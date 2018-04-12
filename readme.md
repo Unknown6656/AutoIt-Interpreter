@@ -1,8 +1,19 @@
+# **THIS PROJECT IS FAR FROM FINISHED - THE INTERPRETER CANNOT DO MORE THAN RESOLVE INCLUDES AND PRE-PROCESSOR DIRECTIVES AT THIS STAGE !!**
+
+
+
+
+
+
+
+
+
+
 # C# AutoIt Interpreter
 
 This AutoIt-Interpreter is written in C# targeting the .NET-Core Framework in order to provide full platform independency.
 
-## Usage
+## Build
 
 The project requires the v2.1-installation of the `.NET SDK`.
 
@@ -40,17 +51,32 @@ $ sudo yum install libunwind libicu
 $ sudo yum install dotnet-sdk-2.0.0
 ```
 
-### Build [VisualStudio and VisualStudio Code]
+### Build/Run [VisualStudio and VisualStudio Code]
 
 1) Open the Project by opening the `.sln`-file in VisualStudio
-2) Press compile or <kbd>F5</kbd>
+2) Press `Run` or <kbd>F5</kbd>
 3) ???
 4) Profit!
 
-### Build [Command line]
+### Build/Run [Command line]
 
 Then switch to your downloaded copy of this repository and execute:
 ```bash
 $ cd <location of the downloaded repository folder>
 $ dotnet run
 ```
+
+## Usage
+
+After having built the interpreter from source (via cmd line or VS), use the following command to execute it as follows:
+```bash
+# linux/unix/mac:
+$ cd CSAutoItInterpreter/bin
+$ chmod a+rwx autoit.sh
+$ ./autoit.sh <arguments>
+
+# windows
+$ cd CSAutoItInterpreter/bin
+$ autoit <arguments> 
+```
+

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CSAutoItInterpreter": {
+      "commandName": "Project",
+      "commandLineArgs": "-i=test/program.au3"
+    }
+  }
+}

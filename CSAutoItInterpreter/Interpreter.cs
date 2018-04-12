@@ -17,11 +17,43 @@ namespace CSAutoItInterpreter
             RootContext = new InterpreterContext(path);
             Settings = settings;
             Settings.IncludeDirectories = Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
+
+            if (RootContext.Content is null)
+                throw new FileNotFoundException("The given file could not be found, accessed or read.", path);
         }
 
-        public void DoMagic() => DoMagic(RootContext, Settings);
+        public void DoMagic()
+        {
+            InterpreterState state = InterpretScript(RootContext, Settings);
 
 
+
+            ///////////////////////////////////////////// DEBUGGING /////////////////////////////////////////////
+
+            Console.WriteLine(new string('=', 200));
+
+            foreach (var fn in state.Functions.Keys)
+            {
+                var func = state.Functions[fn];
+
+                Console.WriteLine($"---------------------------------------- function {fn} ----------------------------------------");
+
+                foreach (var l in func.Lines)
+                {
+                    Console.CursorLeft = 10;
+                    Console.Write(l.Context);
+                    Console.CursorLeft = 40;
+                    Console.WriteLine(l.Line);
+                }
+            }
+
+            Console.WriteLine(new string('=', 200));
+
+            foreach (var e in state.Errors)
+                Console.WriteLine(e);
+
+            Console.WriteLine(new string('=', 200));
+        }
 
         private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(InterpreterContext context)
         {
@@ -71,7 +103,7 @@ namespace CSAutoItInterpreter
                     select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
         }
 
-        private static void DoMagic(InterpreterContext context, InterpreterSettings settings)
+        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings)
         {
             List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
             InterpreterState state = new InterpreterState
@@ -121,10 +153,12 @@ namespace CSAutoItInterpreter
                 ++locindx;
             }
 
-            DoMagic2(state);
+            ProcessFunctions(state);
+
+            return state;
         }
 
-        private static void DoMagic2(InterpreterState state)
+        private static void ProcessFunctions(InterpreterState state)
         {
 
 
@@ -134,33 +168,11 @@ namespace CSAutoItInterpreter
 
 
 
-            ///////////////////////////////////////////// DEBUGGING /////////////////////////////////////////////
 
-            Console.WriteLine(new string('=', 200));
 
-            foreach (var fn in state.Functions.Keys)
-            {
-                var func = state.Functions[fn];
 
-                Console.Write(func.Context);
-                Console.CursorLeft = 30;
-                Console.WriteLine($"-------------------- function {fn} --------------------");
 
-                foreach (var l in func.Lines)
-                {
-                    Console.CursorLeft = 10;
-                    Console.Write(l.Context);
-                    Console.CursorLeft = 40;
-                    Console.WriteLine(l.Line);
-                }
-            }
 
-            Console.WriteLine(new string('=', 200));
-
-            foreach (var e in state.Errors)
-                Console.WriteLine(e);
-
-            Console.WriteLine(new string('=', 200));
         }
 
         private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, InterpreterState st, Action<string> err)

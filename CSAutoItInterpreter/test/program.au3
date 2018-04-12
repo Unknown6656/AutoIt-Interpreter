@@ -2,7 +2,7 @@
 
 #include-once
 #include <APIComConstants.au3>
-#include 'test-header-1.au3'
+#include 'header-1.au3'
 
 #cs
 
