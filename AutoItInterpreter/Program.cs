@@ -138,36 +138,37 @@ namespace CSAutoItInterpreter
         }
 
         private static void PrintUsage() => $@"
-+---------------------------------- C# AutoIt Interpreter ----------------------------------+
-|                              Copyright (c) Unknown6656, 2018                              |
-|                                                                                           |
-|    Usage:                                                                                 |
-|    {ASM_FILE.Name,18} <options>                                                           |
-|                                                                                           |
-+-------------------+-------------------+---------------------------------------------------+
-| OPTION (short)    | OPTION (long)     | Effect                                            |
-+-------------------+-------------------+---------------------------------------------------+
-| -h, -?            | --help            | Displays this help menu                           |
-| -i=...            | --input=...       | The input .au3 AutoIt Script file      [required] |
-| -s=...            | --settings=...    | The path to the .json settings file               |
-| -rs               | --reset-settings  | Resets the .json settings file to its defaults    |
-| -l=....           | --lang=...        | Sets the language for the current session using   |
-|                   |                   | the given language code. (Doen't affect settings) |
-+-------------------+-------------------+---------------------------------------------------+
-|                                                                                           |
-| Most options can be used as follows:                                                      |
-|     x                   simple argument                                                   |
-|     -x                  short variant without value                                       |
-|     -x=abc              short variant                                                     |
-|     --xy-z=abc          long variant                                                      |
-|     /xy-z:abc           alternative long variant                                          |
-|                                                                                           |
-+-------------------------------------------------------------------------------------------+
-|                                                                                           |
-|    Example:                                                                               |
-|    {ASM_FILE.Name,18} -i script.au3                                                       |
-|                                                                                           |
-+-------------------------------------------------------------------------------------------+
++----------------------------------- C#/F# AutoIt Interpreter ----------------------------------+
+|                     AutoIt Interpreter : Copyright (c) Unknown6656, 2018                      |
+|                  Piglet Parser Library : Copyright (c) Dervall, 2012                          |
+|                                                                                               |
+|    Usage:                                                                                     |
+|    {ASM_FILE.Name,18} <options>                                                               |
+|                                                                                               |
++-------------------+-------------------+-------------------------------------------------------+
+| OPTION (short)    | OPTION (long)     | Effect                                                |
++-------------------+-------------------+-------------------------------------------------------+
+| -h, -?            | --help            | Displays this help menu                               |
+| -i=...            | --input=...       | The input .au3 AutoIt Script file          [required] |
+| -s=...            | --settings=...    | The path to the .json settings file                   |
+| -rs               | --reset-settings  | Resets the .json settings file to its defaults        |
+| -l=....           | --lang=...        | Sets the language for the current session using the   |
+|                   |                   | given language code. (Doesn't affect the settings)    |
++-------------------+-------------------+-------------------------------------------------------+
+|                                                                                               |
+| Most options can be used as follows:                                                          |
+|     x                   simple argument                                                       |
+|     -x                  short variant without value                                           |
+|     -x=abc              short variant                                                         |
+|     --xy-z=abc          long variant                                                          |
+|     /xy-z:abc           alternative long variant                                              |
+|                                                                                               |
++-----------------------------------------------------------------------------------------------+
+|                                                                                               |
+|    Example:                                                                                   |
+|    {ASM_FILE.Name,18} -i script.au3                                                           |
+|                                                                                               |
++-----------------------------------------------------------------------------------------------+
 ".PrintC(ConsoleColor.Cyan);
 
         private static void PrintLanguages()
@@ -175,9 +176,10 @@ namespace CSAutoItInterpreter
             string[] lcodes = Language.LanugageCodes;
 
             $@"
-+---------------------------------- C# AutoIt Interpreter ----------------------------------+
-|                              Copyright (c) Unknown6656, 2018                              |
-+-------------------------------------------------------------------------------------------+
++----------------------------------- C#/F# AutoIt Interpreter ----------------------------------+
+|                     AutoIt Interpreter : Copyright (c) Unknown6656, 2018                      |
+|                  Piglet Parser Library : Copyright (c) Dervall, 2012                          |
++-----------------------------------------------------------------------------------------------+
 
     Avaialable Languages ({lcodes.Length}):".PrintC(ConsoleColor.Cyan);
 

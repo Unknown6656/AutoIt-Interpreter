@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Optimize>true</Optimize>
+      <OutputPath>bin</OutputPath>
+      <LangVersion>latest</LangVersion>
+      <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+      <AssemblyName>autoitexpplib</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Util.fs" />
+    <Compile Include="AST.fs" />
+    <Compile Include="Parser.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PigletParser\PigletParser.csproj" />
+  </ItemGroup>
+</Project>

@@ -34,6 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+    <ProjectReference Include="..\PigletParser\PigletParser.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
