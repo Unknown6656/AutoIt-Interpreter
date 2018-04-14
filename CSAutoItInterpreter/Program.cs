@@ -39,6 +39,7 @@ namespace CSAutoItInterpreter
 
                 string stgpath = GetF("settings", InterpreterSettings.DefaultSettingsPath);
                 InterpreterSettings settings;
+                Language lang;
 
                 if ((settings = InterpreterSettings.FromFile(stgpath)) is null)
                 {
@@ -50,6 +51,16 @@ namespace CSAutoItInterpreter
                 if ((settings = InterpreterSettings.FromFile(stgpath)) is null || GetF("reset-settings", null) != null)
                     settings = InterpreterSettings.DefaultSettings;
 
+                if (Language.LanugageCodes.Contains(settings.LanguageCode?.ToLower()?.Trim()?? ""))
+                    lang = Language.FromLanguageCode(settings.LanguageCode);
+                else
+                {
+                    $"The language code '{settings.LanguageCode}' is not associated with any known language. The language code 'en' will be used instead.".Warn();
+
+                    lang = Language.FromLanguageCode("en");
+                }
+
+                settings.LanguageCode = lang.Code;
                 settings.ToFile(stgpath);
 
                 #endregion
@@ -66,7 +77,7 @@ namespace CSAutoItInterpreter
                     if (GetF("input", null) is string s)
                         $"The input AutoIt file '{s}' could not be found.".Error();
                     else
-                        "No input file has been given. Use the commandline option '-?' or '--help' to see the usage information.".Error();
+                        lang["errors.general.no_input_given"].Error();
 
                     return -1;
                 }
@@ -176,10 +187,12 @@ namespace CSAutoItInterpreter
                 "/usr/include",
                 "C:/progra~1/autoit3/include",
                 "C:/progra~2/autoit3/include",
-            }
+            },
+            LanguageCode = "en"
         };
 
         public string[] IncludeDirectories { set; get; }
+        public string LanguageCode { set; get; }
 
 
         

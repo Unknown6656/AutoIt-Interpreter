@@ -1,0 +1,16 @@
+﻿{
+    "meta": {
+        "code": "en",
+        "name": "English",
+        "name_e": "English"
+    },
+    "errors": {
+        "general": {
+            "no_input_given": "No input file has been given. Use the commandline option '-?' or '--help' to see the usage information.",
+
+
+
+            "file_n_found": "The given file could not be found, accessed or read."
+        }
+    }
+}

@@ -4,10 +4,116 @@ using System.Linq;
 using System.IO;
 using System;
 
+using CSAutoItInterpreter.Preprocessed;
+
+/* ====================== GLOBAL VARIABLE TRANSFORMATION =======================
+
+ AutoIt .--
+        |
+        | Global $a
+        | Global Const $b = 1
+        | Const $c = "42", $d = func()
+        | Global $e[5] = [1, "2", False, 4.2, "0"]
+        | $f = 88
+        | Dim $g
+        |
+        '--
+     C# .--
+        |
+        |   static class globals
+        |   {
+        |       static Variant __global_error = default;
+        |
+        |       static Variant _a;
+        |       static Variant _b; // use 'readonly' ?
+        |       static Variant _c;
+        |       static Variant _d;
+        |       static Variant[] _e;
+        |       static Variant _f;
+        |       static Variant _g;
+        |
+        |       static void init()
+        |       {
+        |           globals._a = default;
+        |           globals._b = 1m;
+        |           globals._c = "42";
+        |
+        |           __func(ref _d, ref __global_error);
+        |
+        |           globals._e = new Variant[5];
+        |           globals._e[0] = 1m;
+        |           globals._e[1] = "2";
+        |           globals._e[2] = false;
+        |           globals._e[3] = 4.2m;
+        |           globals._e[4] = "0";
+        |
+        |           globals._f = 88m;
+        |           globals._g = default;
+        |       }
+        |
+        |       ...
+        |   }
+        |
+        '--
+*/
+/* ============================ FUNCTION GENERATION ============================
+
+ AutoIt .--
+        |
+        |   Func MyFunc($a, ByRef $b, Const $c, Const ByRef $d, $e = 315, $f = "42")
+        |       $b = $a + $c 
+        |       MsgBox($d)
+        |       $b *= $e - $f
+        |       Return $a
+        |   EndFunc
+        |
+        |   $x = "99"
+        |   $y = "abc"
+        |   $z = 0.88
+        |   $w = MyFunc(0, $x, 1, $y, $z)
+        |
+        '--
+     C# .--
+        |
+        |   void __myfunc(Variant _a, ref Variant _b, Variant _c, ref Variant _d, Variant _e, Variant _f, ref Variant @return, ref Variant @error)
+        |   {
+        |       _b = _a + _c;
+        |       Util.MsgBox(_d);
+        |       _b *= _e - _f;
+        |       @return = _a;
+        |   }
+        |
+        |   Variant _x = "99";
+        |   Variant _y = "abc";
+        |   Variant _z = 0.88m;
+        |   Variant _w = default;
+        |
+        |   __myfunc((Variant)0m, ref _x, (Variant)1m, ref _y, _z, (Variant)"42", ref _w, ref __global_error);
+        |   // do some error checking 
+        |
+        '--
+ */
+
 namespace CSAutoItInterpreter
 {
+    using static ControlBlock;
+
+
     public sealed class Interpreter
     {
+        private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
+        {
+            [__NONE__] = "EndFunc",
+            [If] = "EndIf",
+            [ElseIf] = "EndIf",
+            [Else] = "EndIf",
+            [Select] = "EndSelect",
+            [Switch] = "EndSwitch",
+            [For] = "Next",
+            [While] = "WEnd",
+            [Do] = "Until ...",
+            [With] = "EndWith",
+        };
         private InterpreterSettings Settings { get; }
         public InterpreterContext RootContext { get; }
 
@@ -28,6 +134,10 @@ namespace CSAutoItInterpreter
 
 
 
+
+
+
+
             ///////////////////////////////////////////// DEBUGGING /////////////////////////////////////////////
 
             Console.WriteLine(new string('=', 200));
@@ -36,7 +146,7 @@ namespace CSAutoItInterpreter
             {
                 var func = state.Functions[fn];
 
-                Console.WriteLine($"---------------------------------------- function {fn} ----------------------------------------");
+                Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
 
                 foreach (var l in func.Lines)
                 {
@@ -98,6 +208,38 @@ namespace CSAutoItInterpreter
                 ++lcnt;
             }
 
+            lcnt = 0;
+
+            while (lcnt < lines.Count)
+            {
+                int[] lnr = lines[lcnt].Item2;
+
+                if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<iaction>.+)\s+else\s+(?<eaction>)$", out Match m))
+                {
+                    lines.RemoveAt(lcnt);
+                    lines.AddRange(new(string, int[])[]
+                    {
+                        ($"If ({m.Get("cond")}) Then", lnr),
+                        (m.Get("iaction"), lnr),
+                        ("Else", lnr),
+                        (m.Get("eaction"), lnr),
+                        ("EndIf", lnr)
+                    });
+                }
+                else if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
+                {
+                    lines.RemoveAt(lcnt);
+                    lines.AddRange(new(string, int[])[]
+                    {
+                        ($"If ({m.Get("cond")}) Then", lnr),
+                        (m.Get("then"), lnr),
+                        ("EndIf", lnr)
+                    });
+                }
+
+                ++lcnt;
+            }
+
             return (from ln in lines
                     where ln.Item1.Length > 0
                     select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
@@ -123,11 +265,11 @@ namespace CSAutoItInterpreter
                     lines[locindx].OriginalLineNumbers[0],
                     lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
                 );
-                void fail(string msg) => state.ReportError(msg, defcntx);
+                void err(string msg) => state.ReportError(msg, defcntx);
 
                 if (Line.StartsWith('#'))
                 {
-                    string path = ProcessDirective(Line.Substring(1), state, settings, fail);
+                    string path = ProcessDirective(Line.Substring(1), state, settings, err);
 
                     try
                     {
@@ -144,35 +286,305 @@ namespace CSAutoItInterpreter
                     }
                     catch
                     {
-                        fail($"The include file '{path}' could not be found or is inaccessible.");
+                        err($"The include file '{path}' could not be found or is inaccessible.");
                     }
                 }
-                else if (!ProcessFunctionDeclaration(Line, defcntx, state, fail))
+                else if (!ProcessFunctionDeclaration(Line, defcntx, state, err))
                     (state.CurrentFunction is FunctionScope f ? f : state.GlobalFunction).Lines.Add((Line, defcntx));
 
                 ++locindx;
             }
 
-            ProcessFunctions(state);
+            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(state);
 
             return state;
         }
 
-        private static void ProcessFunctions(InterpreterState state)
+        private static Dictionary<string, FUNCTION> PreProcessFunctions(InterpreterState state)
         {
+            Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>();
 
+            funcdir[InterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, InterpreterState.GLOBAL_FUNC_NAME, true);
 
+            foreach (string name in state.Functions.Keys)
+                if (name != InterpreterState.GLOBAL_FUNC_NAME)
+                    funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
 
+            return funcdir;
 
+            FUNCTION PreProcessFunction(FunctionScope func, string name, bool global)
+            {
+                Stack<ControlBlock> blocks = new Stack<ControlBlock>(new[] { __NONE__ });
+                var lines = func.Lines.ToArray();
+                int locndx = 0;
 
+                Entity curr = new FUNCTION(name, global, func);
 
+                while (locndx < lines.Length)
+                {
+                    DefinitionContext defctx = new DefinitionContext(func.Context.FilePath, lines[locndx].Context.StartLine, lines[locndx].Context.EndLine);
+                    //void Requires(Action f, params ControlBlock[] cbs)
+                    //{
+                    //    if (cbs.Contains(blocks.Peek()))
+                    //        f();
+                    //    else
+                    //        err($"The current statement reuires to be directly in one of the following scopes: '{string.Join("', '", cbs)}'");
+                    //}
+                    void Conflicts(Action f, params ControlBlock[] cbs)
+                    {
+                        if (cbs.Contains(blocks.Peek()))
+                            err($"The current statement cannot be directly placed inside one of the following blocks: '{string.Join("', '", cbs)}'");
+                        else
+                            f();
+                    }
+                    T AppendSet<T>(ControlBlock cb, T e) where T : Entity
+                    {
+                        e.Parent = curr;
+                        e.DefinitionContext = defctx;
 
+                        curr.Append(e);
+                        curr = e;
 
+                        blocks.Push(cb);
 
+                        return e;
+                    }
+                    void err(string msg, bool fatal = true)
+                    {
+                        msg = (global ? $"[{name}]  " : "") + msg;
 
+                        if (fatal)
+                            state.ReportError(msg, defctx);
+                        else
+                            state.ReportWarning(msg, defctx);
+                    }
+                    bool trycloseblock(ControlBlock ivb)
+                    {
+                        ControlBlock top = blocks.Pop();
 
+                        if (ClosingInstruction[top] == ClosingInstruction[ivb])
+                            return true;
+                        else
+                            blocks.Push(top);
 
+                        if (top == __NONE__)
+                            err($"No existent {ivb}-block can be closed. Please create one in order to close it or remove the closing statement.");
+                        else
+                            err($"The currently open {top}-block cannot be closed with an '{ClosingInstruction[ivb]}'-statement.");
 
+                        return false;
+                    }
+
+                    string line = lines[locndx].Line;
+
+                    line.Match(new(string, ControlBlock[], Action<Match>)[]
+                    {
+                        (@"^(?<optelse>else)?if\s+(?<cond>.+)\s+then$", new[] { Switch, Select }, m =>
+                        {
+                            string cond = m.Get("cond").Trim();
+
+                            if (m.Get("optelse").Length > 0)
+                            {
+                                ControlBlock cb = blocks.Peek();
+
+                                if (cb == If || cb == ElseIf)
+                                {
+                                    blocks.Pop();
+                                    blocks.Push(ElseIf);
+
+                                    IF par = curr.Parent as IF;
+                                    ELSEIF_BLOCK b = new ELSEIF_BLOCK(par, cond) { DefinitionContext = defctx };
+
+                                    par.AddElseIf(b);
+                                    curr = b;
+                                }
+                                else
+                                    err("A 'ElseIf'-block can only be used after a previous 'If'-block in the same scope.");
+                            }
+                            else
+                            {
+                                blocks.Push(If);
+
+                                IF b = new IF(curr) { DefinitionContext = defctx };
+                                b.SetIf(new IF_BLOCK(b, cond) { DefinitionContext = defctx });
+
+                                curr.Append(b);
+                                curr = b.If;
+                            }
+                        }),
+                        ("^else$", new[] { Switch, Select }, _ =>
+                        {
+                            ControlBlock cb = blocks.Peek();
+
+                            if (cb == If || cb == ElseIf)
+                            {
+                                blocks.Pop();
+                                blocks.Push(Else);
+
+                                IF par = curr.Parent as IF;
+                                ELSE_BLOCK b = new ELSE_BLOCK(par) { DefinitionContext = defctx };
+
+                                par.SetElse(b);
+                                curr = b;
+                            }
+                            else
+                                err("A 'Else'-block can only be used after a previous 'If'- or 'ElseIf'-block in the same scope.");
+                        }),
+                        ("^endif$", new[] { Switch, Select }, _ =>
+                        {
+                            if (trycloseblock(If))
+                                curr = curr.Parent;
+                        }),
+                        ("^select$", new[] { Switch, Select }, _ => AppendSet(Select, new SELECT(null))),
+                        ("^endselect$", new[] { Switch }, _ =>
+                        {
+                            if (blocks.Peek() == Case)
+                                blocks.Pop();
+
+                            if (trycloseblock(Select))
+                                curr = curr.Parent;
+                        }),
+                        (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => AppendSet(Switch, new SWITCH(curr, m.Get("cond")))),
+                        ("^endswitch$", new[] { Select }, _ =>
+                        {
+                            if (blocks.Peek() == Case)
+                                blocks.Pop();
+
+                            if (trycloseblock(Switch))
+                                curr = curr.Parent;
+                        }),
+                        (@"^case\s+(?<cond>.+)$", new ControlBlock[0], m =>
+                        {
+                            ControlBlock cb = blocks.Peek();
+                            string cond = m.Get("cond");
+
+                            if (cb == Case)
+                            {
+                                blocks.Pop();
+                                cb = blocks.Peek();
+                            }
+
+                            if (cb == Switch)
+                                AppendSet(Case, new SWITCH_CASE(null, cond));
+                            else if (cb == Select)
+                                AppendSet(Case, new SELECT_CASE(null, cond));
+                            else
+                            {
+                                err("The 'Case'-statement can only be used directly inside a 'Switch'- or 'Select'-block.");
+
+                                return;
+                            }
+
+                            blocks.Push(Case);
+                        }),
+                        ("^continuecase$", new[] { Switch, Select }, _ =>
+                        {
+                            if (!blocks.Contains(Case))
+                                err("The 'ContinueCase'-statement can only be used inside the scope of a 'Case'-block.");
+                            else
+                                curr.Append(new CONTINUECASE(curr));
+                        }),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$", new[] { Switch, Select }, m => AppendSet(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => AppendSet(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
+                        ("^next$", new[] { Switch, Select }, _ =>
+                        {
+                            if (trycloseblock(For))
+                                curr = curr.Parent;
+                        }),
+                        (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => AppendSet(While, new WHILE(curr, m.Get("cond")))),
+                        (@"^exitloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
+                        {
+                            int cnt = blocks.Count(x => x == For || x == Do || x == While);
+
+                            if (cnt == 0)
+                                err("The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').");
+                            else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
+                            {
+                                if (levels > cnt)
+                                {
+                                    err($"The exit level {levels} is too high. It has been truncated to level {cnt}.", false);
+
+                                    levels = cnt;
+                                }
+
+                                curr.Append(new BREAK(curr, levels));
+                            }
+                            else
+                                err($"The exit level '{m.Get("levels")}' could not be parsed or is lower than 1. The statement has therefore been ignored.", false);
+                        }),
+                        (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
+                        {
+                            int cnt = blocks.Count(x => x == For || x == Do || x == While);
+
+                            if (cnt == 0)
+                                err("The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').");
+                            else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
+                            {
+                                if (levels > cnt)
+                                {
+                                    err($"The continuation level {levels} is too high. It has been truncated to level {cnt}.", false);
+
+                                    levels = cnt;
+                                }
+
+                                curr.Append(new CONTINUE(curr, levels));
+                            }
+                            else
+                                err($"The continuation level '{m.Get("levels")}' could not be parsed or is lower than 1. The statement has therefore been ignored.", false);
+                        }),
+                        ("^wend$", new[] { Switch, Select }, _ =>
+                        {
+                            if (trycloseblock(While))
+                                curr = curr.Parent;
+                        }),
+                        ("^do$", new[] { Switch, Select }, _ => AppendSet(Do, new DO_UNTIL(null))),
+                        (@"^until\s+(?<cond>.+)$", new[] { Switch, Select }, m =>
+                        {
+                            if (trycloseblock(Do))
+                            {
+                                (curr as DO_UNTIL).SetCondition(m.Get("cond"));
+                                curr = curr.Parent;
+                            }
+                        }),
+                        (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => AppendSet(With, new WITH(curr, m.Get("expr")))),
+                        ("^endwith$", new[] { Switch, Select }, _ =>
+                        {
+                            if (trycloseblock(Do))
+                                curr = curr.Parent;
+                        }),
+                        (@"(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s+(?<expr>.+)", new[] { Switch, Select }, m =>
+                        {
+                            string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                            string expr = m.Get("expr");
+
+                            if (modf.Contains("local") && global)
+                                err("A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.");
+                            else if (modf.Contains("global") && !global)
+                                err("A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely.");
+
+                            // TODO
+                        }),
+                        (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => curr.Append(new RETURN(curr, m.Get("val")) { DefinitionContext = defctx })),
+                        (".*", new[] { Switch, Select }, _ => curr.Append(new RAWLINE(curr, line) { DefinitionContext = defctx })),
+                    }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
+
+                    ++locndx;
+                }
+
+                List<string> ci = new List<string>();
+
+                while (blocks.Pop() is ControlBlock cb && cb != __NONE__)
+                    if (cb != Case)
+                        ci.Add(ClosingInstruction[cb]);
+
+                if (ci.Count > 0)
+                    state.ReportError($"{(global ? $"[{ name}]  " : "")} There are open control blocks which must be closed before using 'EndFunc'. Please use (in order) the instructions '{string.Join("', '", ci)}' to close the open blocks.", new DefinitionContext(func.Context.FilePath, locndx));
+
+                while (!(curr is FUNCTION))
+                    curr = curr.Parent;
+
+                return curr as FUNCTION;
+            }
         }
 
         private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, InterpreterState st, Action<string> err)
@@ -187,14 +599,27 @@ namespace CSAutoItInterpreter
                         err($"A function named '{name}' has already been declared (See {st.Functions[lname].Context}).");
                     else
                     {
+                        st.CurrentFunction = new FunctionScope(defcntx);
+                        st.CurrentFunction.Parameters.AddRange(from p in par
+                                                               let ndx = p.IndexOf('$')
+                                                               let attr = p.Remove(ndx).Trim().ToLower()
+                                                               select (
+                                                                    p.Substring(ndx + 1).Trim().ToLower(),
+                                                                    attr.Contains("byref"),
+                                                                    attr.Contains("const"),
+                                                                    null as string
+                                                               ));
+                        st.CurrentFunction.Parameters.AddRange(from p in opar
+                                                               let ndx = p.IndexOf('=')
+                                                               let nm = p.Remove(ndx).Trim().ToLower().TrimStart('$')
+                                                               select (
+                                                                    nm,
+                                                                    false,
+                                                                    false,
+                                                                    p.Substring(ndx + 1).Trim()
+                                                               ));
 
-                        // todo : parameter parsing
-
-
-                        st.Functions[lname] = st.CurrentFunction = new FunctionScope(defcntx)
-                        {
-                            // Parameters = ,
-                        };
+                        st.Functions[lname] = st.CurrentFunction;
                     }
                 }
                 else
@@ -350,7 +775,7 @@ namespace CSAutoItInterpreter
 
     public sealed class InterpreterState
     {
-        private const string GLOBAL_FUNC_NAME = "__global<>";
+        internal const string GLOBAL_FUNC_NAME = "__global<>";
 
         private List<InterpreterError> _errors;
 
@@ -385,6 +810,10 @@ namespace CSAutoItInterpreter
         }
 
         public void ReportError(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx));
+
+        public void ReportWarning(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx, false));
+
+        public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Constant ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.InitExpression is string s ? $" = {s}" : "")}"))})";
     }
 
     public sealed class GlobalScope
@@ -394,17 +823,15 @@ namespace CSAutoItInterpreter
 
     public sealed class FunctionScope
     {
-        public Dictionary<string, (DefinitionContext context, bool Constant, int ArrayDim)> Locals { get; }
-        public List<(string Name, bool ByRef, bool Constant)> Parameters { get; }
+        public List<(string Name, bool ByRef, bool Constant, string InitExpression)> Parameters { get; }
         public List<(string Line, DefinitionContext Context)> Lines { get; }
         public DefinitionContext Context { get; }
 
 
         public FunctionScope(DefinitionContext ctx)
         {
-            Locals = new Dictionary<string, (DefinitionContext, bool, int)>();
+            Parameters = new List<(string, bool, bool, string)>();
             Lines = new List<(string, DefinitionContext)>();
-            Parameters = new List<(string, bool, bool)>();
             Context = ctx;
         }
     }
@@ -462,10 +889,18 @@ namespace CSAutoItInterpreter
     {
         public DefinitionContext ErrorContext { get; }
         public string ErrorMessage { get; }
+        public bool IsFatal { get; }
 
 
+        /// <summary>A new fatal error</summary>
         internal InterpreterError(string msg, DefinitionContext line)
+            : this(msg, line, true)
         {
+        }
+
+        internal InterpreterError(string msg, DefinitionContext line, bool fatal)
+        {
+            IsFatal = fatal;
             ErrorMessage = msg;
             ErrorContext = line;
         }
@@ -520,5 +955,20 @@ namespace CSAutoItInterpreter
         win8,
         win81,
         win10
+    }
+
+    public enum ControlBlock
+    {
+        __NONE__,
+        If,
+        ElseIf,
+        Else,
+        Select,
+        Switch,
+        Case,
+        For,
+        While,
+        Do,
+        With,
     }
 }

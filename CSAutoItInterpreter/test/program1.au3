@@ -27,7 +27,7 @@
 		_PPT_SlideAddPicture()
 		_PPT_SlideAddTable()
 		_PPT_SlideAddTextBox()
-		
+
         Functions - Slide Show Config Settings
 		----------------------
 		_PPT_SlideShowStartingSlide()
@@ -41,12 +41,12 @@
 		_PPT_SlideShowRun()
 		_PPT_SlideShowAdvanceOnTime()
 		_PPT_SlideShowAdvanceTime()
-		
+
 		Functions - Misc
 		----------------------
 		_PPT_bAssistant()
 		_PPT_SlideSelect()
-		
+
 #ce
 
 #cs -------------------------------------------------
@@ -95,7 +95,7 @@ PowerPoint function implimentations
 ;
 ;===============================================================================
 Func _PPT_SlideTextFrameSetText(ByRef $obj, $intTextFrame, $Text)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -115,7 +115,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideTextFrameSetFont(ByRef $obj, $intTextFrame, $font)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -136,7 +136,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideTextFrameSetFontSize(ByRef $obj, $intTextFrame, $size)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -155,7 +155,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideSelect(ByRef $obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -173,7 +173,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowRun(ByRef $obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -193,7 +193,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowShowType(ByRef $obj, $intType)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf $intType > 3 Or $intType < 1 Then
@@ -216,7 +216,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowRangeType(ByRef $obj, $intType)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf $intType > 3 Or $intType < 1 Then
@@ -239,7 +239,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowAdvanceTime(ByRef $obj, $intSecond)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf IsInt($intSecond) = 0 Then
@@ -261,7 +261,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowAdvanceOnTime(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -280,7 +280,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_SlideShowLoopUntilStopped(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -299,7 +299,7 @@ EndFunc
 ;
 ;===============================================================================
 Func _PPT_bAssistant(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -308,7 +308,7 @@ Func _PPT_bAssistant(ByRef $obj, $boolean)
 EndFunc
 
 Func _PPT_SlideShowAdvanceMode(ByRef $obj, $intMode)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf $intMode > 3 Or $intMode < 1 Then
@@ -320,7 +320,7 @@ Func _PPT_SlideShowAdvanceMode(ByRef $obj, $intMode)
 EndFunc
 
 Func _PPT_SlideShowDisplayScrollbars(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -329,7 +329,7 @@ Func _PPT_SlideShowDisplayScrollbars(ByRef $obj, $boolean)
 EndFunc
 
 Func _PPT_SlideShowWithNarration(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -338,7 +338,7 @@ Func _PPT_SlideShowWithNarration(ByRef $obj, $boolean)
 EndFunc
 
 Func _PPT_SlideShowWithAnimation(ByRef $obj, $boolean)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -347,7 +347,7 @@ Func _PPT_SlideShowWithAnimation(ByRef $obj, $boolean)
 EndFunc
 
 Func _PPT_SlideShowStartingSlide(ByRef $obj, $intSlide)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -356,7 +356,7 @@ Func _PPT_SlideShowStartingSlide(ByRef $obj, $intSlide)
 EndFunc
 
 Func _PPT_SlideShowEndingSlide(ByRef $obj, $intSlide)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -365,7 +365,7 @@ Func _PPT_SlideShowEndingSlide(ByRef $obj, $intSlide)
 EndFunc
 
 Func _PPT_PresentationSaveAs(ByRef $obj, $filename)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -374,7 +374,7 @@ Func _PPT_PresentationSaveAs(ByRef $obj, $filename)
 EndFunc
 
 Func _PPT_PresentationClose(ByRef $obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -383,7 +383,7 @@ Func _PPT_PresentationClose(ByRef $obj)
 EndFunc
 
 Func _PPT_PresentationName($obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -392,7 +392,7 @@ Func _PPT_PresentationName($obj)
 EndFunc
 
 Func _PPT_PresentationSaved($obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -401,7 +401,7 @@ Func _PPT_PresentationSaved($obj)
 EndFunc
 
 Func _PPT_SlideAddPicture(ByRef $obj, $filepath, $left = 0, $top = 0, $width = 100, $height = 100)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf FileExists($filepath) <> 1 Then
@@ -410,7 +410,7 @@ Func _PPT_SlideAddPicture(ByRef $obj, $filepath, $left = 0, $top = 0, $width = 1
 	ElseIf $left = "" Or $top = "" Or $width = "" Or $height = "" Then
 		SetError(3)
 		Return 3
-	ElseIf IsInt($left+$top+$width+$height) <> 1 Then 
+	ElseIf IsInt($left+$top+$width+$height) <> 1 Then
 		SetError(4)
 		Return 4 ;All parameters have to be integer
 	Else
@@ -419,13 +419,13 @@ Func _PPT_SlideAddPicture(ByRef $obj, $filepath, $left = 0, $top = 0, $width = 1
 EndFunc
 
 Func _PPT_SlideAddTable(ByRef $obj, $rows, $cols, $left = -1, $top = -1, $width = -1, $height = -1)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	ElseIf $left = "" Or $top = "" Or $width = "" Or $height = "" Then
 		SetError(3)
 		Return 3
-	ElseIf IsInt($left+$top+$width+$height) <> 1 Then 
+	ElseIf IsInt($left+$top+$width+$height) <> 1 Then
 		SetError(4)
 		Return 4 ;All parameters have to be integer
 	Else
@@ -434,7 +434,7 @@ Func _PPT_SlideAddTable(ByRef $obj, $rows, $cols, $left = -1, $top = -1, $width 
 EndFunc
 
 Func _PPT_SlideAddTextBox(ByRef $obj, $left = 0, $top = 0, $width = 100, $height = 100)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -443,7 +443,7 @@ Func _PPT_SlideAddTextBox(ByRef $obj, $left = 0, $top = 0, $width = 100, $height
 EndFunc
 
 Func _PPT_SlideTextFrameGetText($obj, $intSlide, $intTextFrame)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -453,7 +453,7 @@ Func _PPT_SlideTextFrameGetText($obj, $intSlide, $intTextFrame)
 EndFunc
 
 Func _PPT_SlideShapeCount($obj, $intSlide)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -462,7 +462,7 @@ Func _PPT_SlideShapeCount($obj, $intSlide)
 EndFunc
 
 Func _PPT_SlideCreate($obj, $index, $layout)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -472,7 +472,7 @@ Func _PPT_SlideCreate($obj, $index, $layout)
 EndFunc
 
 Func _PPT_PresentationOpen($obj, $filepath)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -483,7 +483,7 @@ Func _PPT_PresentationOpen($obj, $filepath)
 EndFunc
 
 Func _PPT_CreatePresentation($obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -493,7 +493,7 @@ Func _PPT_CreatePresentation($obj)
 EndFunc
 
 Func _PPT_PresentationAdd($obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -504,7 +504,7 @@ EndFunc
 
 Func _PPT_PowerPointApp($visible = 1)
 	Local $obj = ObjCreate("PowerPoint.Application")
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -514,7 +514,7 @@ Func _PPT_PowerPointApp($visible = 1)
 EndFunc
 
 Func _PPT_PowerPointQuit(ByRef $obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else
@@ -523,7 +523,7 @@ Func _PPT_PowerPointQuit(ByRef $obj)
 EndFunc
 
 Func _PPT_SlideCount($obj)
-	If IsObj($obj) <> 1 Then 
+	If IsObj($obj) <> 1 Then
 		SetError(1)
 		Return 0
 	Else

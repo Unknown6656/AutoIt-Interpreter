@@ -1,8 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Text;
-using System;
 using System.Globalization;
+using System;
+
+using Newtonsoft.Json.Linq;
 
 namespace CSAutoItInterpreter
 {
@@ -16,6 +17,19 @@ namespace CSAutoItInterpreter
                 if (s.Match(pattern, out Match m))
                 {
                     f(m);
+
+                    return true;
+                }
+
+            return false;
+        }
+
+        public static bool Match(this string s, Dictionary<string, Action<Match>> p)
+        {
+            foreach (string pattern in (p ?? new Dictionary<string, Action<Match>>()).Keys)
+                if (s.Match(pattern, out Match m))
+                {
+                    p[pattern](m);
 
                     return true;
                 }
@@ -38,6 +52,25 @@ namespace CSAutoItInterpreter
             else
                 n();
         }
+
+        public static bool IsValidJson(this string str)
+        {
+            if (str is string s)
+                try
+                {
+                    s = s.Trim();
+
+                    if ((s.StartsWith("{") && s.EndsWith("}")) || (s.StartsWith("[") && s.EndsWith("]")))
+                        return JToken.Parse(s) is JToken _;
+                }
+                catch
+                {
+                }
+
+            return false;
+        }
+
+        public static string Format(this string s, params object[] args) => string.Format(s, args);
     }
 
 
