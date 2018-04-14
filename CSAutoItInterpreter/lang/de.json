@@ -5,42 +5,40 @@
         "name_e": "German",
         "author": "Unknown6656"
     },
-
-
-    //////////////////////                    v-------------- TODO --------------v                    //////////////////////
-
-
     "errors": {
         "general": {
-            "no_input": "No input file has been given. Use the commandline option '-?' or '--help' to see the usage information.",
-            "inputfile_nfound": "The input AutoIt file '{0}' could not be found.",
-            "file_nopen": "The given file could not be found, accessed or read."
+            "no_input": "Es wurde keine Eingabedatei angegeben. Verwenden Sie die Kommandozeilenoptionen '-?' oder '--help', um Informationen über die Verwendung der Kommandozeile einzusehen.",
+            "inputfile_nfound": "Die AutoIt-Eingabedatei '{0}' konnte nicht gefunden werden.",
+            "file_nopen": "Die gegebene Eingabedatei konnte nicht gefunden, geöffnet oder gelesen werden."
         },
         "preproc": {
-            "include_nfound": "The include file '{0}' could not be found or is inaccessible.",
-            "directive_invalid": "The directive '{0}' is either invalid or currently unsupported.",
-            "directive_invalid_value": "The value '{0}' is invalid for the directive '{1}'.",
-            "pragma_unsupported": "The pragma option '{0}' is currently not supported.",
-            "function_nesting": "A function cannot be declared inside an other function (yet).",
-            "unexpected_endfunc": "A function has to be declared with 'Func ...' before it can be closed wih 'EndFunc'.",
-            "function_exists": "A function named '{0}' has already been declared (see {1}).",
-            "block_reqr": "The current statement reuires to be directly in one of the following scopes: '{0}'.",
-            "block_confl": "The current statement cannot be directly placed inside one of the following blocks: '{0}'.",
-            "block_invalid_close": "No existent {0}-block can be closed. Please create one in order to close it or remove the closing statement.",
-            "block_conflicting_close": "The currently open {0}-block cannot be closed with an '{1}'-statement.",
-            "blocks_unclosed": "There are open control blocks which must be closed before using 'EndFunc'. Please use (in order) the instructions '{0}' to close the open blocks.",
-            "misplaced_elseif": "A 'ElseIf'-block can only be used after a previous 'If'-block in the same scope.",
-            "misplaced_else": "A 'Else'-block can only be used after a previous 'If'- or 'ElseIf'-block in the same scope.",
-            "misplaced_case": "A 'Case'-statement can only be used directly inside a 'Switch'- or 'Select'-block.",
-            "misplaced_continuecase": "A 'ContinueCase'-statement can only be used inside the scope of a 'Case'-block.",
-            "misplaced_exitloop": "The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
-            "misplaced_continueloop": "The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
+            "include_nfound": "Die include-Datei '{0}' konnte nicht gefunden oder geöffnet werden.",
+            "directive_invalid": "Die Direktive '{0}' ist entweder ungültig oder wird derzeitig nicht unterstützt.",
+            "directive_invalid_value": "Der Wert '{0}' ist für die Direktive '{1}' ungültig.",
+            "pragma_unsupported": "Die pragma-Option '{0}' wird derzeitig nicht unterstützt.",
+            "function_nesting": "Eine Funktion kann (noch) nicht innerhalb einer anderen Funktion platziert werden.",
+            "unexpected_endfunc": "Eine Funktion muss zuerst mit 'Func ...' deklariert werden, bevor diese mit 'EndFunc' geschlossen werden kann.",
+            "function_exists": "Eine Funktion namens '{0}' existiert bereits (siehe {1}).",
+            "block_reqr": "Die Anweisung muss direkt in eine der folgenden Blöcke platziert werden: '{0}'.",
+            "block_confl": "Die Anweisung darf nicht direkt in eine der folgenden Blöcke platziert werden: '{0}'.",
+            "block_invalid_close": "Es konnte kein offner {0}-Block geschlossen werden. Erstellen Sie einen solchen Block, um diesen zu schließen oder entfernen Sie die Anweisung.",
+            "block_conflicting_close": "Der offene {0}-Block kann nicht mit einer '{1}'-Anweisung geschlossen werden.",
+            "blocks_unclosed": "Es existieren noch offene Blöcke, welche vor der Verwendung von 'EndFunc' geschlossen werden müssen. Bitte verwenden Sie (in der entsprechenden Reihenfolge) die Anweisungen '{0}', um die offenen Blöcke zu schließen.",
+            "misplaced_elseif": "Ein 'ElseIf'-Block kann nur nach einem direkt voranschreitenden 'If'-Block in der selben Sichtbarkeitsebene verwendet werden.",
+            "misplaced_else": "Ein 'Else'-Block kann nur nach einem direkt voranschreitenden 'If'- oder 'ElseIf'-Block in der selben Sichtbarkeitsebene verwendet werden.",
+            "misplaced_case": "Eine 'Case'-Anweisung kann nur direkt innerhalb eines 'Switch'- der 'Select'-Blockes verwendet werden.",
+            "misplaced_continuecase": "Eine 'ContinueCase'-Anweisung kann nur in der Sichtbarkeitsebene innerhalb eines 'Case'-Blockes verwendet werden.",
+            "misplaced_exitloop": "Die 'ExitLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
+            "misplaced_continueloop": "Die 'ContinueLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
+
+            ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
-            "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.",
-            "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely."
+
+            "invalid_global": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
+            "invalid_local": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'."
         }
     }
 }

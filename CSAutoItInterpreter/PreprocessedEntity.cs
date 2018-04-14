@@ -185,7 +185,6 @@ namespace CSAutoItInterpreter.Preprocessed
     public sealed class FUNCTION
         : Entity
     {
-        public DefinitionContext DefinitionContext { get; }
         public FUNCTIONPARAM[] Parameters { get; }
         public bool IsGlobal { get; }
         public string Name { get; }
@@ -321,5 +320,22 @@ namespace CSAutoItInterpreter.Preprocessed
             VariableExpression = var;
             RangeExpression = range;
         }
+    }
+
+    public sealed class DECLARATION
+        : Entity
+    {
+        public string[] Modifiers { get; }
+        public string Expression { get; }
+
+
+        public DECLARATION(Entity parent, string expr, string[] mod)
+            : base(parent)
+        {
+            Expression = expr;
+            Modifiers = mod;
+        }
+
+        public override string ToString() => string.Concat(Modifiers.Select(x => x + ' ')) + Expression;
     }
 }

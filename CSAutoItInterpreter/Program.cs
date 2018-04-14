@@ -21,6 +21,8 @@ namespace CSAutoItInterpreter
                     ("i", "input"),
                     ("h", "help"),
                     ("?", "help"),
+                    ("l", "lang"),
+                    ("ll", "list-languages"),
                     ("s", "settings"),
                     ("rs", "reset-settings")
                 );
@@ -31,6 +33,12 @@ namespace CSAutoItInterpreter
                 if (Cont("help") || Cont("?"))
                 {
                     PrintUsage();
+
+                    return 0;
+                }
+                if (Cont("list-languages"))
+                {
+                    PrintLanguages();
 
                     return 0;
                 }
@@ -51,16 +59,20 @@ namespace CSAutoItInterpreter
                 if ((settings = InterpreterSettings.FromFile(stgpath)) is null || GetF("reset-settings", null) != null)
                     settings = InterpreterSettings.DefaultSettings;
 
-                if (Language.LanugageCodes.Contains(settings.LanguageCode?.ToLower()?.Trim()?? ""))
-                    lang = Language.FromLanguageCode(settings.LanguageCode);
+                string lcode = GetF("lang", settings.LanguageCode ?? "").ToLower().Trim();
+
+                if (Language.LanugageCodes.Contains(lcode))
+                    lang = Language.FromLanguageCode(lcode);
                 else
                 {
-                    $"The language code '{settings.LanguageCode}' is not associated with any known language. The language code 'en' will be used instead.".Warn();
+                    $"The language code '{lcode}' is not associated with any known language. The language code 'en' will be used instead.".Warn();
 
                     lang = Language.FromLanguageCode("en");
                 }
 
-                settings.LanguageCode = lang.Code;
+                if (!Cont("lang"))
+                    settings.LanguageCode = lang.Code;
+
                 settings.ToFile(stgpath);
 
                 #endregion
@@ -139,6 +151,8 @@ namespace CSAutoItInterpreter
 | -i=...            | --input=...       | The input .au3 AutoIt Script file      [required] |
 | -s=...            | --settings=...    | The path to the .json settings file               |
 | -rs               | --reset-settings  | Resets the .json settings file to its defaults    |
+| -l=....           | --lang=...        | Sets the language for the current session using   |
+|                   |                   | the given language code. (Doen't affect settings) |
 +-------------------+-------------------+---------------------------------------------------+
 |                                                                                           |
 | Most options can be used as follows:                                                      |
@@ -155,6 +169,25 @@ namespace CSAutoItInterpreter
 |                                                                                           |
 +-------------------------------------------------------------------------------------------+
 ".PrintC(ConsoleColor.Cyan);
+
+        private static void PrintLanguages()
+        {
+            string[] lcodes = Language.LanugageCodes;
+
+            $@"
++---------------------------------- C# AutoIt Interpreter ----------------------------------+
+|                              Copyright (c) Unknown6656, 2018                              |
++-------------------------------------------------------------------------------------------+
+
+    Avaialable Languages ({lcodes.Length}):".PrintC(ConsoleColor.Cyan);
+
+            foreach (string code in lcodes)
+            {
+                Language lang = Language.Languages[code];
+
+                $"        {code} : {lang["meta.name"]} ({lang["meta.name_e"]}) by {lang["meta.author"]}".PrintC(ConsoleColor.Cyan);
+            }
+        }
 
         private static void PrintC(this string msg, ConsoleColor c)
         {

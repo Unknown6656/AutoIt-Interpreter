@@ -22,12 +22,21 @@ namespace CSAutoItInterpreter
         {
             get
             {
-                dynamic val = _langobj;
+                try
+                {
+                    dynamic val = _langobj;
 
-                foreach (string path in name.Split('/', '.', '\\'))
-                    val = val[path];
+                    foreach (string path in name.Split('/', '.', '\\'))
+                        val = val[path];
 
-                return val is string s ? s : val?.ToString();
+                    return val is string s ? s : val?.ToString();
+                }
+                catch
+                {
+                    $"The resource string '{name}' could not be found in the current resource file.".Error();
+
+                    return $"[{name.ToUpper()}]";
+                }
             }
         }
 

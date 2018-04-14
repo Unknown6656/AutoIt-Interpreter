@@ -151,12 +151,12 @@ namespace CSAutoItInterpreter
 
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
 
-                foreach (var l in func.Lines)
+                foreach (var l in func.RawLines)
                 {
                     Console.CursorLeft = 10;
-                    Console.Write(l.Context);
+                    Console.Write(l.DefinitionContext);
                     Console.CursorLeft = 40;
-                    Console.WriteLine(l.Line);
+                    Console.WriteLine(l);
                 }
             }
 
@@ -173,7 +173,7 @@ namespace CSAutoItInterpreter
         private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang)
         {
             List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
-            InterpreterState state = new InterpreterState
+            PreInterpreterState pstate = new PreInterpreterState
             {
                 Language = lang,
                 CurrentContext = context,
@@ -191,11 +191,11 @@ namespace CSAutoItInterpreter
                     lines[locindx].OriginalLineNumbers[0],
                     lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
                 );
-                void err(string name, params object[] args) => state.ReportError(lang[name, args], defcntx);
+                void err(string name, params object[] args) => pstate.ReportError(lang[name, args], defcntx);
 
                 if (Line.StartsWith('#'))
                 {
-                    string path = ProcessDirective(Line.Substring(1), state, settings, err);
+                    string path = ProcessDirective(Line.Substring(1), pstate, settings, err);
 
                     try
                     {
@@ -215,13 +215,17 @@ namespace CSAutoItInterpreter
                         err("errors.preproc.include_nfound", path);
                     }
                 }
-                else if (!ProcessFunctionDeclaration(Line, defcntx, state, err))
-                    (state.CurrentFunction is FunctionScope f ? f : state.GlobalFunction).Lines.Add((Line, defcntx));
+                else if (!ProcessFunctionDeclaration(Line, defcntx, pstate, err))
+                    (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
                 ++locindx;
             }
 
-            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(state);
+            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate);
+            InterpreterState state = InterpreterState.Convert(pstate);
+
+            foreach (string func in ppfuncdir.Keys)
+                state.Functions[func] = ppfuncdir[func];
 
             return state;
         }
@@ -306,15 +310,15 @@ namespace CSAutoItInterpreter
                     select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
         }
 
-        private static Dictionary<string, FUNCTION> PreProcessFunctions(InterpreterState state)
+        private static Dictionary<string, FUNCTION> PreProcessFunctions(PreInterpreterState state)
         {
             Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
             {
-                [InterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, InterpreterState.GLOBAL_FUNC_NAME, true)
+                [PreInterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, PreInterpreterState.GLOBAL_FUNC_NAME, true)
             };
 
             foreach (string name in state.Functions.Keys)
-                if (name != InterpreterState.GLOBAL_FUNC_NAME)
+                if (name != PreInterpreterState.GLOBAL_FUNC_NAME)
                     funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
 
             return funcdir;
@@ -325,7 +329,7 @@ namespace CSAutoItInterpreter
                 var lines = func.Lines.ToArray();
                 int locndx = 0;
 
-                Entity curr = new FUNCTION(name, global, func);
+                Entity curr = new FUNCTION(name, global, func) { DefinitionContext = func.Context };
 
                 while (locndx < lines.Length)
                 {
@@ -363,9 +367,9 @@ namespace CSAutoItInterpreter
                             blocks.Push(top);
 
                         if (top == __NONE__)
-                            err("errros.preproc.block_invalid_close", true, ivb);
+                            err("errors.preproc.block_invalid_close", true, ivb);
                         else
-                            err("errros.preproc.block_conflicting_close", true, top, ClosingInstruction[ivb]);
+                            err("errors.preproc.block_conflicting_close", true, top, ClosingInstruction[ivb]);
 
                         return false;
                     }
@@ -489,7 +493,7 @@ namespace CSAutoItInterpreter
                             if (!blocks.Contains(Case))
                                 err("errors.preproc.misplaced_continuecase", true);
                             else
-                                curr.Append(new CONTINUECASE(curr));
+                                curr.Append(new CONTINUECASE(curr) { DefinitionContext = defctx });
                         }),
                         (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$", new[] { Switch, Select }, m => AppendSet(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
                         (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => AppendSet(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
@@ -514,7 +518,7 @@ namespace CSAutoItInterpreter
                                     levels = cnt;
                                 }
 
-                                curr.Append(new BREAK(curr, levels));
+                                curr.Append(new BREAK(curr, levels) { DefinitionContext = defctx });
                             }
                             else
                                 err("errors.preproc.exit_level_invalid", false, m.Get("levels"));
@@ -534,7 +538,7 @@ namespace CSAutoItInterpreter
                                     levels = cnt;
                                 }
 
-                                curr.Append(new CONTINUE(curr, levels));
+                                curr.Append(new CONTINUE(curr, levels) { DefinitionContext = defctx });
                             }
                             else
                                 err("errors.preproc.continue_level_invalid", false, m.Get("levels"));
@@ -569,7 +573,7 @@ namespace CSAutoItInterpreter
                             else if (modf.Contains("global") && !global)
                                 err("errors.preproc.invalid_global", true);
 
-                            // TODO
+                            curr.Append(new DECLARATION(curr, expr, modf) { DefinitionContext = defctx });
                         }),
                         (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => curr.Append(new RETURN(curr, m.Get("val")) { DefinitionContext = defctx })),
                         (".*", new[] { Switch, Select }, _ => curr.Append(new RAWLINE(curr, line) { DefinitionContext = defctx })),
@@ -585,7 +589,7 @@ namespace CSAutoItInterpreter
                         ci.Add(ClosingInstruction[cb]);
 
                 if (ci.Count > 0)
-                    state.ReportError($"{(global ? $"[{ name}]  " : "")} {state.Language["errors.preproc.blocks_unclosed", string.Join("', '", ci)]}", new DefinitionContext(func.Context.FilePath, locndx));
+                    state.ReportError((global ? $"[{ name}]  " : "") + state.Language["errors.preproc.blocks_unclosed", string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx));
 
                 while (!(curr is FUNCTION))
                     curr = curr.Parent;
@@ -594,7 +598,7 @@ namespace CSAutoItInterpreter
             }
         }
 
-        private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, InterpreterState st, ErrorReporter err)
+        private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
         {
             void __procfunc(string name, string[] par, string[] opar)
             {
@@ -662,36 +666,36 @@ namespace CSAutoItInterpreter
 
             name.ToLower().Switch(new Dictionary<string, Action>
             {
-				["out"] = () => ci.FileName = value,
-				["icon"] = () => ci.IconPath = value,
-				["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
-				["upx"] = () => ci.UPX = bool.Parse(value),
-				["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
-				["console"] = () => ci.ConsoleMode = bool.Parse(value),
-				["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
-				["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value, true),
+                ["out"] = () => ci.FileName = value,
+                ["icon"] = () => ci.IconPath = value,
+                ["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
+                ["upx"] = () => ci.UPX = bool.Parse(value),
+                ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
+                ["console"] = () => ci.ConsoleMode = bool.Parse(value),
+                ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
+                ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value, true),
                 ["x64"] = () => ci.X64 = bool.Parse(value),
-				["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
-				["comments"] = () => ci.AssemblyComment = value,
-				["companyname"] = () => ci.AssemblyCompanyName = value,
-				["filedescription"] = () => ci.AssemblyFileDescription = value,
-				["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
-				["internalname"] = () => ci.AssemblyInternalName = value,
-				["legalcopyright"] = () => ci.AssemblyCopyright = value,
-				["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
-				["originalfilename"] = () => { /* do nothing */ },
-				["productname"] = () => ci.AssemblyProductName = value,
-				["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
+                ["comments"] = () => ci.AssemblyComment = value,
+                ["companyname"] = () => ci.AssemblyCompanyName = value,
+                ["filedescription"] = () => ci.AssemblyFileDescription = value,
+                ["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                ["internalname"] = () => ci.AssemblyInternalName = value,
+                ["legalcopyright"] = () => ci.AssemblyCopyright = value,
+                ["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
+                ["originalfilename"] = () => { /* do nothing */ },
+                ["productname"] = () => ci.AssemblyProductName = value,
+                ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
             },
             () => err("errors.preproc.directive_invalid", name));
         }
 
-        private static string ProcessDirective(string line, InterpreterState st, InterpreterSettings settings, ErrorReporter err)
+        private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
         {
             string inclpath = "";
 
             line.Match(
-                ("^notrayicon$", _ => st.TrayIcon = false),
+                ("^notrayicon$", _ => st.UseTrayIcon = false),
                 ("^requireadmin$", _ => st.RequireAdmin = true),
                 ("^include-once$", _ => st.IsIncludeOnce = true),
                 (@"^include(\s|\b)\s*(\<(?<rel>.*)\>|\""(?<abs1>.*)\""|\'(?<abs2>.*)\')$", m => {
@@ -779,23 +783,72 @@ namespace CSAutoItInterpreter
         }
     }
 
+    public abstract class AbstractParserState
+    {
+        private protected List<InterpreterError> _errors;
+
+        public InterpreterError[] Errors => _errors.ToArray();
+        public CompileInfo CompileInfo { private protected set; get; }
+        public Language Language { get; set; }
+        public bool IsIncludeOnce { set; get; }
+        public bool RequireAdmin { set; get; }
+        public bool UseTrayIcon { set; get; }
+
+
+        public AbstractParserState()
+        {
+            _errors = new List<InterpreterError>();
+            CompileInfo = new CompileInfo();
+            UseTrayIcon = true;
+        }
+
+        public void ReportError(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx));
+
+        public void ReportWarning(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx, false));
+    }
+
     public sealed class InterpreterState
+        : AbstractParserState
+    {
+        public Dictionary<string, FUNCTION> Functions { get; }
+        public List<string> StartFunctions { get; }
+
+
+        public InterpreterState()
+        {
+            Functions = new Dictionary<string, FUNCTION>();
+            StartFunctions = new List<string>();
+        }
+
+        public static InterpreterState Convert(PreInterpreterState ps)
+        {
+            InterpreterState s = new InterpreterState
+            {
+                IsIncludeOnce = ps.IsIncludeOnce,
+                RequireAdmin = ps.RequireAdmin,
+                UseTrayIcon = ps.UseTrayIcon,
+                CompileInfo = ps.CompileInfo,
+                Language = ps.Language,
+            };
+            s.StartFunctions.AddRange(ps.StartFunctions);
+            s._errors.AddRange(ps.Errors);
+
+            return s;
+        }
+
+        public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Const ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.RawInitExpression is string s ? $" = {s}" : "")}"))})";
+    }
+
+    public sealed class PreInterpreterState
+        : AbstractParserState
     {
         internal const string GLOBAL_FUNC_NAME = "__global<>";
-
-        private List<InterpreterError> _errors;
-
 
         public InterpreterContext CurrentContext { set; get; }
         public Dictionary<string, FunctionScope> Functions { get; }
         public FunctionScope CurrentFunction { set; get; }
         public List<string> IncludeOncePaths { get; }
         public List<string> StartFunctions { get; }
-        public CompileInfo CompileInfo { get; }
-        public Language Language { get; set; }
-        public bool IsIncludeOnce { set; get; }
-        public bool RequireAdmin { set; get; }
-        public bool TrayIcon { set; get; }
 
         public FunctionScope GlobalFunction
         {
@@ -803,21 +856,14 @@ namespace CSAutoItInterpreter
             get => Functions[GLOBAL_FUNC_NAME];
         }
 
-        public InterpreterError[] Errors => _errors.ToArray();
 
-        public InterpreterState()
+        public PreInterpreterState()
         {
             Functions = new Dictionary<string, FunctionScope> { [GLOBAL_FUNC_NAME] = null };
-            _errors = new List<InterpreterError>();
             IncludeOncePaths = new List<string>();
             StartFunctions = new List<string>();
-            CompileInfo = new CompileInfo();
-            TrayIcon = true;
+            UseTrayIcon = true;
         }
-
-        public void ReportError(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx));
-
-        public void ReportWarning(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx, false));
 
         public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Constant ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.InitExpression is string s ? $" = {s}" : "")}"))})";
     }
