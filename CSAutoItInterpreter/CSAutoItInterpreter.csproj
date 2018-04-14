@@ -20,10 +20,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="lang\de.json" />
     <None Remove="lang\en.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="lang\de.json" />
     <EmbeddedResource Include="lang\en.json" />
   </ItemGroup>
 

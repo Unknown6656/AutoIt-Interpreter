@@ -70,14 +70,14 @@ namespace CSAutoItInterpreter
 
                 try
                 {
-                    intp = new Interpreter(GetF("input"), settings);
+                    intp = new Interpreter(GetF("input"), lang, settings);
                 }
                 catch
                 {
                     if (GetF("input", null) is string s)
-                        $"The input AutoIt file '{s}' could not be found.".Error();
+                        lang["errors.general.inputfile_nfound", s].Error();
                     else
-                        lang["errors.general.no_input_given"].Error();
+                        lang["errors.general.no_input"].Error();
 
                     return -1;
                 }

@@ -1,10 +1,15 @@
 ﻿{
     "meta": {
-        "code": "en",
-        "name": "English",
-        "name_e": "English",
+        "code": "de",
+        "name": "Deutsch",
+        "name_e": "German",
         "author": "Unknown6656"
     },
+
+
+    //////////////////////                    v-------------- TODO --------------v                    //////////////////////
+
+
     "errors": {
         "general": {
             "no_input": "No input file has been given. Use the commandline option '-?' or '--help' to see the usage information.",

@@ -98,6 +98,7 @@ namespace CSAutoItInterpreter
 {
     using static ControlBlock;
 
+    public delegate void ErrorReporter(string name, params object[] args);
 
     public sealed class Interpreter
     {
@@ -116,21 +117,23 @@ namespace CSAutoItInterpreter
         };
         private InterpreterSettings Settings { get; }
         public InterpreterContext RootContext { get; }
+        internal Language Language { get; }
 
 
-        public Interpreter(string path, InterpreterSettings settings)
+        public Interpreter(string path, Language lang, InterpreterSettings settings)
         {
             RootContext = new InterpreterContext(path);
+            Language = lang;
             Settings = settings;
             Settings.IncludeDirectories = Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
 
             if (RootContext.Content is null)
-                throw new FileNotFoundException("The given file could not be found, accessed or read.", path);
+                throw new FileNotFoundException(lang["errors.general.file_nopen"], path);
         }
 
         public void DoMagic()
         {
-            InterpreterState state = InterpretScript(RootContext, Settings);
+            InterpreterState state = InterpretScript(RootContext, Settings, Language);
 
 
 
@@ -163,6 +166,64 @@ namespace CSAutoItInterpreter
                 Console.WriteLine(e);
 
             Console.WriteLine(new string('=', 200));
+        }
+
+
+
+        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang)
+        {
+            List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
+            InterpreterState state = new InterpreterState
+            {
+                Language = lang,
+                CurrentContext = context,
+                GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1))
+            };
+            int locindx = 0;
+
+            lines.AddRange(FetchLines(context));
+
+            while (locindx < lines.Count)
+            {
+                string Line = lines[locindx].Line;
+                DefinitionContext defcntx = new DefinitionContext(
+                    lines[locindx].File,
+                    lines[locindx].OriginalLineNumbers[0],
+                    lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
+                );
+                void err(string name, params object[] args) => state.ReportError(lang[name, args], defcntx);
+
+                if (Line.StartsWith('#'))
+                {
+                    string path = ProcessDirective(Line.Substring(1), state, settings, err);
+
+                    try
+                    {
+                        FileInfo inclpath = path.Length > 0 ? new FileInfo(path) : default;
+
+                        if (inclpath?.Exists ?? false)
+                            using (StreamReader rd = inclpath.OpenText())
+                            {
+                                lines.RemoveAt(locindx);
+                                lines.InsertRange(locindx, FetchLines(new InterpreterContext(inclpath)));
+
+                                --locindx;
+                            }
+                    }
+                    catch
+                    {
+                        err("errors.preproc.include_nfound", path);
+                    }
+                }
+                else if (!ProcessFunctionDeclaration(Line, defcntx, state, err))
+                    (state.CurrentFunction is FunctionScope f ? f : state.GlobalFunction).Lines.Add((Line, defcntx));
+
+                ++locindx;
+            }
+
+            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(state);
+
+            return state;
         }
 
         private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(InterpreterContext context)
@@ -245,66 +306,12 @@ namespace CSAutoItInterpreter
                     select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
         }
 
-        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings)
-        {
-            List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
-            InterpreterState state = new InterpreterState
-            {
-                CurrentContext = context,
-                GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1))
-            };
-            int locindx = 0;
-
-            lines.AddRange(FetchLines(context));
-
-            while (locindx < lines.Count)
-            {
-                string Line = lines[locindx].Line;
-                DefinitionContext defcntx = new DefinitionContext(
-                    lines[locindx].File,
-                    lines[locindx].OriginalLineNumbers[0],
-                    lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
-                );
-                void err(string msg) => state.ReportError(msg, defcntx);
-
-                if (Line.StartsWith('#'))
-                {
-                    string path = ProcessDirective(Line.Substring(1), state, settings, err);
-
-                    try
-                    {
-                        FileInfo inclpath = path.Length > 0 ? new FileInfo(path) : default;
-
-                        if (inclpath?.Exists ?? false)
-                            using (StreamReader rd = inclpath.OpenText())
-                            {
-                                lines.RemoveAt(locindx);
-                                lines.InsertRange(locindx, FetchLines(new InterpreterContext(inclpath)));
-
-                                --locindx;
-                            }
-                    }
-                    catch
-                    {
-                        err($"The include file '{path}' could not be found or is inaccessible.");
-                    }
-                }
-                else if (!ProcessFunctionDeclaration(Line, defcntx, state, err))
-                    (state.CurrentFunction is FunctionScope f ? f : state.GlobalFunction).Lines.Add((Line, defcntx));
-
-                ++locindx;
-            }
-
-            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(state);
-
-            return state;
-        }
-
         private static Dictionary<string, FUNCTION> PreProcessFunctions(InterpreterState state)
         {
-            Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>();
-
-            funcdir[InterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, InterpreterState.GLOBAL_FUNC_NAME, true);
+            Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
+            {
+                [InterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, InterpreterState.GLOBAL_FUNC_NAME, true)
+            };
 
             foreach (string name in state.Functions.Keys)
                 if (name != InterpreterState.GLOBAL_FUNC_NAME)
@@ -328,30 +335,18 @@ namespace CSAutoItInterpreter
                     //    if (cbs.Contains(blocks.Peek()))
                     //        f();
                     //    else
-                    //        err($"The current statement reuires to be directly in one of the following scopes: '{string.Join("', '", cbs)}'");
+                    //        err("errors.preproc.block_reqr", true, string.Join("', '", cbs));
                     //}
                     void Conflicts(Action f, params ControlBlock[] cbs)
                     {
                         if (cbs.Contains(blocks.Peek()))
-                            err($"The current statement cannot be directly placed inside one of the following blocks: '{string.Join("', '", cbs)}'");
+                            err("errors.preproc.block_confl", true, string.Join("', '", cbs));
                         else
                             f();
                     }
-                    T AppendSet<T>(ControlBlock cb, T e) where T : Entity
+                    void err(string msg, bool fatal, params object[] args)
                     {
-                        e.Parent = curr;
-                        e.DefinitionContext = defctx;
-
-                        curr.Append(e);
-                        curr = e;
-
-                        blocks.Push(cb);
-
-                        return e;
-                    }
-                    void err(string msg, bool fatal = true)
-                    {
-                        msg = (global ? $"[{name}]  " : "") + msg;
+                        msg = (global ? $"[{name}]  " : "") + state.Language[msg, args];
 
                         if (fatal)
                             state.ReportError(msg, defctx);
@@ -368,11 +363,23 @@ namespace CSAutoItInterpreter
                             blocks.Push(top);
 
                         if (top == __NONE__)
-                            err($"No existent {ivb}-block can be closed. Please create one in order to close it or remove the closing statement.");
+                            err("errros.preproc.block_invalid_close", true, ivb);
                         else
-                            err($"The currently open {top}-block cannot be closed with an '{ClosingInstruction[ivb]}'-statement.");
+                            err("errros.preproc.block_conflicting_close", true, top, ClosingInstruction[ivb]);
 
                         return false;
+                    }
+                    T AppendSet<T>(ControlBlock cb, T e) where T : Entity
+                    {
+                        e.Parent = curr;
+                        e.DefinitionContext = defctx;
+
+                        curr.Append(e);
+                        curr = e;
+
+                        blocks.Push(cb);
+
+                        return e;
                     }
 
                     string line = lines[locndx].Line;
@@ -399,7 +406,7 @@ namespace CSAutoItInterpreter
                                     curr = b;
                                 }
                                 else
-                                    err("A 'ElseIf'-block can only be used after a previous 'If'-block in the same scope.");
+                                    err("errors.preproc.misplaced_elseif", true);
                             }
                             else
                             {
@@ -428,7 +435,7 @@ namespace CSAutoItInterpreter
                                 curr = b;
                             }
                             else
-                                err("A 'Else'-block can only be used after a previous 'If'- or 'ElseIf'-block in the same scope.");
+                                err("errors.preproc.misplaced_else", true);
                         }),
                         ("^endif$", new[] { Switch, Select }, _ =>
                         {
@@ -470,7 +477,7 @@ namespace CSAutoItInterpreter
                                 AppendSet(Case, new SELECT_CASE(null, cond));
                             else
                             {
-                                err("The 'Case'-statement can only be used directly inside a 'Switch'- or 'Select'-block.");
+                                err("errors.preproc.misplaced_case", true);
 
                                 return;
                             }
@@ -480,7 +487,7 @@ namespace CSAutoItInterpreter
                         ("^continuecase$", new[] { Switch, Select }, _ =>
                         {
                             if (!blocks.Contains(Case))
-                                err("The 'ContinueCase'-statement can only be used inside the scope of a 'Case'-block.");
+                                err("errors.preproc.misplaced_continuecase", true);
                             else
                                 curr.Append(new CONTINUECASE(curr));
                         }),
@@ -497,12 +504,12 @@ namespace CSAutoItInterpreter
                             int cnt = blocks.Count(x => x == For || x == Do || x == While);
 
                             if (cnt == 0)
-                                err("The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').");
+                                err("errors.preproc.misplaced_exitloop", true);
                             else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
                             {
                                 if (levels > cnt)
                                 {
-                                    err($"The exit level {levels} is too high. It has been truncated to level {cnt}.", false);
+                                    err("errors.preproc.exit_level_truncated", false, levels, cnt);
 
                                     levels = cnt;
                                 }
@@ -510,19 +517,19 @@ namespace CSAutoItInterpreter
                                 curr.Append(new BREAK(curr, levels));
                             }
                             else
-                                err($"The exit level '{m.Get("levels")}' could not be parsed or is lower than 1. The statement has therefore been ignored.", false);
+                                err("errors.preproc.exit_level_invalid", false, m.Get("levels"));
                         }),
                         (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                         {
                             int cnt = blocks.Count(x => x == For || x == Do || x == While);
 
                             if (cnt == 0)
-                                err("The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').");
+                                err("errors.preproc.misplaced_continueloop", true);
                             else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
                             {
                                 if (levels > cnt)
                                 {
-                                    err($"The continuation level {levels} is too high. It has been truncated to level {cnt}.", false);
+                                    err("errors.preproc.continue_level_truncated", false, levels, cnt);
 
                                     levels = cnt;
                                 }
@@ -530,7 +537,7 @@ namespace CSAutoItInterpreter
                                 curr.Append(new CONTINUE(curr, levels));
                             }
                             else
-                                err($"The continuation level '{m.Get("levels")}' could not be parsed or is lower than 1. The statement has therefore been ignored.", false);
+                                err("errors.preproc.continue_level_invalid", false, m.Get("levels"));
                         }),
                         ("^wend$", new[] { Switch, Select }, _ =>
                         {
@@ -558,9 +565,9 @@ namespace CSAutoItInterpreter
                             string expr = m.Get("expr");
 
                             if (modf.Contains("local") && global)
-                                err("A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.");
+                                err("errors.preproc.invalid_local", true);
                             else if (modf.Contains("global") && !global)
-                                err("A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely.");
+                                err("errors.preproc.invalid_global", true);
 
                             // TODO
                         }),
@@ -578,7 +585,7 @@ namespace CSAutoItInterpreter
                         ci.Add(ClosingInstruction[cb]);
 
                 if (ci.Count > 0)
-                    state.ReportError($"{(global ? $"[{ name}]  " : "")} There are open control blocks which must be closed before using 'EndFunc'. Please use (in order) the instructions '{string.Join("', '", ci)}' to close the open blocks.", new DefinitionContext(func.Context.FilePath, locndx));
+                    state.ReportError($"{(global ? $"[{ name}]  " : "")} {state.Language["errors.preproc.blocks_unclosed", string.Join("', '", ci)]}", new DefinitionContext(func.Context.FilePath, locndx));
 
                 while (!(curr is FUNCTION))
                     curr = curr.Parent;
@@ -587,7 +594,7 @@ namespace CSAutoItInterpreter
             }
         }
 
-        private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, InterpreterState st, Action<string> err)
+        private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, InterpreterState st, ErrorReporter err)
         {
             void __procfunc(string name, string[] par, string[] opar)
             {
@@ -596,7 +603,7 @@ namespace CSAutoItInterpreter
                     string lname = name.ToLower();
 
                     if (st.Functions.ContainsKey(lname))
-                        err($"A function named '{name}' has already been declared (See {st.Functions[lname].Context}).");
+                        err("errors.preproc.function_exists", name, st.Functions[lname].Context);
                     else
                     {
                         st.CurrentFunction = new FunctionScope(defcntx);
@@ -623,7 +630,7 @@ namespace CSAutoItInterpreter
                     }
                 }
                 else
-                    err("A function cannot be declared inside an other function (yet).");
+                    err("errors.preproc.function_nesting");
             }
 
             if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>((const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)(,\s*(const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)*)?\s*(?<optparams>(,\s*\$[a-z]\w*\s*=\s*.+\s*)*)\s*\)$", out Match m))
@@ -640,7 +647,7 @@ namespace CSAutoItInterpreter
                 );
             else if (Line.Match("^endfunc$", out m))
                 if (st.CurrentFunction is null)
-                    err("A function has to be declared with 'Func ...' before it can be closed wih 'EndFunc'.");
+                    err("errors.preproc.unexpected_endfunc");
                 else
                     st.CurrentFunction = null;
             else
@@ -649,7 +656,7 @@ namespace CSAutoItInterpreter
             return true;
         }
 
-        private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, Action<string> err)
+        private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
         {
             value = value.Trim('\'', '"', ' ', '\t', '\r', '\n', '\v');
 
@@ -676,10 +683,10 @@ namespace CSAutoItInterpreter
 				["productname"] = () => ci.AssemblyProductName = value,
 				["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
             },
-            () => err($"The directive '{name}' is either invalid or currently unsupported."));
+            () => err("errors.preproc.directive_invalid", name));
         }
 
-        private static string ProcessDirective(string line, InterpreterState st, InterpreterSettings settings, Action<string> err)
+        private static string ProcessDirective(string line, InterpreterState st, InterpreterSettings settings, ErrorReporter err)
         {
             string inclpath = "";
 
@@ -729,8 +736,7 @@ namespace CSAutoItInterpreter
                         {
                         }
 
-                    err($"The include file '{path}' could not be found.");
-
+                    err("errors.preproc.include_nfound", path);
 
                     void include()
                     {
@@ -757,14 +763,14 @@ namespace CSAutoItInterpreter
 
                                 break;
                             default:
-                                err($"The pragma option '{opt}' is currently not supported.");
+                                err("errors.preproc.pragma_unsupported", opt);
 
                                 break;
                         }
                     }
                     catch
                     {
-                        err($"The value '{value}' is invalid for the directive '{name}'");
+                        err("errors.preproc.directive_invalid_value", value, name);
                     }
                 })
             );
@@ -786,6 +792,7 @@ namespace CSAutoItInterpreter
         public List<string> IncludeOncePaths { get; }
         public List<string> StartFunctions { get; }
         public CompileInfo CompileInfo { get; }
+        public Language Language { get; set; }
         public bool IsIncludeOnce { set; get; }
         public bool RequireAdmin { set; get; }
         public bool TrayIcon { set; get; }
@@ -797,7 +804,6 @@ namespace CSAutoItInterpreter
         }
 
         public InterpreterError[] Errors => _errors.ToArray();
-
 
         public InterpreterState()
         {
@@ -814,11 +820,6 @@ namespace CSAutoItInterpreter
         public void ReportWarning(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx, false));
 
         public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Constant ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.InitExpression is string s ? $" = {s}" : "")}"))})";
-    }
-
-    public sealed class GlobalScope
-    {
-        public List<(string, DefinitionContext)> Globals { get; }
     }
 
     public sealed class FunctionScope
