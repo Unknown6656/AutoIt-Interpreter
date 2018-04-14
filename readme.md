@@ -11,7 +11,10 @@
 
 # C# AutoIt Interpreter
 
-This AutoIt-Interpreter is written in C# targeting the .NET-Core Framework in order to provide full platform independency.
+This AutoIt-Interpreter is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+
+It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
+All credits go to him for the wonderful LR-Parser-Library!!
 
 ## Build
 
