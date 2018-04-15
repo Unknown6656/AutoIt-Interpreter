@@ -1,4 +1,4 @@
-# **THIS PROJECT IS FAR FROM FINISHED - THE INTERPRETER CANNOT DO MORE THAN RESOLVE INCLUDES AND PRE-PROCESSOR DIRECTIVES AT THIS STAGE !!**
+# **THIS PROJECT IS FAR FROM FINISHED !!**
 
 
 
@@ -9,7 +9,7 @@
 
 
 
-# C# AutoIt Interpreter
+# AutoIt Interpreter
 
 This AutoIt-Interpreter is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
 
