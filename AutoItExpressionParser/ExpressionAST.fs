@@ -29,25 +29,6 @@ type LITERAL =
     | False
     | Number of decimal
     | String of string
-type OPERATOR_BINARY_COMPARISON =
-    | EqualCaseSensitive
-    | EqualCaseInsensitive
-    | Unequal
-    | Greater
-    | GreaterEqual
-    | Lower
-    | LowerEqual
-type OPERATOR_BINARY_LOGIC =
-    | And
-    | Xor
-    | Or
-type OPERATOR_BINARY_NUMERIC =
-    | Add
-    | Subtract
-    | Multiply
-    | Divide
-    | Modulus
-    | Power
 type OPERATOR_BINARY_ASSIGNMENT =
     | Assign
     | AssignAdd
@@ -58,11 +39,23 @@ type OPERATOR_BINARY_ASSIGNMENT =
     | AssignConcat
     | AssignPower
 type OPERATOR_BINARY =
-    | BinaryAssignment of OPERATOR_BINARY_ASSIGNMENT
-    | BinaryComparison of OPERATOR_BINARY_COMPARISON
-    | BinaryNumeric of OPERATOR_BINARY_NUMERIC
-    | BinaryLogic of OPERATOR_BINARY_LOGIC
     | StringConcat
+    | EqualCaseSensitive
+    | EqualCaseInsensitive
+    | Unequal
+    | Greater
+    | GreaterEqual
+    | Lower
+    | LowerEqual
+    | And
+    | Xor
+    | Or
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulus
+    | Power
 type OPERATOR_UNARY =
     | Identity
     | Negate

@@ -20,11 +20,10 @@ let private t = term conf
 let private a d x = assoc conf d x |> ignore
 
 let private nt_expression           = nt<EXPRESSION>()
+let private nt_subexpr              = Array.map (fun _ -> nt<EXPRESSION>()) [| 0..10 |]
 let private nt_funccall             = nt<FUNCCALL>()
 let private nt_funcparams           = nt<EXPRESSION list>()
 let private nt_literal              = nt<LITERAL>()
-let private nt_operator_unary       = nt<OPERATOR_UNARY>()
-let private nt_operator_binary      = nt<OPERATOR_BINARY>()
 
 let private t_operator_comp_neq     = t @"<>"
 let private t_operator_comp_gte     = t @">="
@@ -76,31 +75,45 @@ let private t_string_1              = tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""     
 let private t_string_2              = tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
 let private t_identifier            = tf @"[a-z0-9_]*"                                           id
 
-a Left [ t_keyword_and; t_keyword_xor; t_keyword_or ]
-a Left [ t_symbol_questionmark ]
-a Left [ t_symbol_colon ]
-a Right [ t_operator_comp_lt; t_operator_comp_gt; t_operator_comp_lte; t_operator_comp_gte; t_operator_comp_neq; t_operator_comp_eq; t_symbol_equal ]
-a Left [ t_symbol_ampersand ]
-a Left [ t_symbol_minus; t_symbol_plus ]
-a Left [ t_symbol_asterisk; t_symbol_slash; t_symbol_percent ]
-a Left [ t_symbol_hat ]
-a Right [ t_keyword_not ]
-// a Right [ t_symbol_dot ]
+let private (!@) x = nt_subexpr.[x]
 
-let private unaryExpressionPrecedenceGroup  = conf.RightAssociative()
+reduce0 nt_expression !@0
 
-reduce1 nt_expression nt_literal Literal
-reduce1 nt_expression nt_funccall FunctionCall
-reduce1 nt_expression t_variable Variable
-reduce1 nt_expression t_macro Macro
-reduce4 nt_expression t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
-reduce3 nt_expression t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-reduce3 nt_expression nt_expression nt_operator_binary nt_expression (fun a o b -> BinaryExpression(o, a, b))
-// reduce5 nt_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
+reduce0 !@0 !@1
+reduce3 !@0 !@0 t_keyword_and !@1 (fun a _ b -> BinaryExpression(And, a, b))
+reduce3 !@0 !@0 t_keyword_or !@1 (fun a _ b -> BinaryExpression(Or, a, b))
+reduce3 !@0 !@0 t_keyword_xor !@1 (fun a _ b -> BinaryExpression(Xor, a, b))
+reduce0 !@1 !@2
+reduce3 !@1 !@1 t_operator_comp_lte !@2 (fun a _ b -> BinaryExpression(LowerEqual, a, b))
+reduce3 !@1 !@1 t_operator_comp_lt !@2 (fun a _ b -> BinaryExpression(Lower, a, b))
+reduce3 !@1 !@1 t_operator_comp_gte !@2 (fun a _ b -> BinaryExpression(GreaterEqual, a, b))
+reduce3 !@1 !@1 t_operator_comp_gt !@2 (fun a _ b -> BinaryExpression(Greater, a, b))
+reduce3 !@1 !@1 t_operator_comp_neq !@2 (fun a _ b -> BinaryExpression(Unequal, a, b))
+reduce3 !@1 !@1 t_operator_comp_eq !@2 (fun a _ b -> BinaryExpression(EqualCaseSensitive, a, b))
+reduce3 !@1 !@1 t_symbol_equal !@2 (fun a _ b -> BinaryExpression(EqualCaseInsensitive, a, b))
+reduce0 !@2 !@3
+reduce3 !@2 !@2 t_symbol_ampersand !@3 (fun a _ b -> BinaryExpression(StringConcat, a, b))
+reduce0 !@3 !@4
+reduce3 !@3 !@3 t_symbol_plus !@4 (fun a _ b -> BinaryExpression(Add, a, b))
+reduce3 !@3 !@3 t_symbol_minus !@4 (fun a _ b -> BinaryExpression(Subtract, a, b))
+reduce0 !@4 !@5
+reduce3 !@4 !@4 t_symbol_asterisk !@5 (fun a _ b -> BinaryExpression(Multiply, a, b))
+reduce3 !@4 !@4 t_symbol_slash !@5 (fun a _ b -> BinaryExpression(Divide, a, b))
+reduce3 !@4 !@4 t_symbol_percent !@5 (fun a _ b -> BinaryExpression(Modulus, a, b))
+reduce0 !@5 !@6
+reduce3 !@5 !@5 t_symbol_hat !@6 (fun a _ b -> BinaryExpression(Power, a, b))
+reduce0 !@6 !@7
+reduce2 !@6 t_symbol_plus !@6 (fun _ e -> e)
+reduce2 !@6 t_symbol_minus !@6 (fun _ e -> UnaryExpression(Negate, e))
+reduce2 !@6 t_keyword_not !@6 (fun _ e -> UnaryExpression(Not, e))
 
-let private uexprp = nt_expression.AddProduction(nt_operator_unary, nt_expression)
-uexprp.SetReduceFunction (fun o e -> UnaryExpression(o, e))
-uexprp.SetPrecedence unaryExpressionPrecedenceGroup
+reduce1 !@7 nt_literal Literal
+reduce1 !@7 nt_funccall FunctionCall
+reduce1 !@7 t_variable Variable
+reduce1 !@7 t_macro Macro
+reduce3 !@7 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
+reduce4 !@7 t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+//reduce5 !@7 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
 reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
 
@@ -117,28 +130,6 @@ reduce0 nt_literal t_hex
 reduce0 nt_literal t_dec
 reduce0 nt_literal t_oct
 reduce0 nt_literal t_bin
-
-reduce1 nt_operator_binary t_symbol_plus (fun _ -> BinaryNumeric Add)
-reduce1 nt_operator_binary t_symbol_minus (fun _ -> BinaryNumeric Subtract)
-reduce1 nt_operator_binary t_symbol_asterisk (fun _ -> BinaryNumeric Multiply)
-reduce1 nt_operator_binary t_symbol_slash (fun _ -> BinaryNumeric Divide)
-reduce1 nt_operator_binary t_symbol_percent (fun _ -> BinaryNumeric Modulus)
-reduce1 nt_operator_binary t_symbol_hat (fun _ -> BinaryNumeric Power)
-reduce1 nt_operator_binary t_symbol_equal (fun _ -> BinaryComparison EqualCaseInsensitive)
-reduce1 nt_operator_binary t_operator_comp_eq (fun _ -> BinaryComparison EqualCaseSensitive)
-reduce1 nt_operator_binary t_operator_comp_neq (fun _ -> BinaryComparison Unequal)
-reduce1 nt_operator_binary t_operator_comp_gt (fun _ -> BinaryComparison Greater)
-reduce1 nt_operator_binary t_operator_comp_gte (fun _ -> BinaryComparison GreaterEqual)
-reduce1 nt_operator_binary t_operator_comp_lt (fun _ -> BinaryComparison Lower)
-reduce1 nt_operator_binary t_operator_comp_lte (fun _ -> BinaryComparison LowerEqual)
-reduce1 nt_operator_binary t_keyword_and BinaryLogic
-reduce1 nt_operator_binary t_keyword_xor BinaryLogic
-reduce1 nt_operator_binary t_keyword_or BinaryLogic
-reduce1 nt_operator_binary t_symbol_ampersand (fun _ -> StringConcat)
-
-//reduce1 nt_operator_unary t_symbol_minus (fun _ -> Negate)
-//reduce1 nt_operator_unary t_symbol_plus (fun _ -> Identity)
-reduce1 nt_operator_unary t_keyword_not (fun _ -> Not)
 
 conf.LexerSettings.Ignore <- [| @"\s+" |]
 
