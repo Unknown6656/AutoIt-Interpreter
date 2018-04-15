@@ -6,6 +6,7 @@ using System;
 
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
+using AutoItExpressionParser;
 
 /* ====================== GLOBAL VARIABLE TRANSFORMATION =======================
 
@@ -97,6 +98,7 @@ using AutoItInterpreter.PartialAST;
 
 namespace AutoItInterpreter
 {
+    using static ExpressionAST;
     using static ControlBlock;
 
     public delegate void ErrorReporter(string name, params object[] args);
@@ -796,12 +798,64 @@ namespace AutoItInterpreter
 
             }
 
-            object process(Entity e)
+            dynamic process(Entity e)
             {
+                void err(string path, params object[] args) => state.ReportError(state.Language[path, args], e.DefinitionContext);
+                AST_STATEMENT[] proclines() => e.RawLines.Select(x => process(x) as AST_STATEMENT).ToArray();
+                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK { Condition = parseexpr((e as ConditionalEntity).RawCondition), Statements = proclines() };
+                EXPRESSION parseexpr(string expr)
+                {
+                    try
+                    {
+                        return ExpressionParser.Parse(expr);
+                    }
+                    catch (Exception ex)
+                    {
+                        err("errors.astproc.parser_error", expr, ex.Message);
+
+                        return null;
+                    }
+                }
+
                 switch (e)
                 {
+                    case FUNCTION i:
+                        return new AST_FUNCTION
+                        {
+                            Statements = proclines(),
+                            // TODO : parse params etc.
+                        };
                     case IF i:
-                        break;
+                        return new AST_IF_STATEMENT
+                        {
+                            If = process(i.If),
+                            ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
+                            OptionalElse = i.Else is ELSE_BLOCK eb ? process(eb) : null
+                        };
+                    case IF_BLOCK _:
+                    case ELSEIF_BLOCK _:
+                        return proccond();
+                    case ELSE_BLOCK i:
+                        return proclines();
+                    case WHILE i:
+                        return (AST_WHILE_STATEMENT)proccond();
+                    case DO_UNTIL i:
+                        return (AST_DO_STATEMENT)proccond();
+                    case SELECT i: break;
+                    case SWITCH i: break;
+                    case RAWLINE i: break;
+                    case RETURN i: break;
+                    case CONTINUECASE i: break;
+                    case CONTINUE i: break;
+                    case BREAK i: break;
+                    case WITH i: break;
+                    case FOR i: break;
+                    case FOREACH i: break;
+                    case DECLARATION i: break;
+                    default:
+                        err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
+
+                        return null;
                 }
 
                 return null;

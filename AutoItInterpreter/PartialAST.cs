@@ -42,12 +42,18 @@ namespace AutoItInterpreter.PartialAST
         : AST_STATEMENT
     {
         public AST_CONDITIONAL_BLOCK WhileBlock { set; get; }
+
+
+        public static implicit operator AST_WHILE_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_WHILE_STATEMENT { WhileBlock = b };
     }
 
     public sealed class AST_DO_STATEMENT
         : AST_STATEMENT
     {
         public AST_CONDITIONAL_BLOCK DoBlock { set; get; }
+
+
+        public static implicit operator AST_DO_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_DO_STATEMENT { DoBlock = b };
     }
 
 

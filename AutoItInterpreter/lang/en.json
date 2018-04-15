@@ -36,6 +36,10 @@
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
             "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.",
             "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely."
+        },
+        "astproc": {
+            "unknown_entity": "Internal error: The entity '{0}' is unknown.",
+            "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}"
         }
     }
 }

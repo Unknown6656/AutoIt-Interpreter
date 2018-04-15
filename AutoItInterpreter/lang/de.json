@@ -39,6 +39,9 @@
 
             "invalid_global": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
             "invalid_local": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'."
+        },
+        "astproc": {
+            "unknown_entity": "Internal error: The entity '{0}' is unknown."
         }
     }
 }

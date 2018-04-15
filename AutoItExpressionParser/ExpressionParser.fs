@@ -75,14 +75,16 @@ let private t_macro                 = tf @"@[a-z_][a-z0-9_]*"                   
 let private t_string                = tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim()))
 let private t_identifier            = tf @"[a-z0-9_]*"                                           id
 
-a Left [ t_keyword_and; t_keyword_or ]
-a Left [ t_symbol_questionmark ] // I'm not sure about this line
+a Left [ t_keyword_and; t_keyword_xor; t_keyword_or ]
+a Left [ t_symbol_questionmark ]
 a Left [ t_symbol_colon ]
 a Right [ t_operator_comp_lt; t_operator_comp_gt; t_operator_comp_lte;t_operator_comp_gte; t_operator_comp_neq; t_operator_comp_eq; t_symbol_equal ]
 a Left [ t_symbol_ampersand ]
 a Left [ t_symbol_minus; t_symbol_plus ]
 a Left [ t_symbol_asterisk; t_symbol_slash; t_symbol_percent ]
+a Left [ t_symbol_hat ]
 a Left [ t_keyword_not ]
+a Right [ t_symbol_dot ]
 
 let private unaryExpressionPrecedenceGroup  = conf.RightAssociative()
 
@@ -93,7 +95,7 @@ reduce1 nt_expression t_variable Variable
 reduce1 nt_expression t_macro Macro
 reduce4 nt_expression t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
 reduce3 nt_expression nt_expression nt_operator_binary nt_expression (fun a o b -> BinaryExpression(o, a, b))
-reduce5 nt_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
+//reduce5 nt_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
 let private uexprp = nt_expression.AddProduction(nt_operator_unary, nt_expression)
 uexprp.SetReduceFunction (fun o e -> UnaryExpression(o, e))
