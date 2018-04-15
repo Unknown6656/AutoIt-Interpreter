@@ -17,7 +17,7 @@ namespace Piglet.Lexer.Construction.DotNotation
         /// <param name="minimize">Minimize the resulting DFA</param>
         /// <param name="nfaString">Dot notation NFA graph</param>
         /// <param name="dfaString">Dot notation DFA graph</param>
-        public static void GetDfaAndNfaGraphs(string regex, bool minimize, out string nfaString, out string dfaString) => GetDfaAndNfaGraphs(regex, null, minimize, out nfaString, out dfaString);
+        public static void GetDfaAndNfaGraphs(string regex, bool minimize, bool ignorecase, out string nfaString, out string dfaString) => GetDfaAndNfaGraphs(regex, null, minimize, ignorecase, out nfaString, out dfaString);
 
         /// <summary>
         /// Get the DFA and NFA graphs for a given regular expression and highlight active
@@ -28,15 +28,15 @@ namespace Piglet.Lexer.Construction.DotNotation
         /// <param name="minimize">Minimize the resulting DFA</param>
         /// <param name="nfaString">Dot notation NFA graph</param>
         /// <param name="dfaString">Dot notation DFA graph</param>
-        public static void GetDfaAndNfaGraphs(string regex, string input, bool minimize, out string nfaString, out string dfaString)
+        public static void GetDfaAndNfaGraphs(string regex, string input, bool minimize, bool ignorecase, out string nfaString, out string dfaString)
         {
-            NFA nfa = NfaBuilder.Create(new ShuntingYard(new RegExLexer(new StringReader(regex))));
+            NFA nfa = NfaBuilder.Create(new ShuntingYard(new RegExLexer(new StringReader(regex))), ignorecase);
             nfaString = nfa.AsDotNotation(input, "NFA");
             DFA dfa = DFA.Create(nfa);
+
             if (minimize)
-            {
                 dfa.Minimize();
-            }
+
             dfaString = dfa.AsDotNotation(input, "DFA");
         }
 

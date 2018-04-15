@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Piglet.Lexer;
-using Piglet.Lexer.Configuration;
+using System;
+
 using Piglet.Parser.Construction;
+using Piglet.Lexer.Configuration;
+using Piglet.Lexer;
 
 namespace Piglet.Parser.Configuration
 {
@@ -14,7 +15,6 @@ namespace Piglet.Parser.Configuration
         private NonTerminal<T> startSymbol;
         private readonly List<NonTerminal<T>> nonTerminals;
         private readonly LinkedList<Terminal<T>> terminals;
-        private readonly ILexerSettings lexerSettings;
         private readonly List<TerminalPrecedence> terminalPrecedences;
         private int currentPrecedence;
 
@@ -34,6 +34,7 @@ namespace Piglet.Parser.Configuration
             public bool EscapeLiterals { get; set; }
             public string[] Ignore { get; set; }
             public LexerRuntime Runtime { get; set; }
+            public bool IgnoreCase { get; set; }
         }
 
 
@@ -41,7 +42,7 @@ namespace Piglet.Parser.Configuration
         {
             nonTerminals = new List<NonTerminal<T>>();
         	terminals = new LinkedList<Terminal<T>>();
-            lexerSettings = new LexerSettingsImpl();
+            LexerSettings = new LexerSettingsImpl();
             terminalPrecedences = new List<TerminalPrecedence>();
             currentPrecedence = 0;
 
@@ -59,6 +60,7 @@ namespace Piglet.Parser.Configuration
         public ITerminal<T> CreateTerminal(string regExp, Func<string, T> onParse = null, bool topPrecedence = false)
         {
             Terminal<T> terminal = terminals.SingleOrDefault(f => f.RegExp == regExp);
+
             if (terminal != null && regExp != null)
             {
                 if (terminal.OnParse != (onParse??Terminal<T>.DefaultFunc))
@@ -68,15 +70,13 @@ namespace Piglet.Parser.Configuration
             else
             {
                 terminal = new Terminal<T>(regExp, onParse);
+
 				if (topPrecedence)
-				{
-					terminals.AddFirst(terminal);
-				}
-				else
-				{
-					terminals.AddLast(terminal);
-				}
+                    terminals.AddFirst(terminal);
+                else
+                    terminals.AddLast(terminal);
             }
+
             return terminal;
         }
 
@@ -86,17 +86,12 @@ namespace Piglet.Parser.Configuration
             nonTerminals.Add(nonTerminal);
 
             if (startSymbol == null)
-            {
-                // First symbol to be created is the start symbol
-                SetStartSymbol(nonTerminal);
-            }
+                SetStartSymbol(nonTerminal); // First symbol to be created is the start symbol
+
             return nonTerminal;
         }
 
-        public ILexerSettings LexerSettings
-        {
-            get { return lexerSettings; }
-        }
+        public ILexerSettings LexerSettings { get; }
 
         public ITerminal<T> ErrorToken { get; set; }
 
@@ -111,20 +106,16 @@ namespace Piglet.Parser.Configuration
             foreach (Terminal<T> terminal in symbols.OfType<Terminal<T>>())
             {
                 if (terminalPrecedences.Any( f => f.Terminal == terminal))
-                {
-                    // This terminal is defined multiple times
-                    throw new ParserConfigurationException(
-                        string.Format("Terminal {0} has been declared to have a precedence multiple times",
-                                      terminal.DebugName));
-                }
+                    throw new ParserConfigurationException($"Terminal {terminal.DebugName} has been declared to have a precedence multiple times"); // This terminal is defined multiple times
 
                 terminalPrecedences.Add(new TerminalPrecedence
-                                         {
-                                             Associativity = associativityDirection,
-                                             Terminal = terminal,
-                                             Precedence = currentPrecedence
-                                         });
+                                        {
+                                            Associativity = associativityDirection,
+                                            Terminal = terminal,
+                                            Precedence = currentPrecedence
+                                        });
             }
+
             PrecedenceGroup group = new PrecedenceGroup  { Precedence = currentPrecedence };
 
             ++currentPrecedence;
@@ -132,7 +123,7 @@ namespace Piglet.Parser.Configuration
             return group;
         }
 
-        public void SetStartSymbol(INonTerminal<T> start) => startSymbol = (NonTerminal<T>)start;
+        public void SetStartSymbol(INonTerminal<T> start) => startSymbol = start as NonTerminal<T>;
 
         public void AugmentGrammar()
         {
@@ -154,27 +145,21 @@ namespace Piglet.Parser.Configuration
 			// TODO: Does the terminals.AddLast ever get called? This looks like dead code to me, apart from the sanity
 			// TODO: check for redefinition. Which even that gets done someplace else.
             foreach (NonTerminal<T> nonTerminal in nonTerminals)
-            {
                 foreach (Terminal<T> terminal in nonTerminal.ProductionRules.SelectMany(f => f.Symbols).OfType<Terminal<T>>())
                 {
                     Terminal<T> oldTerminal = terminals.SingleOrDefault(f => f.RegExp == terminal.RegExp);
+
                     if (oldTerminal != null)
                     {
                         if (oldTerminal.OnParse != terminal.OnParse)
-                        {
-                            throw new ParserConfigurationException(
-                                "Multiply defined terminal has more than one OnParse action");
-                        }
+                            throw new ParserConfigurationException("Multiply defined terminal has more than one OnParse action");
                     }
                     else
-                    {
                         terminals.AddLast(terminal);
-                    }
                 }
-            }
 
             // Add the end of input symbol
-            EndOfInputTerminal = (Terminal<T>) CreateTerminal(null, s => default(T));
+            EndOfInputTerminal = (Terminal<T>) CreateTerminal(null, _ => default);
             EndOfInputTerminal.DebugName = "%EOF%";
 
             // Move the error symbol to the end of the list
@@ -189,59 +174,41 @@ namespace Piglet.Parser.Configuration
             // This class is now a valid implementation of IGrammar, ready to use.
         }
 
-        public ILexer<T> CreateLexer() =>
-            // User wants a default lexer, great. Use the lexer from grammar factory
-            // to fix him up
-            LexerFactory<T>.ConfigureFromGrammar(this, LexerSettings);
+        // User wants a default lexer, great. Use the lexer from grammar factory to fix him up
+        public ILexer<T> CreateLexer() => LexerFactory<T>.ConfigureFromGrammar(this, LexerSettings);
 
         public IParser<T> CreateParser()
         {
+            // User has forgotten to augment the grammar. Lets help him out and do it for him
             if (Start == null)
-            {
-                // User has forgotten to augment the grammar. Lets help him out and do it
-                // for him
                 AugmentGrammar();
-            }
 
             IParser<T> parser = new ParserBuilder<T>(this).CreateParser();
 
-            // If our lexer settings says that we are supposed to create a lexer, do so now and assign
-            // the lexer to the created parser.
+            // If our lexer settings says that we are supposed to create a lexer, do so now and assign the lexer to the created parser.
             if (LexerSettings.CreateLexer)
-            {
                 parser.Lexer = CreateLexer();
-            }
 
             return parser;
         }
 
         public IProductionRule<T> Start { get; private set; }
 
-        public IEnumerable<IProductionRule<T>> ProductionRules
-        {
-            get { return nonTerminals.SelectMany(nonTerminal => nonTerminal.ProductionRules); }
-        }
+        public IEnumerable<IProductionRule<T>> ProductionRules => nonTerminals.SelectMany(nonTerminal => nonTerminal.ProductionRules);
 
         public IEnumerable<ISymbol<T>> AllSymbols
         {
             get
             {
                 foreach (Terminal<T> terminal in terminals)
-                {
                     yield return terminal;
-                }
 
                 foreach (NonTerminal<T> nonTerminal in nonTerminals)
-                {
                     yield return nonTerminal;
-                }
             }
         }
 
-        public NonTerminal<T> AcceptSymbol
-        {
-            get { return (NonTerminal<T>)Start.ResultSymbol; }
-        }
+        public NonTerminal<T> AcceptSymbol => (NonTerminal<T>)Start.ResultSymbol;
 
         public Terminal<T> EndOfInputTerminal { get; set; }
 
@@ -250,10 +217,9 @@ namespace Piglet.Parser.Configuration
         private void AssignTokenNumbers()
         {
             int t = 0;
+
             foreach (ISymbol<T> symbol in AllSymbols)
-            {
                 ((Symbol<T>)symbol).TokenNumber = t++;
-            }
         }
     }
 }

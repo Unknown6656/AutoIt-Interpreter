@@ -8,7 +8,7 @@ namespace Piglet.Lexer.Construction
     {
         private IList<CharRange> ranges = new List<CharRange>();
 
-        public IEnumerable<CharRange> Ranges { get { return ranges; } }
+        public IEnumerable<CharRange> Ranges => ranges;
 
         public CharSet()
         {

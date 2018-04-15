@@ -64,6 +64,7 @@ type OPERATOR_BINARY =
     | BinaryLogic of OPERATOR_BINARY_LOGIC
     | StringConcat
 type OPERATOR_UNARY =
+    | Identity
     | Negate
     | Not
 

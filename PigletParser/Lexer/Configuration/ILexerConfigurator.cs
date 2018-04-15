@@ -41,5 +41,7 @@ namespace Piglet.Lexer.Configuration
         /// Gets and sets the lexer runtime, which is the method that the resulting lexer will be constructed with.
         /// </summary>
         LexerRuntime Runtime { get; set; }
+
+        bool IgnoreCase { get; set; }
     }
 }

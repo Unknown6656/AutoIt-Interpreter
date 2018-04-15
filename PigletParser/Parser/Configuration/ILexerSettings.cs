@@ -27,5 +27,7 @@ namespace Piglet.Parser.Configuration
         /// explanation of the valid values.
         /// </summary>
         LexerRuntime Runtime { get; set; }
+
+        bool IgnoreCase { get; set; }
     }
 }

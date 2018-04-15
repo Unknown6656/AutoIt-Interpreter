@@ -14,7 +14,7 @@ let private a d x = assoc conf d x |> ignore
 let private nt_assignment_expression        = nt<ASSIGNMENT_EXPRESSION>()
 let private nt_operator_binary_ass          = nt<OPERATOR_BINARY_ASSIGNMENT>()
 
-let private t_operator_assign_add           = t @"+="
+let private t_operator_assign_add           = t @"\+="
 let private t_operator_assign_sub           = t @"-="
 let private t_operator_assign_mul           = t @"\*="
 let private t_operator_assign_div           = t @"/="

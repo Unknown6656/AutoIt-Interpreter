@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text;
-using System;
-
-using AutoItExpressionParser;
+﻿using AutoItExpressionParser;
 
 namespace AutoItInterpreter.PartialAST
 {

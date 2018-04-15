@@ -12,6 +12,13 @@ namespace Piglet.Lexer.Configuration
         private readonly List<Tuple<string, Func<string, T>>> tokens;
         private readonly List<string> ignore;
 
+
+        public int EndOfInputTokenNumber { get; set; }
+        public LexerRuntime Runtime { get; set; }
+        public bool MinimizeDfa { get; set; }
+        public bool IgnoreCase { get; set; }
+
+
         public LexerConfigurator()
         {
             tokens = new List<Tuple<string, Func<string, T>>>();
@@ -24,20 +31,17 @@ namespace Piglet.Lexer.Configuration
         public ILexer<T> CreateLexer()
         {
             // For each token, create a NFA
-            IList<NFA> nfas = tokens.Select(token => NfaBuilder.Create(new ShuntingYard(new RegExLexer( new StringReader(token.Item1))))).ToList();
+            IList<NFA> nfas = tokens.Select(token => NfaBuilder.Create(new ShuntingYard(new RegExLexer( new StringReader(token.Item1))), IgnoreCase)).ToList();
+
             foreach (string ignoreExpr in ignore)
-            {
-                nfas.Add(NfaBuilder.Create(new ShuntingYard(new RegExLexer(new StringReader(ignoreExpr)))));
-            }
+                nfas.Add(NfaBuilder.Create(new ShuntingYard(new RegExLexer(new StringReader(ignoreExpr))), IgnoreCase));
 
             // Create a merged NFA
             NFA mergedNfa = NFA.Merge(nfas);
 
             // If we desire a NFA based lexer, stop now
             if (Runtime == LexerRuntime.Nfa)
-            {
                 return new NfaLexer<T>(mergedNfa, nfas, tokens, EndOfInputTokenNumber);
-            }
 
             // Convert the NFA to a DFA
             DFA dfa = DFA.Create(mergedNfa);
@@ -64,9 +68,5 @@ namespace Piglet.Lexer.Configuration
         public void Token(string regEx, Func<string, T> action) => tokens.Add(new Tuple<string, Func<string, T>>(regEx, action));
 
         public void Ignore(string regEx) => ignore.Add(regEx);
-
-        public int EndOfInputTokenNumber { get; set; }
-        public bool MinimizeDfa { get; set; }
-        public LexerRuntime Runtime { get; set; }
     }
 }

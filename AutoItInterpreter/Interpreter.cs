@@ -101,6 +101,7 @@ namespace AutoItInterpreter
     using static ExpressionAST;
     using static ControlBlock;
 
+
     public delegate void ErrorReporter(string name, params object[] args);
 
     public sealed class Interpreter
@@ -794,8 +795,6 @@ namespace AutoItInterpreter
                                                                                                         select (kvp.Key, kvp.Value)))
             {
                 var result = process(func);
-
-
             }
 
             dynamic process(Entity e)

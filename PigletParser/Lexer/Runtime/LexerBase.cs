@@ -27,9 +27,9 @@ namespace Piglet.Lexer.Runtime
                 this.source = source;
             }
 
-            public int CurrentLineNumber { get { return lineNumber; } }
-            public string CurrentLine { get { return currentLine.ToString(); } }
-            public string LastLexeme { get { return lexeme.ToString(); } }
+            public int CurrentLineNumber => lineNumber;
+            public string CurrentLine => currentLine.ToString();
+            public string LastLexeme => lexeme.ToString();
 
             public Tuple<int, T> Next()
             {

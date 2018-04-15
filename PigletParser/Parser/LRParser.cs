@@ -22,7 +22,7 @@ namespace Piglet.Parser
             this.terminalDebugNames = terminalDebugNames;
         }
 
-        public IParseTable<T> ParseTable { get { return parseTable; } }
+        public IParseTable<T> ParseTable => parseTable;
 
         public ILexer<T> Lexer { get; set; }
 

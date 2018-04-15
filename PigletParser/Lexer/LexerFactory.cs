@@ -1,8 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System;
+
 using Piglet.Lexer.Configuration;
 using Piglet.Parser.Configuration;
 using Piglet.Parser.Construction;
-using System.Linq;
 
 namespace Piglet.Lexer
 {
@@ -21,7 +23,9 @@ namespace Piglet.Lexer
         public static ILexer<T> Configure(Action<ILexerConfigurator<T>> configureAction)
         {
             LexerConfigurator<T> lexerConfigurator = new LexerConfigurator<T>();
+
             configureAction(lexerConfigurator);
+
             return lexerConfigurator.CreateLexer();
         }
 
@@ -41,21 +45,18 @@ namespace Piglet.Lexer
             Configure(c =>
             {
                 c.Runtime = lexerSettings.Runtime;
+                c.IgnoreCase = lexerSettings.IgnoreCase;
 
-                System.Collections.Generic.List<ITerminal<T>> terminals = grammar.AllSymbols.OfType<ITerminal<T>>().ToList();
+                List<ITerminal<T>> terminals = grammar.AllSymbols.OfType<ITerminal<T>>().ToList();
+
                 foreach (ITerminal<T> terminal in terminals)
-                {
                     if (terminal.RegExp != null)
-                    {
                         c.Token(terminal.RegExp, terminal.OnParse);
-                    }
-                }
+
                 c.EndOfInputTokenNumber = terminals.FindIndex(f => f == grammar.EndOfInputTerminal);
 
                 foreach (string ignored in lexerSettings.Ignore)
-                {
                     c.Ignore(ignored);
-                }
             });
     }
 }
