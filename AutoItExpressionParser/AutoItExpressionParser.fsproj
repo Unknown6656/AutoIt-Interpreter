@@ -11,8 +11,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Util.fs" />
-    <Compile Include="AST.fs" />
-    <Compile Include="Parser.fs" />
+    <Compile Include="ExpressionAST.fs" />
+    <Compile Include="ExpressionParser.fs" />
+    <Compile Include="AssignmentExpressionParser.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PigletParser\PigletParser.csproj" />

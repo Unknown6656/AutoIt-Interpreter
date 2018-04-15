@@ -4,7 +4,8 @@ using System.Linq;
 using System.IO;
 using System;
 
-using CSAutoItInterpreter.Preprocessed;
+using AutoItInterpreter.Preprocessed;
+using AutoItInterpreter.PartialAST;
 
 /* ====================== GLOBAL VARIABLE TRANSFORMATION =======================
 
@@ -94,7 +95,7 @@ using CSAutoItInterpreter.Preprocessed;
         '--
  */
 
-namespace CSAutoItInterpreter
+namespace AutoItInterpreter
 {
     using static ControlBlock;
 
@@ -135,6 +136,8 @@ namespace CSAutoItInterpreter
         {
             InterpreterState state = InterpretScript(RootContext, Settings, Language);
 
+            ParseExpressionAST(state);
+
 
 
 
@@ -167,8 +170,6 @@ namespace CSAutoItInterpreter
 
             Console.WriteLine(new string('=', 200));
         }
-
-
 
         private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang)
         {
@@ -780,6 +781,31 @@ namespace CSAutoItInterpreter
             );
 
             return inclpath;
+        }
+
+        private static void ParseExpressionAST(InterpreterState state)
+        {
+            const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
+
+            foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
+                                                                                                        where kvp.Key != globnm
+                                                                                                        select (kvp.Key, kvp.Value)))
+            {
+                var result = process(func);
+
+
+            }
+
+            object process(Entity e)
+            {
+                switch (e)
+                {
+                    case IF i:
+                        break;
+                }
+
+                return null;
+            }
         }
     }
 

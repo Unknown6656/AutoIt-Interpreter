@@ -6,7 +6,7 @@ using System.IO;
 
 using Newtonsoft.Json;
 
-namespace CSAutoItInterpreter
+namespace AutoItInterpreter
 {
     public sealed class Language
     {

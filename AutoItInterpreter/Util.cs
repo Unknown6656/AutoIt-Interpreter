@@ -5,7 +5,7 @@ using System;
 
 using Newtonsoft.Json.Linq;
 
-namespace CSAutoItInterpreter
+namespace AutoItInterpreter
 {
     internal static class Util
     {

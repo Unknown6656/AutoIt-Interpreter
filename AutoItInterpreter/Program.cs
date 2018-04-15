@@ -6,7 +6,7 @@ using System;
 
 using Newtonsoft.Json;
 
-namespace CSAutoItInterpreter
+namespace AutoItInterpreter
 {
     public static class Program
     {

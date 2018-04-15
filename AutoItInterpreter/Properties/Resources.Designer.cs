@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CSAutoItInterpreter.Properties {
+namespace AutoItInterpreter.Properties {
     using System;
     
     

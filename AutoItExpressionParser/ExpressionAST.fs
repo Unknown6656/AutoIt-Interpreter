@@ -1,4 +1,4 @@
-﻿module AutoItExpressionParser.AST
+﻿module AutoItExpressionParser.ExpressionAST
 
 open AutoItExpressionParser.Util
 
@@ -22,22 +22,31 @@ type MACRO (name : string) =
         | As (m : MACRO) -> m.GetHashCode() = x.GetHashCode()
         | _ -> false
 
+type LITERAL =
+    | Null
+    | Default
+    | True
+    | False
+    | Number of decimal
+    | String of string
 type OPERATOR_BINARY_COMPARISON =
     | EqualCaseSensitive
     | EqualCaseInsensitive
     | Unequal
     | Greater
-    | GraterEqual
+    | GreaterEqual
     | Lower
     | LowerEqual
 type OPERATOR_BINARY_LOGIC =
     | And
+    | Xor
     | Or
 type OPERATOR_BINARY_NUMERIC =
     | Add
     | Subtract
     | Multiply
     | Divide
+    | Modulus
     | Power
 type OPERATOR_BINARY_ASSIGNMENT =
     | Assign
@@ -45,7 +54,9 @@ type OPERATOR_BINARY_ASSIGNMENT =
     | AssignSubtract
     | AssignMultiply
     | AssignDivide
+    | AssignModulus
     | AssignConcat
+    | AssignPower
 type OPERATOR_BINARY =
     | BinaryAssignment of OPERATOR_BINARY_ASSIGNMENT
     | BinaryComparison of OPERATOR_BINARY_COMPARISON
@@ -55,12 +66,18 @@ type OPERATOR_BINARY =
 type OPERATOR_UNARY =
     | Negate
     | Not
-type OPERATOR_TERNARY =
-    | Conditional
-type EXPRESSION =
-    | FunctionCall of string * EXPRESSION list
+
+type FUNCCALL = string * EXPRESSION list
+and EXPRESSION =
+    | Literal of LITERAL
+    | FunctionCall of FUNCCALL
     | Variable of VARIABLE
     | Macro of MACRO
+    | ArrayIndex of VARIABLE * EXPRESSION
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
-    | TernaryExpression of OPERATOR_TERNARY * EXPRESSION * EXPRESSION * EXPRESSION
+    | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
+    // TODO : dot-access of member elements
+type ASSIGNMENT_EXPRESSION =
+    | Assignment of OPERATOR_BINARY_ASSIGNMENT * VARIABLE * EXPRESSION
+    | ArrayAssignment of OPERATOR_BINARY_ASSIGNMENT * VARIABLE * EXPRESSION * EXPRESSION // op, var, index, expr
