@@ -150,10 +150,7 @@ type NonTerminalWrapper<'T> (nonTerminal : INonTerminal<obj>) =
         |> ProductionWrapper<'a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'T>
 
 [<AbstractClass>]
-type AbstractParser<'a>() as this =
-    do
-        this.BuildParser()
-        this.Parser <- (this.Configuration : IParserConfigurator<obj>).CreateParser()
+type AbstractParser<'a>() =
     member x.Configuration = ParserFactory.Configure<obj>()
     member internal x.t = x.Configuration.CreateTerminal >> TerminalWrapper<string>
     member internal x.tf<'T> regex (onParse : (string -> 'T)) = TerminalWrapper<'T>(x.Configuration.CreateTerminal(regex, (fun s -> box (onParse s))))
@@ -167,7 +164,13 @@ type AbstractParser<'a>() as this =
         |> ignore
     abstract BuildParser : unit -> unit
     member val private Parser : IParser<obj> = null with get, set
-    member x.Parse (s : string) = x.Parser.Parse(s.Replace('\t', ' ')) :?> 'a
+    member x.Initialize() =
+        x.BuildParser()
+        x.Parser <- (x.Configuration : IParserConfigurator<obj>).CreateParser()
+    member x.Parse (s : string) =
+        if x.Parser = null then
+            x.Initialize()
+        x.Parser.Parse(s.Replace('\t', ' ')) :?> 'a
     
 [<AutoOpen>]
 module ProductionUtil =

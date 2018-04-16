@@ -4,7 +4,7 @@ open AutoItExpressionParser.ExpressionAST
 
 
 type AssignmentExpressionParser() =
-    inherit AbstractParser<EXPRESSION>()
+    inherit AbstractParser<ASSIGNMENT_EXPRESSION>()
     override x.BuildParser() =
         let expr_p = ExpressionParser()
 

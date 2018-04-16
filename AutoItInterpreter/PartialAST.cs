@@ -77,14 +77,14 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_SWITCH_CASE_SINGLEVALUE
         : AST_SWITCH_CASE
     {
-        public decimal Value { set; get; }
+        public EXPRESSION Value { set; get; }
     }
 
     public sealed class AST_SWITCH_CASE_RANGE
         : AST_SWITCH_CASE
     {
-        public decimal From { set; get; }
-        public decimal To { set; get; }
+        public EXPRESSION Infimum { set; get; }
+        public EXPRESSION Supremum { set; get; }
     }
 
     public sealed class AST_SWITCH_CASE_ELSE

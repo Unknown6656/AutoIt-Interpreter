@@ -1,8 +1,8 @@
 # **THIS PROJECT IS FAR FROM FINISHED !!**
 
+The following image describes more or less the current state :wink:
 
-
-
+![Exception Screenshot](wtf.png)
 
 
 

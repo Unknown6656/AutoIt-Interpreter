@@ -789,6 +789,7 @@ namespace AutoItInterpreter
         private static void ParseExpressionAST(InterpreterState state)
         {
             const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
+            CaseExpressionParser cexparser = new CaseExpressionParser();
             ExpressionParser exparser = new ExpressionParser();
 
             foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
@@ -850,7 +851,7 @@ namespace AutoItInterpreter
                         case SWITCH i:
                             return new AST_SWITCH_STATEMENT
                             {
-                                Cases = i.Cases.Select(x => process(x) as AST_SWITCH_CASE).ToArray(),
+                                Cases = i.Cases.SelectMany(x => process(x) as AST_SWITCH_CASE[]).ToArray(),
                                 Expression = parseexpr(i.Expression)
                             };
                         case SELECT_CASE i:
@@ -858,30 +859,34 @@ namespace AutoItInterpreter
                             {
                                 Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition),
                                 Statements = proclines(),
-                                Context = e.DefinitionContext
+                                Context = i.DefinitionContext
                             };
                         case SWITCH_CASE i:
                             {
+                                List<AST_SWITCH_CASE> cases = new List<AST_SWITCH_CASE>();
                                 string expr = i.RawCondition;
 
                                 if (expr.ToLower() == "else")
-                                    return new AST_SWITCH_CASE_ELSE();
+                                    return new[] { new AST_SWITCH_CASE_ELSE() };
 
-                                while (expr.Match(@"^(?<expr>.+\s+to\s+.+)\s*\,\s*(?<following>.+)$", out Match m))
-                                {
-                                    m.Get("expr");
+                                foreach (CASE_EXPRESSION @case in cexparser.Parse("case " + expr))
+                                    if (@case is CASE_EXPRESSION.SingleValue sv)
+                                        cases.Add(new AST_SWITCH_CASE_SINGLEVALUE
+                                        {
+                                            Value = sv.Item,
+                                            Statements = proclines(),
+                                            Context = i.DefinitionContext
+                                        });
+                                    else if (@case is CASE_EXPRESSION.ValueRange vr)
+                                        cases.Add(new AST_SWITCH_CASE_RANGE
+                                        {
+                                            Infimum = vr.Item1,
+                                            Supremum = vr.Item2,
+                                            Statements = proclines(),
+                                            Context = i.DefinitionContext
+                                        });
 
-                                    expr = m.Get("following");
-                                }
-
-                                
-
-
-
-                                return new AST_SWITCH_CASE
-                                {
-
-                                };
+                                return cases.ToArray();
                             }
                         case RETURN i:
                             return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT

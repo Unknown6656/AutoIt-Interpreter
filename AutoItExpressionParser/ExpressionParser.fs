@@ -8,6 +8,7 @@ open System.Globalization
 type long = System.Int64
 type decimal = System.Decimal
 
+
 type ExpressionParser() =
     inherit AbstractParser<EXPRESSION>()
     override x.BuildParser() =
@@ -39,7 +40,6 @@ type ExpressionParser() =
         let t_symbol_cparen         = x.t @"\)"
         let t_symbol_obrack         = x.t @"\["
         let t_symbol_cbrack         = x.t @"\]"
-        let t_keyword_to            = x.t @"to"
         let t_keyword_and           = x.tf @"and"                                                  (fun _ -> And)
         let t_keyword_xor           = x.tf @"xor"                                                  (fun _ -> Xor)
         let t_keyword_or            = x.tf @"or"                                                   (fun _ -> Or)
@@ -105,7 +105,6 @@ type ExpressionParser() =
         reduce1 !@7 t_macro Macro
         reduce3 !@7 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
         reduce4 !@7 t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
-        reduce3 !@7 nt_expression t_keyword_to nt_expression (fun a _ b -> ToExpression(a, b))
         //reduce5 !@7 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
@@ -125,4 +124,3 @@ type ExpressionParser() =
         reduce0 nt_literal t_bin
 
         x.Configuration.LexerSettings.Ignore <- [| @"\s+" |]
-
