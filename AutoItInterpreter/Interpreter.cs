@@ -151,16 +151,16 @@ namespace AutoItInterpreter
 
             Console.WriteLine(new string('=', 200));
 
-            foreach (var fn in state.Functions.Keys)
+            foreach (var fn in state.ASTFunctions.Keys)
             {
-                var func = state.Functions[fn];
+                var func = state.ASTFunctions[fn];
 
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
 
-                foreach (var l in func.RawLines)
+                foreach (var l in func.Statements)
                 {
                     Console.CursorLeft = 10;
-                    Console.Write(l.DefinitionContext);
+                    Console.Write(l.Context);
                     Console.CursorLeft = 40;
                     Console.WriteLine(l);
                 }
@@ -789,24 +789,23 @@ namespace AutoItInterpreter
         private static void ParseExpressionAST(InterpreterState state)
         {
             const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
+            ExpressionParser exparser = new ExpressionParser();
 
             foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
                                                                                                         where kvp.Key != globnm
                                                                                                         select (kvp.Key, kvp.Value)))
-            {
-                var result = process(func);
-            }
+                state.ASTFunctions[name] = process(func);
 
             dynamic process(Entity e)
             {
                 void err(string path, params object[] args) => state.ReportError(state.Language[path, args], e.DefinitionContext);
                 AST_STATEMENT[] proclines() => e.RawLines.Select(x => process(x) as AST_STATEMENT).ToArray();
-                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK { Condition = parseexpr((e as ConditionalEntity).RawCondition), Statements = proclines() };
+                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK { Condition = parseexpr((e as ConditionalEntity).RawCondition), Statements = proclines(), Context = e.DefinitionContext };
                 EXPRESSION parseexpr(string expr)
                 {
                     try
                     {
-                        return ExpressionParser.Parse(expr);
+                        return exparser.Parse(expr);
                     }
                     catch (Exception ex)
                     {
@@ -815,49 +814,112 @@ namespace AutoItInterpreter
                         return null;
                     }
                 }
-
-                switch (e)
+                dynamic __inner()
                 {
-                    case FUNCTION i:
-                        return new AST_FUNCTION
-                        {
-                            Statements = proclines(),
-                            // TODO : parse params etc.
-                        };
-                    case IF i:
-                        return new AST_IF_STATEMENT
-                        {
-                            If = process(i.If),
-                            ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
-                            OptionalElse = i.Else is ELSE_BLOCK eb ? process(eb) : null
-                        };
-                    case IF_BLOCK _:
-                    case ELSEIF_BLOCK _:
-                        return proccond();
-                    case ELSE_BLOCK i:
-                        return proclines();
-                    case WHILE i:
-                        return (AST_WHILE_STATEMENT)proccond();
-                    case DO_UNTIL i:
-                        return (AST_DO_STATEMENT)proccond();
-                    case SELECT i: break;
-                    case SWITCH i: break;
-                    case RAWLINE i: break;
-                    case RETURN i: break;
-                    case CONTINUECASE i: break;
-                    case CONTINUE i: break;
-                    case BREAK i: break;
-                    case WITH i: break;
-                    case FOR i: break;
-                    case FOREACH i: break;
-                    case DECLARATION i: break;
-                    default:
-                        err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
+                    switch (e)
+                    {
+                        case FUNCTION i:
+                            return new AST_FUNCTION
+                            {
+                                Statements = proclines(),
+                                Context = i.DefinitionContext,
+                                // TODO : parse params etc.
+                            };
+                        case IF i:
+                            return new AST_IF_STATEMENT
+                            {
+                                If = process(i.If),
+                                ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
+                                OptionalElse = i.Else is ELSE_BLOCK eb ? process(eb) : null,
+                                Context = e.DefinitionContext,
+                            };
+                        case IF_BLOCK _:
+                        case ELSEIF_BLOCK _:
+                            return proccond();
+                        case ELSE_BLOCK i:
+                            return proclines();
+                        case WHILE i:
+                            return (AST_WHILE_STATEMENT)proccond();
+                        case DO_UNTIL i:
+                            return (AST_DO_STATEMENT)proccond();
+                        case SELECT i:
+                            return new AST_SELECT_STATEMENT
+                            {
+                                Cases = i.Cases.Select(x => process(x) as AST_SELECT_CASE).ToArray(),
+                            };
+                        case SWITCH i:
+                            return new AST_SWITCH_STATEMENT
+                            {
+                                Cases = i.Cases.Select(x => process(x) as AST_SWITCH_CASE).ToArray(),
+                                Expression = parseexpr(i.Expression)
+                            };
+                        case SELECT_CASE i:
+                            return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
+                            {
+                                Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition),
+                                Statements = proclines(),
+                                Context = e.DefinitionContext
+                            };
+                        case SWITCH_CASE i:
+                            {
+                                string expr = i.RawCondition;
 
-                        return null;
+                                if (expr.ToLower() == "else")
+                                    return new AST_SWITCH_CASE_ELSE();
+
+                                while (expr.Match(@"^(?<expr>.+\s+to\s+.+)\s*\,\s*(?<following>.+)$", out Match m))
+                                {
+                                    m.Get("expr");
+
+                                    expr = m.Get("following");
+                                }
+
+                                
+
+
+
+                                return new AST_SWITCH_CASE
+                                {
+
+                                };
+                            }
+                        case RETURN i:
+                            return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT
+                            {
+                                Expression = parseexpr(i.Expression)
+                            };
+                        case CONTINUECASE i:
+                            return new AST_CONTINUECASE_STATEMENT();
+                        case CONTINUE i:
+                            return new AST_CONTINUE_STATEMENT
+                            {
+                                Level = (uint)i.Level
+                            };
+                        case BREAK i:
+                            return new AST_BREAK_STATEMENT
+                            {
+                                Level = (uint)i.Level
+                            };
+                        case WITH i: break;
+                        case FOR i: break;
+                        case FOREACH i: break;
+                        case RAWLINE i: break;
+                        case DECLARATION i: break;
+                        default:
+                            err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
+
+                            return null;
+                    }
+
+                    return null;
                 }
 
-                return null;
+                dynamic res = __inner();
+
+                if (res is AST_STATEMENT s)
+                    s.Context = e.DefinitionContext;
+
+                return res;
             }
         }
     }
@@ -890,12 +952,14 @@ namespace AutoItInterpreter
         : AbstractParserState
     {
         public Dictionary<string, FUNCTION> Functions { get; }
+        public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
         public List<string> StartFunctions { get; }
 
 
         public InterpreterState()
         {
             Functions = new Dictionary<string, FUNCTION>();
+            ASTFunctions = new Dictionary<string, AST_FUNCTION>();
             StartFunctions = new List<string>();
         }
 

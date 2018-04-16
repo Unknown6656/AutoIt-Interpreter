@@ -71,6 +71,7 @@ and EXPRESSION =
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
+    | ToExpression of EXPRESSION * EXPRESSION
     // TODO : dot-access of member elements
 type ASSIGNMENT_EXPRESSION =
     | Assignment of OPERATOR_BINARY_ASSIGNMENT * VARIABLE * EXPRESSION

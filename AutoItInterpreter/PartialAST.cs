@@ -5,13 +5,15 @@ namespace AutoItInterpreter.PartialAST
     using static ExpressionAST;
 
 
-    public sealed class AST_FUNCTION
-    {
-        public AST_STATEMENT[] Statements { set; get; }
-    }
-
     public abstract class AST_STATEMENT
     {
+        public DefinitionContext Context { set; get; }
+    }
+
+    public sealed class AST_FUNCTION
+        : AST_STATEMENT
+    {
+        public AST_STATEMENT[] Statements { set; get; }
     }
 
     public sealed class AST_ASSIGNMENT_STATEMNT
@@ -32,6 +34,7 @@ namespace AutoItInterpreter.PartialAST
     {
         public EXPRESSION Condition { set; get; }
         public AST_STATEMENT[] Statements { set; get; }
+        public DefinitionContext Context { set; get; }
     }
 
     public sealed class AST_WHILE_STATEMENT
@@ -52,7 +55,85 @@ namespace AutoItInterpreter.PartialAST
         public static implicit operator AST_DO_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_DO_STATEMENT { DoBlock = b };
     }
 
+    public sealed class AST_SELECT_STATEMENT
+        : AST_STATEMENT
+    {
+        public AST_SELECT_CASE[] Cases { set; get; }
+    }
 
+    public sealed class AST_SWITCH_STATEMENT
+        : AST_STATEMENT
+    {
+        public AST_SWITCH_CASE[] Cases { set; get; }
+        public EXPRESSION Expression { get; set; }
+    }
+
+    public abstract class AST_SWITCH_CASE
+        : AST_STATEMENT
+    {
+        public AST_STATEMENT[] Statements { set; get; }
+    }
+
+    public sealed class AST_SWITCH_CASE_SINGLEVALUE
+        : AST_SWITCH_CASE
+    {
+        public decimal Value { set; get; }
+    }
+
+    public sealed class AST_SWITCH_CASE_RANGE
+        : AST_SWITCH_CASE
+    {
+        public decimal From { set; get; }
+        public decimal To { set; get; }
+    }
+
+    public sealed class AST_SWITCH_CASE_ELSE
+        : AST_SWITCH_CASE
+    {
+    }
+
+    public sealed class AST_SELECT_CASE
+        : AST_STATEMENT
+    {
+        public AST_CONDITIONAL_BLOCK CaseBlock { set; get; }
+
+
+        public static implicit operator AST_SELECT_CASE(AST_CONDITIONAL_BLOCK b) => new AST_SELECT_CASE { CaseBlock = b };
+    }
+
+    public sealed class AST_EXPRESSION_STATEMENT
+        : AST_STATEMENT
+    {
+
+    }
+
+    public sealed class AST_CONTINUECASE_STATEMENT
+        : AST_STATEMENT
+    {
+    }
+
+    public class AST_RETURN_STATEMENT
+        : AST_STATEMENT
+    {
+    }
+
+    public sealed class AST_RETURN_VALUE_STATEMENT
+        : AST_RETURN_STATEMENT
+    {
+        public EXPRESSION Expression { set; get; }
+    }
+
+    public class AST_BREAK_STATEMENT
+        : AST_STATEMENT
+    {
+        public uint Level { set; get; }
+    }
+
+    public class AST_CONTINUE_STATEMENT
+        : AST_STATEMENT
+    {
+        public uint Level { set; get; }
+    }
 
     // TODO
 }
