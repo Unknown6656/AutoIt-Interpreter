@@ -66,6 +66,9 @@
     <None Update="test\header-1.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="test\NPCBrainibot.au3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="test\program2.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

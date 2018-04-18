@@ -24,6 +24,7 @@
             "block_invalid_close": "No existent {0}-block can be closed. Please create one in order to close it or remove the closing statement.",
             "block_conflicting_close": "The currently open {0}-block cannot be closed with an '{1}'-statement.",
             "blocks_unclosed": "There are open control blocks which must be closed before using 'EndFunc'. Please use (in order) the instructions '{0}' to close the open blocks.",
+            "missing_then":  "An 'If'- or 'Elseif'-expression must be followed by the keyword 'Then'.",
             "misplaced_elseif": "A 'ElseIf'-block can only be used after a previous 'If'-block in the same scope.",
             "misplaced_else": "A 'Else'-block can only be used after a previous 'If'- or 'ElseIf'-block in the same scope.",
             "misplaced_case": "A 'Case'-statement can only be used directly inside a 'Switch'- or 'Select'-block.",

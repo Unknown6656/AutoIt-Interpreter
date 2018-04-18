@@ -2,7 +2,7 @@
   "profiles": {
     "CSAutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-i=test/program1.au3"
+      "commandLineArgs": "-i=test/program2.au3"
     }
   }
 }

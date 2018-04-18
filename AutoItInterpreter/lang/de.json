@@ -24,6 +24,7 @@
             "block_invalid_close": "Es konnte kein offner {0}-Block geschlossen werden. Erstellen Sie einen solchen Block, um diesen zu schließen oder entfernen Sie die Anweisung.",
             "block_conflicting_close": "Der offene {0}-Block kann nicht mit einer '{1}'-Anweisung geschlossen werden.",
             "blocks_unclosed": "Es existieren noch offene Blöcke, welche vor der Verwendung von 'EndFunc' geschlossen werden müssen. Bitte verwenden Sie (in der entsprechenden Reihenfolge) die Anweisungen '{0}', um die offenen Blöcke zu schließen.",
+            "missing_then": "Ein 'If'- oder 'Elseif'-Ausdruck muss von einem 'Then'-Schlüsselwort nach der Bedingung gefolgt werden.",
             "misplaced_elseif": "Ein 'ElseIf'-Block kann nur nach einem direkt voranschreitenden 'If'-Block in der selben Sichtbarkeitsebene verwendet werden.",
             "misplaced_else": "Ein 'Else'-Block kann nur nach einem direkt voranschreitenden 'If'- oder 'ElseIf'-Block in der selben Sichtbarkeitsebene verwendet werden.",
             "misplaced_case": "Eine 'Case'-Anweisung kann nur direkt innerhalb eines 'Switch'- der 'Select'-Blockes verwendet werden.",

@@ -219,7 +219,7 @@ namespace AutoItInterpreter
                         err("errors.preproc.include_nfound", path);
                     }
                 }
-                else if (!ProcessFunctionDeclaration(Line, defcntx, pstate, err))
+                else if (ProcessFunctionDeclaration(Line, defcntx, pstate, err))
                     (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
                 ++locindx;
@@ -329,29 +329,17 @@ namespace AutoItInterpreter
 
             FUNCTION PreProcessFunction(FunctionScope func, string name, bool global)
             {
-                Stack<ControlBlock> blocks = new Stack<ControlBlock>(new[] { __NONE__ });
+                Stack<(Entity Entity, ControlBlock CB)> eblocks = new Stack<(Entity, ControlBlock)>();
                 var lines = func.Lines.ToArray();
                 int locndx = 0;
 
                 Entity curr = new FUNCTION(name, global, func) { DefinitionContext = func.Context };
 
+                eblocks.Push((curr, __NONE__));
+
                 while (locndx < lines.Length)
                 {
                     DefinitionContext defctx = new DefinitionContext(func.Context.FilePath, lines[locndx].Context.StartLine, lines[locndx].Context.EndLine);
-                    //void Requires(Action f, params ControlBlock[] cbs)
-                    //{
-                    //    if (cbs.Contains(blocks.Peek()))
-                    //        f();
-                    //    else
-                    //        err("errors.preproc.block_reqr", true, string.Join("', '", cbs));
-                    //}
-                    void Conflicts(Action f, params ControlBlock[] cbs)
-                    {
-                        if (cbs.Contains(blocks.Peek()))
-                            err("errors.preproc.block_confl", true, string.Join("', '", cbs));
-                        else
-                            f();
-                    }
                     void err(string msg, bool fatal, params object[] args)
                     {
                         msg = (global ? $"[{name}]  " : "") + state.Language[msg, args];
@@ -361,23 +349,58 @@ namespace AutoItInterpreter
                         else
                             state.ReportWarning(msg, defctx);
                     }
-                    bool trycloseblock(ControlBlock ivb)
+                    void Conflicts(Action f, params ControlBlock[] cbs)
                     {
-                        ControlBlock top = blocks.Pop();
-
-                        if (ClosingInstruction[top] == ClosingInstruction[ivb])
-                            return true;
+                        if (cbs.Contains(eblocks.Peek().CB))
+                            err("errors.preproc.block_confl", true, string.Join("', '", cbs));
                         else
-                            blocks.Push(top);
+                            f();
+                    }
+                    void TryCloseBlock(ControlBlock ivb)
+                    {
+                        (Entity et, ControlBlock CB) = eblocks.Pop();
 
-                        if (top == __NONE__)
+                        if (CB == __NONE__)
+                        {
+                            eblocks.Push((et, CB));
+
+                            return;
+                        }
+                        else if ((ivb == IfElifElseBlock)
+                              || (CB == ivb)
+                              || ((CB == Case) && (ivb == Select || ivb == Switch))
+                              || (ClosingInstruction[CB] == ClosingInstruction[ivb]))
+                        {
+                            curr = eblocks.Peek().Entity;
+
+                            return;
+                        }
+                        else
+                            eblocks.Push((et, CB));
+
+                        if (CB == __NONE__)
                             err("errors.preproc.block_invalid_close", true, ivb);
                         else
-                            err("errors.preproc.block_conflicting_close", true, top, ClosingInstruction[ivb]);
-
-                        return false;
+                            err("errors.preproc.block_conflicting_close", true, CB, ClosingInstruction[ivb]);
                     }
-                    T AppendSet<T>(ControlBlock cb, T e) where T : Entity
+                    void ForceCloseBlock()
+                    {
+                        eblocks.Pop();
+
+                        curr = eblocks.Peek().Entity;
+                    }
+                    int AnyParentCount(params ControlBlock[] cb) => eblocks.Count(x => cb.Contains(x.CB));
+                    void Append(params Entity[] es)
+                    {
+                        foreach (Entity e in es)
+                        {
+                            e.DefinitionContext = defctx;
+                            e.Parent = curr;
+
+                            curr.Append(e);
+                        }
+                    }
+                    T OpenBlock<T>(ControlBlock cb, T e) where T : Entity
                     {
                         e.Parent = curr;
                         e.DefinitionContext = defctx;
@@ -385,7 +408,7 @@ namespace AutoItInterpreter
                         curr.Append(e);
                         curr = e;
 
-                        blocks.Push(cb);
+                        eblocks.Push((e, cb));
 
                         return e;
                     }
@@ -400,116 +423,102 @@ namespace AutoItInterpreter
 
                             if (m.Get("optelse").Length > 0)
                             {
-                                ControlBlock cb = blocks.Peek();
+                                ControlBlock cb = eblocks.Peek().CB;
 
                                 if (cb == If || cb == ElseIf)
                                 {
-                                    blocks.Pop();
-                                    blocks.Push(ElseIf);
+                                    ForceCloseBlock();
 
-                                    IF par = curr.Parent as IF;
-                                    ELSEIF_BLOCK b = new ELSEIF_BLOCK(par, cond) { DefinitionContext = defctx };
+                                    IF par = (IF)curr;
+                                    ELSEIF_BLOCK b = OpenBlock(ElseIf, new ELSEIF_BLOCK(par, cond));
 
                                     par.AddElseIf(b);
-                                    curr = b;
                                 }
                                 else
                                     err("errors.preproc.misplaced_elseif", true);
                             }
                             else
                             {
-                                blocks.Push(If);
+                                IF b = OpenBlock(IfElifElseBlock, new IF(curr));
+                                IF_BLOCK ib = OpenBlock(If, new IF_BLOCK(b, cond));
 
-                                IF b = new IF(curr) { DefinitionContext = defctx };
-                                b.SetIf(new IF_BLOCK(b, cond) { DefinitionContext = defctx });
-
-                                curr.Append(b);
-                                curr = b.If;
+                                b.SetIf(ib);
                             }
                         }),
+                        (@"^(else)?if\s+.+$", new[] { Switch, Select }, _ => err("errors.preproc.missing_then", true)),
                         ("^else$", new[] { Switch, Select }, _ =>
                         {
-                            ControlBlock cb = blocks.Peek();
+                            ControlBlock cb = eblocks.Peek().CB;
 
                             if (cb == If || cb == ElseIf)
                             {
-                                blocks.Pop();
-                                blocks.Push(Else);
+                                ForceCloseBlock();
 
-                                IF par = curr.Parent as IF;
-                                ELSE_BLOCK b = new ELSE_BLOCK(par) { DefinitionContext = defctx };
+                                IF par = (IF)curr;
+                                ELSE_BLOCK eb = OpenBlock(Else, new ELSE_BLOCK(par));
 
-                                par.SetElse(b);
-                                curr = b;
+                                par.SetElse(eb);
                             }
                             else
                                 err("errors.preproc.misplaced_else", true);
                         }),
                         ("^endif$", new[] { Switch, Select }, _ =>
                         {
-                            if (trycloseblock(If))
-                                curr = curr.Parent;
+                            TryCloseBlock(If);
+                            TryCloseBlock(IfElifElseBlock);
                         }),
-                        ("^select$", new[] { Switch, Select }, _ => AppendSet(Select, new SELECT(null))),
+                        ("^select$", new[] { Switch, Select }, _ => OpenBlock(Select, new SELECT(curr))),
                         ("^endselect$", new[] { Switch }, _ =>
                         {
-                            if (blocks.Peek() == Case)
-                                blocks.Pop();
+                            if (eblocks.Peek().CB == Case)
+                                TryCloseBlock(Case);
 
-                            if (trycloseblock(Select))
-                                curr = curr.Parent;
+                            TryCloseBlock(Select);
                         }),
-                        (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => AppendSet(Switch, new SWITCH(curr, m.Get("cond")))),
+                        (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(Switch, new SWITCH(curr, m.Get("cond")))),
                         ("^endswitch$", new[] { Select }, _ =>
                         {
-                            if (blocks.Peek() == Case)
-                                blocks.Pop();
+                            if (eblocks.Peek().CB == Case)
+                                TryCloseBlock(Case);
 
-                            if (trycloseblock(Switch))
-                                curr = curr.Parent;
+                            TryCloseBlock(Switch);
                         }),
                         (@"^case\s+(?<cond>.+)$", new ControlBlock[0], m =>
                         {
-                            ControlBlock cb = blocks.Peek();
+                            var b = eblocks.Peek();
                             string cond = m.Get("cond");
 
-                            if (cb == Case)
+                            if (b.CB == Case)
                             {
-                                blocks.Pop();
-                                cb = blocks.Peek();
+                                eblocks.Pop();
+                                b = eblocks.Peek();
                             }
 
-                            if (cb == Switch)
-                                AppendSet(Case, new SWITCH_CASE(null, cond));
-                            else if (cb == Select)
-                                AppendSet(Case, new SELECT_CASE(null, cond));
+                            if (b.CB == Switch)
+                                OpenBlock(Case, new SWITCH_CASE(null, cond));
+                            else if (b.CB == Select)
+                                OpenBlock(Case, new SELECT_CASE(null, cond));
                             else
                             {
                                 err("errors.preproc.misplaced_case", true);
 
                                 return;
                             }
-
-                            blocks.Push(Case);
                         }),
                         ("^continuecase$", new[] { Switch, Select }, _ =>
                         {
-                            if (!blocks.Contains(Case))
-                                err("errors.preproc.misplaced_continuecase", true);
+                            if (AnyParentCount(Switch, Select) > 1)
+                                Append(new CONTINUECASE(curr));
                             else
-                                curr.Append(new CONTINUECASE(curr) { DefinitionContext = defctx });
+                                err("errors.preproc.misplaced_continuecase", true);
                         }),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$", new[] { Switch, Select }, m => AppendSet(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => AppendSet(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
-                        ("^next$", new[] { Switch, Select }, _ =>
-                        {
-                            if (trycloseblock(For))
-                                curr = curr.Parent;
-                        }),
-                        (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => AppendSet(While, new WHILE(curr, m.Get("cond")))),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
+                        ("^next$", new[] { Switch, Select }, _ => TryCloseBlock(For)),
+                        (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(While, new WHILE(curr, m.Get("cond")))),
                         (@"^exitloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                         {
-                            int cnt = blocks.Count(x => x == For || x == Do || x == While);
+                            int cnt = AnyParentCount (For, Do, While);
 
                             if (cnt == 0)
                                 err("errors.preproc.misplaced_exitloop", true);
@@ -522,14 +531,14 @@ namespace AutoItInterpreter
                                     levels = cnt;
                                 }
 
-                                curr.Append(new BREAK(curr, levels) { DefinitionContext = defctx });
+                                Append(new BREAK(curr, levels));
                             }
                             else
                                 err("errors.preproc.exit_level_invalid", false, m.Get("levels"));
                         }),
                         (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                         {
-                            int cnt = blocks.Count(x => x == For || x == Do || x == While);
+                            int cnt = AnyParentCount (For, Do, While);
 
                             if (cnt == 0)
                                 err("errors.preproc.misplaced_continueloop", true);
@@ -542,31 +551,21 @@ namespace AutoItInterpreter
                                     levels = cnt;
                                 }
 
-                                curr.Append(new CONTINUE(curr, levels) { DefinitionContext = defctx });
+                                Append(new CONTINUE(curr, levels));
                             }
                             else
                                 err("errors.preproc.continue_level_invalid", false, m.Get("levels"));
                         }),
-                        ("^wend$", new[] { Switch, Select }, _ =>
-                        {
-                            if (trycloseblock(While))
-                                curr = curr.Parent;
-                        }),
-                        ("^do$", new[] { Switch, Select }, _ => AppendSet(Do, new DO_UNTIL(null))),
+                        ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
+                        ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
                         (@"^until\s+(?<cond>.+)$", new[] { Switch, Select }, m =>
                         {
-                            if (trycloseblock(Do))
-                            {
-                                (curr as DO_UNTIL).SetCondition(m.Get("cond"));
-                                curr = curr.Parent;
-                            }
+                            (curr as DO_UNTIL)?.SetCondition(m.Get("cond"));
+
+                            TryCloseBlock(Do);
                         }),
-                        (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => AppendSet(With, new WITH(curr, m.Get("expr")))),
-                        ("^endwith$", new[] { Switch, Select }, _ =>
-                        {
-                            if (trycloseblock(Do))
-                                curr = curr.Parent;
-                        }),
+                        (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => OpenBlock(With, new WITH(curr, m.Get("expr")))),
+                        ("^endwith$", new[] { Switch, Select }, _ => TryCloseBlock(Do)),
                         (@"(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s+(?<expr>.+)", new[] { Switch, Select }, m =>
                         {
                             string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
@@ -577,28 +576,30 @@ namespace AutoItInterpreter
                             else if (modf.Contains("global") && !global)
                                 err("errors.preproc.invalid_global", true);
 
-                            curr.Append(new DECLARATION(curr, expr, modf) { DefinitionContext = defctx });
+                            Append(new DECLARATION(curr, expr, modf));
                         }),
-                        (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => curr.Append(new RETURN(curr, m.Get("val")) { DefinitionContext = defctx })),
-                        (".*", new[] { Switch, Select }, _ => curr.Append(new RAWLINE(curr, line) { DefinitionContext = defctx })),
+                        (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
+                        (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
                     }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
                     ++locndx;
                 }
 
                 List<string> ci = new List<string>();
+                ControlBlock pb;
 
-                while (blocks.Pop() is ControlBlock cb && cb != __NONE__)
-                    if (cb != Case)
-                        ci.Add(ClosingInstruction[cb]);
+                while ((pb = eblocks.Pop().CB) != __NONE__)
+                    ci.Add(ClosingInstruction[pb == IfElifElseBlock ? If : pb]);
 
                 if (ci.Count > 0)
+                {
                     state.ReportError((global ? $"[{ name}]  " : "") + state.Language["errors.preproc.blocks_unclosed", string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx));
 
-                while (!(curr is FUNCTION))
-                    curr = curr.Parent;
+                    while (curr.Parent is Entity e)
+                        curr = e;
+                }
 
-                return curr as FUNCTION;
+                return (FUNCTION)curr;
             }
         }
 
@@ -659,9 +660,9 @@ namespace AutoItInterpreter
                 else
                     st.CurrentFunction = null;
             else
-                return false;
+                return true;
 
-            return true;
+            return false;
         }
 
         private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
@@ -800,8 +801,16 @@ namespace AutoItInterpreter
             dynamic process(Entity e)
             {
                 void err(string path, params object[] args) => state.ReportError(state.Language[path, args], e.DefinitionContext);
-                AST_STATEMENT[] proclines() => e.RawLines.Select(x => process(x) as AST_STATEMENT).ToArray();
-                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK { Condition = parseexpr((e as ConditionalEntity).RawCondition), Statements = proclines(), Context = e.DefinitionContext };
+                AST_STATEMENT[] proclines() => (from rl in e.RawLines
+                                                let ast = process(rl) as AST_STATEMENT
+                                                where ast != null
+                                                select ast).ToArray();
+                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
+                {
+                    Condition = parseexpr((e as ConditionalEntity).RawCondition),
+                    Statements = proclines(),
+                    Context = e.DefinitionContext
+                };
                 EXPRESSION parseexpr(string expr)
                 {
                     try
@@ -905,11 +914,11 @@ namespace AutoItInterpreter
                             {
                                 Level = (uint)i.Level
                             };
-                        case WITH i: break;
-                        case FOR i: break;
-                        case FOREACH i: break;
-                        case RAWLINE i: break;
-                        case DECLARATION i: break;
+                        case WITH i: break; // TODO
+                        case FOR i: break; // TODO
+                        case FOREACH i: break; // TODO
+                        case RAWLINE i: break; // TODO
+                        case DECLARATION i: break; // TODO
                         default:
                             err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
 
@@ -1155,6 +1164,7 @@ namespace AutoItInterpreter
     public enum ControlBlock
     {
         __NONE__,
+        IfElifElseBlock,
         If,
         ElseIf,
         Else,
