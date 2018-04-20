@@ -78,13 +78,19 @@ type OPERATOR_UNARY =
     | Not
     | BitwiseNot
 
-type FUNCCALL = string * EXPRESSION list
+type MEMBER =
+    | Field of string
+    | Method of FUNCCALL
+and VARIABLE_EXPRESSION =
+    | DotAccess of VARIABLE * MEMBER list
+    | Variable of VARIABLE
+and FUNCCALL = string * EXPRESSION list
 and EXPRESSION =
     | Literal of LITERAL
     | FunctionCall of FUNCCALL
-    | Variable of VARIABLE
+    | VariableExpression of VARIABLE_EXPRESSION
     | Macro of MACRO
-    | ArrayIndex of VARIABLE * EXPRESSION
+    | ArrayIndex of VARIABLE_EXPRESSION * EXPRESSION
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
@@ -92,8 +98,8 @@ and EXPRESSION =
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     // TODO : dot-access of member elements
 and ASSIGNMENT_EXPRESSION =
-    | Assignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION
-    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION * EXPRESSION // op, var, index, expr
+    | Assignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
+    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION * EXPRESSION // op, var, index, expr
 type CASE_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION

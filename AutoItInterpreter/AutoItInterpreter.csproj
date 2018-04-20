@@ -20,8 +20,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="errorcodes.json" />
     <None Remove="lang\de.json" />
     <None Remove="lang\en.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="errorcodes.json" />
   </ItemGroup>
 
   <ItemGroup>

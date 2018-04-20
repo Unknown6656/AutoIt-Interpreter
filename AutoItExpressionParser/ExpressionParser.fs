@@ -28,6 +28,9 @@ type ExpressionParser() =
         let nt_literal                  = x.nt<LITERAL>()
         let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>()
         let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>()
+        let nt_variable_expr            = x.nt<VARIABLE_EXPRESSION>()
+        let nt_dot_members              = x.nt<MEMBER list>()
+        let nt_dot_member               = x.nt<MEMBER>()
 
         let t_operator_assign_and       = x.t @"&&="
         let t_operator_assign_xor       = x.t @"^^="
@@ -60,7 +63,7 @@ type ExpressionParser() =
         let t_symbol_equal              = x.t @"="
         let t_symbol_questionmark       = x.t @"\?" // TODO
         let t_symbol_colon              = x.t @":" // TODO
-        let t_symbol_dot                = x.t @"\." // TODO
+        let t_symbol_dot                = x.t @"\."
         let t_symbol_comma              = x.t @","
         let t_symbol_minus              = x.t @"-"
         let t_symbol_plus               = x.t @"\+"
@@ -94,6 +97,15 @@ type ExpressionParser() =
         let t_identifier                = x.tf @"[a-z0-9_]*"                                           id
 
         let (!@) x = nt_subexpr.[x]
+
+        reduce1 nt_variable_expr t_variable Variable
+        reduce3 nt_variable_expr t_variable t_symbol_dot nt_dot_members (fun v _ m -> DotAccess(v, m))
+        
+        reduce1 nt_dot_members nt_dot_member (fun i -> [i])
+        reduce3 nt_dot_members nt_dot_member t_symbol_dot nt_dot_members (fun x _ xs -> x::xs)
+
+        reduce1 nt_dot_member t_identifier Field
+        reduce1 nt_dot_member nt_funccall Method
 
         reduce0 nt_expression !@0
         reduce1 nt_expression nt_assignment_expression AssignmentExpression
@@ -140,13 +152,14 @@ type ExpressionParser() =
         reduce2 !@7 t_operator_bit_not !@7 (fun _ e -> UnaryExpression(BitwiseNot, e))
         reduce1 !@8 nt_literal Literal
         reduce1 !@8 nt_funccall FunctionCall
-        reduce1 !@8 t_variable Variable
+        reduce1 !@8 nt_variable_expr VariableExpression
         reduce1 !@8 t_macro Macro
         reduce3 !@8 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-        reduce4 !@8 t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
-        //reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
+        reduce4 !@8 nt_variable_expr t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+     // reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
+        reduce3 nt_funccall t_identifier t_symbol_oparen t_symbol_cparen (fun f _ _ -> (f, []))
 
         reduce3 nt_funcparams nt_expression t_symbol_comma nt_funcparams (fun e _ p -> e::p)
         reduce1 nt_funcparams nt_expression (fun e -> [e])
@@ -178,7 +191,7 @@ type ExpressionParser() =
         reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
         reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
         
-        reduce3 nt_assignment_expression t_variable nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
-        reduce6 nt_assignment_expression t_variable t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
+        reduce3 nt_assignment_expression nt_variable_expr nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
+        reduce6 nt_assignment_expression nt_variable_expr t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

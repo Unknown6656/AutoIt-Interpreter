@@ -5,12 +5,15 @@ using System.Linq;
 using System.IO;
 
 using Newtonsoft.Json;
+using AutoItInterpreter.Properties;
 
 namespace AutoItInterpreter
 {
     public sealed class Language
     {
+        private readonly static Language _errcodes;
         private readonly dynamic _langobj;
+
 
         public static Dictionary<string, Language> Languages { get; }
 
@@ -50,6 +53,10 @@ namespace AutoItInterpreter
             Dictionary<string, dynamic> langs = new Dictionary<string, dynamic>();
             Match m = default;
 
+            using (MemoryStream ms = new MemoryStream(Resources.errorcodes))
+            using (StreamReader rd = new StreamReader(ms))
+                _errcodes = new Language(JsonConvert.DeserializeObject<dynamic>(rd.ReadToEnd()));
+
             foreach ((string code, string name) in from r in asm.GetManifestResourceNames()
                                                    where r.Match(@"^.+\.lang\.(?<code>\w+)\.json$", out m)
                                                    select (m.Get("code").ToLower(), r))
@@ -84,6 +91,8 @@ namespace AutoItInterpreter
         }
 
         private Language(dynamic langobj) => _langobj = langobj;
+
+        public static int GetErrorNumber(string name) => int.Parse(_errcodes[name]);
 
         public static Language FromLanguageCode(string code) => Languages[(code ?? "en").ToLower().Trim()];
     }

@@ -1,0 +1,48 @@
+﻿{
+    "errors": {
+        "general": {
+            "no_input": 1001,
+            "inputfile_nfound": 1002,
+            "file_nopen": 1003
+        },
+        "preproc": {
+            "include_nfound": 1004,
+            "directive_invalid": 1005,
+            "directive_invalid_value": 1006,
+            "pragma_unsupported": 1007,
+            "function_nesting": 1008,
+            "unexpected_endfunc": 1009,
+            "function_exists": 1010,
+            "block_reqr": 1011,
+            "block_confl": 1012,
+            "block_invalid_close": 1013,
+            "block_conflicting_close": 1014,
+            "blocks_unclosed": 1015,
+            "missing_then": 1016,
+            "misplaced_elseif": 1017,
+            "misplaced_else": 1018,
+            "misplaced_case": 1018,
+            "misplaced_continuecase": 1019,
+            "misplaced_exitloop": 1020,
+            "misplaced_continueloop": 1021,
+            "invalid_local": 1022,
+            "invalid_global": 1023
+        },
+        "astproc": {
+            "unknown_entity": 1024,
+            "parser_error": 1025,
+            "obj_expression_required": 1026
+        }
+    },
+    "warnings": {
+        "preproc": {
+            "exit_level_truncated": 2001,
+            "exit_level_invalid": 2002,
+            "continue_level_truncated": 2003,
+            "continue_level_invalid": 2004
+        },
+        "astproc": {
+            "expression_result_discarded": 2005
+        }
+    }
+}

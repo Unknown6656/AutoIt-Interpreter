@@ -218,7 +218,7 @@ namespace AutoItInterpreter
                     lines[locindx].OriginalLineNumbers[0],
                     lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
                 );
-                void err(string name, params object[] args) => pstate.ReportError(lang[name, args], defcntx);
+                void err(string name, params object[] args) => pstate.ReportKnownError(name, defcntx, args);
 
                 if (Line.StartsWith('#'))
                 {
@@ -365,12 +365,14 @@ namespace AutoItInterpreter
                     DefinitionContext defctx = new DefinitionContext(func.Context.FilePath, lines[locndx].Context.StartLine, lines[locndx].Context.EndLine);
                     void err(string msg, bool fatal, params object[] args)
                     {
+                        int errnum = Language.GetErrorNumber(msg);
+
                         msg = (global ? $"[{name}]  " : "") + state.Language[msg, args];
 
                         if (fatal)
-                            state.ReportError(msg, defctx);
+                            state.ReportError(msg, defctx, errnum);
                         else
-                            state.ReportWarning(msg, defctx);
+                            state.ReportWarning(msg, defctx, errnum);
                     }
                     void Conflicts(Action f, params ControlBlock[] cbs)
                     {
@@ -549,7 +551,7 @@ namespace AutoItInterpreter
                             {
                                 if (levels > cnt)
                                 {
-                                    err("errors.preproc.exit_level_truncated", false, levels, cnt);
+                                    err("warnings.preproc.exit_level_truncated", false, levels, cnt);
 
                                     levels = cnt;
                                 }
@@ -557,7 +559,7 @@ namespace AutoItInterpreter
                                 Append(new BREAK(curr, levels));
                             }
                             else
-                                err("errors.preproc.exit_level_invalid", false, m.Get("levels"));
+                                err("warnings.preproc.exit_level_invalid", false, m.Get("levels"));
                         }),
                         (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                         {
@@ -569,7 +571,7 @@ namespace AutoItInterpreter
                             {
                                 if (levels > cnt)
                                 {
-                                    err("errors.preproc.continue_level_truncated", false, levels, cnt);
+                                    err("warnings.preproc.continue_level_truncated", false, levels, cnt);
 
                                     levels = cnt;
                                 }
@@ -577,7 +579,7 @@ namespace AutoItInterpreter
                                 Append(new CONTINUE(curr, levels));
                             }
                             else
-                                err("errors.preproc.continue_level_invalid", false, m.Get("levels"));
+                                err("warnings.preproc.continue_level_invalid", false, m.Get("levels"));
                         }),
                         ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
                         ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
@@ -616,7 +618,9 @@ namespace AutoItInterpreter
 
                 if (ci.Count > 0)
                 {
-                    state.ReportError((global ? $"[{ name}]  " : "") + state.Language["errors.preproc.blocks_unclosed", string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx));
+                    const string errpath = "errors.preproc.blocks_unclosed";
+
+                    state.ReportError((global ? $"[{ name}]  " : "") + state.Language[errpath, string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx), Language.GetErrorNumber(errpath));
 
                     while (curr.Parent is Entity e)
                         curr = e;
@@ -826,7 +830,8 @@ namespace AutoItInterpreter
 
             dynamic process(Entity e)
             {
-                void err(string path, params object[] args) => state.ReportError(state.Language[path, args], e.DefinitionContext);
+                void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
+                void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
@@ -940,29 +945,45 @@ namespace AutoItInterpreter
                                 Level = (uint)i.Level
                             };
                         case WITH i:
-                            return new AST_WITH_STATEMENT
                             {
-                                WithExpression = parseexpr(i.Expression),
-                                WithLines = null, // TODO
-                            };
+                                if (parseexpr(i.Expression) is EXPRESSION expr)
+                                {
+                                    if (!expr.IsVariableExpression)
+                                        err("errors.astproc.obj_expression_required", i.Expression);
+
+                                    return new AST_WITH_STATEMENT
+                                    {
+                                        WithExpression = expr,
+                                        WithLines = null // TODO
+                                    };
+                                }
+                                else
+                                    break;
+                            }
                         case FOR i:
                             break; // TODO
                         case FOREACH i:
                             break; // TODO
                         case RAWLINE i:
                             {
-                                EXPRESSION expr = parseexpr(i.RawContent?.Trim() ?? "");
+                                if (parseexpr(i.RawContent?.Trim() ?? "") is EXPRESSION expr)
+                                    if (expr.IsAssignmentExpression)
+                                        return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                        {
+                                            Expression = (expr as EXPRESSION.AssignmentExpression)?.Item,
+                                        };
+                                    else
+                                    {
+                                        if (!expr.IsFunctionCall)
+                                            warn("warnings.astproc.expression_result_discarded");
 
-                                if (expr.IsAssignmentExpression)
-                                    return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                    {
-                                        Expression = (expr as EXPRESSION.AssignmentExpression)?.Item,
-                                    };
+                                        return new AST_EXPRESSION_STATEMENT
+                                        {
+                                            Expression = expr,
+                                        };
+                                    }
                                 else
-                                    return new AST_EXPRESSION_STATEMENT
-                                    {
-                                        Expression = expr,
-                                    };
+                                    break;
                             }
                         case DECLARATION i:
                             break; // TODO
@@ -1004,9 +1025,13 @@ namespace AutoItInterpreter
             UseTrayIcon = true;
         }
 
-        public void ReportError(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx));
+        public void ReportError(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num));
 
-        public void ReportWarning(string msg, DefinitionContext ctx) => _errors.Add(new InterpreterError(msg, ctx, false));
+        public void ReportWarning(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, false));
+
+        internal void ReportKnownError(string errname, DefinitionContext ctx, params object[] args) => ReportError(Language[errname, args], ctx, Language.GetErrorNumber(errname));
+
+        internal void ReportKnownWarning(string errname, DefinitionContext ctx, params object[] args) => ReportWarning(Language[errname, args], ctx, Language.GetErrorNumber(errname));
     }
 
     public sealed class InterpreterState
@@ -1140,25 +1165,27 @@ namespace AutoItInterpreter
     {
         public DefinitionContext ErrorContext { get; }
         public string ErrorMessage { get; }
+        public int ErrorNumber { get; }
         public bool IsFatal { get; }
 
 
         /// <summary>A new fatal error</summary>
-        internal InterpreterError(string msg, DefinitionContext line)
-            : this(msg, line, true)
+        internal InterpreterError(string msg, DefinitionContext line, int number)
+            : this(msg, line, number, true)
         {
         }
 
-        internal InterpreterError(string msg, DefinitionContext line, bool fatal)
+        internal InterpreterError(string msg, DefinitionContext line, int number, bool fatal)
         {
             IsFatal = fatal;
             ErrorMessage = msg;
             ErrorContext = line;
+            ErrorNumber = number;
         }
 
         public void @throw() => throw (InvalidProgramException)this;
 
-        public override string ToString() => $"{ErrorContext}: {ErrorMessage}";
+        public override string ToString() => $"(AU{ErrorNumber:D4})  {ErrorContext}: {ErrorMessage}";
 
 
         public static implicit operator InvalidProgramException(InterpreterError err) => new InvalidProgramException(err.ToString())

@@ -33,16 +33,25 @@
             "misplaced_continueloop": "Die 'ContinueLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
 
             ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
-            "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
-            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
 
             "invalid_global": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
             "invalid_local": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'."
         },
         "astproc": {
-            "unknown_entity": "Internal error: The entity '{0}' is unknown."
+            "unknown_entity": "Internal error: The entity '{0}' is unknown.",
+            "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}",
+            "obj_expression_required": "The expression '{0}' is not a valid object-expression."
+        }
+    },
+    "warnings": {
+        "preproc": {
+            "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
+            "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
+            "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
+            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored."
+        },
+        "astproc": {
+            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."
         }
     }
 }

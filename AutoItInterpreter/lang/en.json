@@ -24,23 +24,31 @@
             "block_invalid_close": "No existent {0}-block can be closed. Please create one in order to close it or remove the closing statement.",
             "block_conflicting_close": "The currently open {0}-block cannot be closed with an '{1}'-statement.",
             "blocks_unclosed": "There are open control blocks which must be closed before using 'EndFunc'. Please use (in order) the instructions '{0}' to close the open blocks.",
-            "missing_then":  "An 'If'- or 'Elseif'-expression must be followed by the keyword 'Then'.",
+            "missing_then": "An 'If'- or 'Elseif'-expression must be followed by the keyword 'Then'.",
             "misplaced_elseif": "A 'ElseIf'-block can only be used after a previous 'If'-block in the same scope.",
             "misplaced_else": "A 'Else'-block can only be used after a previous 'If'- or 'ElseIf'-block in the same scope.",
             "misplaced_case": "A 'Case'-statement can only be used directly inside a 'Switch'- or 'Select'-block.",
             "misplaced_continuecase": "A 'ContinueCase'-statement can only be used inside the scope of a 'Case'-block.",
             "misplaced_exitloop": "The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
             "misplaced_continueloop": "The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
-            "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
-            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
             "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.",
             "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",
-            "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}"
+            "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}",
+            "obj_expression_required": "The expression '{0}' is not a valid object-expression."
+        }
+    },
+    "warnings": {
+        "preproc": {
+            "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
+            "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
+            "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
+            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored."
+        },
+        "astproc": {
+            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."
         }
     }
 }
