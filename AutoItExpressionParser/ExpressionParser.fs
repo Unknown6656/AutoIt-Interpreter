@@ -12,44 +12,7 @@ type decimal = System.Decimal
 type ExpressionParser() =
     inherit AbstractParser<EXPRESSION>()
     override x.BuildParser() =
-        let nt_expression           = x.nt<EXPRESSION>()
-        let nt_subexpr              = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..7 |]
-        let nt_funccall             = x.nt<FUNCCALL>()
-        let nt_funcparams           = x.nt<EXPRESSION list>()
-        let nt_literal              = x.nt<LITERAL>()
-
-        let t_operator_comp_neq     = x.t @"<>"
-        let t_operator_comp_gte     = x.t @">="
-        let t_operator_comp_gt      = x.t @">"
-        let t_operator_comp_lte     = x.t @"<="
-        let t_operator_comp_lt      = x.t @"<"
-        let t_operator_comp_eq      = x.t @"=="
-        let t_symbol_equal          = x.t @"="
-        let t_symbol_questionmark   = x.t @"\?"
-        // let t_symbol_dot            = x.t @"\."
-        let t_symbol_colon          = x.t @":"
-        let t_symbol_comma          = x.t @","
-        let t_symbol_minus          = x.t @"-"
-        let t_symbol_plus           = x.t @"\+"
-        let t_symbol_asterisk       = x.t @"\*"
-        let t_symbol_slash          = x.t @"/"
-        let t_symbol_percent        = x.t @"%"
-        let t_symbol_hat            = x.t @"^"
-        let t_symbol_ampersand      = x.t @"&"
-        let t_symbol_oparen         = x.t @"\("
-        let t_symbol_cparen         = x.t @"\)"
-        let t_symbol_obrack         = x.t @"\["
-        let t_symbol_cbrack         = x.t @"\]"
-        let t_keyword_and           = x.tf @"and"                                                  (fun _ -> And)
-        let t_keyword_xor           = x.tf @"xor"                                                  (fun _ -> Xor)
-        let t_keyword_or            = x.tf @"or"                                                   (fun _ -> Or)
-        let t_keyword_not           = x.tf @"not"                                                  (fun _ -> Not)
-        let t_literal_true          = x.tf @"true"                                                 (fun _ -> True)
-        let t_literal_false         = x.tf @"false"                                                (fun _ -> False)
-        let t_literal_null          = x.tf @"null"                                                 (fun _ -> Null)
-        let t_literal_default       = x.tf @"default"                                              (fun _ -> Default)
-
-        let parse p (f : string -> long) (s : string) =
+        let lparse p (f : string -> long) (s : string) =
             let s = s.TrimStart('+').ToLower().Replace(p, "")
             let n, s = if s.[0] = '-' then (true, s.Substring(1))
                         else (false, s)
@@ -58,24 +21,91 @@ type ExpressionParser() =
             |> decimal
             |> Number
 
-        let t_hex                   = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"                         (parse "0x" (fun s -> long.Parse(s.TrimEnd('h'), NumberStyles.HexNumber)))
-        let t_bin                   = x.tf @"(\+|-)?0b[01]+"                                       (parse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
-        let t_oct                   = x.tf @"(\+|-)?0o[0-7]+"                                      (parse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
-        let t_dec                   = x.tf @"(\+|-)?(\d+\.\d*(e(\+|-)?\d+)?|\.?\d+(e(\+|-)?\d+)?)" (fun s -> Number <| decimal.Parse(s))
-        let t_variable              = x.tf @"$[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> VARIABLE(s.Substring(1)))
-        let t_macro                 = x.tf @"@[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> MACRO(s.Substring(1)))
-        let t_string_1              = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
-        let t_string_2              = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
-        let t_identifier            = x.tf @"[a-z0-9_]*"                                           id
+        let nt_expression               = x.nt<EXPRESSION>()
+        let nt_subexpr                  = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..8 |]
+        let nt_funccall                 = x.nt<FUNCCALL>()
+        let nt_funcparams               = x.nt<EXPRESSION list>()
+        let nt_literal                  = x.nt<LITERAL>()
+        let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>()
+        let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>()
+
+        let t_operator_assign_and       = x.t @"&&="
+        let t_operator_assign_xor       = x.t @"^^="
+        let t_operator_assign_or        = x.t @"\|\|="
+        let t_operator_assign_rol       = x.t @"<<<="
+        let t_operator_assign_ror       = x.t @">>>="
+        let t_operator_assign_shl       = x.t @"<<="
+        let t_operator_assign_shr       = x.t @">>="
+        let t_operator_assign_add       = x.t @"\+="
+        let t_operator_assign_sub       = x.t @"-="
+        let t_operator_assign_mul       = x.t @"\*="
+        let t_operator_assign_div       = x.t @"/="
+        let t_operator_assign_mod       = x.t @"%="
+        let t_operator_assign_con       = x.t @"&="
+        let t_operator_assign_pow       = x.t @"^="
+        let t_operator_bit_and          = x.t @"&&"
+        let t_operator_bit_xor          = x.t @"^^"
+        let t_operator_bit_or           = x.t @"\|\|"
+        let t_operator_bit_rol          = x.t @"<<<"
+        let t_operator_bit_ror          = x.t @">>>"
+        let t_operator_bit_shl          = x.t @"<<"
+        let t_operator_bit_shr          = x.t @">>"
+        let t_operator_bit_not          = x.t @"~"
+        let t_operator_comp_neq         = x.t @"<>"
+        let t_operator_comp_gte         = x.t @">="
+        let t_operator_comp_gt          = x.t @">"
+        let t_operator_comp_lte         = x.t @"<="
+        let t_operator_comp_lt          = x.t @"<"
+        let t_operator_comp_eq          = x.t @"=="
+        let t_symbol_equal              = x.t @"="
+        let t_symbol_questionmark       = x.t @"\?" // TODO
+        let t_symbol_colon              = x.t @":" // TODO
+        let t_symbol_dot                = x.t @"\." // TODO
+        let t_symbol_comma              = x.t @","
+        let t_symbol_minus              = x.t @"-"
+        let t_symbol_plus               = x.t @"\+"
+        let t_symbol_asterisk           = x.t @"\*"
+        let t_symbol_slash              = x.t @"/"
+        let t_symbol_percent            = x.t @"%"
+        let t_symbol_hat                = x.t @"^"
+        let t_symbol_ampersand          = x.t @"&"
+        let t_symbol_oparen             = x.t @"\("
+        let t_symbol_cparen             = x.t @"\)"
+        let t_symbol_obrack             = x.t @"\["
+        let t_symbol_cbrack             = x.t @"\]"
+        let t_keyword_nand              = x.t @"nand"
+        let t_keyword_nor               = x.t @"nor"
+        let t_keyword_and               = x.t @"and"
+        let t_keyword_xor               = x.t @"xor"
+        let t_keyword_or                = x.t @"or"
+        let t_keyword_not               = x.t @"not"
+        let t_literal_true              = x.tf @"true"                                                 (fun _ -> True)
+        let t_literal_false             = x.tf @"false"                                                (fun _ -> False)
+        let t_literal_null              = x.tf @"null"                                                 (fun _ -> Null)
+        let t_literal_default           = x.tf @"default"                                              (fun _ -> Default)
+        let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"                         (lparse "0x" (fun s -> long.Parse(s.TrimEnd('h'), NumberStyles.HexNumber)))
+        let t_bin                       = x.tf @"(\+|-)?0b[01]+"                                       (lparse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
+        let t_oct                       = x.tf @"(\+|-)?0o[0-7]+"                                      (lparse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
+        let t_dec                       = x.tf @"(\+|-)?(\d+\.\d*(e(\+|-)?\d+)?|\.?\d+(e(\+|-)?\d+)?)" (fun s -> Number <| decimal.Parse(s))
+        let t_variable                  = x.tf @"$[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> VARIABLE(s.Substring(1)))
+        let t_macro                     = x.tf @"@[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> MACRO(s.Substring(1)))
+        let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
+        let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
+        let t_identifier                = x.tf @"[a-z0-9_]*"                                           id
 
         let (!@) x = nt_subexpr.[x]
 
         reduce0 nt_expression !@0
+        reduce1 nt_expression nt_assignment_expression AssignmentExpression
+
+        // TODO  : change precedence inside each precedence group (?)
 
         reduce0 !@0 !@1
+        reduce3 !@0 !@0 t_keyword_nand !@1 (fun a _ b -> BinaryExpression(Nand, a, b))
         reduce3 !@0 !@0 t_keyword_and !@1 (fun a _ b -> BinaryExpression(And, a, b))
-        reduce3 !@0 !@0 t_keyword_or !@1 (fun a _ b -> BinaryExpression(Or, a, b))
+        reduce3 !@0 !@0 t_keyword_nor !@1 (fun a _ b -> BinaryExpression(Nor, a, b))
         reduce3 !@0 !@0 t_keyword_xor !@1 (fun a _ b -> BinaryExpression(Xor, a, b))
+        reduce3 !@0 !@0 t_keyword_or !@1 (fun a _ b -> BinaryExpression(Or, a, b))
         reduce0 !@1 !@2
         reduce3 !@1 !@1 t_operator_comp_lte !@2 (fun a _ b -> BinaryExpression(LowerEqual, a, b))
         reduce3 !@1 !@1 t_operator_comp_lt !@2 (fun a _ b -> BinaryExpression(Lower, a, b))
@@ -87,25 +117,34 @@ type ExpressionParser() =
         reduce0 !@2 !@3
         reduce3 !@2 !@2 t_symbol_ampersand !@3 (fun a _ b -> BinaryExpression(StringConcat, a, b))
         reduce0 !@3 !@4
-        reduce3 !@3 !@3 t_symbol_plus !@4 (fun a _ b -> BinaryExpression(Add, a, b))
-        reduce3 !@3 !@3 t_symbol_minus !@4 (fun a _ b -> BinaryExpression(Subtract, a, b))
+        reduce3 !@3 !@3 t_operator_bit_and !@4 (fun a _ b -> BinaryExpression(BitwiseAnd, a, b))
+        reduce3 !@3 !@3 t_operator_bit_xor !@4 (fun a _ b -> BinaryExpression(BitwiseXor, a, b))
+        reduce3 !@3 !@3 t_operator_bit_or !@4 (fun a _ b -> BinaryExpression(BitwiseOr, a, b))
+        reduce3 !@3 !@3 t_operator_bit_rol !@4 (fun a _ b -> BinaryExpression(BitwiseRotateLeft, a, b))
+        reduce3 !@3 !@3 t_operator_bit_ror !@4 (fun a _ b -> BinaryExpression(BitwiseRotateRight, a, b))
+        reduce3 !@3 !@3 t_operator_bit_shl !@4 (fun a _ b -> BinaryExpression(BitwiseShiftLeft, a, b))
+        reduce3 !@3 !@3 t_operator_bit_shr !@4 (fun a _ b -> BinaryExpression(BitwiseShiftRight, a, b))
         reduce0 !@4 !@5
-        reduce3 !@4 !@4 t_symbol_asterisk !@5 (fun a _ b -> BinaryExpression(Multiply, a, b))
-        reduce3 !@4 !@4 t_symbol_slash !@5 (fun a _ b -> BinaryExpression(Divide, a, b))
-        reduce3 !@4 !@4 t_symbol_percent !@5 (fun a _ b -> BinaryExpression(Modulus, a, b))
+        reduce3 !@4 !@4 t_symbol_plus !@5 (fun a _ b -> BinaryExpression(Add, a, b))
+        reduce3 !@4 !@4 t_symbol_minus !@5 (fun a _ b -> BinaryExpression(Subtract, a, b))
         reduce0 !@5 !@6
-        reduce3 !@5 !@5 t_symbol_hat !@6 (fun a _ b -> BinaryExpression(Power, a, b))
+        reduce3 !@5 !@5 t_symbol_asterisk !@6 (fun a _ b -> BinaryExpression(Multiply, a, b))
+        reduce3 !@5 !@5 t_symbol_slash !@6 (fun a _ b -> BinaryExpression(Divide, a, b))
+        reduce3 !@5 !@5 t_symbol_percent !@6 (fun a _ b -> BinaryExpression(Modulus, a, b))
         reduce0 !@6 !@7
-        reduce2 !@6 t_symbol_plus !@6 (fun _ e -> e)
-        reduce2 !@6 t_symbol_minus !@6 (fun _ e -> UnaryExpression(Negate, e))
-        reduce2 !@6 t_keyword_not !@6 (fun _ e -> UnaryExpression(Not, e))
-        reduce1 !@7 nt_literal Literal
-        reduce1 !@7 nt_funccall FunctionCall
-        reduce1 !@7 t_variable Variable
-        reduce1 !@7 t_macro Macro
-        reduce3 !@7 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-        reduce4 !@7 t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
-        //reduce5 !@7 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
+        reduce3 !@6 !@6 t_symbol_hat !@7 (fun a _ b -> BinaryExpression(Power, a, b))
+        reduce0 !@7 !@8
+        reduce2 !@7 t_symbol_plus !@7 (fun _ e -> e)
+        reduce2 !@7 t_symbol_minus !@7 (fun _ e -> UnaryExpression(Negate, e))
+        reduce2 !@7 t_keyword_not !@7 (fun _ e -> UnaryExpression(Not, e))
+        reduce2 !@7 t_operator_bit_not !@7 (fun _ e -> UnaryExpression(BitwiseNot, e))
+        reduce1 !@8 nt_literal Literal
+        reduce1 !@8 nt_funccall FunctionCall
+        reduce1 !@8 t_variable Variable
+        reduce1 !@8 t_macro Macro
+        reduce3 !@8 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
+        reduce4 !@8 t_variable t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+        //reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
 
@@ -122,5 +161,24 @@ type ExpressionParser() =
         reduce0 nt_literal t_dec
         reduce0 nt_literal t_oct
         reduce0 nt_literal t_bin
+        
+        reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignSubtract)
+        reduce1 nt_operator_binary_ass t_operator_assign_sub (fun _ -> AssignAdd)
+        reduce1 nt_operator_binary_ass t_operator_assign_mul (fun _ -> AssignMultiply)
+        reduce1 nt_operator_binary_ass t_operator_assign_div (fun _ -> AssignDivide)
+        reduce1 nt_operator_binary_ass t_operator_assign_mod (fun _ -> AssignModulus)
+        reduce1 nt_operator_binary_ass t_operator_assign_con (fun _ -> AssignConcat)
+        reduce1 nt_operator_binary_ass t_operator_assign_pow (fun _ -> AssignPower)
+        reduce1 nt_operator_binary_ass t_operator_assign_and (fun _ -> AssignAnd)
+        reduce1 nt_operator_binary_ass t_operator_assign_xor (fun _ -> AssignXor)
+        reduce1 nt_operator_binary_ass t_operator_assign_or (fun _ -> AssignOr)
+        reduce1 nt_operator_binary_ass t_operator_assign_rol (fun _ -> AssignRotateLeft)
+        reduce1 nt_operator_binary_ass t_operator_assign_ror (fun _ -> AssignRotateRight)
+        reduce1 nt_operator_binary_ass t_operator_assign_shl (fun _ -> AssignShiftLeft)
+        reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
+        reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
+        
+        reduce3 nt_assignment_expression t_variable nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
+        reduce6 nt_assignment_expression t_variable t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
 
-        x.Configuration.LexerSettings.Ignore <- [| @"\s+" |]
+        x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

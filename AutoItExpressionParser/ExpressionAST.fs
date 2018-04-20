@@ -29,7 +29,7 @@ type LITERAL =
     | False
     | Number of decimal
     | String of string
-type OPERATOR_BINARY_ASSIGNMENT =
+type OPERATOR_ASSIGNMENT =
     | Assign
     | AssignAdd
     | AssignSubtract
@@ -38,6 +38,13 @@ type OPERATOR_BINARY_ASSIGNMENT =
     | AssignModulus
     | AssignConcat
     | AssignPower
+    | AssignAnd
+    | AssignXor
+    | AssignOr
+    | AssignRotateLeft
+    | AssignRotateRight
+    | AssignShiftLeft
+    | AssignShiftRight
 type OPERATOR_BINARY =
     | StringConcat
     | EqualCaseSensitive
@@ -49,6 +56,8 @@ type OPERATOR_BINARY =
     | LowerEqual
     | And
     | Xor
+    | Nor
+    | Nand
     | Or
     | Add
     | Subtract
@@ -56,10 +65,18 @@ type OPERATOR_BINARY =
     | Divide
     | Modulus
     | Power
+    | BitwiseAnd
+    | BitwiseXor
+    | BitwiseOr
+    | BitwiseRotateLeft
+    | BitwiseRotateRight
+    | BitwiseShiftLeft
+    | BitwiseShiftRight
 type OPERATOR_UNARY =
     | Identity
     | Negate
     | Not
+    | BitwiseNot
 
 type FUNCCALL = string * EXPRESSION list
 and EXPRESSION =
@@ -72,10 +89,11 @@ and EXPRESSION =
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
     | ToExpression of EXPRESSION * EXPRESSION
+    | AssignmentExpression of ASSIGNMENT_EXPRESSION
     // TODO : dot-access of member elements
-type ASSIGNMENT_EXPRESSION =
-    | Assignment of OPERATOR_BINARY_ASSIGNMENT * VARIABLE * EXPRESSION
-    | ArrayAssignment of OPERATOR_BINARY_ASSIGNMENT * VARIABLE * EXPRESSION * EXPRESSION // op, var, index, expr
+and ASSIGNMENT_EXPRESSION =
+    | Assignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION
+    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION * EXPRESSION // op, var, index, expr
 type CASE_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION

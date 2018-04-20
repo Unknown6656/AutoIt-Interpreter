@@ -55,6 +55,20 @@ namespace AutoItInterpreter.PartialAST
         public static implicit operator AST_DO_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_DO_STATEMENT { DoBlock = b };
     }
 
+    public sealed class AST_WITH_STATEMENT
+        : AST_STATEMENT
+    {
+        public EXPRESSION WithExpression { set; get; }
+        public AST_WITH_LINE[] WithLines { set; get; }
+    }
+
+    // TODO
+    public sealed class AST_WITH_LINE
+        : AST_STATEMENT
+    {
+        public dynamic Expression { set; get; }
+    }
+
     public sealed class AST_SELECT_STATEMENT
         : AST_STATEMENT
     {
@@ -101,10 +115,21 @@ namespace AutoItInterpreter.PartialAST
         public static implicit operator AST_SELECT_CASE(AST_CONDITIONAL_BLOCK b) => new AST_SELECT_CASE { CaseBlock = b };
     }
 
-    public sealed class AST_EXPRESSION_STATEMENT
+    public abstract class AST_EXPR_STATEMENT
         : AST_STATEMENT
     {
+    }
 
+    public sealed class AST_EXPRESSION_STATEMENT
+        : AST_EXPR_STATEMENT
+    {
+        public EXPRESSION Expression { set; get; }
+    }
+
+    public sealed class AST_ASSIGNMENT_EXPRESSION_STATEMENT
+        : AST_EXPR_STATEMENT
+    {
+        public ASSIGNMENT_EXPRESSION Expression { set; get; }
     }
 
     public sealed class AST_CONTINUECASE_STATEMENT

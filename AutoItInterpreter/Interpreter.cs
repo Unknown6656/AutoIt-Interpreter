@@ -167,10 +167,33 @@ namespace AutoItInterpreter
             }
 
             Console.WriteLine(new string('=', 200));
+            Console.ForegroundColor = ConsoleColor.DarkGray;
 
-            foreach (var e in state.Errors)
-                Console.WriteLine(e);
+            int cnt = 1;
 
+            foreach (string line in RootContext.Content.Replace("\r\n", "\n").Split('\n'))
+            {
+                ++cnt;
+
+                if (Array.Find(state.Errors, e => e.ErrorContext.StartLine == cnt) is InterpreterError err)
+                    if (line.Trim().Length > 0)
+                    {
+                        string pad = line.Remove(line.Length - line.TrimStart().Length);
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(line);
+                        Console.ForegroundColor = ConsoleColor.DarkRed;
+                        Console.WriteLine(pad + new string('^', line.Trim().Length));
+                        Console.WriteLine(pad + err.ErrorMessage);
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+                    else
+                        Console.WriteLine();
+                else
+                    Console.WriteLine(line);
+            }
+
+            Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine(new string('=', 200));
         }
 
@@ -368,8 +391,8 @@ namespace AutoItInterpreter
                         }
                         else if ((ivb == IfElifElseBlock)
                               || (CB == ivb)
-                              || ((CB == Case) && (ivb == Select || ivb == Switch))
-                              || (ClosingInstruction[CB] == ClosingInstruction[ivb]))
+                              || ((CB == Case) && (ivb == Select || ivb == Switch)
+                              || (ClosingInstruction.ContainsKey(CB) && ClosingInstruction.ContainsKey(ivb) && ClosingInstruction[CB] == ClosingInstruction[ivb])))
                         {
                             curr = eblocks.Peek().Entity;
 
@@ -790,21 +813,21 @@ namespace AutoItInterpreter
         private static void ParseExpressionAST(InterpreterState state)
         {
             const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
-            CaseExpressionParser cexparser = new CaseExpressionParser();
             ExpressionParser exparser = new ExpressionParser();
+            CaseExpressionParser cexparser = new CaseExpressionParser();
+
+            foreach (dynamic p in new dynamic[] { cexparser, exparser })
+                p.Initialize();
 
             foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
                                                                                                         where kvp.Key != globnm
                                                                                                         select (kvp.Key, kvp.Value)))
-                state.ASTFunctions[name] = process(func);
+                state.ASTFunctions[name] = process(func)[0];
 
             dynamic process(Entity e)
             {
                 void err(string path, params object[] args) => state.ReportError(state.Language[path, args], e.DefinitionContext);
-                AST_STATEMENT[] proclines() => (from rl in e.RawLines
-                                                let ast = process(rl) as AST_STATEMENT
-                                                where ast != null
-                                                select ast).ToArray();
+                AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
                     Condition = parseexpr((e as ConditionalEntity).RawCondition),
@@ -813,6 +836,8 @@ namespace AutoItInterpreter
                 };
                 EXPRESSION parseexpr(string expr)
                 {
+                    expr = expr.Trim();
+
                     try
                     {
                         return exparser.Parse(expr);
@@ -914,11 +939,33 @@ namespace AutoItInterpreter
                             {
                                 Level = (uint)i.Level
                             };
-                        case WITH i: break; // TODO
-                        case FOR i: break; // TODO
-                        case FOREACH i: break; // TODO
-                        case RAWLINE i: break; // TODO
-                        case DECLARATION i: break; // TODO
+                        case WITH i:
+                            return new AST_WITH_STATEMENT
+                            {
+                                WithExpression = parseexpr(i.Expression),
+                                WithLines = null, // TODO
+                            };
+                        case FOR i:
+                            break; // TODO
+                        case FOREACH i:
+                            break; // TODO
+                        case RAWLINE i:
+                            {
+                                EXPRESSION expr = parseexpr(i.RawContent?.Trim() ?? "");
+
+                                if (expr.IsAssignmentExpression)
+                                    return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                    {
+                                        Expression = (expr as EXPRESSION.AssignmentExpression)?.Item,
+                                    };
+                                else
+                                    return new AST_EXPRESSION_STATEMENT
+                                    {
+                                        Expression = expr,
+                                    };
+                            }
+                        case DECLARATION i:
+                            break; // TODO
                         default:
                             err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
 
@@ -933,7 +980,7 @@ namespace AutoItInterpreter
                 if (res is AST_STATEMENT s)
                     s.Context = e.DefinitionContext;
 
-                return res;
+                return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
             }
         }
     }

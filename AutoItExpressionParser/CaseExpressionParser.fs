@@ -23,4 +23,4 @@ type CaseExpressionParser() =
         reduce3 nt_case_expression t_expression t_keyword_to t_expression (fun f _ t -> ValueRange(f, t))
         reduce1 nt_case_expression t_expression SingleValue
 
-        x.Configuration.LexerSettings.Ignore <- [| @"\s+"; |]
+        x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

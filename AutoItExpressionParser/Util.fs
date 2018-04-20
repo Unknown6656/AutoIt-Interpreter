@@ -150,8 +150,10 @@ type NonTerminalWrapper<'T> (nonTerminal : INonTerminal<obj>) =
         |> ProductionWrapper<'a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'T>
 
 [<AbstractClass>]
-type AbstractParser<'a>() =
-    member x.Configuration = ParserFactory.Configure<obj>()
+type AbstractParser<'a>() as this =
+    let config = ParserFactory.Configure<obj>()
+    let mutable parser : IParser<obj> = null
+    member x.Configuration with get() = config
     member internal x.t = x.Configuration.CreateTerminal >> TerminalWrapper<string>
     member internal x.tf<'T> regex (onParse : (string -> 'T)) = TerminalWrapper<'T>(x.Configuration.CreateTerminal(regex, (fun s -> box (onParse s))))
     member internal x.nt<'T>() = NonTerminalWrapper<'T>(x.Configuration.CreateNonTerminal())
@@ -163,15 +165,14 @@ type AbstractParser<'a>() =
         | Right -> x.Configuration.RightAssociative(arg s)
         |> ignore
     abstract BuildParser : unit -> unit
-    member val private Parser : IParser<obj> = null with get, set
     member x.Initialize() =
         x.BuildParser()
-        x.Parser <- (x.Configuration : IParserConfigurator<obj>).CreateParser()
+        parser <- (x.Configuration : IParserConfigurator<obj>).CreateParser()
     member x.Parse (s : string) =
-        if x.Parser = null then
+        if parser = null then
             x.Initialize()
-        x.Parser.Parse(s.Replace('\t', ' ')) :?> 'a
-    
+        parser.Parse(s.Replace('\t', ' ')) :?> 'a
+            
 [<AutoOpen>]
 module ProductionUtil =
     let internal reducef (s : NonTerminalWrapper<'a>) x = s.AddProduction().SetReduceFunction x
