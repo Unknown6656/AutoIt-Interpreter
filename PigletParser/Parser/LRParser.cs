@@ -69,13 +69,13 @@ namespace Piglet.Parser
 
                     // Create an exception that either might be thrown or may be handed to the error handling routine.
                     exception = new ParseException($"Illegal token '{terminalDebugNames[input.Item1]}', Expected '{string.Join(",", expectedTokens)}'.")
-                                {
-                                    LexerState = lexerInstance,
-                                    FoundToken = terminalDebugNames[input.Item1],
-                                    ExpectedTokens = expectedTokens,
-                                    FoundTokenId = input.Item1,
-                                    ParserState = state
-                                };
+                    {
+                        LexerState = lexerInstance,
+                        FoundToken = terminalDebugNames[input.Item1],
+                        ExpectedTokens = expectedTokens,
+                        FoundTokenId = input.Item1,
+                        ParserState = state
+                    };
 
                     // Go for error recovery!
                     while (ParseTable.Action[parseStack.Peek(), errorTokenNumber] == short.MinValue)
@@ -122,6 +122,7 @@ namespace Piglet.Parser
 
                     // Transfer to state found in goto table
                     int stateOnTopOfStack = parseStack.Peek();
+
                     parseStack.Push(reductionRule.TokenToPush);
                     parseStack.Push(ParseTable.Goto[stateOnTopOfStack, reductionRule.TokenToPush]);
 

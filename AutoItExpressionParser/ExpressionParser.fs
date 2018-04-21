@@ -23,6 +23,7 @@ type ExpressionParser() =
             
         let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>()
         let nt_multi_expression         = x.nt<MULTI_EXPRESSION>()
+        let nt_expression_ext           = x.nt<EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
         let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..8 |]
         let nt_funccall                 = x.nt<FUNCCALL>()
@@ -96,20 +97,20 @@ type ExpressionParser() =
         let t_literal_false             = x.tf @"false"                                                (fun _ -> False)
         let t_literal_null              = x.tf @"null"                                                 (fun _ -> Null)
         let t_literal_default           = x.tf @"default"                                              (fun _ -> Default)
-        let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"                         (lparse "0x" (fun s -> long.Parse(s.TrimEnd('h'), NumberStyles.HexNumber)))
+        let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"                         (lparse "0x" (fun s -> long.Parse(s.TrimEnd 'h', NumberStyles.HexNumber)))
         let t_bin                       = x.tf @"(\+|-)?0b[01]+"                                       (lparse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
         let t_oct                       = x.tf @"(\+|-)?0o[0-7]+"                                      (lparse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
-        let t_dec                       = x.tf @"(\+|-)?(\d+\.\d*(e(\+|-)?\d+)?|\.?\d+(e(\+|-)?\d+)?)" (fun s -> Number <| decimal.Parse(s))
-        let t_variable                  = x.tf @"$[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> VARIABLE(s.Substring(1)))
-        let t_macro                     = x.tf @"@[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> MACRO(s.Substring(1)))
+        let t_dec                       = x.tf @"(\+|-)?(\d+\.\d*(e(\+|-)?\d+)?|\.?\d+(e(\+|-)?\d+)?)" (fun s -> Number <| decimal.Parse s)
+        let t_variable                  = x.tf @"$[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> VARIABLE(s.Substring 1))
+        let t_macro                     = x.tf @"@[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
         let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
         let t_identifier                = x.tf @"[a-z0-9_]*"                                           id
 
         let (!@) x = nt_subexpression.[x]
 
-        reduce1 nt_multi_expression nt_expression SingleValue
-        reduce3 nt_multi_expression nt_expression t_keyword_to nt_expression (fun a _ b -> ValueRange(a, b))
+        reduce1 nt_multi_expression nt_expression_ext SingleValue
+        reduce3 nt_multi_expression nt_expression_ext t_keyword_to nt_expression_ext (fun a _ b -> ValueRange(a, b))
         reduce1 nt_multi_expressions nt_multi_expression (fun m -> [m])
         reduce3 nt_multi_expressions nt_multi_expression t_symbol_comma nt_multi_expressions (fun m _ ms -> m::ms)
 
@@ -121,9 +122,11 @@ type ExpressionParser() =
 
         reduce1 nt_dot_member t_identifier Field
         reduce1 nt_dot_member nt_funccall Method
+        
+        reduce0 nt_expression_ext nt_expression
+        reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
 
         reduce0 nt_expression !@0
-        reduce1 nt_expression nt_assignment_expression AssignmentExpression
 
         // TODO  : change precedence inside each precedence group (?)
 

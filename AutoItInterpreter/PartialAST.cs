@@ -28,7 +28,7 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_FUNCTION
         : AST_SCOPE
     {
-        public AST_STATEMENT[] Statements { set; get; }
+        public string Name { set; get; }
     }
 
     public sealed class AST_ASSIGNMENT_STATEMNT

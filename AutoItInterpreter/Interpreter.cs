@@ -153,81 +153,13 @@ namespace AutoItInterpreter
 
 
             if (UseVerboseOutput)
-                DEBUG_DisplayCodeAndErrors(RootContext.SourcePath, state);
+            {
+                DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
+                DebugPrintUtil.DisplayPartialAST(state);
+            }
             else
                 foreach (InterpreterError err in state.Errors)
                     Console.WriteLine($"[{(err.IsFatal ? " ERROR " : "WARNING")}]  {err}");
-        }
-
-        private static void DEBUG_DisplayCodeAndErrors(FileInfo root, InterpreterState state)
-        {
-            Console.WriteLine(new string('=', 200));
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-            foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
-            {
-                Console.WriteLine($"       ____________________________ {path.FullName} ____________________________");
-
-                int cnt = 1;
-
-                InterpreterError[] localerrors = state.Errors.Where(e => Util.ArePathsEqual(e.ErrorContext.FilePath, path)).ToArray();
-
-                foreach (string line in File.ReadAllText(path.FullName).Replace("\r\n", "\n").Split('\n'))
-                {
-                    InterpreterError[] errs = localerrors.Where(e => e.ErrorContext.StartLine == cnt).ToArray();
-
-                    Console.Write($"{cnt,6} |  ");
-
-                    if (errs.Length > 0 && line.Trim().Length > 0)
-                    {
-                        string pad = "       |  " + line.Remove(line.Length - line.TrimStart().Length);
-                        bool crit = errs.Any(e => e.IsFatal);
-
-                        Console.ForegroundColor = crit ? ConsoleColor.Red : ConsoleColor.Yellow;
-                        Console.WriteLine(line);
-                        Console.ForegroundColor = crit ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
-                        Console.WriteLine(pad + new string('^', line.Trim().Length));
-
-                        foreach (IGrouping<bool, InterpreterError> g in errs.GroupBy(e => e.IsFatal))
-                        {
-                            Console.ForegroundColor = g.Key ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
-
-                            foreach (InterpreterError e in g)
-                                Console.WriteLine(pad + e.ErrorMessage);
-                        }
-
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-                    }
-                    else
-                        Console.WriteLine(line);
-
-                    ++cnt;
-                }
-
-                Console.WriteLine();
-            }
-
-            Console.ForegroundColor = ConsoleColor.Gray;
-        }
-
-        private static void DEBUG_DisplayPreState(PreInterpreterState state)
-        {
-            Console.WriteLine(new string('=', 200));
-
-            foreach (string fn in state.Functions.Keys)
-            {
-                FunctionScope func = state.Functions[fn];
-
-                Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
-
-                foreach (var l in func.Lines)
-                {
-                    Console.CursorLeft = 10;
-                    Console.Write(l.Context);
-                    Console.CursorLeft = 40;
-                    Console.WriteLine(l.Line);
-                }
-            }
         }
 
         private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang, bool verbose)
@@ -282,7 +214,7 @@ namespace AutoItInterpreter
             }
 
             if (verbose)
-                DEBUG_DisplayPreState(pstate);
+                DebugPrintUtil.DisplayPreState(pstate);
 
             Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate);
             InterpreterState state = InterpreterState.Convert(pstate);
@@ -403,7 +335,7 @@ namespace AutoItInterpreter
                     {
                         int errnum = Language.GetErrorNumber(msg);
 
-                        msg = (global ? $"[{name}]  " : "") + state.Language[msg, args];
+                        msg = state.Language[msg, args];
 
                         if (fatal)
                             state.ReportError(msg, defctx, errnum);
@@ -910,6 +842,7 @@ namespace AutoItInterpreter
                             {
                                 Statements = proclines(),
                                 Context = i.DefinitionContext,
+                                Name = i.Name,
                                 // TODO : parse params etc.
                             };
                         case IF i:
@@ -1019,6 +952,7 @@ namespace AutoItInterpreter
                             }
                         case FOR i:
                             {
+                                DefinitionContext defctx = i.DefinitionContext;
                                 EXPRESSION start = parseexpr(i.StartExpression);
                                 EXPRESSION stop = parseexpr(i.StopExpression);
                                 EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
@@ -1038,19 +972,24 @@ namespace AutoItInterpreter
                                 };
                                 AST_SCOPE scope = new AST_SCOPE
                                 {
+                                    Context = defctx,
                                     Statements = new AST_STATEMENT[]
                                     {
                                         new AST_WHILE_STATEMENT
                                         {
+                                            Context = defctx,
                                             WhileBlock = new AST_CONDITIONAL_BLOCK
                                             {
+                                                Context = defctx,
                                                 Condition = EXPRESSION.NewLiteral(LITERAL.True),
                                                 Statements = new AST_STATEMENT[]
                                                 {
                                                     new AST_IF_STATEMENT
                                                     {
+                                                        Context = defctx,
                                                         If = new AST_CONDITIONAL_BLOCK
                                                         {
+                                                            Context = defctx,
                                                             Condition = EXPRESSION.NewBinaryExpression(
                                                                 OPERATOR_BINARY.Or,
                                                                 EXPRESSION.NewBinaryExpression(
@@ -1094,6 +1033,7 @@ namespace AutoItInterpreter
                                                 {
                                                     new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                     {
+                                                        Context = defctx,
                                                         Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
                                                             OPERATOR_ASSIGNMENT.AssignAdd,
                                                             VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
@@ -1113,11 +1053,109 @@ namespace AutoItInterpreter
                                 return scope;
                             }
                         case FOREACH i:
-                            warn("warnings.not_impl"); // TODO
+                            {
+                                DefinitionContext defctx = i.DefinitionContext;
+                                AST_LOCAL_VARIABLE elemvar = new AST_LOCAL_VARIABLE
+                                {
+                                    Variable = new VARIABLE(i.VariableExpression),
+                                    InitExpression = EXPRESSION.NewLiteral(LITERAL.Null)
+                                };
 
-                            break;
+                                if (parseexpr(i.RangeExpression) is EXPRESSION collexpr)
+                                {
+                                    AST_LOCAL_VARIABLE collvar = new AST_LOCAL_VARIABLE
+                                    {
+                                        Variable = VARIABLE.NewTemporary,
+                                        InitExpression = collexpr
+                                    };
+                                    AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+                                    {
+                                        Variable = VARIABLE.NewTemporary,
+                                        InitExpression = EXPRESSION.NewLiteral(LITERAL.NewNumber(0))
+                                    };
+                                    AST_SCOPE scope = new AST_SCOPE
+                                    {
+                                        Context = defctx,
+                                        Statements = new AST_STATEMENT[]
+                                        {
+                                            new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                            {
+                                                Context = defctx,
+                                                Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                    OPERATOR_ASSIGNMENT.Assign,
+                                                    VARIABLE_EXPRESSION.NewVariable(elemvar.Variable),
+                                                    EXPRESSION.NewArrayIndex(
+                                                        VARIABLE_EXPRESSION.NewVariable(collvar.Variable),
+                                                        EXPRESSION.NewVariableExpression(
+                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                        )
+                                                    )
+                                                )
+                                            },
+                                        }
+                                        .Concat(proclines())
+                                        .Concat(new AST_STATEMENT[]
+                                        {
+                                            new AST_IF_STATEMENT
+                                            {
+                                                Context = defctx,
+                                                If = new AST_CONDITIONAL_BLOCK
+                                                {
+                                                    Context = defctx,
+                                                    Condition = EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.GreaterEqual,
+                                                        EXPRESSION.NewVariableExpression(
+                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                        ),
+                                                        EXPRESSION.NewFunctionCall(
+                                                            new Tuple<string, FSharpList<EXPRESSION>>(
+                                                                "ubound",
+                                                                new FSharpList<EXPRESSION>(
+                                                                    EXPRESSION.NewVariableExpression(
+                                                                        VARIABLE_EXPRESSION.NewVariable(collvar.Variable)
+                                                                    ),
+                                                                    FSharpList<EXPRESSION>.Empty
+                                                                )
+                                                            )
+                                                        )
+                                                    ),
+                                                    Statements = new AST_STATEMENT[]
+                                                    {
+                                                        new AST_BREAK_STATEMENT { Level = 1 }
+                                                    }
+                                                },
+                                                OptionalElse = new AST_STATEMENT[]
+                                                {
+                                                    new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                    {
+                                                        Context = defctx,
+                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                            OPERATOR_ASSIGNMENT.AssignAdd,
+                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                            EXPRESSION.NewLiteral(
+                                                                LITERAL.NewNumber(1)
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        })
+                                        .ToArray()
+                                    };
+
+                                    scope.ExplicitLocalsVariables.Add(collvar);
+
+                                    warn("warnings.not_impl"); // TODO
+
+                                    return scope;
+                                }
+
+                                break;
+                            }
                         case RAWLINE i:
                             {
+                                // TODO : with-statement rawline ?
+
                                 if (parseexpr(i.RawContent?.Trim() ?? "") is EXPRESSION expr)
                                     if (expr.IsAssignmentExpression)
                                         return new AST_ASSIGNMENT_EXPRESSION_STATEMENT

@@ -11,7 +11,8 @@
 
 Func f1()
     If true Then
-        $test = 0
+        $test = 0x7fffffffffffffff
+        $test = 0x80000000000000000 ; <-- too big  *wink*
     Else
         If $test Then
             f2()
@@ -46,5 +47,11 @@ for $cnt1 = 0 to 7
             case else ; <--- should not be valid !
                 f2()
         endswitch
+    next
+
+     $test[5] = { 0, 1, 2, 3, 4 }
+
+    for $var in $test
+        printf($var)
     next
 next

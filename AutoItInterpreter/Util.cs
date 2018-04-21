@@ -1,10 +1,14 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.IO;
 using System;
 
 using Newtonsoft.Json.Linq;
+
+using AutoItInterpreter.PartialAST;
+using AutoItExpressionParser;
 
 namespace AutoItInterpreter
 {
@@ -78,6 +82,122 @@ namespace AutoItInterpreter
         public static bool ArePathsEqual(FileInfo nfo1, FileInfo nfo2) => ArePathsEqual(nfo1.FullName, nfo2.FullName);
     }
 
+    internal static class DebugPrintUtil
+    {
+        public static void DisplayPartialAST(InterpreterState state)
+        {
+            Console.WriteLine(new string('=', 200));
+
+            string[] glob = { PreInterpreterState.GLOBAL_FUNC_NAME };
+
+            foreach (string fn in state.ASTFunctions.Keys.Except(glob).OrderByDescending(fn => fn).Concat(glob).Reverse())
+            {
+                AST_FUNCTION func = state.ASTFunctions[fn];
+
+                Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
+
+                print(func, 1);
+            }
+
+            void print(AST_STATEMENT e, int indent)
+            {
+                void println(string s) => Console.WriteLine(new string(' ', indent * 4) + s);
+
+                switch (e)
+                {
+                    case AST_SCOPE s:
+                        println("{");
+
+                        foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalsVariables)
+                            if (ls.InitExpression is null)
+                                println($"    {ls.Variable};");
+                            else
+                                println($"    {ls.Variable} = {ExpressionAST.Print(ls.InitExpression)};");
+
+                        foreach (AST_STATEMENT ls in s.Statements)
+                            print(ls, indent + 1);
+
+                        println("}");
+
+                        return;
+
+
+                    // TODO 
+                }
+            }
+        }
+
+        public static void DisplayCodeAndErrors(FileInfo root, InterpreterState state)
+        {
+            Console.WriteLine(new string('=', 200));
+
+            foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
+            {
+                Console.WriteLine($"     _ |  {path.FullName}");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+
+                int cnt = 1;
+
+                InterpreterError[] localerrors = state.Errors.Where(e => Util.ArePathsEqual(e.ErrorContext.FilePath, path)).ToArray();
+
+                foreach (string line in File.ReadAllText(path.FullName).Replace("\r\n", "\n").Split('\n'))
+                {
+                    InterpreterError[] errs = localerrors.Where(e => e.ErrorContext.StartLine == cnt).ToArray();
+
+                    Console.Write($"{cnt,6} |  ");
+
+                    if (errs.Length > 0 && line.Trim().Length > 0)
+                    {
+                        string pad = $"       |  {line.Remove(line.Length - line.TrimStart().Length)}";
+                        bool crit = errs.Any(e => e.IsFatal);
+
+                        Console.ForegroundColor = crit ? ConsoleColor.Red : ConsoleColor.Yellow;
+                        Console.WriteLine(line);
+                        Console.ForegroundColor = crit ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+                        Console.WriteLine(pad + new string('^', line.Trim().Length));
+
+                        foreach (IGrouping<bool, InterpreterError> g in errs.GroupBy(e => e.IsFatal))
+                        {
+                            Console.ForegroundColor = g.Key ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+
+                            foreach (InterpreterError e in g)
+                                Console.WriteLine(pad + e.ErrorMessage);
+                        }
+
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+                    else
+                        Console.WriteLine(line);
+
+                    ++cnt;
+                }
+
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+        }
+
+        public static void DisplayPreState(PreInterpreterState state)
+        {
+            Console.WriteLine(new string('=', 200));
+
+            foreach (string fn in state.Functions.Keys)
+            {
+                FunctionScope func = state.Functions[fn];
+
+                Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
+
+                foreach (var l in func.Lines)
+                {
+                    Console.CursorLeft = 10;
+                    Console.Write(l.Context);
+                    Console.CursorLeft = 40;
+                    Console.WriteLine(l.Line);
+                }
+            }
+        }
+    }
+
     public sealed class PathEqualityComparer
         : IEqualityComparer<FileInfo>
     {
@@ -85,6 +205,9 @@ namespace AutoItInterpreter
 
         public int GetHashCode(FileInfo obj) => obj is null ? 0 : Path.GetFullPath(obj.FullName).GetHashCode();
     }
+
+
+
 
 
     // only used inside the interpreted script
