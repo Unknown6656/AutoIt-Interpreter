@@ -1,6 +1,7 @@
 ﻿module AutoItExpressionParser.ExpressionAST
 
 open AutoItExpressionParser.Util
+open System
 
 
 type VARIABLE (name : string) =
@@ -11,6 +12,7 @@ type VARIABLE (name : string) =
         match o with
         | As (m : VARIABLE) -> m.GetHashCode() = x.GetHashCode()
         | _ -> false
+    static member NewTemporary = VARIABLE(sprintf "__tmp<>%d" (DateTime.Now.Ticks))
         
 // https://www.autoitscript.com/autoit3/docs/macros.htm
 type MACRO (name : string) =
@@ -38,8 +40,11 @@ type OPERATOR_ASSIGNMENT =
     | AssignModulus
     | AssignConcat
     | AssignPower
+    | AssignNand
     | AssignAnd
+    | AssignNxor
     | AssignXor
+    | AssignNor
     | AssignOr
     | AssignRotateLeft
     | AssignRotateRight
@@ -56,6 +61,7 @@ type OPERATOR_BINARY =
     | LowerEqual
     | And
     | Xor
+    | Nxor
     | Nor
     | Nand
     | Or
@@ -65,8 +71,11 @@ type OPERATOR_BINARY =
     | Divide
     | Modulus
     | Power
+    | BitwiseNand
     | BitwiseAnd
+    | BitwiseNxor
     | BitwiseXor
+    | BitwiseNor
     | BitwiseOr
     | BitwiseRotateLeft
     | BitwiseRotateRight
@@ -100,6 +109,6 @@ and EXPRESSION =
 and ASSIGNMENT_EXPRESSION =
     | Assignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
     | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION * EXPRESSION // op, var, index, expr
-type CASE_EXPRESSION =
+type MULTI_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION

@@ -24,7 +24,8 @@ namespace AutoItInterpreter
                     ("l", "lang"),
                     ("ll", "list-languages"),
                     ("s", "settings"),
-                    ("rs", "reset-settings")
+                    ("rs", "reset-settings"),
+                    ("v", "verbose")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -82,7 +83,7 @@ namespace AutoItInterpreter
 
                 try
                 {
-                    intp = new Interpreter(GetF("input"), lang, settings);
+                    intp = new Interpreter(GetF("input"), lang, settings, Cont("verbose"));
                 }
                 catch
                 {
@@ -154,6 +155,8 @@ namespace AutoItInterpreter
 | -rs               | --reset-settings  | Resets the .json settings file to its defaults        |
 | -l=....           | --lang=...        | Sets the language for the current session using the   |
 |                   |                   | given language code. (Doesn't affect the settings)    |
+| -v                | --verbose         | Displays verbose compilation output (instead of only  |
+|                   |                   | the compiler errors and warnings).                    |
 +-------------------+-------------------+-------------------------------------------------------+
 |                                                                                               |
 | Most options can be used as follows:                                                          |
@@ -166,7 +169,7 @@ namespace AutoItInterpreter
 +-----------------------------------------------------------------------------------------------+
 |                                                                                               |
 |    Example:                                                                                   |
-|    {ASM_FILE.Name,18} -i script.au3                                                           |
+|    {ASM_FILE.Name,18} -i=script.au3                                                           |
 |                                                                                               |
 +-----------------------------------------------------------------------------------------------+
 ".PrintC(ConsoleColor.Cyan);

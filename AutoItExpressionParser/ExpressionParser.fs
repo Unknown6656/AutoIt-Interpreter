@@ -10,7 +10,7 @@ type decimal = System.Decimal
 
 
 type ExpressionParser() =
-    inherit AbstractParser<EXPRESSION>()
+    inherit AbstractParser<MULTI_EXPRESSION list>()
     override x.BuildParser() =
         let lparse p (f : string -> long) (s : string) =
             let s = s.TrimStart('+').ToLower().Replace(p, "")
@@ -20,20 +20,25 @@ type ExpressionParser() =
             if n then -l else l
             |> decimal
             |> Number
-
+            
+        let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>()
+        let nt_multi_expression         = x.nt<MULTI_EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
-        let nt_subexpr                  = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..8 |]
+        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..8 |]
         let nt_funccall                 = x.nt<FUNCCALL>()
         let nt_funcparams               = x.nt<EXPRESSION list>()
         let nt_literal                  = x.nt<LITERAL>()
         let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>()
         let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>()
-        let nt_variable_expr            = x.nt<VARIABLE_EXPRESSION>()
+        let nt_variable_expression      = x.nt<VARIABLE_EXPRESSION>()
         let nt_dot_members              = x.nt<MEMBER list>()
         let nt_dot_member               = x.nt<MEMBER>()
-
+        
+        let t_operator_assign_nand      = x.t @"~&&="
         let t_operator_assign_and       = x.t @"&&="
+        let t_operator_assign_nxor      = x.t @"~^^="
         let t_operator_assign_xor       = x.t @"^^="
+        let t_operator_assign_nor       = x.t @"~\|\|="
         let t_operator_assign_or        = x.t @"\|\|="
         let t_operator_assign_rol       = x.t @"<<<="
         let t_operator_assign_ror       = x.t @">>>="
@@ -46,8 +51,11 @@ type ExpressionParser() =
         let t_operator_assign_mod       = x.t @"%="
         let t_operator_assign_con       = x.t @"&="
         let t_operator_assign_pow       = x.t @"^="
+        let t_operator_bit_nand         = x.t @"~&&"
         let t_operator_bit_and          = x.t @"&&"
+        let t_operator_bit_nxor         = x.t @"~^^"
         let t_operator_bit_xor          = x.t @"^^"
+        let t_operator_bit_nor          = x.t @"~\|\|"
         let t_operator_bit_or           = x.t @"\|\|"
         let t_operator_bit_rol          = x.t @"<<<"
         let t_operator_bit_ror          = x.t @">>>"
@@ -76,12 +84,14 @@ type ExpressionParser() =
         let t_symbol_cparen             = x.t @"\)"
         let t_symbol_obrack             = x.t @"\["
         let t_symbol_cbrack             = x.t @"\]"
+        let t_keyword_to                = x.t @"to"
         let t_keyword_nand              = x.t @"nand"
         let t_keyword_nor               = x.t @"nor"
         let t_keyword_and               = x.t @"and"
+        let t_keyword_nxor              = x.t @"nxor"
         let t_keyword_xor               = x.t @"xor"
         let t_keyword_or                = x.t @"or"
-        let t_keyword_not               = x.t @"not"
+        let t_keyword_not               = x.t @"(not|!)"
         let t_literal_true              = x.tf @"true"                                                 (fun _ -> True)
         let t_literal_false             = x.tf @"false"                                                (fun _ -> False)
         let t_literal_null              = x.tf @"null"                                                 (fun _ -> Null)
@@ -96,10 +106,15 @@ type ExpressionParser() =
         let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
         let t_identifier                = x.tf @"[a-z0-9_]*"                                           id
 
-        let (!@) x = nt_subexpr.[x]
+        let (!@) x = nt_subexpression.[x]
 
-        reduce1 nt_variable_expr t_variable Variable
-        reduce3 nt_variable_expr t_variable t_symbol_dot nt_dot_members (fun v _ m -> DotAccess(v, m))
+        reduce1 nt_multi_expression nt_expression SingleValue
+        reduce3 nt_multi_expression nt_expression t_keyword_to nt_expression (fun a _ b -> ValueRange(a, b))
+        reduce1 nt_multi_expressions nt_multi_expression (fun m -> [m])
+        reduce3 nt_multi_expressions nt_multi_expression t_symbol_comma nt_multi_expressions (fun m _ ms -> m::ms)
+
+        reduce1 nt_variable_expression t_variable Variable
+        reduce3 nt_variable_expression t_variable t_symbol_dot nt_dot_members (fun v _ m -> DotAccess(v, m))
         
         reduce1 nt_dot_members nt_dot_member (fun i -> [i])
         reduce3 nt_dot_members nt_dot_member t_symbol_dot nt_dot_members (fun x _ xs -> x::xs)
@@ -116,6 +131,7 @@ type ExpressionParser() =
         reduce3 !@0 !@0 t_keyword_nand !@1 (fun a _ b -> BinaryExpression(Nand, a, b))
         reduce3 !@0 !@0 t_keyword_and !@1 (fun a _ b -> BinaryExpression(And, a, b))
         reduce3 !@0 !@0 t_keyword_nor !@1 (fun a _ b -> BinaryExpression(Nor, a, b))
+        reduce3 !@0 !@0 t_keyword_nxor !@1 (fun a _ b -> BinaryExpression(Nxor, a, b))
         reduce3 !@0 !@0 t_keyword_xor !@1 (fun a _ b -> BinaryExpression(Xor, a, b))
         reduce3 !@0 !@0 t_keyword_or !@1 (fun a _ b -> BinaryExpression(Or, a, b))
         reduce0 !@1 !@2
@@ -129,8 +145,11 @@ type ExpressionParser() =
         reduce0 !@2 !@3
         reduce3 !@2 !@2 t_symbol_ampersand !@3 (fun a _ b -> BinaryExpression(StringConcat, a, b))
         reduce0 !@3 !@4
+        reduce3 !@3 !@3 t_operator_bit_nand !@4 (fun a _ b -> BinaryExpression(BitwiseNand, a, b))
         reduce3 !@3 !@3 t_operator_bit_and !@4 (fun a _ b -> BinaryExpression(BitwiseAnd, a, b))
+        reduce3 !@3 !@3 t_operator_bit_nxor !@4 (fun a _ b -> BinaryExpression(BitwiseNxor, a, b))
         reduce3 !@3 !@3 t_operator_bit_xor !@4 (fun a _ b -> BinaryExpression(BitwiseXor, a, b))
+        reduce3 !@3 !@3 t_operator_bit_nor !@4 (fun a _ b -> BinaryExpression(BitwiseNor, a, b))
         reduce3 !@3 !@3 t_operator_bit_or !@4 (fun a _ b -> BinaryExpression(BitwiseOr, a, b))
         reduce3 !@3 !@3 t_operator_bit_rol !@4 (fun a _ b -> BinaryExpression(BitwiseRotateLeft, a, b))
         reduce3 !@3 !@3 t_operator_bit_ror !@4 (fun a _ b -> BinaryExpression(BitwiseRotateRight, a, b))
@@ -152,10 +171,10 @@ type ExpressionParser() =
         reduce2 !@7 t_operator_bit_not !@7 (fun _ e -> UnaryExpression(BitwiseNot, e))
         reduce1 !@8 nt_literal Literal
         reduce1 !@8 nt_funccall FunctionCall
-        reduce1 !@8 nt_variable_expr VariableExpression
+        reduce1 !@8 nt_variable_expression VariableExpression
         reduce1 !@8 t_macro Macro
         reduce3 !@8 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-        reduce4 !@8 nt_variable_expr t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+        reduce4 !@8 nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
      // reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
@@ -182,8 +201,11 @@ type ExpressionParser() =
         reduce1 nt_operator_binary_ass t_operator_assign_mod (fun _ -> AssignModulus)
         reduce1 nt_operator_binary_ass t_operator_assign_con (fun _ -> AssignConcat)
         reduce1 nt_operator_binary_ass t_operator_assign_pow (fun _ -> AssignPower)
+        reduce1 nt_operator_binary_ass t_operator_assign_nand (fun _ -> AssignNand)
         reduce1 nt_operator_binary_ass t_operator_assign_and (fun _ -> AssignAnd)
+        reduce1 nt_operator_binary_ass t_operator_assign_nxor (fun _ -> AssignNxor)
         reduce1 nt_operator_binary_ass t_operator_assign_xor (fun _ -> AssignXor)
+        reduce1 nt_operator_binary_ass t_operator_assign_nor (fun _ -> AssignNor)
         reduce1 nt_operator_binary_ass t_operator_assign_or (fun _ -> AssignOr)
         reduce1 nt_operator_binary_ass t_operator_assign_rol (fun _ -> AssignRotateLeft)
         reduce1 nt_operator_binary_ass t_operator_assign_ror (fun _ -> AssignRotateRight)
@@ -191,7 +213,7 @@ type ExpressionParser() =
         reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
         reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
         
-        reduce3 nt_assignment_expression nt_variable_expr nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
-        reduce6 nt_assignment_expression nt_variable_expr t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
+        reduce3 nt_assignment_expression nt_variable_expression nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
+        reduce6 nt_assignment_expression nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

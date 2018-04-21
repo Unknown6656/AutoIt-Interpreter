@@ -4,6 +4,8 @@ using System.Linq;
 using System.IO;
 using System;
 
+using Microsoft.FSharp.Collections;
+
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
@@ -98,6 +100,7 @@ using AutoItExpressionParser;
 
 namespace AutoItInterpreter
 {
+    using MULTI_EXPRESSIONS = FSharpList<ExpressionAST.MULTI_EXPRESSION>;
     using static ExpressionAST;
     using static ControlBlock;
 
@@ -121,14 +124,16 @@ namespace AutoItInterpreter
         };
         private InterpreterSettings Settings { get; }
         public InterpreterContext RootContext { get; }
+        public bool UseVerboseOutput { get; }
         internal Language Language { get; }
 
 
-        public Interpreter(string path, Language lang, InterpreterSettings settings)
+        public Interpreter(string path, Language lang, InterpreterSettings settings, bool verbose)
         {
             RootContext = new InterpreterContext(path);
             Language = lang;
             Settings = settings;
+            UseVerboseOutput = verbose;
             Settings.IncludeDirectories = Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
 
             if (RootContext.Content is null)
@@ -137,7 +142,7 @@ namespace AutoItInterpreter
 
         public void DoMagic()
         {
-            InterpreterState state = InterpretScript(RootContext, Settings, Language);
+            InterpreterState state = InterpretScript(RootContext, Settings, Language, UseVerboseOutput);
 
             ParseExpressionAST(state);
 
@@ -147,57 +152,85 @@ namespace AutoItInterpreter
 
 
 
-            ///////////////////////////////////////////// DEBUGGING /////////////////////////////////////////////
+            if (UseVerboseOutput)
+                DEBUG_DisplayCodeAndErrors(RootContext.SourcePath, state);
+            else
+                foreach (InterpreterError err in state.Errors)
+                    Console.WriteLine($"[{(err.IsFatal ? " ERROR " : "WARNING")}]  {err}");
+        }
 
+        private static void DEBUG_DisplayCodeAndErrors(FileInfo root, InterpreterState state)
+        {
+            Console.WriteLine(new string('=', 200));
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+
+            foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
+            {
+                Console.WriteLine($"       ____________________________ {path.FullName} ____________________________");
+
+                int cnt = 1;
+
+                InterpreterError[] localerrors = state.Errors.Where(e => Util.ArePathsEqual(e.ErrorContext.FilePath, path)).ToArray();
+
+                foreach (string line in File.ReadAllText(path.FullName).Replace("\r\n", "\n").Split('\n'))
+                {
+                    InterpreterError[] errs = localerrors.Where(e => e.ErrorContext.StartLine == cnt).ToArray();
+
+                    Console.Write($"{cnt,6} |  ");
+
+                    if (errs.Length > 0 && line.Trim().Length > 0)
+                    {
+                        string pad = "       |  " + line.Remove(line.Length - line.TrimStart().Length);
+                        bool crit = errs.Any(e => e.IsFatal);
+
+                        Console.ForegroundColor = crit ? ConsoleColor.Red : ConsoleColor.Yellow;
+                        Console.WriteLine(line);
+                        Console.ForegroundColor = crit ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+                        Console.WriteLine(pad + new string('^', line.Trim().Length));
+
+                        foreach (IGrouping<bool, InterpreterError> g in errs.GroupBy(e => e.IsFatal))
+                        {
+                            Console.ForegroundColor = g.Key ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+
+                            foreach (InterpreterError e in g)
+                                Console.WriteLine(pad + e.ErrorMessage);
+                        }
+
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+                    else
+                        Console.WriteLine(line);
+
+                    ++cnt;
+                }
+
+                Console.WriteLine();
+            }
+
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
+
+        private static void DEBUG_DisplayPreState(PreInterpreterState state)
+        {
             Console.WriteLine(new string('=', 200));
 
-            foreach (var fn in state.ASTFunctions.Keys)
+            foreach (string fn in state.Functions.Keys)
             {
-                var func = state.ASTFunctions[fn];
+                FunctionScope func = state.Functions[fn];
 
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
 
-                foreach (var l in func.Statements)
+                foreach (var l in func.Lines)
                 {
                     Console.CursorLeft = 10;
                     Console.Write(l.Context);
                     Console.CursorLeft = 40;
-                    Console.WriteLine(l);
+                    Console.WriteLine(l.Line);
                 }
             }
-
-            Console.WriteLine(new string('=', 200));
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-            int cnt = 1;
-
-            foreach (string line in RootContext.Content.Replace("\r\n", "\n").Split('\n'))
-            {
-                ++cnt;
-
-                if (Array.Find(state.Errors, e => e.ErrorContext.StartLine == cnt) is InterpreterError err)
-                    if (line.Trim().Length > 0)
-                    {
-                        string pad = line.Remove(line.Length - line.TrimStart().Length);
-
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine(line);
-                        Console.ForegroundColor = ConsoleColor.DarkRed;
-                        Console.WriteLine(pad + new string('^', line.Trim().Length));
-                        Console.WriteLine(pad + err.ErrorMessage);
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-                    }
-                    else
-                        Console.WriteLine();
-                else
-                    Console.WriteLine(line);
-            }
-
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine(new string('=', 200));
         }
 
-        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang)
+        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang, bool verbose)
         {
             List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
             PreInterpreterState pstate = new PreInterpreterState
@@ -247,6 +280,9 @@ namespace AutoItInterpreter
 
                 ++locindx;
             }
+
+            if (verbose)
+                DEBUG_DisplayPreState(pstate);
 
             Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate);
             InterpreterState state = InterpreterState.Convert(pstate);
@@ -362,7 +398,7 @@ namespace AutoItInterpreter
 
                 while (locndx < lines.Length)
                 {
-                    DefinitionContext defctx = new DefinitionContext(func.Context.FilePath, lines[locndx].Context.StartLine, lines[locndx].Context.EndLine);
+                    DefinitionContext defctx = lines[locndx].Context;
                     void err(string msg, bool fatal, params object[] args)
                     {
                         int errnum = Language.GetErrorNumber(msg);
@@ -537,7 +573,8 @@ namespace AutoItInterpreter
                             else
                                 err("errors.preproc.misplaced_continuecase", true);
                         }),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
+                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop")))),
                         (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
                         ("^next$", new[] { Switch, Select }, _ => TryCloseBlock(For)),
                         (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(While, new WHILE(curr, m.Get("cond")))),
@@ -818,10 +855,8 @@ namespace AutoItInterpreter
         {
             const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
             ExpressionParser exparser = new ExpressionParser();
-            CaseExpressionParser cexparser = new CaseExpressionParser();
 
-            foreach (dynamic p in new dynamic[] { cexparser, exparser })
-                p.Initialize();
+            exparser.Initialize();
 
             foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
                                                                                                         where kvp.Key != globnm
@@ -840,6 +875,18 @@ namespace AutoItInterpreter
                     Context = e.DefinitionContext
                 };
                 EXPRESSION parseexpr(string expr)
+                {
+                    if (parsemexpr(expr) is MULTI_EXPRESSIONS m)
+                        if (m.Length > 1)
+                            err("errors.astproc.no_comma_allowed", expr);
+                        else if (m[0].IsValueRange)
+                            err("errors.astproc.no_range_allowed", expr);
+                        else
+                            return (m[0] as MULTI_EXPRESSION.SingleValue).Item;
+
+                    return null;
+                }
+                MULTI_EXPRESSIONS parsemexpr(string expr)
                 {
                     expr = expr.Trim();
 
@@ -888,11 +935,18 @@ namespace AutoItInterpreter
                                 Cases = i.Cases.Select(x => process(x) as AST_SELECT_CASE).ToArray(),
                             };
                         case SWITCH i:
-                            return new AST_SWITCH_STATEMENT
                             {
-                                Cases = i.Cases.SelectMany(x => process(x) as AST_SWITCH_CASE[]).ToArray(),
-                                Expression = parseexpr(i.Expression)
-                            };
+                                AST_SWITCH_STATEMENT @switch = new AST_SWITCH_STATEMENT
+                                {
+                                    Cases = i.Cases.SelectMany(x => process(x) as AST_SWITCH_CASE[]).ToArray(),
+                                    Expression = parseexpr(i.Expression)
+                                };
+
+                                if (@switch.Cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
+                                    err("errors.astproc.multiple_switch_case_else");
+
+                                return @switch;
+                            }
                         case SELECT_CASE i:
                             return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
                             {
@@ -908,22 +962,23 @@ namespace AutoItInterpreter
                                 if (expr.ToLower() == "else")
                                     return new[] { new AST_SWITCH_CASE_ELSE() };
 
-                                foreach (CASE_EXPRESSION @case in cexparser.Parse("case " + expr))
-                                    if (@case is CASE_EXPRESSION.SingleValue sv)
-                                        cases.Add(new AST_SWITCH_CASE_SINGLEVALUE
-                                        {
-                                            Value = sv.Item,
-                                            Statements = proclines(),
-                                            Context = i.DefinitionContext
-                                        });
-                                    else if (@case is CASE_EXPRESSION.ValueRange vr)
-                                        cases.Add(new AST_SWITCH_CASE_RANGE
-                                        {
-                                            Infimum = vr.Item1,
-                                            Supremum = vr.Item2,
-                                            Statements = proclines(),
-                                            Context = i.DefinitionContext
-                                        });
+                                if (parsemexpr(expr) is MULTI_EXPRESSIONS m)
+                                    foreach (MULTI_EXPRESSION @case in m)
+                                        if (@case is MULTI_EXPRESSION.SingleValue sv)
+                                            cases.Add(new AST_SWITCH_CASE_SINGLEVALUE
+                                            {
+                                                Value = sv.Item,
+                                                Statements = proclines(),
+                                                Context = i.DefinitionContext
+                                            });
+                                        else if (@case is MULTI_EXPRESSION.ValueRange vr)
+                                            cases.Add(new AST_SWITCH_CASE_RANGE
+                                            {
+                                                Infimum = vr.Item1,
+                                                Supremum = vr.Item2,
+                                                Statements = proclines(),
+                                                Context = i.DefinitionContext
+                                            });
 
                                 return cases.ToArray();
                             }
@@ -951,6 +1006,8 @@ namespace AutoItInterpreter
                                     if (!expr.IsVariableExpression)
                                         err("errors.astproc.obj_expression_required", i.Expression);
 
+                                    warn("warnings.not_impl");
+
                                     return new AST_WITH_STATEMENT
                                     {
                                         WithExpression = expr,
@@ -961,9 +1018,104 @@ namespace AutoItInterpreter
                                     break;
                             }
                         case FOR i:
-                            break; // TODO
+                            {
+                                EXPRESSION start = parseexpr(i.StartExpression);
+                                EXPRESSION stop = parseexpr(i.StopExpression);
+                                EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
+                                AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+                                {
+                                    Variable = new VARIABLE(i.VariableExpression),
+                                    InitExpression = start,
+                                };
+                                AST_LOCAL_VARIABLE upvar = new AST_LOCAL_VARIABLE
+                                {
+                                    Variable = VARIABLE.NewTemporary,
+                                    InitExpression = EXPRESSION.NewBinaryExpression(
+                                        OPERATOR_BINARY.LowerEqual,
+                                        start,
+                                        stop
+                                    ),
+                                };
+                                AST_SCOPE scope = new AST_SCOPE
+                                {
+                                    Statements = new AST_STATEMENT[]
+                                    {
+                                        new AST_WHILE_STATEMENT
+                                        {
+                                            WhileBlock = new AST_CONDITIONAL_BLOCK
+                                            {
+                                                Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                                Statements = new AST_STATEMENT[]
+                                                {
+                                                    new AST_IF_STATEMENT
+                                                    {
+                                                        If = new AST_CONDITIONAL_BLOCK
+                                                        {
+                                                            Condition = EXPRESSION.NewBinaryExpression(
+                                                                OPERATOR_BINARY.Or,
+                                                                EXPRESSION.NewBinaryExpression(
+                                                                    OPERATOR_BINARY.And,
+                                                                    EXPRESSION.NewVariableExpression(
+                                                                        VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                                    ),
+                                                                    EXPRESSION.NewBinaryExpression(
+                                                                        OPERATOR_BINARY.Greater,
+                                                                        EXPRESSION.NewVariableExpression(
+                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                                        ),
+                                                                        stop
+                                                                    )
+                                                                ),EXPRESSION.NewBinaryExpression(
+                                                                    OPERATOR_BINARY.And,
+                                                                    EXPRESSION.NewUnaryExpression(
+                                                                        OPERATOR_UNARY.Not,
+                                                                        EXPRESSION.NewVariableExpression(
+                                                                            VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                                        )
+                                                                    ),
+                                                                    EXPRESSION.NewBinaryExpression(
+                                                                        OPERATOR_BINARY.Lower,
+                                                                        EXPRESSION.NewVariableExpression(
+                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                                        ),
+                                                                        start
+                                                                    )
+                                                                )
+                                                            ),
+                                                            Statements = new AST_STATEMENT[]
+                                                            {
+                                                                new AST_BREAK_STATEMENT { Level = 1 }
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                                .Concat(proclines())
+                                                .Concat(new AST_STATEMENT[]
+                                                {
+                                                    new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                    {
+                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                            OPERATOR_ASSIGNMENT.AssignAdd,
+                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                            EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
+                                                        )
+                                                    }
+                                                })
+                                                .ToArray()
+                                            }
+                                        }
+                                    }
+                                };
+
+                                scope.ExplicitLocalsVariables.Add(cntvar);
+                                scope.ExplicitLocalsVariables.Add(upvar);
+
+                                return scope;
+                            }
                         case FOREACH i:
-                            break; // TODO
+                            warn("warnings.not_impl"); // TODO
+
+                            break;
                         case RAWLINE i:
                             {
                                 if (parseexpr(i.RawContent?.Trim() ?? "") is EXPRESSION expr)
@@ -986,7 +1138,9 @@ namespace AutoItInterpreter
                                     break;
                             }
                         case DECLARATION i:
-                            break; // TODO
+                            warn("warnings.not_impl"); // TODO
+
+                            break;
                         default:
                             err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
 

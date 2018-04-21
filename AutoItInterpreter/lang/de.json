@@ -40,7 +40,10 @@
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",
             "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}",
-            "obj_expression_required": "The expression '{0}' is not a valid object-expression."
+            "obj_expression_required": "The expression '{0}' is not a valid object-expression.",
+            "multiple_switch_case_else": "A 'Case Else'-statement can only defined once for each Switch-block.",
+            "no_comma_allowed": "The expression '{0}' must be a single-value expression and must not be multiple comma-seperated values.",
+            "no_range_allowed": "The expression '{0}' must be a single-value expression and must therefore not contain the range-specific keyword 'To'."
         }
     },
     "warnings": {
@@ -52,6 +55,7 @@
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."
-        }
+        },
+        "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"
     }
 }

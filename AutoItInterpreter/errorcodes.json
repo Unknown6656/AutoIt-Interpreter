@@ -31,7 +31,9 @@
         "astproc": {
             "unknown_entity": 1024,
             "parser_error": 1025,
-            "obj_expression_required": 1026
+            "obj_expression_required": 1026,
+            "no_comma_allowed": 1027,
+            "no_range_allowed": 1028
         }
     },
     "warnings": {
@@ -43,6 +45,7 @@
         },
         "astproc": {
             "expression_result_discarded": 2005
-        }
+        },
+        "not_impl": 9999
     }
 }

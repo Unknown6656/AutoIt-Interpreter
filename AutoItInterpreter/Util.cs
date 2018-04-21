@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System;
 
 using Newtonsoft.Json.Linq;
@@ -71,6 +72,18 @@ namespace AutoItInterpreter
         }
 
         public static string Format(this string s, params object[] args) => string.Format(s, args);
+
+        public static bool ArePathsEqual(string path1, string path2) => string.Equals(Path.GetFullPath(path1), Path.GetFullPath(path2), StringComparison.InvariantCultureIgnoreCase);
+
+        public static bool ArePathsEqual(FileInfo nfo1, FileInfo nfo2) => ArePathsEqual(nfo1.FullName, nfo2.FullName);
+    }
+
+    public sealed class PathEqualityComparer
+        : IEqualityComparer<FileInfo>
+    {
+        public bool Equals(FileInfo x, FileInfo y) => Util.ArePathsEqual(x, y);
+
+        public int GetHashCode(FileInfo obj) => obj is null ? 0 : Path.GetFullPath(obj.FullName).GetHashCode();
     }
 
 

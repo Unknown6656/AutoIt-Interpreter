@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 
 using Newtonsoft.Json;
+
 using AutoItInterpreter.Properties;
 
 namespace AutoItInterpreter

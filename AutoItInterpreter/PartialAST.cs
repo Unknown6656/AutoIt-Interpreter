@@ -1,17 +1,32 @@
-﻿using AutoItExpressionParser;
+﻿using System.Collections.Generic;
+
+using AutoItExpressionParser;
 
 namespace AutoItInterpreter.PartialAST
 {
     using static ExpressionAST;
 
 
+    public sealed class AST_LOCAL_VARIABLE
+    {
+        public VARIABLE Variable { set; get; }
+        public EXPRESSION InitExpression { set; get; }
+    }
+
     public abstract class AST_STATEMENT
     {
         public DefinitionContext Context { set; get; }
     }
 
-    public sealed class AST_FUNCTION
+    public class AST_SCOPE
         : AST_STATEMENT
+    {
+        public List<AST_LOCAL_VARIABLE> ExplicitLocalsVariables { get; } = new List<AST_LOCAL_VARIABLE>();
+        public AST_STATEMENT[] Statements { set; get; }
+    }
+
+    public sealed class AST_FUNCTION
+        : AST_SCOPE
     {
         public AST_STATEMENT[] Statements { set; get; }
     }
@@ -31,10 +46,9 @@ namespace AutoItInterpreter.PartialAST
     }
 
     public class AST_CONDITIONAL_BLOCK
+        : AST_SCOPE
     {
         public EXPRESSION Condition { set; get; }
-        public AST_STATEMENT[] Statements { set; get; }
-        public DefinitionContext Context { set; get; }
     }
 
     public sealed class AST_WHILE_STATEMENT
@@ -83,9 +97,8 @@ namespace AutoItInterpreter.PartialAST
     }
 
     public abstract class AST_SWITCH_CASE
-        : AST_STATEMENT
+        : AST_SCOPE
     {
-        public AST_STATEMENT[] Statements { set; get; }
     }
 
     public sealed class AST_SWITCH_CASE_SINGLEVALUE
@@ -159,6 +172,4 @@ namespace AutoItInterpreter.PartialAST
     {
         public uint Level { set; get; }
     }
-
-    // TODO
 }
