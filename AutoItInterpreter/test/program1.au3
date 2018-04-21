@@ -5,7 +5,7 @@
 
 #cs
     Func f2()
-        // this is an invalid comment inside an non-exitent function ...
+        // this is an invalid comment inside an non-existent function ...
     EndFunc
 #ce
 

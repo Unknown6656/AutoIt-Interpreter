@@ -313,7 +313,7 @@ namespace AutoItInterpreter
                     comment = false;
                 else if (!comment)
                 {
-                    if (tline.Match(@"\;[^\""]$", out Match m))
+                    if (tline.Match(@"\;[^\""]*$", out Match m))
                         tline = tline.Remove(m.Index).Trim();
                     else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
                         tline = tline.Remove(m.Groups["cmt"].Index).Trim();
