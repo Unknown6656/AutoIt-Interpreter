@@ -173,7 +173,7 @@ namespace AutoItInterpreter
             };
             int locindx = 0;
 
-            lines.AddRange(FetchLines(context));
+            lines.AddRange(FetchLines(pstate, context));
 
             while (locindx < lines.Count)
             {
@@ -197,7 +197,7 @@ namespace AutoItInterpreter
                             using (StreamReader rd = inclpath.OpenText())
                             {
                                 lines.RemoveAt(locindx);
-                                lines.InsertRange(locindx, FetchLines(new InterpreterContext(inclpath)));
+                                lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath)));
 
                                 --locindx;
                             }
@@ -225,7 +225,7 @@ namespace AutoItInterpreter
             return state;
         }
 
-        private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(InterpreterContext context)
+        private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context)
         {
             string raw = context.Content;
 
@@ -269,9 +269,7 @@ namespace AutoItInterpreter
             }
 
             if (comment)
-            {
-                // TODO : warning
-            }
+                state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt));
 
             lcnt = 0;
 
@@ -479,6 +477,10 @@ namespace AutoItInterpreter
                             if (eblocks.Peek().CB == Case)
                                 TryCloseBlock(Case);
 
+                            SWITCH sw = eblocks.Peek().Entity as SWITCH;
+
+                            sw.Cases.AddRange(sw.RawLines.Select(x => x as SWITCH_CASE));
+
                             TryCloseBlock(Switch);
                         }),
                         (@"^case\s+(?<cond>.+)$", new ControlBlock[0], m =>
@@ -488,7 +490,8 @@ namespace AutoItInterpreter
 
                             if (b.CB == Case)
                             {
-                                eblocks.Pop();
+                                TryCloseBlock(Case);
+
                                 b = eblocks.Peek();
                             }
 
@@ -805,7 +808,7 @@ namespace AutoItInterpreter
                 void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
-                EXPRESSION opt(EXPRESSION expr) => Refactorings.ProcessExpression(expr);
+                EXPRESSION opt(EXPRESSION expr) => expr is null ? null : Refactorings.ProcessExpression(expr);
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
                     Condition = parseexpr((e as ConditionalEntity).RawCondition),
@@ -902,16 +905,81 @@ namespace AutoItInterpreter
                             }
                         case SWITCH i:
                             {
-                                AST_SWITCH_STATEMENT @switch = new AST_SWITCH_STATEMENT
+                                AST_LOCAL_VARIABLE exprvar = new AST_LOCAL_VARIABLE
                                 {
-                                    Cases = i.Cases.SelectMany(x => process(x) as AST_SWITCH_CASE[]).ToArray(),
-                                    Expression = parseexpr(i.Expression)
+                                    Variable = VARIABLE.NewTemporary,
+                                    InitExpression = parseexpr(i.Expression)
                                 };
+                                EXPRESSION exprvare = EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(exprvar.Variable));
+                                dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
+                                IEnumerable<AST_CONDITIONAL_BLOCK> condcases = cases.Select(x =>
+                                {
+                                    AST_CONDITIONAL_BLOCK cblock = new AST_CONDITIONAL_BLOCK
+                                    {
+                                        Context = x.Context,
+                                        Statements = x.Statements,
+                                    };
 
-                                if (@switch.Cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
+                                    switch (x)
+                                    {
+                                        case AST_SWITCH_CASE_EXPRESSION ce:
+                                            IEnumerable<EXPRESSION> expr = ce.Expressions.Select(ex =>
+                                            {
+                                                if (ex is MULTI_EXPRESSION.SingleValue sv)
+                                                    return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, sv.Item);
+                                                else if (ex is MULTI_EXPRESSION.ValueRange vr)
+                                                    return EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.And,
+                                                        EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.GreaterEqual,
+                                                            exprvare,
+                                                            vr.Item1
+                                                        ),
+                                                        EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.LowerEqual,
+                                                            exprvare,
+                                                            vr.Item2
+                                                        )
+                                                    );
+                                                else
+                                                    return null;
+                                            });
+
+                                            if (expr.Any())
+                                                cblock.Condition = expr.Aggregate((a, b) => EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Or, a, b));
+                                            else
+                                                cblock.Condition = EXPRESSION.NewLiteral(LITERAL.False);
+
+                                            break;
+                                        case AST_SWITCH_CASE_ELSE _:
+                                            cblock.Condition = EXPRESSION.NewLiteral(LITERAL.True);
+
+                                            break;
+                                    }
+
+                                    cblock.ExplicitLocalsVariables.AddRange(x.ExplicitLocalsVariables);
+
+                                    return cblock;
+                                });
+                                AST_SCOPE scope = new AST_SCOPE();
+
+                                if (condcases.Any())
+                                    scope.Statements = new AST_STATEMENT[]
+                                    {
+                                        new AST_IF_STATEMENT
+                                        {
+                                            Context = i.DefinitionContext,
+                                            If = condcases.First(),
+                                            ElseIf = condcases.Skip(1).ToArray()
+                                        }
+                                    };
+
+                                if (cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
                                     err("errors.astproc.multiple_switch_case_else");
 
-                                return @switch;
+                                scope.ExplicitLocalsVariables.Add(exprvar);
+
+                                return scope;
                             }
                         case SELECT_CASE i:
                             return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
@@ -922,31 +990,16 @@ namespace AutoItInterpreter
                             };
                         case SWITCH_CASE i:
                             {
-                                List<AST_SWITCH_CASE> cases = new List<AST_SWITCH_CASE>();
                                 string expr = i.RawCondition;
 
                                 if (expr.ToLower() == "else")
-                                    return new[] { new AST_SWITCH_CASE_ELSE() };
-
-                                if (parsemexpr(expr) is MULTI_EXPRESSIONS m)
-                                    foreach (MULTI_EXPRESSION @case in m)
-                                        if (@case is MULTI_EXPRESSION.SingleValue sv)
-                                            cases.Add(new AST_SWITCH_CASE_SINGLEVALUE
-                                            {
-                                                Value = sv.Item,
-                                                Statements = proclines(),
-                                                Context = i.DefinitionContext
-                                            });
-                                        else if (@case is MULTI_EXPRESSION.ValueRange vr)
-                                            cases.Add(new AST_SWITCH_CASE_RANGE
-                                            {
-                                                Infimum = vr.Item1,
-                                                Supremum = vr.Item2,
-                                                Statements = proclines(),
-                                                Context = i.DefinitionContext
-                                            });
-
-                                return cases.ToArray();
+                                    return new AST_SWITCH_CASE_ELSE();
+                                else
+                                    return new AST_SWITCH_CASE_EXPRESSION
+                                    {
+                                        Statements = proclines(),
+                                        Expressions = parsemexpr(expr)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                    };
                             }
                         case RETURN i:
                             return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT
@@ -954,11 +1007,10 @@ namespace AutoItInterpreter
                                 Expression = parseexpr(i.Expression)
                             };
                         case CONTINUECASE _:
+                            warn("warnings.not_impl"); // TODO
+
                             return new AST_CONTINUECASE_STATEMENT();
                         case CONTINUE i:
-                            if (i.Level > 1)
-                                warn("warnings.not_impl"); // TODO
-
                             return new AST_CONTINUE_STATEMENT
                             {
                                 Level = (uint)i.Level
@@ -1180,8 +1232,6 @@ namespace AutoItInterpreter
                                     };
 
                                     scope.ExplicitLocalsVariables.Add(collvar);
-
-                                    warn("warnings.not_impl"); // TODO
 
                                     return scope;
                                 }

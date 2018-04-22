@@ -48,6 +48,7 @@
     },
     "warnings": {
         "preproc": {
+            "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",

@@ -32,19 +32,21 @@
             "unknown_entity": 1024,
             "parser_error": 1025,
             "obj_expression_required": 1026,
-            "no_comma_allowed": 1027,
-            "no_range_allowed": 1028
+            "multiple_switch_case_else": 1027,
+            "no_comma_allowed": 1028,
+            "no_range_allowed": 1029
         }
     },
     "warnings": {
         "preproc": {
-            "exit_level_truncated": 2001,
-            "exit_level_invalid": 2002,
-            "continue_level_truncated": 2003,
-            "continue_level_invalid": 2004
+            "no_closing_comment": 2001,
+            "exit_level_truncated": 2002,
+            "exit_level_invalid": 2003,
+            "continue_level_truncated": 2004,
+            "continue_level_invalid": 2005
         },
         "astproc": {
-            "expression_result_discarded": 2005
+            "expression_result_discarded": 2006
         },
         "not_impl": 9999
     }

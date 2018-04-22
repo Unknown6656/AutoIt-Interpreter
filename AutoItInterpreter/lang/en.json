@@ -38,12 +38,14 @@
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",
             "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}",
             "obj_expression_required": "The expression '{0}' is not a valid object-expression.",
+            "multiple_switch_case_else": "A 'Case Else'-statement can only defined once for each Switch-block.",
             "no_comma_allowed": "The expression '{0}' must be a single-value expression and must not be multiple comma-seperated values.",
             "no_range_allowed": "The expression '{0}' must be a single-value expression and must therefore not contain the range-specific keyword 'To'."
         }
     },
     "warnings": {
         "preproc": {
+            "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",

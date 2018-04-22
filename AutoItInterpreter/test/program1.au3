@@ -49,6 +49,10 @@ for $cnt1 = 0 to 7
 
     for $cnt2 = 17 to -6 step -2
         switch $cnt2
+            case 0.001e3
+                for $lel = 0 to 1 step 1
+                    continueloop 2
+                next
             case 8, 0x10, 2
                 exitloop 1
                 exitloop 2
@@ -70,3 +74,5 @@ for $cnt1 = 0 to 7
         printf($var)
     next
 next
+
+#cs

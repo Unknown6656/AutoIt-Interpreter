@@ -105,17 +105,10 @@ namespace AutoItInterpreter.PartialAST
     {
     }
 
-    public sealed class AST_SWITCH_CASE_SINGLEVALUE
+    public sealed class AST_SWITCH_CASE_EXPRESSION
         : AST_SWITCH_CASE
     {
-        public EXPRESSION Value { set; get; }
-    }
-
-    public sealed class AST_SWITCH_CASE_RANGE
-        : AST_SWITCH_CASE
-    {
-        public EXPRESSION Infimum { set; get; }
-        public EXPRESSION Supremum { set; get; }
+        public MULTI_EXPRESSION[] Expressions { set; get; }
     }
 
     public sealed class AST_SWITCH_CASE_ELSE

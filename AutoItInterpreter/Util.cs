@@ -125,6 +125,8 @@ namespace AutoItInterpreter
                 void print(AST_STATEMENT s) => _print(s, indent + 1);
                 void printblock(AST_STATEMENT[] xs, string p = "", string s = "")
                 {
+                    xs = xs ?? new AST_STATEMENT[0];
+
                     if (xs.Length > 1 || (p + s).Length == 0 || !allman)
                     {
                         if (allman)
@@ -190,7 +192,7 @@ namespace AutoItInterpreter
                             else
                                 println($"{ls.Variable} = {tstr(ls.InitExpression)};", indent + 1);
 
-                        foreach (AST_STATEMENT ls in s.Statements)
+                        foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
                             print(ls);
 
                         println("}");
