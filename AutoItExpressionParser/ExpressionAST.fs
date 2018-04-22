@@ -5,6 +5,9 @@ open AutoItExpressionParser.Util
 open System.Runtime.CompilerServices
 open System
 
+
+let mutable private _tmp = 0L
+
 type VARIABLE (name : string) =
     member x.Name = if name.StartsWith('$') then name.Substring 1 else name
     override x.ToString() = "$" + x.Name
@@ -13,7 +16,9 @@ type VARIABLE (name : string) =
         match o with
         | As (m : VARIABLE) -> m.GetHashCode() = x.GetHashCode()
         | _ -> false
-    static member NewTemporary = VARIABLE(sprintf "__tmp<>%d" (DateTime.Now.Ticks))
+    static member NewTemporary =
+        _tmp <- _tmp + 1L
+        VARIABLE(sprintf "__tmp<>%04x" _tmp)
         
 // https://www.autoitscript.com/autoit3/docs/macros.htm
 type MACRO (name : string) =

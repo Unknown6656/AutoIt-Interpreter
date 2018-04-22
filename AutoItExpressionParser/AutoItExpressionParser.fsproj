@@ -6,14 +6,15 @@
     <Optimize>true</Optimize>
       <OutputPath>bin</OutputPath>
       <LangVersion>latest</LangVersion>
+      <OutputPath>../bin</OutputPath>
       <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
       <AssemblyName>autoitexpplib</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Util.fs" />
     <Compile Include="ExpressionAST.fs" />
-    <Compile Include="ExpressionParser.fs" />
     <Compile Include="Refactorings.fs" />
+    <Compile Include="ExpressionParser.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PigletParser\PigletParser.csproj" />

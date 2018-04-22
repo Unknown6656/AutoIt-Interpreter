@@ -15,20 +15,32 @@ Func f1()
         $test = 0x80000000000000000 ; <-- too big  *wink*
     Else
         If $test Then
-            f2()
-        else ; comment
+            $cnt = 0
+
+            do  
+                f2()
+                $cnt += 1
+            until $cnt >= 10
+        elseif false then
             $test = "test"
+        else
+            ; this will be optimized away
         endif
     EndIf
 EndFunc
-; comment
+
 Func f2()
-    if $foo then
-        bar("top", "kek", 0x1488, "/blubb/")
-    else
-        baz(42)
-    endif
+    select
+        case $foo
+            bar("top", "kek", 0x1488 << 12, "/blubb/")
+        case nope()
+            nope()
+        case else
+            baz(42 - .5 * 0x3)
+    endselect
 EndFunc
+
+
 
 for $cnt1 = 0 to 7
     if "te""st" <> 5 then
@@ -38,7 +50,10 @@ for $cnt1 = 0 to 7
     for $cnt2 = 17 to -6 step -2
         switch $cnt2
             case 8, 0x10, 2
-            case 1 to "3"
+                exitloop 1
+                exitloop 2
+                exitloop 3
+            case 1 to "3" + 99
             case 0o7
                 continuecase
             case 2 to 5, $cnt2 to "7", 8, "6" to -5
@@ -49,7 +64,7 @@ for $cnt1 = 0 to 7
         endswitch
     next
 
-     $test[5] = { 0, 1, 2, 3, 4 }
+    $test[5] = { 0, 1, 2, 3, 4 }
 
     for $var in $test
         printf($var)

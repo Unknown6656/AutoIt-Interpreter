@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 
 using AutoItExpressionParser;
 
@@ -55,18 +56,11 @@ namespace AutoItInterpreter.PartialAST
         : AST_STATEMENT
     {
         public AST_CONDITIONAL_BLOCK WhileBlock { set; get; }
+        public AST_LABEL ContinueLabel { set; get; }
+        public AST_LABEL ExitLabel { set; get; }
 
 
         public static implicit operator AST_WHILE_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_WHILE_STATEMENT { WhileBlock = b };
-    }
-
-    public sealed class AST_DO_STATEMENT
-        : AST_STATEMENT
-    {
-        public AST_CONDITIONAL_BLOCK DoBlock { set; get; }
-
-
-        public static implicit operator AST_DO_STATEMENT(AST_CONDITIONAL_BLOCK b) => new AST_DO_STATEMENT { DoBlock = b };
     }
 
     public sealed class AST_WITH_STATEMENT
@@ -83,10 +77,20 @@ namespace AutoItInterpreter.PartialAST
         public dynamic Expression { set; get; }
     }
 
-    public sealed class AST_SELECT_STATEMENT
+    public sealed class AST_LABEL
         : AST_STATEMENT
     {
-        public AST_SELECT_CASE[] Cases { set; get; }
+        private static long _tmp = 0L;
+
+        public string Name { set; get; }
+
+        public static AST_LABEL NewLabel => new AST_LABEL { Name = $"__lb<>{++_tmp:x4}" };
+    }
+
+    public sealed class AST_GOTO_STATEMENT
+        : AST_STATEMENT
+    {
+        public AST_LABEL Label { set; get; }
     }
 
     public sealed class AST_SWITCH_STATEMENT

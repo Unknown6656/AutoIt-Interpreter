@@ -226,14 +226,17 @@ namespace AutoItInterpreter
                 "C:/progra~1/autoit3/include",
                 "C:/progra~2/autoit3/include",
             },
+            IndentationStyle = IndentationStyle.AllmanStyle,
+            UseOptimization = true,
             LanguageCode = "en"
         };
 
+        public IndentationStyle IndentationStyle { set; get; }
         public string[] IncludeDirectories { set; get; }
+        public bool UseOptimization { set; get; }
         public string LanguageCode { set; get; }
 
 
-        
         public bool ToFile(string path)
         {
             try
@@ -263,5 +266,12 @@ namespace AutoItInterpreter
         }
 
         internal static InterpreterSettings FromJSONString(string json) => JsonConvert.DeserializeObject<InterpreterSettings>(json);
+    }
+
+    public enum IndentationStyle
+        : byte
+    {
+        AllmanStyle,
+        Shit
     }
 }

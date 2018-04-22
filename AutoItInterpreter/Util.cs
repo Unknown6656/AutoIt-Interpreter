@@ -12,6 +12,9 @@ using AutoItExpressionParser;
 
 namespace AutoItInterpreter
 {
+    using static ExpressionAST;
+
+
     internal static class Util
     {
         public static bool Match(this string s, string p, out Match m, RegexOptions o = RegexOptions.IgnoreCase | RegexOptions.Compiled) => (m = Regex.Match(s, p, o)).Success;
@@ -84,47 +87,141 @@ namespace AutoItInterpreter
 
     internal static class DebugPrintUtil
     {
-        public static void DisplayPartialAST(InterpreterState state)
+        public static void DisplayPartialAST(InterpreterState state, InterpreterSettings settings)
         {
+            Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine(new string('=', 200));
 
             string[] glob = { PreInterpreterState.GLOBAL_FUNC_NAME };
+            bool allman = settings.IndentationStyle == IndentationStyle.AllmanStyle;
+            int linecnt = 0;
 
             foreach (string fn in state.ASTFunctions.Keys.Except(glob).OrderByDescending(fn => fn).Concat(glob).Reverse())
             {
                 AST_FUNCTION func = state.ASTFunctions[fn];
 
-                Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"       |  ------- {state.GetFunctionSignature(fn)} -------");
 
-                print(func, 1);
+                _print(func, 1);
             }
 
-            void print(AST_STATEMENT e, int indent)
+            void _print(AST_STATEMENT e, int indent)
             {
-                void println(string s) => Console.WriteLine(new string(' ', indent * 4) + s);
+                string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ExpressionAST.Print(ex);
+                void println(string s, int i = -1)
+                {
+                    ++linecnt;
+
+                    bool comment = s.StartsWith("//");
+
+                    Console.ForegroundColor = comment ? ConsoleColor.DarkGreen : ConsoleColor.Yellow;
+                    Console.Write($"{linecnt,6} |  ");
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write(string.Concat(Enumerable.Repeat("|   ", (i < 1 ? indent : i) - 1)));
+                    Console.ForegroundColor = comment ? ConsoleColor.DarkGreen : ConsoleColor.White;
+                    Console.WriteLine(s);
+                }
+                void print(AST_STATEMENT s) => _print(s, indent + 1);
+                void printblock(AST_STATEMENT[] xs, string p = "", string s = "")
+                {
+                    if (xs.Length > 1 || (p + s).Length == 0 || !allman)
+                    {
+                        if (allman)
+                        {
+                            if (p.Length > 0)
+                                println(p);
+
+                            println("{");
+                        }
+                        else
+                            println(p.Length > 0 ? $"{p} {{" : "{");
+
+                        foreach (AST_STATEMENT x in xs)
+                            print(x);
+
+                        if (allman)
+                        {
+                            println("}");
+
+                            if (s.Length > 0)
+                                println(s);
+                        }
+                        else
+                            println(s.Length > 0 ? $"}} {s}" : "}");
+                    }
+                    else
+                    {
+                        if (p.Length > 0)
+                            println(p);
+
+                        if (xs.Length > 0)
+                            print(xs[0]);
+                        else
+                            println(";", indent + 1);
+
+                        if (s.Length > 0)
+                            println(s);
+                    }
+                }
 
                 switch (e)
                 {
+                    case AST_IF_STATEMENT s:
+                        printblock(s.If.Statements, $"if ({tstr(s.If.Condition)})");
+
+                        foreach (AST_CONDITIONAL_BLOCK elif in s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
+                            printblock(elif.Statements, $"else if ({tstr(elif.Condition)})");
+
+                        if (s.OptionalElse is AST_STATEMENT[] b)
+                            printblock(b, "else");
+
+                        return;
+                    case AST_WHILE_STATEMENT s:
+                        printblock(s.WhileBlock.Statements, $"while ({tstr(s.WhileBlock.Condition)})");
+
+                        return;
                     case AST_SCOPE s:
                         println("{");
 
                         foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalsVariables)
                             if (ls.InitExpression is null)
-                                println($"    {ls.Variable};");
+                                println($"{ls.Variable};", indent + 1);
                             else
-                                println($"    {ls.Variable} = {ExpressionAST.Print(ls.InitExpression)};");
+                                println($"{ls.Variable} = {tstr(ls.InitExpression)};", indent + 1);
 
                         foreach (AST_STATEMENT ls in s.Statements)
-                            print(ls, indent + 1);
+                            print(ls);
 
                         println("}");
 
                         return;
+                    case AST_BREAK_STATEMENT s when s.Level == 1:
+                        println("break;");
+
+                        return;
+                    case AST_LABEL s:
+                        println(s.Name + ':', 1);
+
+                        return;
+                    case AST_GOTO_STATEMENT s:
+                        println($"goto {s.Label.Name};");
+
+                        return;
 
 
-                    // TODO 
+
+                        // TODO 
+
+
+                    default:
+                        println($"// TODO: {e}");
+
+                        return;
                 }
             }
+
+            Console.ForegroundColor = ConsoleColor.Gray;
         }
 
         public static void DisplayCodeAndErrors(FileInfo root, InterpreterState state)
@@ -133,6 +230,7 @@ namespace AutoItInterpreter
 
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
             {
+                Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"     _ |  {path.FullName}");
                 Console.ForegroundColor = ConsoleColor.DarkGray;
 
@@ -185,7 +283,9 @@ namespace AutoItInterpreter
             {
                 FunctionScope func = state.Functions[fn];
 
+                Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
+                Console.ForegroundColor = ConsoleColor.Gray;
 
                 foreach (var l in func.Lines)
                 {

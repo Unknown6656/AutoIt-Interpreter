@@ -144,7 +144,7 @@ namespace AutoItInterpreter
         {
             InterpreterState state = InterpretScript(RootContext, Settings, Language, UseVerboseOutput);
 
-            ParseExpressionAST(state);
+            ParseExpressionAST(state, Settings);
 
 
 
@@ -155,7 +155,7 @@ namespace AutoItInterpreter
             if (UseVerboseOutput)
             {
                 DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
-                DebugPrintUtil.DisplayPartialAST(state);
+                DebugPrintUtil.DisplayPartialAST(state, Settings);
             }
             else
                 foreach (InterpreterError err in state.Errors)
@@ -266,6 +266,11 @@ namespace AutoItInterpreter
                 }
 
                 ++lcnt;
+            }
+
+            if (comment)
+            {
+                // TODO : warning
             }
 
             lcnt = 0;
@@ -783,23 +788,24 @@ namespace AutoItInterpreter
             return inclpath;
         }
 
-        private static void ParseExpressionAST(InterpreterState state)
+        private static void ParseExpressionAST(InterpreterState state, InterpreterSettings settings)
         {
             const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
-            ExpressionParser exparser = new ExpressionParser();
+            ExpressionParser exparser = new ExpressionParser(settings.UseOptimization);
 
             exparser.Initialize();
 
             foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
                                                                                                         where kvp.Key != globnm
                                                                                                         select (kvp.Key, kvp.Value)))
-                state.ASTFunctions[name] = process(func)[0];
+                state.ASTFunctions[name] = ProcessWhileBlocks(process(func)[0]);
 
             dynamic process(Entity e)
             {
                 void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
+                EXPRESSION opt(EXPRESSION expr) => Refactorings.ProcessExpression(expr);
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
                     Condition = parseexpr((e as ConditionalEntity).RawCondition),
@@ -850,7 +856,7 @@ namespace AutoItInterpreter
                             {
                                 If = process(i.If),
                                 ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
-                                OptionalElse = i.Else is ELSE_BLOCK eb ? process(eb) : null,
+                                OptionalElse = i.Else is ELSE_BLOCK eb && process(eb) is AST_STATEMENT[] el && el.Length > 0 ? el : null,
                                 Context = e.DefinitionContext,
                             };
                         case IF_BLOCK _:
@@ -861,12 +867,39 @@ namespace AutoItInterpreter
                         case WHILE i:
                             return (AST_WHILE_STATEMENT)proccond();
                         case DO_UNTIL i:
-                            return (AST_DO_STATEMENT)proccond();
-                        case SELECT i:
-                            return new AST_SELECT_STATEMENT
                             {
-                                Cases = i.Cases.Select(x => process(x) as AST_SELECT_CASE).ToArray(),
-                            };
+                                return new AST_WHILE_STATEMENT
+                                {
+                                    WhileBlock = new AST_CONDITIONAL_BLOCK
+                                    {
+                                        Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                        Statements = new AST_STATEMENT[]
+                                        {
+                                            new AST_IF_STATEMENT
+                                            {
+                                                If = proccond(),
+                                                OptionalElse = new AST_STATEMENT[]
+                                                {
+                                                    new AST_BREAK_STATEMENT { Level = 1 }
+                                                }
+                                            }
+                                        }
+                                    }
+                                };
+                            }
+                        case SELECT i:
+                            {
+                                IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x) as AST_SELECT_CASE)?.CaseBlock);
+
+                                if (cases.Any())
+                                    return new AST_IF_STATEMENT
+                                    {
+                                        If = cases.First(),
+                                        ElseIf = cases.Skip(1).ToArray()
+                                    };
+                                else
+                                    break;
+                            }
                         case SWITCH i:
                             {
                                 AST_SWITCH_STATEMENT @switch = new AST_SWITCH_STATEMENT
@@ -920,9 +953,12 @@ namespace AutoItInterpreter
                             {
                                 Expression = parseexpr(i.Expression)
                             };
-                        case CONTINUECASE i:
+                        case CONTINUECASE _:
                             return new AST_CONTINUECASE_STATEMENT();
                         case CONTINUE i:
+                            if (i.Level > 1)
+                                warn("warnings.not_impl"); // TODO
+
                             return new AST_CONTINUE_STATEMENT
                             {
                                 Level = (uint)i.Level
@@ -964,11 +1000,11 @@ namespace AutoItInterpreter
                                 AST_LOCAL_VARIABLE upvar = new AST_LOCAL_VARIABLE
                                 {
                                     Variable = VARIABLE.NewTemporary,
-                                    InitExpression = EXPRESSION.NewBinaryExpression(
+                                    InitExpression = opt(EXPRESSION.NewBinaryExpression(
                                         OPERATOR_BINARY.LowerEqual,
                                         start,
                                         stop
-                                    ),
+                                    ))
                                 };
                                 AST_SCOPE scope = new AST_SCOPE
                                 {
@@ -1195,6 +1231,112 @@ namespace AutoItInterpreter
 
                 return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
             }
+        }
+
+        private static AST_FUNCTION ProcessWhileBlocks(AST_FUNCTION func)
+        {
+            ReversedLabelStack ls_cont = new ReversedLabelStack();
+            ReversedLabelStack ls_exit = new ReversedLabelStack();
+
+            return process(func) as AST_FUNCTION;
+
+            AST_STATEMENT process(AST_STATEMENT e)
+            {
+                if (e is null)
+                    return null;
+
+                T[] procas<T>(T[] instr) where T : AST_STATEMENT => instr?.Select(x => process(x) as T)?.ToArray();
+
+                AST_STATEMENT __inner()
+                {
+                    switch (e)
+                    {
+                        case AST_CONTINUE_STATEMENT s:
+                            return new AST_GOTO_STATEMENT { Label = ls_cont[s.Level] };
+                        case AST_BREAK_STATEMENT s:
+                            return new AST_GOTO_STATEMENT { Label = ls_exit[s.Level] };
+                        case AST_WHILE_STATEMENT s:
+                            ls_cont.Push(AST_LABEL.NewLabel);
+                            ls_exit.Push(AST_LABEL.NewLabel);
+
+                            AST_WHILE_STATEMENT w = new AST_WHILE_STATEMENT
+                            {
+                                WhileBlock = s.WhileBlock,
+                                ContinueLabel = ls_cont[1],
+                                ExitLabel = ls_exit[1],
+                                Context = e.Context,
+                            };
+                            AST_SCOPE sc = new AST_SCOPE
+                            {
+                                Statements = new AST_STATEMENT[]
+                                {
+                                    w,
+                                    ls_exit[1]
+                                }
+                            };
+
+                            w.WhileBlock.Statements = new AST_STATEMENT[] { ls_cont[1] }.Concat(procas(w.WhileBlock.Statements)).ToArray();
+
+                            ls_cont.Pop();
+                            ls_exit.Pop();
+
+                            return sc;
+                        case AST_SCOPE s:
+                            s.Statements = procas(s.Statements);
+
+                            return s;
+                        case AST_IF_STATEMENT s:
+                            s.If = process(s.If) as AST_CONDITIONAL_BLOCK;
+                            s.ElseIf = procas(s.ElseIf);
+                            s.OptionalElse = procas(s.OptionalElse);
+
+                            return s;
+                        case AST_WITH_STATEMENT s:
+                            s.WithLines = procas(s.WithLines);
+
+                            return s;
+                        case AST_SWITCH_STATEMENT s:
+                            s.Cases = procas(s.Cases);
+
+                            return s;
+                        default:
+                            return e;
+                    }
+                }
+                AST_STATEMENT res = __inner();
+
+                res.Context = e.Context;
+
+                return res;
+            }
+        }
+    }
+
+    internal sealed class ReversedLabelStack
+    {
+        private readonly List<AST_LABEL> _stack = new List<AST_LABEL>();
+
+
+        /// <summary>level 1 == top-most</summary>
+        public AST_LABEL this[uint level] => level == 0 || level > _stack.Count ? null : _stack[_stack.Count - (int)level];
+
+        public void Push(AST_LABEL lb) => _stack.Add(lb);
+
+        public void Clear() => _stack.Clear();
+
+        public AST_LABEL Pop()
+        {
+            if (_stack.Count > 0)
+            {
+                int index = _stack.Count - 1;
+                AST_LABEL lb = _stack[index];
+
+                _stack.RemoveAt(index);
+
+                return lb;
+            }
+            else
+                return null;
         }
     }
 

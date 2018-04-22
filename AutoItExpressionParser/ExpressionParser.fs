@@ -9,8 +9,9 @@ type long = System.Int64
 type decimal = System.Decimal
 
 
-type ExpressionParser() =
+type ExpressionParser(optimize : bool) =
     inherit AbstractParser<MULTI_EXPRESSION list>()
+    member x.UseOptimization = optimize
     override x.BuildParser() =
         let lparse p (f : string -> long) (s : string) =
             let s = s.TrimStart('+').ToLower().Replace(p, "")
@@ -123,7 +124,7 @@ type ExpressionParser() =
         reduce1 nt_dot_member t_identifier Field
         reduce1 nt_dot_member nt_funccall Method
         
-        reduce0 nt_expression_ext nt_expression
+        reduce1 nt_expression_ext nt_expression (fun e -> if x.UseOptimization then Refactorings.ProcessExpression e else e)
         reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
 
         reduce0 nt_expression !@0
