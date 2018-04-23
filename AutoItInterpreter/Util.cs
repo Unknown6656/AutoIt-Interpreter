@@ -218,13 +218,8 @@ namespace AutoItInterpreter
                         println(tstr(s.Expression) + ';');
 
                         return;
-
-
-                        // TODO 
-
-
                     default:
-                        println($"// TODO: {e}");
+                        println($"// TODO: {e}"); // TODO
 
                         return;
                 }

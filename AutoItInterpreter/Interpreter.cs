@@ -917,7 +917,7 @@ namespace AutoItInterpreter
                             }
                         case SELECT i:
                             {
-                                IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x) as AST_SELECT_CASE)?.CaseBlock);
+                                IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x)[0] as AST_SELECT_CASE)?.CaseBlock);
 
                                 if (cases.Any())
                                     return new AST_IF_STATEMENT

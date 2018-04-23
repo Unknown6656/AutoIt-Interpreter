@@ -195,7 +195,7 @@ and private ToCSString =
         | True -> "true"
         | False -> "false"
         | Number d -> d.ToString()
-        | String s -> sprintf "\"%s\"" s
+        | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
     | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToCSString es)))
     | VariableExpression v -> VarToCSString v
     | Macro m -> sprintf "@%s" (m.Name)

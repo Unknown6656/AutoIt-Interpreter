@@ -37,12 +37,13 @@ Func f2()
             nope()
         case else
             baz(42 - .5 * 0x3)
+        case else
     endselect
 EndFunc
 
 
 for $cnt1 = 0 to 7
-    if "te""st" <> 5 then
+    if "te\""st" <> 5 then
         f2()
     endif
 
