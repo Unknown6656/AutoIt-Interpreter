@@ -108,7 +108,7 @@ namespace AutoItInterpreter
 
             void _print(AST_STATEMENT e, int indent)
             {
-                string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ExpressionAST.Print(ex);
+                string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ex.Print();
                 void println(string s, int i = -1)
                 {
                     ++linecnt;
@@ -210,7 +210,12 @@ namespace AutoItInterpreter
                         println($"goto {s.Label.Name};");
 
                         return;
+                    // case AST_ASSIGNMENT_EXPRESSION_STATEMENT s:
+                        return;
+                    case AST_EXPRESSION_STATEMENT s:
+                        println(tstr(s.Expression) + ';');
 
+                        return;
 
 
                         // TODO 
@@ -246,15 +251,15 @@ namespace AutoItInterpreter
 
                     Console.Write($"{cnt,6} |  ");
 
-                    if (errs.Length > 0 && line.Trim().Length > 0)
+                    if (errs.Length > 0)
                     {
-                        string pad = $"       |  {line.Remove(line.Length - line.TrimStart().Length)}";
+                        string pad = $"       |  {(line.Trim().Length > 0 ? line.Remove(line.Length - line.TrimStart().Length) : "")}";
                         bool crit = errs.Any(e => e.IsFatal);
 
                         Console.ForegroundColor = crit ? ConsoleColor.Red : ConsoleColor.Yellow;
                         Console.WriteLine(line);
                         Console.ForegroundColor = crit ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
-                        Console.WriteLine(pad + new string('^', line.Trim().Length));
+                        Console.WriteLine(pad + new string('^', Math.Max(1, line.Trim().Length)));
 
                         foreach (IGrouping<bool, InterpreterError> g in errs.GroupBy(e => e.IsFatal))
                         {

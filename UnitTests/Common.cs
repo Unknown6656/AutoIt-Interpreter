@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
+using System.IO;
 using System;
 
 using AutoItExpressionParser;
+using AutoItInterpreter;
 
 namespace UnitTests
 {
@@ -75,7 +77,7 @@ namespace UnitTests
             #region REFLECTION + INVOCATION
 
             ForegroundColor = ConsoleColor.White;
-            
+
             List<(string Name, int Passed, int Failed, int Skipped, long TimeCtor, long TimeInit, long TimeMethod)> partial_results = new List<(string, int, int, int, long, long, long)>();
             int passed = 0, failed = 0, skipped = 0;
             Stopwatch sw = new Stopwatch();
@@ -246,12 +248,13 @@ namespace UnitTests
     public abstract class TestCommons
     {
         private static readonly ExpressionParser _parser = new ExpressionParser(true);
+        private static readonly DirectoryInfo _testdir;
 
 
         static TestCommons()
         {
             _parser.Initialize();
-
+            _testdir = new FileInfo(typeof(TestCommons).Assembly.Location).Directory.CreateSubdirectory("test");
         }
 
         [TestInitialize]
@@ -260,6 +263,39 @@ namespace UnitTests
         }
 
         public static void Skip() => throw new SkippedException();
+
+        public static void TestAutoItCode(string code, Action<InterpreterState> callback) => TestAutoItCode(code, (FileInfo tmp) =>
+        {
+            TextWriter @default = Out;
+
+            using (MemoryStream ms = new MemoryStream())
+            using (StreamWriter wr = new StreamWriter(ms))
+                try
+                {
+                    SetOut(wr);
+
+                    Interpreter intp = new Interpreter(tmp.FullName, Language.Languages["en"], InterpreterSettings.DefaultSettings, false);
+
+                    callback(intp.DoMagic());
+                }
+                finally
+                {
+                    SetOut(@default);
+                }
+        });
+
+        public static void TestAutoItCode(string code, Action<FileInfo> callback)
+        {
+            FileInfo file = new FileInfo(_testdir.FullName + $"/___tmp{DateTime.Now.Ticks}.au3");
+
+            using (FileStream fs = file.Create())
+            using (StreamWriter wr = new StreamWriter(fs))
+                wr.Write(code);
+
+            callback(file);
+
+            file.Delete();
+        }
 
         public static MULTI_EXPRESSION[] PaseMultiexpressions(string s) => _parser.Parse(s).ToArray();
 

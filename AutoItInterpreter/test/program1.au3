@@ -41,7 +41,6 @@ Func f2()
 EndFunc
 
 
-
 for $cnt1 = 0 to 7
     if "te""st" <> 5 then
         f2()
@@ -49,11 +48,11 @@ for $cnt1 = 0 to 7
 
     for $cnt2 = 17 to -6 step -2
         switch $cnt2
-            case 0.001e3
+            case 0.001e-2
                 for $lel = 0 to 1 step 1
                     continueloop 2
                 next
-            case 8, 0x10, 2
+            case 8, 0x10, 2 << 3 ~&& (7 - 0.02 ^ 66)
                 exitloop 1
                 exitloop 2
                 exitloop 3
@@ -63,12 +62,11 @@ for $cnt1 = 0 to 7
             case 2 to 5, $cnt2 to "7", 8, "6" to -5
             case else
                 f2()
-            case else ; <--- should not be valid !
-                f2()
         endswitch
     next
 
-    $test[5] = { 0, 1, 2, 3, 4 }
+    $lel + 7
+    $test[5] = [ 0, 1, 2, 3, 4 ]
 
     for $var in $test
         printf($var)

@@ -140,13 +140,11 @@ namespace AutoItInterpreter
                 throw new FileNotFoundException(lang["errors.general.file_nopen"], path);
         }
 
-        public void DoMagic()
+        public InterpreterState DoMagic()
         {
             InterpreterState state = InterpretScript(RootContext, Settings, Language, UseVerboseOutput);
 
             ParseExpressionAST(state, Settings);
-
-
 
 
 
@@ -160,6 +158,8 @@ namespace AutoItInterpreter
             else
                 foreach (InterpreterError err in state.Errors)
                     Console.WriteLine($"[{(err.IsFatal ? " ERROR " : "WARNING")}]  {err}");
+
+            return state;
         }
 
         private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang, bool verbose)
@@ -171,6 +171,7 @@ namespace AutoItInterpreter
                 CurrentContext = context,
                 GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1))
             };
+            int ivalfunc = 0;
             int locindx = 0;
 
             lines.AddRange(FetchLines(pstate, context));
@@ -207,7 +208,7 @@ namespace AutoItInterpreter
                         err("errors.preproc.include_nfound", path);
                     }
                 }
-                else if (ProcessFunctionDeclaration(Line, defcntx, pstate, err))
+                else if (ProcessFunctionDeclaration(Line, ref ivalfunc, defcntx, pstate, err))
                     (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
                 ++locindx;
@@ -269,7 +270,7 @@ namespace AutoItInterpreter
             }
 
             if (comment)
-                state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt));
+                state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt - 1));
 
             lcnt = 0;
 
@@ -607,8 +608,10 @@ namespace AutoItInterpreter
             }
         }
 
-        private static bool ProcessFunctionDeclaration(string Line, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
+        private static unsafe bool ProcessFunctionDeclaration(string Line, ref int ivalfunc, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
         {
+            int ival = ivalfunc;
+
             void __procfunc(string name, string[] par, string[] opar)
             {
                 if (st.CurrentFunction is null)
@@ -616,9 +619,15 @@ namespace AutoItInterpreter
                     string lname = name.ToLower();
 
                     if (st.Functions.ContainsKey(lname))
+                    {
+                        ival = 1;
+
                         err("errors.preproc.function_exists", name, st.Functions[lname].Context);
+                    }
                     else
                     {
+                        ival = 0;
+
                         st.CurrentFunction = new FunctionScope(defcntx);
                         st.CurrentFunction.Parameters.AddRange(from p in par
                                                                let ndx = p.IndexOf('$')
@@ -643,7 +652,11 @@ namespace AutoItInterpreter
                     }
                 }
                 else
+                {
+                    ival = 2;
+
                     err("errors.preproc.function_nesting");
+                }
             }
 
             if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>((const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)(,\s*(const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)*)?\s*(?<optparams>(,\s*\$[a-z]\w*\s*=\s*.+\s*)*)\s*\)$", out Match m))
@@ -659,12 +672,16 @@ namespace AutoItInterpreter
                     m.Get("optparams").Split(',').Select(s => s.Trim()).Where(Enumerable.Any).ToArray()
                 );
             else if (Line.Match("^endfunc$", out m))
-                if (st.CurrentFunction is null)
+                if (ival != 0)
+                    ival = 0;
+                else if (st.CurrentFunction is null)
                     err("errors.preproc.unexpected_endfunc");
                 else
                     st.CurrentFunction = null;
             else
-                return true;
+                return (ivalfunc = ival) == 0;
+
+            ivalfunc = ival;
 
             return false;
         }
@@ -808,7 +825,7 @@ namespace AutoItInterpreter
                 void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
-                EXPRESSION opt(EXPRESSION expr) => expr is null ? null : Refactorings.ProcessExpression(expr);
+                EXPRESSION opt(EXPRESSION expr) => Refactorings.ProcessExpression(expr);
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
                     Condition = parseexpr((e as ConditionalEntity).RawCondition),
@@ -926,19 +943,19 @@ namespace AutoItInterpreter
                                             IEnumerable<EXPRESSION> expr = ce.Expressions.Select(ex =>
                                             {
                                                 if (ex is MULTI_EXPRESSION.SingleValue sv)
-                                                    return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, sv.Item);
+                                                    return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, opt(sv.Item));
                                                 else if (ex is MULTI_EXPRESSION.ValueRange vr)
                                                     return EXPRESSION.NewBinaryExpression(
                                                         OPERATOR_BINARY.And,
                                                         EXPRESSION.NewBinaryExpression(
                                                         OPERATOR_BINARY.GreaterEqual,
                                                             exprvare,
-                                                            vr.Item1
+                                                            opt(vr.Item1)
                                                         ),
                                                         EXPRESSION.NewBinaryExpression(
                                                             OPERATOR_BINARY.LowerEqual,
                                                             exprvare,
-                                                            vr.Item2
+                                                            opt(vr.Item2)
                                                         )
                                                     );
                                                 else

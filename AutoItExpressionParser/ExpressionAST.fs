@@ -120,16 +120,16 @@ type MULTI_EXPRESSION =
     | ValueRange of EXPRESSION * EXPRESSION
 
     
-let rec private VarToCString =
+let rec private VarToAString =
     function
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with
                                                       | Field f -> f
-                                                      | Method m -> ToCString(FunctionCall m)
+                                                      | Method m -> ToAString(FunctionCall m)
                                       )
                           |> List.fold (+) v.Name
     | Variable v -> sprintf "$%s" (v.Name)
-and private AssToCString =
+and private AssToAString =
     function
     | Assign -> "="
     | AssignAdd -> "+="
@@ -149,7 +149,7 @@ and private AssToCString =
     | AssignRotateRight -> ">>>="
     | AssignShiftLeft -> "<<="
     | AssignShiftRight -> ">>="
-and private BinToCString =
+and private BinToAString =
     function
     | StringConcat -> "&"
     | EqualCaseSensitive -> "=="
@@ -181,7 +181,7 @@ and private BinToCString =
     | BitwiseRotateRight -> ">>>"
     | BitwiseShiftLeft -> "<<"
     | BitwiseShiftRight -> ">>"
-and private ToCString =
+and private ToAString =
     function
     | Literal l ->
         match l with
@@ -191,24 +191,24 @@ and private ToCString =
         | False -> "false"
         | Number d -> d.ToString()
         | String s -> sprintf "\"%s\"" s
-    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToCString es)))
-    | VariableExpression v -> VarToCString v
+    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
+    | VariableExpression v -> VarToAString v
     | Macro m -> sprintf "@%s" (m.Name)
-    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToCString v) (ToCString e)
+    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToAString v) (ToAString e)
     | UnaryExpression (o, e) ->
         match o with
         | Identity -> ""
         | Negate -> "-"
         | Not -> "Not "
         | BitwiseNot -> "~"
-        + ToCString e
-    | BinaryExpression (o, x, y) -> sprintf "(%s %s %s)" (ToCString x) (BinToCString o) (ToCString y)
-    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToCString x) (ToCString y) (ToCString z)
-    | ToExpression (f, t) -> sprintf "%s to %s" (ToCString f) (ToCString t)
+        + ToAString e
+    | BinaryExpression (o, x, y) -> sprintf "(%s %s %s)" (ToAString x) (BinToAString o) (ToAString y)
+    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
+    | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
     | AssignmentExpression a ->
         match a with
-        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToCString v) (AssToCString o) (ToCString e)
-        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToCString v) (ToCString i) (AssToCString o) (ToCString e)
+        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
+        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToAString v) (ToAString i) (AssToAString o) (ToAString e)
 
 [<ExtensionAttribute>]
-let Print e = ToCString e
+let Print e = ToAString e
