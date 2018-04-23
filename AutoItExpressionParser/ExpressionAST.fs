@@ -120,16 +120,18 @@ type MULTI_EXPRESSION =
     | ValueRange of EXPRESSION * EXPRESSION
 
     
-let rec private VarToAString =
+let private (!/) = sprintf "AutoItVariantType.%s"
+
+let rec private VarToCSString =
     function
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with
                                                       | Field f -> f
-                                                      | Method m -> ToAString(FunctionCall m)
+                                                      | Method m -> ToCSString(FunctionCall m)
                                       )
                           |> List.fold (+) v.Name
     | Variable v -> sprintf "$%s" (v.Name)
-and private AssToAString =
+and private AssToCSString =
     function
     | Assign -> "="
     | AssignAdd -> "+="
@@ -139,6 +141,8 @@ and private AssToAString =
     | AssignModulus -> "%="
     | AssignConcat -> "&="
     | AssignPower -> "^="
+
+    // TODO
     | AssignNand -> "~&&="
     | AssignAnd -> "&&="
     | AssignNxor -> "~^^="
@@ -149,66 +153,67 @@ and private AssToAString =
     | AssignRotateRight -> ">>>="
     | AssignShiftLeft -> "<<="
     | AssignShiftRight -> ">>="
-and private BinToAString =
-    function
-    | StringConcat -> "&"
-    | EqualCaseSensitive -> "=="
-    | EqualCaseInsensitive -> "="
-    | Unequal -> "<>"
-    | Greater -> ">"
-    | GreaterEqual -> ">="
-    | Lower -> "<"
-    | LowerEqual -> "<="
-    | And -> "And"
-    | Xor -> "Xor"
-    | Nxor -> "Nxor"
-    | Nor -> "Nor"
-    | Nand -> "Nand"
-    | Or -> "Or"
-    | Add -> "+"
-    | Subtract -> "-"
-    | Multiply -> "*"
-    | Divide -> "/"
-    | Modulus -> "%"
-    | Power -> "^"
-    | BitwiseNand -> "~&&"
-    | BitwiseAnd -> "&&"
-    | BitwiseNxor -> "~^^"
-    | BitwiseXor -> "^^"
-    | BitwiseNor -> "~||"
-    | BitwiseOr -> "||"
-    | BitwiseRotateLeft -> "<<<"
-    | BitwiseRotateRight -> ">>>"
-    | BitwiseShiftLeft -> "<<"
-    | BitwiseShiftRight -> ">>"
-and private ToAString =
+and private BinToCSString o a b =
+    sprintf (match o with
+            | StringConcat -> "%s & %s"
+            | EqualCaseSensitive -> "%s == %s"
+            | EqualCaseInsensitive -> "AutoItVariantType.Equals(%s, %s, true)"
+            | Unequal -> "%s != %s"
+            | Greater -> "%s > %s"
+            | GreaterEqual -> "%s >= %s"
+            | Lower -> "%s < %s"
+            | LowerEqual -> "%s <= %s"
+            | And -> "%s && %s"
+            | Xor -> "(bool)%s ^ (bool)%s"
+            | Nxor -> "!((bool)%s ^ (bool)%s)"
+            | Nor -> "!(%s || %s)"
+            | Nand -> "!(%s && %s)"
+            | Or -> "%s || %s"
+            | Add -> "%s + %s"
+            | Subtract -> "%s - %s"
+            | Multiply -> "%s * %s"
+            | Divide -> "%s / %s"
+            | Modulus -> "%s %% %s"
+            | Power -> "%s ^ %s"
+            | BitwiseNand -> "AutoItVariantType.BitwiseNand(%s, %s)"
+            | BitwiseAnd -> "AutoItVariantType.BitwiseAnd(%s, %s)"
+            | BitwiseNxor -> "AutoItVariantType.BitwiseNxor(%s, %s)"
+            | BitwiseXor -> "AutoItVariantType.BitwiseXor(%s, %s)"
+            | BitwiseNor -> "AutoItVariantType.BitwiseNor(%s, %s)"
+            | BitwiseOr -> "AutoItVariantType.BitwiseOr(%s, %s)"
+            | BitwiseRotateLeft -> "AutoItVariantType.BitwiseRol(%s, %s)"
+            | BitwiseRotateRight -> "AutoItVariantType.BitwiseRor(%s, %s)"
+            | BitwiseShiftLeft -> "AutoItVariantType.BitwiseShl(%s, %s)"
+            | BitwiseShiftRight -> "AutoItVariantType.BitwiseShr(%s, %s)"
+            ) a b
+and private ToCSString =
     function
     | Literal l ->
         match l with
-        | Null -> "null"
-        | Default -> "default"
+        | Null -> !/"Null"
+        | Default -> !/"Default"
         | True -> "true"
         | False -> "false"
         | Number d -> d.ToString()
         | String s -> sprintf "\"%s\"" s
-    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
-    | VariableExpression v -> VarToAString v
+    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToCSString es)))
+    | VariableExpression v -> VarToCSString v
     | Macro m -> sprintf "@%s" (m.Name)
-    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToAString v) (ToAString e)
+    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToCSString v) (ToCSString e)
     | UnaryExpression (o, e) ->
         match o with
         | Identity -> ""
         | Negate -> "-"
-        | Not -> "Not "
+        | Not -> "!"
         | BitwiseNot -> "~"
-        + ToAString e
-    | BinaryExpression (o, x, y) -> sprintf "(%s %s %s)" (ToAString x) (BinToAString o) (ToAString y)
-    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
-    | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
+        + ToCSString e
+    | BinaryExpression (o, x, y) -> BinToCSString o (ToCSString x) (ToCSString y)
+    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToCSString x) (ToCSString y) (ToCSString z)
+    | ToExpression (f, t) -> sprintf "%s to %s" (ToCSString f) (ToCSString t)
     | AssignmentExpression a ->
         match a with
-        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
-        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToAString v) (ToAString i) (AssToAString o) (ToAString e)
+        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToCSString v) (AssToCSString o) (ToCSString e)
+        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToCSString v) (ToCSString i) (AssToCSString o) (ToCSString e)
 
 [<ExtensionAttribute>]
-let Print e = ToAString e
+let Print e = ToCSString e

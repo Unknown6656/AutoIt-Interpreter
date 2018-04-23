@@ -109,6 +109,9 @@ namespace AutoItInterpreter
 
     public sealed class Interpreter
     {
+        internal const string DISCARD_VARIBLE = "$___discard___";
+        internal const string ERROR_VARIBLE = "$___error___";
+
         private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
         {
             [__NONE__] = "EndFunc",
@@ -470,6 +473,10 @@ namespace AutoItInterpreter
                             if (eblocks.Peek().CB == Case)
                                 TryCloseBlock(Case);
 
+                            SELECT sw = eblocks.Peek().Entity as SELECT;
+
+                            sw.Cases.AddRange(sw.RawLines.Select(x => x as SELECT_CASE));
+
                             TryCloseBlock(Select);
                         }),
                         (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(Switch, new SWITCH(curr, m.Get("cond")))),
@@ -825,26 +832,26 @@ namespace AutoItInterpreter
                 void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
-                EXPRESSION opt(EXPRESSION expr) => Refactorings.ProcessExpression(expr);
+                EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
                 AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
                 {
                     Condition = parseexpr((e as ConditionalEntity).RawCondition),
                     Statements = proclines(),
                     Context = e.DefinitionContext
                 };
-                EXPRESSION parseexpr(string expr)
+                EXPRESSION parseexpr(string expr, bool suppress = false)
                 {
                     if (parsemexpr(expr) is MULTI_EXPRESSIONS m)
-                        if (m.Length > 1)
+                        if (m.Length > 1 && !suppress)
                             err("errors.astproc.no_comma_allowed", expr);
-                        else if (m[0].IsValueRange)
+                        else if (m[0].IsValueRange && !suppress)
                             err("errors.astproc.no_range_allowed", expr);
                         else
-                            return (m[0] as MULTI_EXPRESSION.SingleValue).Item;
+                            return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
 
                     return null;
                 }
-                MULTI_EXPRESSIONS parsemexpr(string expr)
+                MULTI_EXPRESSIONS parsemexpr(string expr, bool suppress = false)
                 {
                     expr = expr.Trim();
 
@@ -854,7 +861,8 @@ namespace AutoItInterpreter
                     }
                     catch (Exception ex)
                     {
-                        err("errors.astproc.parser_error", expr, ex.Message);
+                        if (!suppress)
+                            err("errors.astproc.parser_error", expr, ex.Message);
 
                         return null;
                     }
@@ -1257,26 +1265,41 @@ namespace AutoItInterpreter
                             }
                         case RAWLINE i:
                             {
-                                // TODO : with-statement rawline ?
+                                if (i.RawContent is string exprstr)
+                                {
+                                    EXPRESSION expr;
 
-                                if (parseexpr(i.RawContent?.Trim() ?? "") is EXPRESSION expr)
-                                    if (expr.IsAssignmentExpression)
-                                        return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                        {
-                                            Expression = (expr as EXPRESSION.AssignmentExpression)?.Item,
-                                        };
-                                    else
+                                    try
                                     {
-                                        if (!expr.IsFunctionCall)
-                                            warn("warnings.astproc.expression_result_discarded");
-
-                                        return new AST_EXPRESSION_STATEMENT
-                                        {
-                                            Expression = expr,
-                                        };
+                                        if ((expr = parseexpr(exprstr, true)) is null)
+                                            throw null;
                                     }
-                                else
-                                    break;
+                                    catch
+                                    {
+                                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})");
+                                    }
+
+                                    // TODO : with-statement rawline ?
+
+                                    if (expr is EXPRESSION ex)
+                                        if (ex.IsAssignmentExpression)
+                                            return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                            {
+                                                Expression = (ex as EXPRESSION.AssignmentExpression)?.Item,
+                                            };
+                                        else
+                                        {
+                                            if (!ex.IsFunctionCall)
+                                                warn("warnings.astproc.expression_result_discarded");
+
+                                            return new AST_EXPRESSION_STATEMENT
+                                            {
+                                                Expression = ex,
+                                            };
+                                        }
+                                }
+
+                                break;
                             }
                         case DECLARATION i:
                             warn("warnings.not_impl"); // TODO

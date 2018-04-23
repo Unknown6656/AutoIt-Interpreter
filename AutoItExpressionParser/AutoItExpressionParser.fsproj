@@ -13,7 +13,7 @@
   <ItemGroup>
     <Compile Include="Util.fs" />
     <Compile Include="ExpressionAST.fs" />
-    <Compile Include="Refactorings.fs" />
+    <Compile Include="Analyzer.fs" />
     <Compile Include="ExpressionParser.fs" />
   </ItemGroup>
   <ItemGroup>

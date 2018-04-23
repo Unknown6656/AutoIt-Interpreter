@@ -1,4 +1,4 @@
-﻿module AutoItExpressionParser.Refactorings
+﻿module AutoItExpressionParser.Analyzer
 
 open AutoItExpressionParser.ExpressionAST
 open System.Globalization
@@ -231,3 +231,43 @@ let rec ProcessExpression e =
         )
     // TODO
     | _ -> e
+
+    
+let private getvarfunccalls =
+    function
+    | Variable _ -> []
+    | DotAccess (_, m) -> List.choose (function
+                                        | Method f -> Some f
+                                        | _ -> None) m
+let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
+    match e with
+    | Literal _
+    | Macro _ -> []
+    | FunctionCall f -> [[f]]
+    | VariableExpression v -> [getvarfunccalls v]
+    | AssignmentExpression (Assignment (_, v, i))
+    | ArrayIndex (v, i) -> [getvarfunccalls v; GetFunctionCallExpressions i]
+    | UnaryExpression (_, e) -> [GetFunctionCallExpressions e]
+    | ToExpression (x, y)
+    | BinaryExpression (_, x, y) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y]
+    | TernaryExpression (x, y, z) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y; GetFunctionCallExpressions z]
+    | AssignmentExpression (ArrayAssignment(_, v, i, e)) -> [getvarfunccalls v; GetFunctionCallExpressions i; GetFunctionCallExpressions e]
+    |> List.concat
+
+let rec GetVariables (e : EXPRESSION) : VARIABLE list =
+    let procvar = function
+                  | DotAccess (v, _)
+                  | Variable v -> v
+    match e with
+    | Literal _
+    | Macro _ -> []
+    | FunctionCall (_, es) -> []
+    | VariableExpression v -> [[procvar v]]
+    | ArrayIndex (v, i)
+    | AssignmentExpression (Assignment (_, v, i)) -> [[procvar v]; GetVariables i]
+    | UnaryExpression (_, e) -> [GetVariables e]
+    | ToExpression (x, y)
+    | BinaryExpression (_, x, y) -> [GetVariables x; GetVariables y]
+    | TernaryExpression (x, y, z) -> [GetVariables x; GetVariables y; GetVariables z]
+    | AssignmentExpression (ArrayAssignment(_, v, i, e)) -> [[procvar v]; GetVariables i; GetVariables e]
+    |> List.concat

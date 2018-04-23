@@ -31,23 +31,23 @@
             "misplaced_continuecase": "Eine 'ContinueCase'-Anweisung kann nur in der Sichtbarkeitsebene innerhalb eines 'Case'-Blockes verwendet werden.",
             "misplaced_exitloop": "Die 'ExitLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
             "misplaced_continueloop": "Die 'ContinueLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
-
-            ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
-
             "invalid_global": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
             "invalid_local": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'."
         },
         "astproc": {
-            "unknown_entity": "Internal error: The entity '{0}' is unknown.",
-            "parser_error": "The expression '{0}' could not be parsed due to the following reason: {1}",
-            "obj_expression_required": "The expression '{0}' is not a valid object-expression.",
-            "multiple_switch_case_else": "A 'Case Else'-statement can only defined once for each Switch-block.",
-            "no_comma_allowed": "The expression '{0}' must be a single-value expression and must not be multiple comma-seperated values.",
-            "no_range_allowed": "The expression '{0}' must be a single-value expression and must therefore not contain the range-specific keyword 'To'."
+            "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",
+            "parser_error": "Der Ausdruck '{0}' konnte aufgrund des foldenden Fehlers nicht nicht erkannt werden: {1}",
+            "obj_expression_required": "Der Ausdruck '{0}' ist kein gültiger Object-Ausdruck.",
+            "multiple_switch_case_else": "Eine 'Case Else'-Anweisung kann nur einmal für jeden 'Switch'-Block definiert werden.",
+            "no_comma_allowed": "Der Ausdruck '{0}' darf kein Ausdruck bestehend aus mehreren Komma-getrennten Werten sein.",
+            "no_range_allowed": "Der Ausdruck  '{0}' darf kein Intervall-Ausdruck mit dem Schlüsselwort 'To' sein."
         }
     },
     "warnings": {
         "preproc": {
+
+            ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
+
             "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",

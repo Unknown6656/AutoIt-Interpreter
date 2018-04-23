@@ -128,7 +128,7 @@ type ExpressionParser(optimize : bool) =
         reduce1 nt_dot_member t_identifier Field
         reduce1 nt_dot_member nt_funccall Method
         
-        reduce1 nt_expression_ext nt_expression (fun e -> if x.UseOptimization then Refactorings.ProcessExpression e else e)
+        reduce1 nt_expression_ext nt_expression (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
         reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
 
         reduce0 nt_expression !@0

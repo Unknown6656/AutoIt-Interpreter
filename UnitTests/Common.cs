@@ -301,7 +301,7 @@ namespace UnitTests
 
         public static EXPRESSION ParseExpression(string s) => (PaseMultiexpressions(s)[0] as MULTI_EXPRESSION.SingleValue)?.Item;
 
-        public static EXPRESSION ProcessExpression(EXPRESSION expr) => Refactorings.ProcessExpression(expr);
+        public static EXPRESSION ProcessExpression(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
 
         public static string ToString(EXPRESSION expr) => ExpressionAST.Print(expr);
 

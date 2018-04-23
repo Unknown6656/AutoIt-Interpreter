@@ -72,5 +72,3 @@ for $cnt1 = 0 to 7
         printf($var)
     next
 next
-
-#cs
