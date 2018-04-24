@@ -155,8 +155,8 @@ namespace AutoItInterpreter
 
             if (UseVerboseOutput)
             {
-                DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
                 DebugPrintUtil.DisplayPartialAST(state, Settings);
+                DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
             }
             else
                 foreach (InterpreterError err in state.Errors)
@@ -516,7 +516,7 @@ namespace AutoItInterpreter
                         }),
                         ("^continuecase$", new[] { Switch, Select }, _ =>
                         {
-                            if (AnyParentCount(Switch, Select) > 1)
+                            if (AnyParentCount(Switch, Select) > 0)
                                 Append(new CONTINUECASE(curr));
                             else
                                 err("errors.preproc.misplaced_continuecase", true);
@@ -589,6 +589,7 @@ namespace AutoItInterpreter
                             Append(new DECLARATION(curr, expr, modf));
                         }),
                         (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
+                        (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
                         (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
                     }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
@@ -1305,6 +1306,22 @@ namespace AutoItInterpreter
                             warn("warnings.not_impl"); // TODO
 
                             break;
+                        case REDIM i:
+                            return new AST_REDIM_STATEMENT
+                            {
+                                DimensionExpressions = i.Dimensions.Select(x =>
+                                {
+                                    EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
+                                    ASSIGNMENT_EXPRESSION aexpr = (expr as EXPRESSION.AssignmentExpression)?.Item;
+                                    EXPRESSION vexpr = (aexpr as ASSIGNMENT_EXPRESSION.Assignment)?.Item3;
+
+                                    if (vexpr is null)
+                                        ; // TODO : report error
+
+                                    return vexpr;
+                                }).ToArray(),
+                                Variable = new VARIABLE(i.VariableName)
+                            };
                         default:
                             err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
 

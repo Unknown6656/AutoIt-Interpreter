@@ -1,0 +1,26 @@
+decl_expr	  ::= [decl_scope] ['const'] decl_list
+
+decl_scope	  ::= 'global'
+				| 'local'
+				| 'dim'
+
+decl_list	  ::= decl
+				| decl_list ',' decl
+
+decl 		  ::= var_name [ '=' expr ]
+				| var_name dim_list [ '=' '[' arr_expr ']' ]
+
+dim_list	  ::= dimension
+				| dim_list dimension
+
+dimension	  ::= '[' size ']'
+
+arr_expr	  ::= '[' arr_expr ']' ',' arr_expr
+				| expr_list
+				| ε
+
+expr_list     ::= expr
+				| expr_list ',' expr
+
+var_name	  ::= '$' identifier
+

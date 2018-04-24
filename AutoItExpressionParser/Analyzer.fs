@@ -252,6 +252,7 @@ let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     | BinaryExpression (_, x, y) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y]
     | TernaryExpression (x, y, z) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y; GetFunctionCallExpressions z]
     | AssignmentExpression (ArrayAssignment(_, v, i, e)) -> [getvarfunccalls v; GetFunctionCallExpressions i; GetFunctionCallExpressions e]
+    | ArrayInitExpression xs -> List.map GetFunctionCallExpressions xs
     |> List.concat
 
 let rec GetVariables (e : EXPRESSION) : VARIABLE list =
@@ -270,4 +271,5 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
     | BinaryExpression (_, x, y) -> [GetVariables x; GetVariables y]
     | TernaryExpression (x, y, z) -> [GetVariables x; GetVariables y; GetVariables z]
     | AssignmentExpression (ArrayAssignment(_, v, i, e)) -> [[procvar v]; GetVariables i; GetVariables e]
+    | ArrayInitExpression xs -> List.map GetVariables xs
     |> List.concat

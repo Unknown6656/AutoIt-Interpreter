@@ -24,6 +24,10 @@ type ExpressionParser(optimize : bool) =
             
         let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>()
         let nt_multi_expression         = x.nt<MULTI_EXPRESSION>()
+
+        let nt_array_init_expressions   = x.nt<EXPRESSION list>()
+        let nt_array_init_expression    = x.nt<EXPRESSION list>()
+
         let nt_expression_ext           = x.nt<EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
         let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..8 |]
@@ -131,6 +135,10 @@ type ExpressionParser(optimize : bool) =
         reduce1 nt_expression_ext nt_expression (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
         reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
 
+        reduce3 nt_array_init_expressions t_symbol_obrack nt_array_init_expression t_symbol_cbrack (fun _ es _ -> es)
+        reduce3 nt_array_init_expression nt_expression t_symbol_comma nt_array_init_expression (fun e _ es -> e::es)
+        reduce1 nt_array_init_expression nt_expression (fun e -> [e])
+
         reduce0 nt_expression !@0
 
         // TODO  : change precedence inside each precedence group (?)
@@ -183,6 +191,7 @@ type ExpressionParser(optimize : bool) =
         reduce1 !@8 t_macro Macro
         reduce3 !@8 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
         reduce4 !@8 nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+        reduce1 !@8 nt_array_init_expression ArrayInitExpression
      // reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))

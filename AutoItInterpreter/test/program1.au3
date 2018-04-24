@@ -67,9 +67,12 @@ for $cnt1 = 0 to 7
     next
 
     $lel + 7
-    $test[5] = [ 0, 1, 2, 3, 4 ]
 
     for $var in $test
         printf($var)
     next
 next
+
+
+dim $test[5] = [ 0, 1, 2, 3, 4 ]
+redim $test[2]

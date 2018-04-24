@@ -330,12 +330,19 @@ namespace AutoItInterpreter.Preprocessed
 
 
         public DECLARATION(Entity parent, string expr, string[] mod)
-            : base(parent)
-        {
-            Expression = expr;
-            Modifiers = mod;
-        }
+            : base(parent) => (Expression, Modifiers) = (expr, mod);
 
         public override string ToString() => string.Concat(Modifiers.Select(x => x + ' ')) + Expression;
+    }
+
+    public sealed class REDIM
+        : Entity
+    {
+        public string VariableName { get; }
+        public string[] Dimensions { get; }
+
+
+        public REDIM(Entity parent, string varname, params string[] dimensions)
+            : base(parent) => (VariableName, Dimensions) = (varname, dimensions);
     }
 }

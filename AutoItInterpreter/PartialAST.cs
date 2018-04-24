@@ -158,15 +158,30 @@ namespace AutoItInterpreter.PartialAST
         public EXPRESSION Expression { set; get; }
     }
 
-    public class AST_BREAK_STATEMENT
+    public sealed class AST_BREAK_STATEMENT
         : AST_STATEMENT
     {
         public uint Level { set; get; }
     }
 
-    public class AST_CONTINUE_STATEMENT
+    public sealed class AST_CONTINUE_STATEMENT
         : AST_STATEMENT
     {
         public uint Level { set; get; }
+    }
+
+    public sealed class AST_REDIM_STATEMENT
+        : AST_STATEMENT
+    {
+        public VARIABLE Variable { set; get; }
+        public EXPRESSION[] DimensionExpressions { set; get; }
+    }
+
+    public sealed class AST_DECLARATION_STATEMENT
+        : AST_STATEMENT
+    {
+        public VARIABLE Variable { set; get; }
+        public EXPRESSION InitExpression { set; get; }
+        public EXPRESSION[] DimensionExpressions { set; get; }
     }
 }

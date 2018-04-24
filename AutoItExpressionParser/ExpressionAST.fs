@@ -2,6 +2,7 @@
 module AutoItExpressionParser.ExpressionAST
 
 open AutoItExpressionParser.Util
+
 open System.Runtime.CompilerServices
 open System
 
@@ -111,6 +112,7 @@ and EXPRESSION =
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
     | ToExpression of EXPRESSION * EXPRESSION
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
+    | ArrayInitExpression of EXPRESSION list
     // TODO : dot-access of member elements
 and ASSIGNMENT_EXPRESSION =
     | Assignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
@@ -198,7 +200,7 @@ and private ToCSString =
         | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
     | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToCSString es)))
     | VariableExpression v -> VarToCSString v
-    | Macro m -> sprintf "@%s" (m.Name)
+    | Macro m -> sprintf "___macros___[\"%s\"]" m.Name
     | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToCSString v) (ToCSString e)
     | UnaryExpression (o, e) ->
         match o with
@@ -214,6 +216,9 @@ and private ToCSString =
         match a with
         | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToCSString v) (AssToCSString o) (ToCSString e)
         | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToCSString v) (ToCSString i) (AssToCSString o) (ToCSString e)
+    | ArrayInitExpression e -> sprintf "[ %s ]" (e
+                                                 |> List.map ToCSString
+                                                 |> String.concat ", ")
 
 [<ExtensionAttribute>]
 let Print e = ToCSString e
