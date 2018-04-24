@@ -1,3 +1,4 @@
 #!/bin/sh
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-dotnet "$DIR/autoitipt.dll" $@
+_dir=$( readlink -e "$( dirname "$0" )" )
+_dll="$_dir/autoitipt.dll"
+dotnet "\"$_dll\"" $@

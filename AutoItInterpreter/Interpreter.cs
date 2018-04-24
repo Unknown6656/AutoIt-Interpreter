@@ -842,11 +842,17 @@ namespace AutoItInterpreter
                 };
                 EXPRESSION parseexpr(string expr, bool suppress = false)
                 {
-                    if (parsemexpr(expr) is MULTI_EXPRESSIONS m)
-                        if (m.Length > 1 && !suppress)
-                            err("errors.astproc.no_comma_allowed", expr);
-                        else if (m[0].IsValueRange && !suppress)
-                            err("errors.astproc.no_range_allowed", expr);
+                    if (parsemexpr(expr, suppress) is MULTI_EXPRESSIONS m)
+                        if (m.Length > 1)
+                        {
+                            if (!suppress)
+                                err("errors.astproc.no_comma_allowed", expr);
+                        }
+                        else if (m[0].IsValueRange)
+                        {
+                            if (!suppress)
+                                err("errors.astproc.no_range_allowed", expr);
+                        }
                         else
                             return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
 
@@ -1270,14 +1276,19 @@ namespace AutoItInterpreter
                                 {
                                     EXPRESSION expr;
 
-                                    try
-                                    {
-                                        if ((expr = parseexpr(exprstr, true)) is null)
-                                            throw null;
-                                    }
-                                    catch
+                                    if ((expr = parseexpr(exprstr)) is null)
                                     {
                                         expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})");
+
+                                        if (expr is null)
+                                            state.RemoveLastErrorOrWarning();
+                                        else
+                                        {
+                                            InterpreterError error = state.Errors.Last();
+
+                                            state.RemoveLastErrorOrWarning();
+                                            state.Report(error);
+                                        }
                                     }
 
                                     // TODO : with-statement rawline ?
@@ -1305,6 +1316,13 @@ namespace AutoItInterpreter
                         case DECLARATION i:
                             warn("warnings.not_impl"); // TODO
 
+
+                            //return new AST_DECLARATION_STATEMENT
+                            //{
+                            //    Variable = new VARIABLE(....),
+                            //    DimensionExpressions = ....,
+                            //    InitExpression = ....
+                            //};
                             break;
                         case REDIM i:
                             return new AST_REDIM_STATEMENT
@@ -1470,9 +1488,17 @@ namespace AutoItInterpreter
 
         public void ReportWarning(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, false));
 
+        internal void Report(InterpreterError error) => _errors.Add(error);
+
         internal void ReportKnownError(string errname, DefinitionContext ctx, params object[] args) => ReportError(Language[errname, args], ctx, Language.GetErrorNumber(errname));
 
         internal void ReportKnownWarning(string errname, DefinitionContext ctx, params object[] args) => ReportWarning(Language[errname, args], ctx, Language.GetErrorNumber(errname));
+
+        internal void RemoveLastErrorOrWarning()
+        {
+            if (_errors.Count > 0)
+                _errors.RemoveAt(_errors.Count - 1);
+        }
     }
 
     public sealed class InterpreterState

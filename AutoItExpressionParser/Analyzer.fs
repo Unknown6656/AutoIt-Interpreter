@@ -213,8 +213,9 @@ let rec ProcessExpression e =
             AssignShiftLeft, BitwiseShiftLeft
             AssignShiftRight, BitwiseShiftRight
         ]
-        |> dict 
-    match ProcessConstants e with
+        |> dict
+    let p = ProcessConstants e
+    match p with
     | AssignmentExpression (Assignment (Assign, Variable v, VariableExpression (Variable w))) when v = w -> VariableExpression (Variable v)
     | AssignmentExpression (Assignment (o, Variable v, e)) when o <> Assign ->
         let v = Variable v
@@ -230,7 +231,7 @@ let rec ProcessExpression e =
             )
         )
     // TODO
-    | _ -> e
+    | _ -> p
 
     
 let private getvarfunccalls =
