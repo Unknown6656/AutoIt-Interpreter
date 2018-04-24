@@ -1,4 +1,4 @@
-# **THIS PROJECT IS FAR FROM FINISHED !!**
+# **THIS PROJECT IS ~FAR~** a few steps away **FROM FINISHED !!**
 
 _The following image describes more or less the current state..._
 
