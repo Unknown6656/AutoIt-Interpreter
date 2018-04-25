@@ -1,8 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 using System.Linq;
 using System.IO;
 using System;
@@ -93,7 +95,8 @@ namespace UnitTests
                 swc = swi = swm = 0;
 
                 dynamic container = Activator.CreateInstance(t);
-                MethodInfo init = t.GetMethod("Test_Init");
+                MethodInfo init = t.GetMethod(nameof(TestCommons.Test_Init));
+                MethodInfo cleanup = t.GetMethod(nameof(TestCommons.Test_Cleanup));
                 int tp = 0, tf = 0, ts = 0, pleft = 0;
 
                 WriteLine($"Testing class '{t.FullName}'");
@@ -117,6 +120,12 @@ namespace UnitTests
                             AddTime(ref swi, sw);
 
                             nfo.Invoke(container, new object[0]);
+
+                            AddTime(ref swm, sw);
+
+                            cleanup.Invoke(container, new object[0]);
+
+                            AddTime(ref swi, sw);
 
                             ForegroundColor = ConsoleColor.Green;
 
@@ -151,11 +160,11 @@ namespace UnitTests
 
                             WriteLine("FAIL");
 
-                            while (ex != null)
+                            while (ex?.InnerException != null)
                             {
-                                WriteLine($"\t\t  {ex.Message}\n{string.Join("\n", ex.StackTrace.Split('\n').Select(x => $"\t\t{x}"))}");
-
                                 ex = ex.InnerException;
+
+                                WriteLine($"\t\t  {ex.Message}\n{string.Join("\n", ex.StackTrace.Split('\n').Select(x => $"\t\t{x}"))}");
                             }
 
                             ForegroundColor = ConsoleColor.White;
@@ -262,6 +271,11 @@ namespace UnitTests
         {
         }
 
+        [TestInitialize]
+        public virtual void Test_Cleanup()
+        {
+        }
+
         public static void Skip() => throw new SkippedException();
 
         public static void TestAutoItCode(string code, Action<InterpreterState> callback) => TestAutoItCode(code, (FileInfo tmp) =>
@@ -295,6 +309,54 @@ namespace UnitTests
             callback(file);
 
             file.Delete();
+        }
+
+        public static void ExpectErrors(string code, params (int Line, int Code)[] errors) => TestAutoItCode(code, (InterpreterState state) =>
+        {
+            string conv((int l, int c) t) => $"Error {t.c} on line {t.l}";
+
+            (int, int)[] raw = state.Errors.Select(e => (e.ErrorContext.StartLine - 1, e.ErrorNumber)).ToArray();
+            (int, int)[] exc1 = raw.Except(errors).ToArray();
+            (int, int)[] exc2 = errors.Except(raw).ToArray();
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine();
+
+            if (exc1.Length > 0)
+            {
+                sb.AppendLine("The following errors occured, but were not expected:");
+
+                foreach ((int l, int n) err in exc1)
+                {
+                    InterpreterError ferr = Array.Find(state.Errors, e => (e.ErrorNumber == err.n) && (e.ErrorContext.StartLine - 1 == err.l));
+
+                    sb.Append('\t').Append(conv(err)).Append(": ").AppendLine(ferr.ErrorMessage);
+                }
+            }
+
+            if (exc2.Length > 0)
+            {
+                sb.AppendLine("The following were expected, but did not occur:");
+
+                foreach ((int, int) err in exc2)
+                    sb.Append('\t').AppendLine(conv(err));
+            }
+
+            if (sb.Length > 2)
+                Assert.Fail(sb.ToString());
+        });
+
+        public static void ExpectErrorsByMarkers(string code)
+        {
+            List<(int, int)> errors = new List<(int, int)>();
+            string[] lines = code.Trim().Replace("\r\n", "\n").Split('\n');
+            int linenr = 1;
+
+            foreach (string line in lines)
+                if (line.Match(@"\;\s+<--+\s*\#(?<num>[0-9]+)\s*$", out Match m))
+                    errors.Add((++linenr, int.Parse(m.Get("num"))));
+
+            ExpectErrors(string.Join("\n", lines), errors.ToArray());
         }
 
         public static MULTI_EXPRESSION[] PaseMultiexpressions(string s) => _parser.Parse(s).ToArray();

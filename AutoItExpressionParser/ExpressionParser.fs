@@ -132,7 +132,7 @@ type ExpressionParser(optimize : bool) =
         reduce1 nt_dot_member t_identifier Field
         reduce1 nt_dot_member nt_funccall Method
         
-        reduce1 nt_expression_ext nt_expression (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
+        reduce0 nt_expression_ext nt_expression
         reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
         
 
@@ -147,7 +147,7 @@ type ExpressionParser(optimize : bool) =
 
 
 
-        reduce0 nt_expression !@0
+        reduce1 nt_expression !@0 (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
 
         // TODO  : change precedence inside each precedence group (?)
 
@@ -237,7 +237,7 @@ type ExpressionParser(optimize : bool) =
         reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
         reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
         
-        reduce3 nt_assignment_expression nt_variable_expression nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
         reduce6 nt_assignment_expression nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
+        reduce3 nt_assignment_expression nt_variable_expression nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

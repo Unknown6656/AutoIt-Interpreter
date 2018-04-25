@@ -6,11 +6,6 @@ namespace UnitTests
     public sealed class ExpressionTests
         : TestCommons
     {
-        void ___()
-        {
-            var ex1 = ParseExpression("$ulk += 5 << ($lel == $lel) * ($jej = (99 << 3) + (8 / (7 + 2) - 6)) + \"lel\" ^ (14 >>> 3 + 88) nor ($lulz <> $lulz)");
-        }
-
         [TestMethod]
         public void Test_01() => AssertValidExpression("func($p1, @macro, false and ($test < 5)) + 88");
 
@@ -20,7 +15,19 @@ namespace UnitTests
         [TestMethod]
         public void Test_03() => AssertEqualExpressions("(1 * 2) + 3", "1 * 2 + 3");
 
-        [TestMethod, Skip]
+        [TestMethod]
         public void Test_04() => AssertEqualProcessedExpressions("(1 * 2) + 3", "5");
+
+        [TestMethod]
+        public void Test_05() => AssertInvalidExpression("0x80000000000000000");
+
+        [TestMethod]
+        public void Test_06() => AssertValidExpression("-0x7ffffffffffffff");
+
+        [TestMethod]
+        public void Test_07() => AssertEqualExpressions(
+            "$ulk += 5 << ($lel == $lel) * ($jej = (99 << 3) + (8 / (7 + 2) - 6)) + \"lel\" ^ (14 >>> 3 + 88) nor ($lulz <> $lulz)",
+            "$ulk"
+        );
     }
 }

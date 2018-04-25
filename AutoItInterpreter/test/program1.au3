@@ -10,23 +10,18 @@
 #ce
 
 Func f1()
-    If true Then
-        $test = 0x7fffffffffffffff
-        $test = 0x80000000000000000 ; <-- too big  *wink*
-    Else
-        If $test Then
-            $cnt = 0
+    If $test Then
+        $cnt = 0
 
-            do  
-                f2()
-                $cnt += 1
-            until $cnt >= 10
-        elseif false then
-            $test = "test"
-        else
-            ; this will be optimized away
-        endif
-    EndIf
+        do  
+            f2()
+            $cnt += 1
+        until $cnt >= 10
+    elseif false then
+        $test = "test"
+    else
+        ; this will be optimized away
+    endif
 EndFunc
 
 Func f2()
@@ -54,9 +49,6 @@ for $cnt1 = 0 to 7
                     continueloop 2
                 next
             case 8, 0x10, 2 << 3 ~&& (7 - 0.02 ^ 66)
-                exitloop 1
-                exitloop 2
-                exitloop 3
             case 1 to "3" + 99
             case 0o7
                 continuecase

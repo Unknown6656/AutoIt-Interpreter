@@ -15,7 +15,7 @@ namespace AutoItInterpreter
     using static ExpressionAST;
 
 
-    internal static class Util
+    public static class Util
     {
         public static bool Match(this string s, string p, out Match m, RegexOptions o = RegexOptions.IgnoreCase | RegexOptions.Compiled) => (m = Regex.Match(s, p, o)).Success;
 
@@ -235,7 +235,7 @@ namespace AutoItInterpreter
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"     _ |  {path.FullName}");
+                Console.WriteLine($"     _ |> {path.FullName}");
                 Console.ForegroundColor = ConsoleColor.DarkGray;
 
                 int cnt = 1;
