@@ -9,7 +9,8 @@
         "general": {
             "no_input": "No input file has been given. Use the commandline option '-?' or '--help' to see the usage information.",
             "inputfile_nfound": "The input AutoIt file '{0}' could not be found.",
-            "file_nopen": "The given file could not be found, accessed or read."
+            "file_nopen": "The given file could not be found, accessed or read.",
+            "reserved_name": "The name '{0}' is reserved for internal or future usage."
         },
         "preproc": {
             "include_nfound": "The include file '{0}' could not be found or is inaccessible.",
@@ -31,8 +32,8 @@
             "misplaced_continuecase": "A 'ContinueCase'-statement can only be used inside the scope of a 'Case'-block.",
             "misplaced_exitloop": "The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
             "misplaced_continueloop": "The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
-            "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely.",
-            "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely."
+            "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely.",
+            "no_closing_csharp": "The currently open C# block has not been closed properly using an '#cse'-directive."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",
@@ -40,7 +41,12 @@
             "obj_expression_required": "The expression '{0}' is not a valid object-expression.",
             "multiple_switch_case_else": "A 'Case Else'-statement can only defined once for each Switch-block.",
             "no_comma_allowed": "The expression '{0}' must be a single-value expression and must not be multiple comma-seperated values.",
-            "no_range_allowed": "The expression '{0}' must be a single-value expression and must therefore not contain the range-specific keyword 'To'."
+            "no_range_allowed": "The expression '{0}' must be a single-value expression and must therefore not contain the range-specific keyword 'To'.",
+            "func_not_declared": "The function '{0}' has not been declared or could not be found. Did you forget to include a header?",
+            "parser_error_funcdecl": "The function parameter expression(s) '{0}' could not be parsed due to the following reason: {1}",
+            "reserved_call": "The function '{0}' is reserved for internal calls only.",
+            "too_many_args": "The function '{0}' expects only {1} arguments.",
+            "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} were given."
         }
     },
     "warnings": {
@@ -49,7 +55,8 @@
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
-            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored."
+            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
+            "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely."
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."

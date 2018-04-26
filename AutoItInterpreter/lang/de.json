@@ -9,7 +9,8 @@
         "general": {
             "no_input": "Es wurde keine Eingabedatei angegeben. Verwenden Sie die Kommandozeilenoptionen '-?' oder '--help', um Informationen über die Verwendung der Kommandozeile einzusehen.",
             "inputfile_nfound": "Die AutoIt-Eingabedatei '{0}' konnte nicht gefunden werden.",
-            "file_nopen": "Die gegebene Eingabedatei konnte nicht gefunden, geöffnet oder gelesen werden."
+            "file_nopen": "Die gegebene Eingabedatei konnte nicht gefunden, geöffnet oder gelesen werden.",
+            "reserved_name": "Der Name '{0}' ist für eine interne oder zukünftige Verwendung reserviert."
         },
         "preproc": {
             "include_nfound": "Die include-Datei '{0}' konnte nicht gefunden oder geöffnet werden.",
@@ -31,8 +32,8 @@
             "misplaced_continuecase": "Eine 'ContinueCase'-Anweisung kann nur in der Sichtbarkeitsebene innerhalb eines 'Case'-Blockes verwendet werden.",
             "misplaced_exitloop": "Die 'ExitLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
             "misplaced_continueloop": "Die 'ContinueLoop'-Anweisung muss inerhalb einer Schleife platziert sein (e.g. 'For', 'Do' or 'While').",
-            "invalid_global": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
-            "invalid_local": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'."
+            "invalid_global": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'.",
+            "no_closing_csharp": "Der noch offene C#-Block wurde nicht ordnungsgemäß mit einer '#cse'-Direktive geschlossen."
         },
         "astproc": {
             "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",
@@ -40,7 +41,10 @@
             "obj_expression_required": "Der Ausdruck '{0}' ist kein gültiger Object-Ausdruck.",
             "multiple_switch_case_else": "Eine 'Case Else'-Anweisung kann nur einmal für jeden 'Switch'-Block definiert werden.",
             "no_comma_allowed": "Der Ausdruck '{0}' darf kein Ausdruck bestehend aus mehreren Komma-getrennten Werten sein.",
-            "no_range_allowed": "Der Ausdruck  '{0}' darf kein Intervall-Ausdruck mit dem Schlüsselwort 'To' sein."
+            "no_range_allowed": "Der Ausdruck '{0}' darf kein Intervall-Ausdruck mit dem Schlüsselwort 'To' sein.",
+            "func_not_declared": "Die Funktion '{0}' wurde nicht deklariert oder konnte nicht gefunden werden. Haben Sie eine #include-Direktive vergessen?",
+            "parser_error_funcdecl": "Der Ausdruck '{0}' zur Deklaration der Funktionsparameter konnte aufgrund des foldenden Fehlers nicht nicht erkannt werden: {1}",
+            "reserved_call": "Die Funktion '{0}' ist auschließlich für interne Zwecke reserviert."
         }
     },
     "warnings": {
@@ -52,7 +56,8 @@
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
-            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored."
+            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
+            "invalid_local": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'."
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."

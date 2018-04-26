@@ -350,11 +350,11 @@ namespace UnitTests
         {
             List<(int, int)> errors = new List<(int, int)>();
             string[] lines = code.Trim().Replace("\r\n", "\n").Split('\n');
-            int linenr = 1;
+            int linenr = 0;
 
             foreach (string line in lines)
                 if (line.Match(@"\;\s+<--+\s*\#(?<num>[0-9]+)\s*$", out Match m))
-                    errors.Add((++linenr, int.Parse(m.Get("num"))));
+                    errors.Add((linenr++, int.Parse(m.Get("num"))));
 
             ExpectErrors(string.Join("\n", lines), errors.ToArray());
         }

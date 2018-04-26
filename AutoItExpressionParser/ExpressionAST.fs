@@ -121,6 +121,23 @@ type MULTI_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION
 
+type FUNCTION_PARAMETER_MODIFIER =
+    {
+        IsConst : bool
+        IsByRef : bool
+    }
+type FUNCTION_PARAMETER_DEFVAL =
+    | Lit of LITERAL
+    | Mac of MACRO
+type FUNCTION_PARAMETER_TYPE =
+    | Mandatory of FUNCTION_PARAMETER_MODIFIER
+    | Optional of FUNCTION_PARAMETER_DEFVAL
+type FUNCTION_PARAMETER =
+    {
+        Variable : VARIABLE
+        Type : FUNCTION_PARAMETER_TYPE
+    }
+
     
 let private (!/) = sprintf "AutoItVariantType.%s"
 
@@ -157,26 +174,26 @@ and private AssToCSString =
     | AssignShiftRight -> ">>="
 and private BinToCSString o a b =
     sprintf (match o with
-            | StringConcat -> "%s & %s"
-            | EqualCaseSensitive -> "%s == %s"
+            | StringConcat -> "(%s & %s)"
+            | EqualCaseSensitive -> "(%s == %s)"
             | EqualCaseInsensitive -> "AutoItVariantType.Equals(%s, %s, true)"
-            | Unequal -> "%s != %s"
-            | Greater -> "%s > %s"
-            | GreaterEqual -> "%s >= %s"
-            | Lower -> "%s < %s"
-            | LowerEqual -> "%s <= %s"
-            | And -> "%s && %s"
-            | Xor -> "(bool)%s ^ (bool)%s"
+            | Unequal -> "(%s != %s)"
+            | Greater -> "(%s > %s)"
+            | GreaterEqual -> "(%s >= %s)"
+            | Lower -> "(%s < %s)"
+            | LowerEqual -> "(%s <= %s)"
+            | And -> "(%s && %s)"
+            | Xor -> "((bool)%s ^ (bool)%s)"
             | Nxor -> "!((bool)%s ^ (bool)%s)"
             | Nor -> "!(%s || %s)"
             | Nand -> "!(%s && %s)"
-            | Or -> "%s || %s"
-            | Add -> "%s + %s"
-            | Subtract -> "%s - %s"
-            | Multiply -> "%s * %s"
-            | Divide -> "%s / %s"
-            | Modulus -> "%s %% %s"
-            | Power -> "%s ^ %s"
+            | Or -> "(%s || %s)"
+            | Add -> "(%s + %s)"
+            | Subtract -> "(%s - %s)"
+            | Multiply -> "(%s * %s)"
+            | Divide -> "(%s / %s)"
+            | Modulus -> "(%s %% %s)"
+            | Power -> "(%s ^ %s)"
             | BitwiseNand -> "AutoItVariantType.BitwiseNand(%s, %s)"
             | BitwiseAnd -> "AutoItVariantType.BitwiseAnd(%s, %s)"
             | BitwiseNxor -> "AutoItVariantType.BitwiseNxor(%s, %s)"

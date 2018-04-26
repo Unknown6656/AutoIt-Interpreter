@@ -5,10 +5,6 @@ open AutoItExpressionParser.ExpressionAST
 open System.Globalization
 
 
-type long = System.Int64
-type decimal = System.Decimal
-
-
 type ExpressionParser(optimize : bool) =
     inherit AbstractParser<MULTI_EXPRESSION list>()
     member x.UseOptimization = optimize

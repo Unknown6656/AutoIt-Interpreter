@@ -1,6 +1,11 @@
+Func test()
+   Local $b;
 
-$kek1 = 0x10    ; 16
-$kek2 = "0x10"  ; 16
+   $b = 1;
+EndFunc
 
-ConsoleWrite($kek1 & $kek2 & @CRLF);
-ConsoleWrite($kek1 + $kek2 & @CRLF);
+Local $b = 0;
+
+test()
+
+ConsoleWrite($b & @CRLF);

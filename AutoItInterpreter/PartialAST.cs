@@ -29,7 +29,33 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_FUNCTION
         : AST_SCOPE
     {
+        public AST_FUNCTION_PARAMETER[] Parameters { set; get; }
         public string Name { set; get; }
+    }
+
+    public class AST_FUNCTION_PARAMETER
+    {
+        public VARIABLE Name { get; }
+        public bool ByRef { get; }
+        public bool Const { get; }
+
+
+        public AST_FUNCTION_PARAMETER(VARIABLE var, bool bref, bool cnst)
+        {
+            Name = var;
+            ByRef = bref;
+            Const = cnst;
+        }
+    }
+
+    public sealed class AST_FUNCTION_PARAMETER_OPT
+        : AST_FUNCTION_PARAMETER
+    {
+        public EXPRESSION InitExpression { get; }
+
+
+        public AST_FUNCTION_PARAMETER_OPT(VARIABLE var, EXPRESSION initexpr)
+            : base(var, false, false) => InitExpression = initexpr;
     }
 
     public sealed class AST_ASSIGNMENT_STATEMNT
@@ -183,5 +209,11 @@ namespace AutoItInterpreter.PartialAST
         public VARIABLE Variable { set; get; }
         public EXPRESSION InitExpression { set; get; }
         public EXPRESSION[] DimensionExpressions { set; get; }
+    }
+
+    public sealed class AST_INLINE_CSHARP
+        : AST_STATEMENT
+    {
+        public string Code { set; get; }
     }
 }

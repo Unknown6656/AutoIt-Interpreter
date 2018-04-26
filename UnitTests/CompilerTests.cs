@@ -13,7 +13,7 @@ namespace UnitTests
 
 
         [TestMethod]
-        public void Test_01() => TestAutoItCode(@"
+        public void Test_00() => TestAutoItCode(@"
 func f1()
 end func
 ", (InterpreterState state) =>
@@ -23,28 +23,46 @@ end func
         });
 
         [TestMethod]
+        public void Test_01() => TestAutoItCode(@"
+#cs
+    Func f2()
+        // this is an invalid comment inside an non-existent function ...
+    EndFunc
+#ce
+", (InterpreterState state) => Assert.AreEqual(1, state.Functions.Count));
+
+        [TestMethod]
         public void Test_02() => ExpectErrorsByMarkers(@"
 for $x = 0 to 10
     for $y = 0 to 10
-        exitloop 1
-        exitloop 2
-        exitloop 3 ; <--- #2002
-        exitloop top/lel ; <--- #2003
-        continueloop 1
         continueloop 2
+        exitloop 3 ; <--- #2002
+        exitloop top/lel ; <--- #1202
         continueloop 3 ; <--- #2004
-        continueloop top/lel ; <--- #2005
     next
+    exitloop 1
 next
 ");
 
         [TestMethod]
-        public void Test_03() => ExpectErrors(@"
-switch $x ; <--- #1027
+        public void Test_03() => ExpectErrorsByMarkers(@"
+switch $x ; <--- #1204
     case 1, 2 to 7 + ""4"", 0x99, -0.5
     case else
     case else
 endswitch
-", NO_ERRORS);
+");
+
+        [TestMethod]
+        public void Test_04() => ExpectErrorsByMarkers(@"
+f1(42)  ; <--- #1210
+f2() ; <--- #1211
+
+func f1()
+endfunc
+
+func f2($a)
+endfunc
+");
     }
 }

@@ -150,7 +150,7 @@ type NonTerminalWrapper<'T> (nonTerminal : INonTerminal<obj>) =
         |> ProductionWrapper<'a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'T>
 
 [<AbstractClass>]
-type AbstractParser<'a>() as this =
+type AbstractParser<'a>() =
     let config = ParserFactory.Configure<obj>()
     let mutable parser : IParser<obj> = null
     member x.Configuration with get() = config
@@ -172,6 +172,11 @@ type AbstractParser<'a>() as this =
         if parser = null then
             x.Initialize()
         parser.Parse(s.Replace('\t', ' ')) :?> 'a
+
+
+type long = System.Int64
+
+type decimal = System.Decimal
             
 [<AutoOpen>]
 module ProductionUtil =

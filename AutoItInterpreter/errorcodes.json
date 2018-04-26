@@ -3,38 +3,44 @@
         "general": {
             "no_input": 1001,
             "inputfile_nfound": 1002,
-            "file_nopen": 1003
+            "file_nopen": 1003,
+            "reserved_name": 1004
         },
         "preproc": {
-            "include_nfound": 1004,
-            "directive_invalid": 1005,
-            "directive_invalid_value": 1006,
-            "pragma_unsupported": 1007,
-            "function_nesting": 1008,
-            "unexpected_endfunc": 1009,
-            "function_exists": 1010,
-            "block_reqr": 1011,
-            "block_confl": 1012,
-            "block_invalid_close": 1013,
-            "block_conflicting_close": 1014,
-            "blocks_unclosed": 1015,
-            "missing_then": 1016,
-            "misplaced_elseif": 1017,
-            "misplaced_else": 1018,
-            "misplaced_case": 1018,
-            "misplaced_continuecase": 1019,
-            "misplaced_exitloop": 1020,
-            "misplaced_continueloop": 1021,
-            "invalid_local": 1022,
-            "invalid_global": 1023
+            "include_nfound": 1101,
+            "directive_invalid": 1102,
+            "directive_invalid_value": 1103,
+            "pragma_unsupported": 1104,
+            "function_nesting": 1105,
+            "unexpected_endfunc": 1106,
+            "function_exists": 1107,
+            "block_reqr": 1108,
+            "block_confl": 1109,
+            "block_invalid_close": 1110,
+            "block_conflicting_close": 1111,
+            "blocks_unclosed": 1112,
+            "missing_then": 1113,
+            "misplaced_elseif": 1114,
+            "misplaced_else": 1115,
+            "misplaced_case": 1116,
+            "misplaced_continuecase": 1117,
+            "misplaced_exitloop": 1118,
+            "misplaced_continueloop": 1119,
+            "invalid_global": 1121,
+            "no_closing_csharp": 1122
         },
         "astproc": {
-            "unknown_entity": 1024,
-            "parser_error": 1025,
-            "obj_expression_required": 1026,
-            "multiple_switch_case_else": 1027,
-            "no_comma_allowed": 1028,
-            "no_range_allowed": 1029
+            "unknown_entity": 1001,
+            "parser_error": 1202,
+            "obj_expression_required": 1203,
+            "multiple_switch_case_else": 1204,
+            "no_comma_allowed": 1205,
+            "no_range_allowed": 1206,
+            "func_not_declared": 1207,
+            "parser_error_funcdecl": 1208,
+            "reserved_call": 1209,
+            "too_many_args": 1210,
+            "not_enough_args": 1211
         }
     },
     "warnings": {
@@ -43,10 +49,11 @@
             "exit_level_truncated": 2002,
             "exit_level_invalid": 2003,
             "continue_level_truncated": 2004,
-            "continue_level_invalid": 2005
+            "continue_level_invalid": 2005,
+            "invalid_local": 2006
         },
         "astproc": {
-            "expression_result_discarded": 2006
+            "expression_result_discarded": 2101
         },
         "not_impl": 9999
     }

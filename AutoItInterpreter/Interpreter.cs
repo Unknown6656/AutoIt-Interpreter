@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Text;
 using System.Linq;
 using System.IO;
 using System;
@@ -101,6 +102,7 @@ using AutoItExpressionParser;
 namespace AutoItInterpreter
 {
     using MULTI_EXPRESSIONS = FSharpList<ExpressionAST.MULTI_EXPRESSION>;
+    using static InterpreterConstants;
     using static ExpressionAST;
     using static ControlBlock;
 
@@ -109,9 +111,6 @@ namespace AutoItInterpreter
 
     public sealed class Interpreter
     {
-        internal const string DISCARD_VARIBLE = "$___discard___";
-        internal const string ERROR_VARIBLE = "$___error___";
-
         private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
         {
             [__NONE__] = "EndFunc",
@@ -172,7 +171,7 @@ namespace AutoItInterpreter
             {
                 Language = lang,
                 CurrentContext = context,
-                GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1))
+                GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1), "")
             };
             int ivalfunc = 0;
             int locindx = 0;
@@ -235,7 +234,8 @@ namespace AutoItInterpreter
 
             List<(string, int[])> lines = new List<(string, int[])>();
             List<int> lnmbrs = new List<int>();
-            bool comment = false;
+            LineState ls = LineState.Regular;
+            (string code, int start) csharp = ("", 0);
             string prev = "";
             int lcnt = 0;
 
@@ -243,11 +243,26 @@ namespace AutoItInterpreter
             {
                 string tline = line.Trim();
 
-                if (tline.Match(@"^\#(comments\-start|cs)", out _))
-                    comment = true;
-                else if (tline.Match(@"^\#(comments\-end|ce)", out _))
-                    comment = false;
-                else if (!comment)
+                if (tline.Match(@"^\#(csharp\-start|css)(\b|\s+|$)", out _))
+                {
+                    ls |= LineState.CSharp;
+                    csharp.start = lcnt;
+                }
+                else if (tline.Match(@"^\#(csharp\-end|cse)(\b|\s+|$)", out _))
+                {
+                    ls &= ~LineState.CSharp;
+
+                    string b64 = Convert.ToBase64String(Encoding.Default.GetBytes(csharp.code));
+
+                    lines.Add(($"{CSHARP_INLINE} {b64}", new int[] { csharp.start, lcnt }));
+
+                    csharp = ("", 0);
+                }
+                else if (tline.Match(@"^\#(comments\-start|cs)(\b|\s+|$)", out _))
+                    ls |= LineState.Comment;
+                else if (tline.Match(@"^\#(comments\-end|ce)(\b|\s+|$)", out _))
+                    ls &= ~LineState.Comment;
+                else if (ls == LineState.Regular)
                 {
                     if (tline.Match(@"\;[^\""]*$", out Match m))
                         tline = tline.Remove(m.Index).Trim();
@@ -268,12 +283,16 @@ namespace AutoItInterpreter
                         prev = "";
                     }
                 }
+                else if (ls == LineState.CSharp)
+                    csharp.code += '\n' + line;
 
                 ++lcnt;
             }
 
-            if (comment)
+            if (ls.HasFlag(LineState.Comment))
                 state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt - 1));
+            else if (ls.HasFlag(LineState.CSharp))
+                state.ReportKnownWarning("errors.preproc.no_closing_csharp", new DefinitionContext(context.SourcePath, lcnt - 1));
 
             lcnt = 0;
 
@@ -316,11 +335,11 @@ namespace AutoItInterpreter
         {
             Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
             {
-                [PreInterpreterState.GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, PreInterpreterState.GLOBAL_FUNC_NAME, true)
+                [GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, GLOBAL_FUNC_NAME, true)
             };
 
             foreach (string name in state.Functions.Keys)
-                if (name != PreInterpreterState.GLOBAL_FUNC_NAME)
+                if (name != GLOBAL_FUNC_NAME)
                     funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
 
             return funcdir;
@@ -417,6 +436,7 @@ namespace AutoItInterpreter
 
                     line.Match(new(string, ControlBlock[], Action<Match>)[]
                     {
+                        ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m => Append(new CS_INLINE(curr, Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))))),
                         (@"^(?<optelse>else)?if\s+(?<cond>.+)\s+then$", new[] { Switch, Select }, m =>
                         {
                             string cond = m.Get("cond").Trim();
@@ -582,7 +602,7 @@ namespace AutoItInterpreter
                             string expr = m.Get("expr");
 
                             if (modf.Contains("local") && global)
-                                err("errors.preproc.invalid_local", true);
+                                err("warnings.preproc.invalid_local", false);
                             else if (modf.Contains("global") && !global)
                                 err("errors.preproc.invalid_global", true);
 
@@ -620,42 +640,22 @@ namespace AutoItInterpreter
         {
             int ival = ivalfunc;
 
-            void __procfunc(string name, string[] par, string[] opar)
-            {
+            if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out Match m))
                 if (st.CurrentFunction is null)
                 {
-                    string lname = name.ToLower();
+                    string lname = m.Get("name").ToLower();
+
+                    ival = 1;
 
                     if (st.Functions.ContainsKey(lname))
-                    {
-                        ival = 1;
-
-                        err("errors.preproc.function_exists", name, st.Functions[lname].Context);
-                    }
+                        err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
+                    else if (IsReserved(lname))
+                        err("errors.general.reserved_name", m.Get("name"));
                     else
                     {
                         ival = 0;
 
-                        st.CurrentFunction = new FunctionScope(defcntx);
-                        st.CurrentFunction.Parameters.AddRange(from p in par
-                                                               let ndx = p.IndexOf('$')
-                                                               let attr = p.Remove(ndx).Trim().ToLower()
-                                                               select (
-                                                                    p.Substring(ndx + 1).Trim().ToLower(),
-                                                                    attr.Contains("byref"),
-                                                                    attr.Contains("const"),
-                                                                    null as string
-                                                               ));
-                        st.CurrentFunction.Parameters.AddRange(from p in opar
-                                                               let ndx = p.IndexOf('=')
-                                                               let nm = p.Remove(ndx).Trim().ToLower().TrimStart('$')
-                                                               select (
-                                                                    nm,
-                                                                    false,
-                                                                    false,
-                                                                    p.Substring(ndx + 1).Trim()
-                                                               ));
-
+                        st.CurrentFunction = new FunctionScope(defcntx, m.Get("params"));
                         st.Functions[lname] = st.CurrentFunction;
                     }
                 }
@@ -665,20 +665,6 @@ namespace AutoItInterpreter
 
                     err("errors.preproc.function_nesting");
                 }
-            }
-
-            if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>((const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)(,\s*(const\s)?\s*(byref\s)?\s*\$[a-z]\w*\s*)*)?\s*(?<optparams>(,\s*\$[a-z]\w*\s*=\s*.+\s*)*)\s*\)$", out Match m))
-                __procfunc(
-                    m.Get("name"),
-                    m.Get("params").Split(',').Select(s => s.Trim()).Where(Enumerable.Any).ToArray(),
-                    m.Get("optparams").Split(',').Select(s => s.Trim()).Where(Enumerable.Any).ToArray()
-                );
-            else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<optparams>(\$[a-z]\w*\s*=\s*.+\s*)(,\s*\$[a-z]\w*\s*=\s*.+\s*)*)?\s*\)$", out m))
-                __procfunc(
-                    m.Get("name"),
-                    new string[0],
-                    m.Get("optparams").Split(',').Select(s => s.Trim()).Where(Enumerable.Any).ToArray()
-                );
             else if (Line.Match("^endfunc$", out m))
                 if (ival != 0)
                     ival = 0;
@@ -818,15 +804,19 @@ namespace AutoItInterpreter
 
         private static void ParseExpressionAST(InterpreterState state, InterpreterSettings settings)
         {
-            const string globnm = PreInterpreterState.GLOBAL_FUNC_NAME;
+            List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
+            FunctionparameterParser fpparser = new FunctionparameterParser(settings.UseOptimization);
             ExpressionParser exparser = new ExpressionParser(settings.UseOptimization);
 
+            fpparser.Initialize();
             exparser.Initialize();
 
-            foreach ((string name, FUNCTION func) in new[] { (globnm, state.Functions[globnm]) }.Concat(from kvp in state.Functions
-                                                                                                        where kvp.Key != globnm
-                                                                                                        select (kvp.Key, kvp.Value)))
+            foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
+                                                                                                                            where kvp.Key != GLOBAL_FUNC_NAME
+                                                                                                                            select (kvp.Key, kvp.Value)))
                 state.ASTFunctions[name] = ProcessWhileBlocks(process(func)[0]);
+
+            ValidateFunctionCalls(state, funccalls.ToArray());
 
             dynamic process(Entity e)
             {
@@ -834,12 +824,35 @@ namespace AutoItInterpreter
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
                 EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
-                AST_CONDITIONAL_BLOCK proccond() => new AST_CONDITIONAL_BLOCK
+                AST_CONDITIONAL_BLOCK proccond()
                 {
-                    Condition = parseexpr((e as ConditionalEntity).RawCondition),
-                    Statements = proclines(),
-                    Context = e.DefinitionContext
-                };
+                    EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition);
+
+                    return new AST_CONDITIONAL_BLOCK
+                    {
+                        Condition = expr,
+                        Statements = proclines(),
+                        Context = e.DefinitionContext
+                    };
+                }
+                EXPRESSION parsefexpr(string exprstr)
+                {
+                    EXPRESSION expr;
+
+                    if ((expr = parseexpr(exprstr)) is null)
+                    {
+                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true);
+
+                        if (expr != null)
+                        {
+                            state.RemoveLastErrorOrWarning();
+
+                            expr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.Assignment)?.Item3 ?? expr;
+                        }
+                    }
+
+                    return expr;
+                }
                 EXPRESSION parseexpr(string expr, bool suppress = false)
                 {
                     if (parsemexpr(expr, suppress) is MULTI_EXPRESSIONS m)
@@ -864,7 +877,26 @@ namespace AutoItInterpreter
 
                     try
                     {
-                        return exparser.Parse(expr);
+                        MULTI_EXPRESSIONS mes = exparser.Parse(expr);
+
+                        funccalls.AddRange(
+                            mes.SelectMany(me =>
+                            {
+                                switch (me)
+                                {
+                                    case MULTI_EXPRESSION.SingleValue sv:
+                                        return new[] { sv.Item };
+                                    case MULTI_EXPRESSION.ValueRange vr:
+                                        return new[] { vr.Item1, vr.Item2 };
+                                }
+
+                                return new EXPRESSION[0];
+                            })
+                            .SelectMany(Analyzer.GetFunctionCallExpressions)
+                            .Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray()))
+                        );
+
+                        return mes;
                     }
                     catch (Exception ex)
                     {
@@ -879,13 +911,54 @@ namespace AutoItInterpreter
                     switch (e)
                     {
                         case FUNCTION i:
-                            return new AST_FUNCTION
                             {
-                                Statements = proclines(),
-                                Context = i.DefinitionContext,
-                                Name = i.Name,
-                                // TODO : parse params etc.
-                            };
+                                FUNCTION_PARAMETER[] @params = new FUNCTION_PARAMETER[0];
+
+                                try
+                                {
+                                    @params = fpparser.Parse(i.RawParameters);
+                                }
+                                catch (Exception ex)
+                                {
+                                    if (!string.IsNullOrWhiteSpace(i.RawParameters))
+                                        err("errors.astproc.parser_error_funcdecl", i.RawParameters, ex.Message);
+                                }
+
+                                return new AST_FUNCTION
+                                {
+                                    Statements = proclines(),
+                                    Context = i.DefinitionContext,
+                                    Name = i.Name,
+                                    Parameters = @params.Select(p =>
+                                    {
+                                        switch (p.Type)
+                                        {
+                                            case FUNCTION_PARAMETER_TYPE.Mandatory m:
+                                                FUNCTION_PARAMETER_MODIFIER mod = m.Item;
+
+                                                return new AST_FUNCTION_PARAMETER(p.Variable, mod.IsByRef, mod.IsConst);
+                                            case FUNCTION_PARAMETER_TYPE.Optional o:
+                                                EXPRESSION expr = null;
+
+                                                switch (o.Item)
+                                                {
+                                                    case FUNCTION_PARAMETER_DEFVAL.Lit l:
+                                                        expr = EXPRESSION.NewLiteral(l.Item);
+
+                                                        break;
+                                                    case FUNCTION_PARAMETER_DEFVAL.Mac l:
+                                                        expr = EXPRESSION.NewMacro(l.Item);
+
+                                                        break;
+                                                }
+
+                                                return new AST_FUNCTION_PARAMETER_OPT(p.Variable, expr);
+                                        }
+
+                                        return null;
+                                    }).ToArray(),
+                                };
+                            }
                         case IF i:
                             return new AST_IF_STATEMENT
                             {
@@ -1270,26 +1343,13 @@ namespace AutoItInterpreter
 
                                 break;
                             }
+                        case CS_INLINE i:
+                            return new AST_INLINE_CSHARP { Code = i.SourceCode };
                         case RAWLINE i:
                             {
                                 if (i.RawContent is string exprstr)
                                 {
-                                    EXPRESSION expr;
-
-                                    if ((expr = parseexpr(exprstr)) is null)
-                                    {
-                                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})");
-
-                                        if (expr is null)
-                                            state.RemoveLastErrorOrWarning();
-                                        else
-                                        {
-                                            InterpreterError error = state.Errors.Last();
-
-                                            state.RemoveLastErrorOrWarning();
-                                            state.Report(error);
-                                        }
-                                    }
+                                    EXPRESSION expr = parsefexpr(exprstr);
 
                                     // TODO : with-statement rawline ?
 
@@ -1316,6 +1376,8 @@ namespace AutoItInterpreter
                         case DECLARATION i:
                             warn("warnings.not_impl"); // TODO
 
+
+                            
 
                             //return new AST_DECLARATION_STATEMENT
                             //{
@@ -1355,6 +1417,39 @@ namespace AutoItInterpreter
                     s.Context = e.DefinitionContext;
 
                 return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
+            }
+        }
+
+        private static void ValidateFunctionCalls(InterpreterState state, params (DefinitionContext, string, EXPRESSION[])[] calls)
+        {
+            foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
+            {
+                void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
+
+                if (!state.ASTFunctions.ContainsKey(func.ToLower()))
+                    err("errors.astproc.func_not_declared", func);
+                else if (IsReserved(func.ToLower()))
+                    err("errors.astproc.reserved_call", func);
+                else
+                {
+                    AST_FUNCTION f = state.ASTFunctions[func.ToLower()];
+                    int index = 0;
+
+                    foreach (EXPRESSION arg in args)
+                        if (index >= f.Parameters.Length)
+                        {
+                            err("errors.astproc.too_many_args", func, f.Parameters.Length);
+
+                            break;
+                        }
+                        else
+                            ++index;
+
+                    int mpcnt = f.Parameters.Count(p => !(p is AST_FUNCTION_PARAMETER_OPT));
+
+                    if (index < mpcnt)
+                        err("errors.astproc.not_enough_args", func, mpcnt, index);
+                }
             }
         }
 
@@ -1434,6 +1529,22 @@ namespace AutoItInterpreter
 
                 return res;
             }
+        }
+    }
+
+    internal static class InterpreterConstants
+    {
+        public const string CSHARP_INLINE = "§___csharp___";
+        public const string DISCARD_VARIBLE = "$___discard___";
+        public const string ERROR_VARIBLE = "$___error___";
+        public const string GLOBAL_FUNC_NAME = "__global<>";
+
+
+        public static bool IsReserved(string name)
+        {
+            name = name?.ToLower() ?? "";
+
+            return new[] { GLOBAL_FUNC_NAME, ERROR_VARIBLE, DISCARD_VARIBLE, CSHARP_INLINE }.Contains(name) || name.Match("^__(<>.+|.+<>)$", out _);
         }
     }
 
@@ -1532,14 +1643,12 @@ namespace AutoItInterpreter
             return s;
         }
 
-        public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Const ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.RawInitExpression is string s ? $" = {s}" : "")}"))})";
+        public string GetFunctionSignature(string funcname) => $"func {funcname}({Functions[funcname].RawParameters})";
     }
 
     public sealed class PreInterpreterState
         : AbstractParserState
     {
-        internal const string GLOBAL_FUNC_NAME = "__global<>";
-
         public InterpreterContext CurrentContext { set; get; }
         public Dictionary<string, FunctionScope> Functions { get; }
         public FunctionScope CurrentFunction { set; get; }
@@ -1561,20 +1670,20 @@ namespace AutoItInterpreter
             UseTrayIcon = true;
         }
 
-        public string GetFunctionSignature(string funcname) => $"func {funcname}({string.Join(", ", Functions[funcname].Parameters.Select(p => $"{(p.Constant ? "const " : "")}{(p.ByRef ? "ref " : "")}${p.Name}{(p.InitExpression is string s ? $" = {s}" : "")}"))})";
+        public string GetFunctionSignature(string funcname) => $"func {funcname}({Functions[funcname].ParameterExpression})";
     }
 
     public sealed class FunctionScope
     {
-        public List<(string Name, bool ByRef, bool Constant, string InitExpression)> Parameters { get; }
         public List<(string Line, DefinitionContext Context)> Lines { get; }
+        public string ParameterExpression { get; }
         public DefinitionContext Context { get; }
 
 
-        public FunctionScope(DefinitionContext ctx)
+        public FunctionScope(DefinitionContext ctx, string @params)
         {
-            Parameters = new List<(string, bool, bool, string)>();
             Lines = new List<(string, DefinitionContext)>();
+            ParameterExpression = @params ?? "";
             Context = ctx;
         }
     }
@@ -1716,5 +1825,14 @@ namespace AutoItInterpreter
         While,
         Do,
         With,
+    }
+
+    [Flags]
+    public enum LineState
+        : byte
+    {
+        Regular     = 0b_0000_0000,
+        Comment     = 0b_0000_0001,
+        CSharp      = 0b_0000_0010,
     }
 }

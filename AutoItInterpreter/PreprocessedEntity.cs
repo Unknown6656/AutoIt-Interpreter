@@ -185,7 +185,7 @@ namespace AutoItInterpreter.Preprocessed
     public sealed class FUNCTION
         : Entity
     {
-        public FUNCTIONPARAM[] Parameters { get; }
+        public string RawParameters { get; }
         public bool IsGlobal { get; }
         public string Name { get; }
 
@@ -193,27 +193,10 @@ namespace AutoItInterpreter.Preprocessed
         public FUNCTION(string name, bool glob, FunctionScope scope)
             : base(default)
         {
-            Parameters = scope.Parameters.Select(x => new FUNCTIONPARAM(x.Name, x.ByRef, x.Constant, x.InitExpression)).ToArray();
+            RawParameters = scope.ParameterExpression;
             DefinitionContext = scope.Context;
             IsGlobal = glob;
             Name = name;
-        }
-    }
-
-    public sealed class FUNCTIONPARAM
-    {
-        public string RawInitExpression { get; }
-        public string Name { get; }
-        public bool ByRef { get; }
-        public bool Const { get; }
-
-
-        public FUNCTIONPARAM(string name, bool bref, bool cnst, string initexpr)
-        {
-            Name = name;
-            ByRef = bref;
-            Const = cnst;
-            RawInitExpression = initexpr;
         }
     }
 
@@ -344,5 +327,15 @@ namespace AutoItInterpreter.Preprocessed
 
         public REDIM(Entity parent, string varname, params string[] dimensions)
             : base(parent) => (VariableName, Dimensions) = (varname, dimensions);
+    }
+
+    public sealed class CS_INLINE
+        : Entity
+    {
+        public string SourceCode { get; }
+
+
+        public CS_INLINE(Entity parent, string code)
+            : base(parent) => SourceCode = (code ?? "").Trim();
     }
 }

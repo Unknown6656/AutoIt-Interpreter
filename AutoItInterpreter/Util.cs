@@ -12,6 +12,7 @@ using AutoItExpressionParser;
 
 namespace AutoItInterpreter
 {
+    using static InterpreterConstants;
     using static ExpressionAST;
 
 
@@ -92,7 +93,7 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine(new string('=', 200));
 
-            string[] glob = { PreInterpreterState.GLOBAL_FUNC_NAME };
+            string[] glob = { GLOBAL_FUNC_NAME };
             bool allman = settings.IndentationStyle == IndentationStyle.AllmanStyle;
             int linecnt = 0;
 
@@ -218,6 +219,10 @@ namespace AutoItInterpreter
                         println(tstr(s.Expression) + ';');
 
                         return;
+                    case AST_INLINE_CSHARP s:
+                        println(s.Code);
+
+                        return;
                     default:
                         println($"// TODO: {e}"); // TODO
 
@@ -295,7 +300,7 @@ namespace AutoItInterpreter
                 {
                     Console.CursorLeft = 10;
                     Console.Write(l.Context);
-                    Console.CursorLeft = 40;
+                    Console.CursorLeft = 50;
                     Console.WriteLine(l.Line);
                 }
             }
