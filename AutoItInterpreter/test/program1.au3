@@ -21,6 +21,8 @@ EndFunc
 for $cnt1 = 0 to 7
     if "te\""st" <> 5 then
         f2()
+    else
+        f2() + 1
     endif
 
     $lel + 7
@@ -44,7 +46,5 @@ endfunc
 
 #css
     System.Console.WriteLine($"top kek at {System.DateTime.Now:yyyy-MM-dd HH-mm-ss-ffffff}!");
-#cse
-#ce
-
+#cse #ce
 e

@@ -101,7 +101,7 @@ namespace AutoItInterpreter
             {
                 AST_FUNCTION func = state.ASTFunctions[fn];
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"       |  ------- {state.GetFunctionSignature(fn)} -------");
 
                 _print(func, 1);
@@ -187,7 +187,7 @@ namespace AutoItInterpreter
                     case AST_SCOPE s:
                         println("{");
 
-                        foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalsVariables)
+                        foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalVariables)
                             if (ls.InitExpression is null)
                                 println($"{ls.Variable};", indent + 1);
                             else
@@ -239,7 +239,7 @@ namespace AutoItInterpreter
 
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"     _ |> {path.FullName}");
                 Console.ForegroundColor = ConsoleColor.DarkGray;
 
@@ -256,16 +256,19 @@ namespace AutoItInterpreter
                     if (errs.Length > 0)
                     {
                         string pad = $"       |  {(line.Trim().Length > 0 ? line.Remove(line.Length - line.TrimStart().Length) : "")}";
-                        bool crit = errs.Any(e => e.IsFatal);
+                        ErrorType level = errs.Select(e => e.Type).Min();
 
-                        Console.ForegroundColor = crit ? ConsoleColor.Red : ConsoleColor.Yellow;
+                        Console.ForegroundColor = level == ErrorType.Fatal ? ConsoleColor.Red
+                                                : level == ErrorType.Warning ? ConsoleColor.Yellow : ConsoleColor.Cyan;
                         Console.WriteLine(line);
-                        Console.ForegroundColor = crit ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+                        Console.ForegroundColor = level == ErrorType.Fatal ? ConsoleColor.DarkRed
+                                                : level == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
                         Console.WriteLine(pad + new string('^', Math.Max(1, line.Trim().Length)));
 
-                        foreach (IGrouping<bool, InterpreterError> g in errs.GroupBy(e => e.IsFatal))
+                        foreach (IGrouping<ErrorType, InterpreterError> g in errs.GroupBy(e => e.Type))
                         {
-                            Console.ForegroundColor = g.Key ? ConsoleColor.DarkRed : ConsoleColor.DarkYellow;
+                            Console.ForegroundColor = g.Key == ErrorType.Fatal ? ConsoleColor.DarkRed
+                                                    : g.Key == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
 
                             foreach (InterpreterError e in g)
                                 Console.WriteLine(pad + e.ErrorMessage);
@@ -292,7 +295,7 @@ namespace AutoItInterpreter
             {
                 FunctionScope func = state.Functions[fn];
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
                 Console.ForegroundColor = ConsoleColor.Gray;
 

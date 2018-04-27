@@ -46,7 +46,10 @@
             "parser_error_funcdecl": "The function parameter expression(s) '{0}' could not be parsed due to the following reason: {1}",
             "reserved_call": "The function '{0}' is reserved for internal calls only.",
             "too_many_args": "The function '{0}' expects only {1} arguments.",
-            "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} were given."
+            "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} were given.",
+            "no_range_as_init": "The initialization expression is invalid, as it is a value range instead of an single-valued expression.",
+            "missing_value": "Constant variables must be initialized with a value upon declaration.",
+            "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead."
         }
     },
     "warnings": {
@@ -59,8 +62,12 @@
             "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely."
         },
         "astproc": {
-            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."
+            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
+            "global_return": "The return value of the global code will be ignored except when being called from inside an 'eval'-call."
         },
         "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"
+    },
+    "notes": {
+        "optimized_away": "This statement or block has been optimized away be the compiler. Consider removing it from the source code."
     }
 }

@@ -159,7 +159,7 @@ namespace AutoItInterpreter
             }
             else
                 foreach (InterpreterError err in state.Errors)
-                    Console.WriteLine($"[{(err.IsFatal ? " ERROR " : "WARNING")}]  {err}");
+                    Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
 
             return state;
         }
@@ -596,7 +596,7 @@ namespace AutoItInterpreter
                         }),
                         (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => OpenBlock(With, new WITH(curr, m.Get("expr")))),
                         ("^endwith$", new[] { Switch, Select }, _ => TryCloseBlock(Do)),
-                        (@"(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s+(?<expr>.+)", new[] { Switch, Select }, m =>
+                        (@"^(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s*(?<expr>.+)\s*$", new[] { Switch, Select }, m =>
                         {
                             string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                             string expr = m.Get("expr");
@@ -806,15 +806,18 @@ namespace AutoItInterpreter
         {
             List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
             FunctionparameterParser fpparser = new FunctionparameterParser(settings.UseOptimization);
-            ExpressionParser exparser = new ExpressionParser(settings.UseOptimization);
+            ExpressionParser aexparser = new ExpressionParser(settings.UseOptimization, true, false);
+            ExpressionParser exparser = new ExpressionParser(settings.UseOptimization, false, false);
+            ExpressionParser dexparser = new ExpressionParser(settings.UseOptimization, true, true);
+            AST_FUNCTION _currfunc = null;
 
-            fpparser.Initialize();
-            exparser.Initialize();
+            foreach (dynamic parser in new dynamic[] { fpparser, aexparser, exparser, dexparser })
+                parser.Initialize();
 
             foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
                                                                                                                             where kvp.Key != GLOBAL_FUNC_NAME
                                                                                                                             select (kvp.Key, kvp.Value)))
-                state.ASTFunctions[name] = ProcessWhileBlocks(process(func)[0]);
+                state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
 
             ValidateFunctionCalls(state, funccalls.ToArray());
 
@@ -822,11 +825,12 @@ namespace AutoItInterpreter
             {
                 void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                 void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
+                void note(string path, params object[] args) => state.ReportKnownNote(path, e.DefinitionContext, args);
                 AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
                 EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
                 AST_CONDITIONAL_BLOCK proccond()
                 {
-                    EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition);
+                    EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition, false);
 
                     return new AST_CONDITIONAL_BLOCK
                     {
@@ -835,13 +839,13 @@ namespace AutoItInterpreter
                         Context = e.DefinitionContext
                     };
                 }
-                EXPRESSION parsefexpr(string exprstr)
+                EXPRESSION parsefexpr(string exprstr, bool assign)
                 {
                     EXPRESSION expr;
 
-                    if ((expr = parseexpr(exprstr)) is null)
+                    if ((expr = parseexpr(exprstr, assign)) is null)
                     {
-                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true);
+                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true, true);
 
                         if (expr != null)
                         {
@@ -853,9 +857,9 @@ namespace AutoItInterpreter
 
                     return expr;
                 }
-                EXPRESSION parseexpr(string expr, bool suppress = false)
+                EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
                 {
-                    if (parsemexpr(expr, suppress) is MULTI_EXPRESSIONS m)
+                    if (parsemexpr(expr, (assign ? aexparser : exparser), suppress) is MULTI_EXPRESSIONS m)
                         if (m.Length > 1)
                         {
                             if (!suppress)
@@ -871,13 +875,13 @@ namespace AutoItInterpreter
 
                     return null;
                 }
-                MULTI_EXPRESSIONS parsemexpr(string expr, bool suppress = false)
+                MULTI_EXPRESSIONS parsemexpr(string expr, ExpressionParser p, bool suppress = false)
                 {
                     expr = expr.Trim();
 
                     try
                     {
-                        MULTI_EXPRESSIONS mes = exparser.Parse(expr);
+                        MULTI_EXPRESSIONS mes = p.Parse(expr);
 
                         funccalls.AddRange(
                             mes.SelectMany(me =>
@@ -924,9 +928,8 @@ namespace AutoItInterpreter
                                         err("errors.astproc.parser_error_funcdecl", i.RawParameters, ex.Message);
                                 }
 
-                                return new AST_FUNCTION
+                                _currfunc = new AST_FUNCTION
                                 {
-                                    Statements = proclines(),
                                     Context = i.DefinitionContext,
                                     Name = i.Name,
                                     Parameters = @params.Select(p =>
@@ -958,6 +961,13 @@ namespace AutoItInterpreter
                                         return null;
                                     }).ToArray(),
                                 };
+
+                                if (i.Name == GLOBAL_FUNC_NAME)
+                                    state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
+
+                                _currfunc.Statements = proclines();
+
+                                return _currfunc;
                             }
                         case IF i:
                             return new AST_IF_STATEMENT
@@ -1013,7 +1023,7 @@ namespace AutoItInterpreter
                                 AST_LOCAL_VARIABLE exprvar = new AST_LOCAL_VARIABLE
                                 {
                                     Variable = VARIABLE.NewTemporary,
-                                    InitExpression = parseexpr(i.Expression)
+                                    InitExpression = parseexpr(i.Expression, false)
                                 };
                                 EXPRESSION exprvare = EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(exprvar.Variable));
                                 dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
@@ -1062,7 +1072,7 @@ namespace AutoItInterpreter
                                             break;
                                     }
 
-                                    cblock.ExplicitLocalsVariables.AddRange(x.ExplicitLocalsVariables);
+                                    cblock.ExplicitLocalVariables.AddRange(x.ExplicitLocalsVariables);
 
                                     return cblock;
                                 });
@@ -1082,14 +1092,14 @@ namespace AutoItInterpreter
                                 if (cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
                                     err("errors.astproc.multiple_switch_case_else");
 
-                                scope.ExplicitLocalsVariables.Add(exprvar);
+                                scope.ExplicitLocalVariables.Add(exprvar);
 
                                 return scope;
                             }
                         case SELECT_CASE i:
                             return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
                             {
-                                Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition),
+                                Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition, false),
                                 Statements = proclines(),
                                 Context = i.DefinitionContext
                             };
@@ -1103,14 +1113,19 @@ namespace AutoItInterpreter
                                     return new AST_SWITCH_CASE_EXPRESSION
                                     {
                                         Statements = proclines(),
-                                        Expressions = parsemexpr(expr)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                        Expressions = parsemexpr(expr, exparser)?.ToArray() ?? new MULTI_EXPRESSION[0]
                                     };
                             }
                         case RETURN i:
-                            return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT
                             {
-                                Expression = parseexpr(i.Expression)
-                            };
+                                if (_currfunc.Name == GLOBAL_FUNC_NAME)
+                                    warn("warnings.astproc.global_return");
+
+                                return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT
+                                {
+                                    Expression = parseexpr(i.Expression, false)
+                                };
+                            }
                         case CONTINUECASE _:
                             warn("warnings.not_impl"); // TODO
 
@@ -1127,7 +1142,7 @@ namespace AutoItInterpreter
                             };
                         case WITH i:
                             {
-                                if (parseexpr(i.Expression) is EXPRESSION expr)
+                                if (parseexpr(i.Expression, true) is EXPRESSION expr)
                                 {
                                     if (!expr.IsVariableExpression)
                                         err("errors.astproc.obj_expression_required", i.Expression);
@@ -1146,9 +1161,9 @@ namespace AutoItInterpreter
                         case FOR i:
                             {
                                 DefinitionContext defctx = i.DefinitionContext;
-                                EXPRESSION start = parseexpr(i.StartExpression);
-                                EXPRESSION stop = parseexpr(i.StopExpression);
-                                EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
+                                EXPRESSION start = parseexpr(i.StartExpression, false);
+                                EXPRESSION stop = parseexpr(i.StopExpression, false);
+                                EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr, false) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
                                 AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
                                 {
                                     Variable = new VARIABLE(i.VariableExpression),
@@ -1240,8 +1255,8 @@ namespace AutoItInterpreter
                                     }
                                 };
 
-                                scope.ExplicitLocalsVariables.Add(cntvar);
-                                scope.ExplicitLocalsVariables.Add(upvar);
+                                scope.ExplicitLocalVariables.Add(cntvar);
+                                scope.ExplicitLocalVariables.Add(upvar);
 
                                 return scope;
                             }
@@ -1254,7 +1269,7 @@ namespace AutoItInterpreter
                                     InitExpression = EXPRESSION.NewLiteral(LITERAL.Null)
                                 };
 
-                                if (parseexpr(i.RangeExpression) is EXPRESSION collexpr)
+                                if (parseexpr(i.RangeExpression, false) is EXPRESSION collexpr)
                                 {
                                     AST_LOCAL_VARIABLE collvar = new AST_LOCAL_VARIABLE
                                     {
@@ -1336,7 +1351,7 @@ namespace AutoItInterpreter
                                         .ToArray()
                                     };
 
-                                    scope.ExplicitLocalsVariables.Add(collvar);
+                                    scope.ExplicitLocalVariables.Add(collvar);
 
                                     return scope;
                                 }
@@ -1349,7 +1364,7 @@ namespace AutoItInterpreter
                             {
                                 if (i.RawContent is string exprstr)
                                 {
-                                    EXPRESSION expr = parsefexpr(exprstr);
+                                    EXPRESSION expr = parsefexpr(exprstr, true);
 
                                     // TODO : with-statement rawline ?
 
@@ -1362,7 +1377,14 @@ namespace AutoItInterpreter
                                         else
                                         {
                                             if (!ex.IsFunctionCall)
-                                                warn("warnings.astproc.expression_result_discarded");
+                                                if (Analyzer.IsStatic(ex))
+                                                {
+                                                    note("notes.optimized_away");
+
+                                                    break;
+                                                }
+                                                else
+                                                    warn("warnings.astproc.expression_result_discarded");
 
                                             return new AST_EXPRESSION_STATEMENT
                                             {
@@ -1374,17 +1396,84 @@ namespace AutoItInterpreter
                                 break;
                             }
                         case DECLARATION i:
-                            warn("warnings.not_impl"); // TODO
+                            {
+                                AST_FUNCTION targetfunc = i.Modifiers.Contains("global") ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
+                                MULTI_EXPRESSIONS expressions = parsemexpr(i.Expression, dexparser);
+                                List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
+                                bool @const = i.Modifiers.Contains("const");
+
+                                if (expressions is null)
+                                {
+                                    state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, -1);
+                                    break; // TODO
+                                }
+
+                                var vars = expressions.Select(mexpr =>
+                                {
+                                    if (mexpr is MULTI_EXPRESSION.SingleValue sv)
+                                        return sv.Item;
+                                    else
+                                        err("errors.astproc.no_range_as_init");
+
+                                    return null;
+                                })
+                                .Where(expr => expr != null)
+                                .Select(expr =>
+                                {
+
+                                    // TODO
 
 
-                            
+                                    if (expr is EXPRESSION.AssignmentExpression aexpr && aexpr?.Item is ASSIGNMENT_EXPRESSION.Assignment assg && assg?.Item3 is EXPRESSION ex)
+                                        if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
+                                        {
+                                            VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
 
-                            //return new AST_DECLARATION_STATEMENT
-                            //{
-                            //    Variable = new VARIABLE(....),
-                            //    DimensionExpressions = ....,
-                            //    InitExpression = ....
-                            //};
+                                            targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                            {
+                                                Constant = @const,
+                                                Variable = var
+                                            });
+                                            statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                            {
+                                                Context = i.DefinitionContext,
+                                                Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                    OPERATOR_ASSIGNMENT.Assign,
+                                                    VARIABLE_EXPRESSION.NewVariable(var),
+                                                    ex
+                                                )
+                                            });
+
+                                            return var;
+                                        }
+                                        else
+                                            err("init_invalid_operator", assg.Item1);
+                                    else if (@const)
+                                        err("missing_value");
+
+
+
+
+
+
+                                    return null;
+                                })
+                                .Where(expr => expr != null)
+                                .ToArray();
+
+
+
+                                warn("warnings.not_impl"); // TODO
+
+
+                                //return new AST_DECLARATION_STATEMENT
+                                //{
+                                //    Variable = new VARIABLE(....),
+                                //    DimensionExpressions = ....,
+                                //    InitExpression = ....
+                                //};
+                            }
+
                             break;
                         case REDIM i:
                             return new AST_REDIM_STATEMENT
@@ -1453,7 +1542,7 @@ namespace AutoItInterpreter
             }
         }
 
-        private static AST_FUNCTION ProcessWhileBlocks(AST_FUNCTION func)
+        private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
         {
             ReversedLabelStack ls_cont = new ReversedLabelStack();
             ReversedLabelStack ls_exit = new ReversedLabelStack();
@@ -1510,7 +1599,52 @@ namespace AutoItInterpreter
                             s.ElseIf = procas(s.ElseIf);
                             s.OptionalElse = procas(s.OptionalElse);
 
-                            return s;
+                            AST_CONDITIONAL_BLOCK[] conditions =
+                                new[] { s.If }
+                                .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
+                                .Concat(new[] {
+                                    new AST_CONDITIONAL_BLOCK
+                                    {
+                                        Context = s.OptionalElse?.FirstOrDefault()?.Context ?? s.Context,
+                                        Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                        Statements = s.OptionalElse ?? new AST_STATEMENT[0]
+                                    }
+                                })
+                                .Where(b =>
+                                {
+                                    bool skippable = Analyzer.EvaluatesToFalse(b.Condition)
+                                                  || (b.Statements.Length == 0 && Analyzer.IsStatic(b.Condition));
+
+                                    if (skippable)
+                                        state.ReportKnownNote("notes.optimized_away", b.Context);
+
+                                    return !skippable;
+                                })
+                                .ToArray();
+
+                            int lastok = conditions.Length;
+
+                            for (int i = 0; i < conditions.Length; ++i)
+                                if (Analyzer.EvaluatesToTrue(conditions[i].Condition))
+                                    lastok = i;
+                                else if (i > lastok)
+                                    state.ReportKnownNote("notes.optimized_away", conditions[i].Context);
+
+                            conditions = conditions.Take(lastok + 1).ToArray();
+
+                            if (conditions.Length > 0)
+                            {
+                                s.If = conditions[0];
+                                s.ElseIf = conditions.Skip(1).ToArray();
+                                s.OptionalElse = new AST_STATEMENT[0];
+
+                                return s;
+                            }
+                            else
+                                return new AST_SCOPE
+                                {
+                                    Statements = s.OptionalElse
+                                };
                         case AST_WITH_STATEMENT s:
                             s.WithLines = procas(s.WithLines);
 
@@ -1595,15 +1729,19 @@ namespace AutoItInterpreter
             UseTrayIcon = true;
         }
 
-        public void ReportError(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num));
+        public void ReportError(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, ErrorType.Fatal));
 
-        public void ReportWarning(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, false));
+        public void ReportWarning(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, ErrorType.Warning));
+
+        public void ReportNote(string msg, DefinitionContext ctx, int num) => _errors.Add(new InterpreterError(msg, ctx, num, ErrorType.Note));
 
         internal void Report(InterpreterError error) => _errors.Add(error);
 
         internal void ReportKnownError(string errname, DefinitionContext ctx, params object[] args) => ReportError(Language[errname, args], ctx, Language.GetErrorNumber(errname));
 
         internal void ReportKnownWarning(string errname, DefinitionContext ctx, params object[] args) => ReportWarning(Language[errname, args], ctx, Language.GetErrorNumber(errname));
+
+        internal void ReportKnownNote(string errname, DefinitionContext ctx, params object[] args) => ReportNote(Language[errname, args], ctx, Language.GetErrorNumber(errname));
 
         internal void RemoveLastErrorOrWarning()
         {
@@ -1742,18 +1880,12 @@ namespace AutoItInterpreter
         public DefinitionContext ErrorContext { get; }
         public string ErrorMessage { get; }
         public int ErrorNumber { get; }
-        public bool IsFatal { get; }
+        public ErrorType Type { get; }
 
 
-        /// <summary>A new fatal error</summary>
-        internal InterpreterError(string msg, DefinitionContext line, int number)
-            : this(msg, line, number, true)
+        internal InterpreterError(string msg, DefinitionContext line, int number, ErrorType type)
         {
-        }
-
-        internal InterpreterError(string msg, DefinitionContext line, int number, bool fatal)
-        {
-            IsFatal = fatal;
+            Type = type;
             ErrorMessage = msg;
             ErrorContext = line;
             ErrorNumber = number;
@@ -1825,6 +1957,14 @@ namespace AutoItInterpreter
         While,
         Do,
         With,
+    }
+
+    public enum ErrorType
+        : byte
+    {
+        Fatal = 0,
+        Warning = 1,
+        Note = 2
     }
 
     [Flags]

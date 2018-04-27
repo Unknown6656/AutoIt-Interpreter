@@ -60,8 +60,12 @@
             "invalid_local": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'."
         },
         "astproc": {
-            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable."
+            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
+            "global_return": "The return value of the global code will be ignored except when being called from inside an 'eval'-call."
         },
-        "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"
+        "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
+    },
+    "notes": {
+        "optimized_away": "This statement or block has been optimized away be the compiler. Consider removing it from the source code."
     }
 }

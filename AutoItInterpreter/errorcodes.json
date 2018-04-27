@@ -53,8 +53,12 @@
             "invalid_local": 2006
         },
         "astproc": {
-            "expression_result_discarded": 2101
+            "expression_result_discarded": 2101,
+            "global_return": 2102
         },
         "not_impl": 9999
+    },
+    "notes": {
+        "optimized_away": 3001
     }
 }

@@ -256,7 +256,8 @@ namespace UnitTests
 
     public abstract class TestCommons
     {
-        private static readonly ExpressionParser _parser = new ExpressionParser(true);
+        private static readonly ExpressionParser _aparser = new ExpressionParser(true, true, false);
+        private static readonly ExpressionParser _parser = new ExpressionParser(true, false, false);
         private static readonly DirectoryInfo _testdir;
 
 
@@ -359,9 +360,9 @@ namespace UnitTests
             ExpectErrors(string.Join("\n", lines), errors.ToArray());
         }
 
-        public static MULTI_EXPRESSION[] PaseMultiexpressions(string s) => _parser.Parse(s).ToArray();
+        public static MULTI_EXPRESSION[] PaseMultiexpressions(string s, bool assign) => (assign ? _aparser : _parser).Parse(s).ToArray();
 
-        public static EXPRESSION ParseExpression(string s) => (PaseMultiexpressions(s)[0] as MULTI_EXPRESSION.SingleValue)?.Item;
+        public static EXPRESSION ParseExpression(string s, bool assign) => (PaseMultiexpressions(s, assign)[0] as MULTI_EXPRESSION.SingleValue)?.Item;
 
         public static EXPRESSION ProcessExpression(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
 
@@ -369,13 +370,13 @@ namespace UnitTests
 
         public static bool AreEqual(EXPRESSION e1, EXPRESSION e2) => e1 is EXPRESSION x && e2 is EXPRESSION y && (x == y || x.Equals(y));
 
-        public static void AssertValidExpression(string s) => Assert.IsNotNull(ParseExpression(s));
+        public static void AssertValidExpression(string s, bool assign) => Assert.IsNotNull(ParseExpression(s, assign));
 
-        public static void AssertInvalidExpression(string s)
+        public static void AssertInvalidExpression(string s, bool assign)
         {
             try
             {
-                ParseExpression(s);
+                ParseExpression(s, assign);
 
                 Assert.Fail();
             }
@@ -384,9 +385,9 @@ namespace UnitTests
             }
         }
 
-        public static void AssertEqualExpressions(string e1, string e2) => Assert.IsTrue(AreEqual(ParseExpression(e1), ParseExpression(e2)));
+        public static void AssertEqualExpressions(string e1, string e2, bool assign) => Assert.IsTrue(AreEqual(ParseExpression(e1, assign), ParseExpression(e2, assign)));
 
-        public static void AssertEqualProcessedExpressions(string e1, string e2) => Assert.IsTrue(AreEqual(ProcessExpression(ParseExpression(e1)), ProcessExpression(ParseExpression(e2))));
+        public static void AssertEqualProcessedExpressions(string e1, string e2, bool assign) => Assert.IsTrue(AreEqual(ProcessExpression(ParseExpression(e1, assign)), ProcessExpression(ParseExpression(e2, assign))));
     }
 
     public sealed class SkippedException

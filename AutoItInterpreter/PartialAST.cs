@@ -10,8 +10,12 @@ namespace AutoItInterpreter.PartialAST
 
     public sealed class AST_LOCAL_VARIABLE
     {
+        public bool Constant { set; get; }
         public VARIABLE Variable { set; get; }
         public EXPRESSION InitExpression { set; get; }
+
+
+        public override string ToString() => $"{(Constant ? "const " : "")}{Variable}{(InitExpression is null ? "" : " = " + InitExpression.Print())}";
     }
 
     public abstract class AST_STATEMENT
@@ -22,8 +26,10 @@ namespace AutoItInterpreter.PartialAST
     public class AST_SCOPE
         : AST_STATEMENT
     {
-        public List<AST_LOCAL_VARIABLE> ExplicitLocalsVariables { get; } = new List<AST_LOCAL_VARIABLE>();
+        public List<AST_LOCAL_VARIABLE> ExplicitLocalVariables { get; } = new List<AST_LOCAL_VARIABLE>();
         public AST_STATEMENT[] Statements { set; get; }
+
+        public AST_LOCAL_VARIABLE this[string name] => ExplicitLocalVariables.Find(lv => lv.Variable.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
     }
 
     public sealed class AST_FUNCTION
@@ -46,6 +52,8 @@ namespace AutoItInterpreter.PartialAST
             ByRef = bref;
             Const = cnst;
         }
+
+        public override string ToString() => $"{(Const ? "const " : "")}{(ByRef ? "byref " : "")}{Name}";
     }
 
     public sealed class AST_FUNCTION_PARAMETER_OPT
@@ -56,6 +64,8 @@ namespace AutoItInterpreter.PartialAST
 
         public AST_FUNCTION_PARAMETER_OPT(VARIABLE var, EXPRESSION initexpr)
             : base(var, false, false) => InitExpression = initexpr;
+
+        public override string ToString() => $"{base.ToString()} = {InitExpression.Print()}";
     }
 
     public sealed class AST_ASSIGNMENT_STATEMNT

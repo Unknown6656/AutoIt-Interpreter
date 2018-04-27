@@ -161,7 +161,7 @@ let rec ProcessConstants e =
                         | Unequal
                         | Lower
                         | Greater
-                        | Modulus -> num 1m
+                        | Modulus -> num 0m
                         | BitwiseOr
                         | BitwiseAnd -> x
                         | _ -> proc()
@@ -230,6 +230,12 @@ let rec ProcessExpression e =
         )
     // TODO
     | _ -> p
+
+let EvaluatesTo(from, ``to``) = ProcessExpression from = ProcessExpression ``to``
+
+let EvaluatesToFalse e = EvaluatesTo (e, Literal False)
+
+let EvaluatesToTrue e = EvaluatesTo (e, Literal True)
 
     
 let private getvarfunccalls =
