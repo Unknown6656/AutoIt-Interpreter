@@ -66,7 +66,7 @@
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
-            "global_return": "The return value of the global code will be ignored except when being called from inside an 'eval'-call."
+            "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call."
         },
         "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
     },

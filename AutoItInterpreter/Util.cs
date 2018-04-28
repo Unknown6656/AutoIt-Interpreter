@@ -18,6 +18,8 @@ namespace AutoItInterpreter
 
     public static class Util
     {
+        public static string[] SplitIntoLines(this string s) => (s ?? "").Replace("\r\n", "\n").Split('\n');
+
         public static bool Match(this string s, string p, out Match m, RegexOptions o = RegexOptions.IgnoreCase | RegexOptions.Compiled) => (m = Regex.Match(s, p, o)).Success;
 
         public static bool Match(this string s, params (string, Action<Match>)[] p)
@@ -93,140 +95,48 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine(new string('=', 200));
 
-            string[] glob = { GLOBAL_FUNC_NAME };
-            bool allman = settings.IndentationStyle == IndentationStyle.AllmanStyle;
+            int lastpadl = 0;
             int linecnt = 0;
 
-            foreach (string fn in state.ASTFunctions.Keys.Except(glob).OrderByDescending(fn => fn).Concat(glob).Reverse())
+            foreach (string line in Generator.Generate(state, settings).SplitIntoLines())
             {
-                AST_FUNCTION func = state.ASTFunctions[fn];
+                ++linecnt;
 
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine($"       |  ------- {state.GetFunctionSignature(fn)} -------");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write($"{linecnt,6} |  ");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
 
-                _print(func, 1);
-            }
-
-            void _print(AST_STATEMENT e, int indent)
-            {
-                string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ex.Print();
-                void println(string s, int i = -1)
+                if (line.Length == 0)
                 {
-                    ++linecnt;
+                    for (int i = 0; i < lastpadl; ++i)
+                        Console.Write("|   ");
 
-                    bool comment = s.StartsWith("//");
-
-                    Console.ForegroundColor = comment ? ConsoleColor.DarkGreen : ConsoleColor.Yellow;
-                    Console.Write($"{linecnt,6} |  ");
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.Write(string.Concat(Enumerable.Repeat("|   ", (i < 1 ? indent : i) - 1)));
-                    Console.ForegroundColor = comment ? ConsoleColor.DarkGreen : ConsoleColor.White;
-                    Console.WriteLine(s);
+                    Console.WriteLine();
                 }
-                void print(AST_STATEMENT s) => _print(s, indent + 1);
-                void printblock(AST_STATEMENT[] xs, string p = "", string s = "")
+                else
                 {
-                    xs = xs ?? new AST_STATEMENT[0];
+                    string tline = line.TrimStart();
+                    string pad = line.Remove(line.Length - tline.Length);
+                    int left = Console.CursorLeft;
 
-                    if (xs.Length > 1 || (p + s).Length == 0 || !allman)
+                    Console.Write(pad.Replace("\t", "    "));
+
+                    int pleft = Console.CursorLeft;
+
+                    Console.CursorLeft = left;
+
+                    lastpadl = 0;
+
+                    do
                     {
-                        if (allman)
-                        {
-                            if (p.Length > 0)
-                                println(p);
+                        Console.Write("|   ");
 
-                            println("{");
-                        }
-                        else
-                            println(p.Length > 0 ? $"{p} {{" : "{");
-
-                        foreach (AST_STATEMENT x in xs)
-                            print(x);
-
-                        if (allman)
-                        {
-                            println("}");
-
-                            if (s.Length > 0)
-                                println(s);
-                        }
-                        else
-                            println(s.Length > 0 ? $"}} {s}" : "}");
+                        ++lastpadl;
                     }
-                    else
-                    {
-                        if (p.Length > 0)
-                            println(p);
+                    while (Console.CursorLeft < pleft);
 
-                        if (xs.Length > 0)
-                            print(xs[0]);
-                        else
-                            println(";", indent + 1);
-
-                        if (s.Length > 0)
-                            println(s);
-                    }
-                }
-
-                switch (e)
-                {
-                    case AST_IF_STATEMENT s:
-                        printblock(s.If.Statements, $"if ({tstr(s.If.Condition)})");
-
-                        foreach (AST_CONDITIONAL_BLOCK elif in s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
-                            printblock(elif.Statements, $"else if ({tstr(elif.Condition)})");
-
-                        if (s.OptionalElse is AST_STATEMENT[] b)
-                            printblock(b, "else");
-
-                        return;
-                    case AST_WHILE_STATEMENT s:
-                        printblock(s.WhileBlock.Statements, $"while ({tstr(s.WhileBlock.Condition)})");
-
-                        return;
-                    case AST_SCOPE s:
-                        println("{");
-
-                        foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalVariables)
-                            if (ls.InitExpression is null)
-                                println($"{ls.Variable};", indent + 1);
-                            else
-                                println($"{ls.Variable} = {tstr(ls.InitExpression)};", indent + 1);
-
-                        foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
-                            print(ls);
-
-                        println("}");
-
-                        return;
-                    case AST_BREAK_STATEMENT s when s.Level == 1:
-                        println("break;");
-
-                        return;
-                    case AST_LABEL s:
-                        println(s.Name + ':', 1);
-
-                        return;
-                    case AST_GOTO_STATEMENT s:
-                        println($"goto {s.Label.Name};");
-
-                        return;
-                    case AST_ASSIGNMENT_EXPRESSION_STATEMENT s:
-                        println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression)) + ';');
-
-                        return;
-                    case AST_EXPRESSION_STATEMENT s:
-                        println(tstr(s.Expression) + ';');
-
-                        return;
-                    case AST_INLINE_CSHARP s:
-                        println(s.Code);
-
-                        return;
-                    default:
-                        println($"// TODO: {e}"); // TODO
-
-                        return;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine(tline);
                 }
             }
 
@@ -241,50 +151,78 @@ namespace AutoItInterpreter
             {
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"     _ |> {path.FullName}");
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                int cnt = 1;
 
                 InterpreterError[] localerrors = state.Errors.Where(e => Util.ArePathsEqual(e.ErrorContext.FilePath, path)).ToArray();
+                string[] lines = (File.ReadAllText(path.FullName) + "\n").SplitIntoLines();
+                List<int> vlines = new List<int>();
 
-                foreach (string line in File.ReadAllText(path.FullName).Replace("\r\n", "\n").Split('\n'))
-                {
-                    InterpreterError[] errs = localerrors.Where(e => e.ErrorContext.StartLine == cnt).ToArray();
+                const int DIST = 3;
+                int lastlnr = -1;
 
-                    Console.Write($"{cnt,6} |  ");
-
-                    if (errs.Length > 0)
+                for (int lcnt = 1; lcnt <= lines.Length; ++lcnt)
+                    if (localerrors.Any(err =>
                     {
-                        string pad = $"       |  {(line.Trim().Length > 0 ? line.Remove(line.Length - line.TrimStart().Length) : "")}";
-                        ErrorType level = errs.Select(e => e.Type).Min();
+                        int start = err.ErrorContext.StartLine;
+                        int end = err.ErrorContext.EndLine ?? err.ErrorContext.StartLine;
 
-                        Console.ForegroundColor = level == ErrorType.Fatal ? ConsoleColor.Red
-                                                : level == ErrorType.Warning ? ConsoleColor.Yellow : ConsoleColor.Cyan;
-                        Console.WriteLine(line);
-                        Console.ForegroundColor = level == ErrorType.Fatal ? ConsoleColor.DarkRed
-                                                : level == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
-                        Console.WriteLine(pad + new string('^', Math.Max(1, line.Trim().Length)));
+                        return (lcnt >= start - DIST) && (lcnt <= end + DIST);
+                    }))
+                        vlines.Add(lcnt - 1);
 
-                        foreach (IGrouping<ErrorType, InterpreterError> g in errs.GroupBy(e => e.Type))
+                foreach (int linenr in vlines)
+                    if (linenr >= lastlnr)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+
+                        if ((linenr > lastlnr + 1) && (linenr > 1))
+                            Console.WriteLine("       :");
+
+                        int cnt = linenr + 1;
+                        (InterpreterError err, int dist)[] errs = (from err in localerrors
+                                                                   let start = err.ErrorContext.StartLine
+                                                                   let end = err.ErrorContext.EndLine ?? start
+                                                                   where (cnt >= start) && (cnt <= end)
+                                                                   select (err, end - start + 1)).ToArray();
+
+                        if (errs.Length == 0)
                         {
-                            Console.ForegroundColor = g.Key == ErrorType.Fatal ? ConsoleColor.DarkRed
-                                                    : g.Key == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
+                            Console.WriteLine($"{cnt,6} |  {lines[linenr]}");
 
-                            foreach (InterpreterError e in g)
-                                Console.WriteLine(pad + e.ErrorMessage);
+                            lastlnr = linenr;
+                        }
+                        else
+                        {
+                            ErrorType level = errs.Select(e => e.err.Type).Min();
+                            int dist = errs.Select(e => e.dist).Max();
+                            Console.ForegroundColor = level == ErrorType.Fatal ? ConsoleColor.Red
+                                                    : level == ErrorType.Warning ? ConsoleColor.Yellow : ConsoleColor.Cyan;
+
+                            for (int i = 0; i < dist; ++i)
+                                Console.WriteLine($"{linenr + i + 1,6} |  {lines[linenr + i]}");
+
+                            var alines = dist <= 1 ? new[] { lines[linenr] } : Enumerable.Range(linenr, dist + 1).Select(l => lines[l]);
+                            var apads = alines.Select(al => al.Trim().Length > 0 ? al.Remove(al.Length - al.TrimStart().Length) : "");
+                            string mpad = apads.OrderBy(al => al.Length).First();
+
+                            Console.ForegroundColor = fgclr(level);
+                            Console.WriteLine($"       |  {mpad}{new string('^', Math.Max(1, alines.Max(al => al.Length) - mpad.Length))}");
+
+                            foreach (IGrouping<ErrorType, InterpreterError> g in errs.GroupBy(e => e.err.Type, e => e.err))
+                            {
+                                Console.ForegroundColor = fgclr(g.Key);
+
+                                foreach (InterpreterError e in g)
+                                    Console.WriteLine($"       |  {mpad}{e.ErrorMessage}");
+                            }
+
+                            lastlnr = linenr + dist;
                         }
 
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        ConsoleColor fgclr(ErrorType l) => l == ErrorType.Fatal ? ConsoleColor.DarkRed : l == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
                     }
-                    else
-                        Console.WriteLine(line);
-
-                    ++cnt;
-                }
-
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Gray;
             }
+
+            Console.ForegroundColor = ConsoleColor.Gray;
         }
 
         public static void DisplayPreState(PreInterpreterState state)

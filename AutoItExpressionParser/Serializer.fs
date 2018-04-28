@@ -10,6 +10,7 @@ type SerializerSettings =
         VariableDictionary : string
         VariableTypeName : string
         FunctionPrefix : string
+        FunctionResolver : Func<string, string>
     }
 
 type Serializer (settings : SerializerSettings) =
@@ -108,14 +109,22 @@ type Serializer (settings : SerializerSettings) =
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
                             match f.ToLower() with
-                            | "eval"
-                            | "assign"
-                            | "isdeclared" -> ""
-                            | f -> sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) f (String.Join (", ", (List.map printexpr es)))
+                            | "eval" -> sprintf "%s[%s]" (x.Settings.VariableDictionary) (printexpr es.[0])
+                            | "assign" -> sprintf "%s[%s] = %s" (x.Settings.VariableDictionary) (printexpr es.[0]) (printexpr es.[1])
+                            | "isdeclared" -> sprintf "%s.ContainsVariable(%s)" (x.Settings.VariableDictionary) (printexpr es.[0])
+                            | f -> let fs = match x.Settings.FunctionResolver.Invoke f with
+                                            | null -> f
+                                            | f -> f
+                                   sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) fs (String.Join (", ", (List.map printexpr es)))
                       | AssignmentExpression (Assignment (o, v, e)) -> printass (printvar v) o e
                       | ArrayIndex (v, e) -> "  « array access not yet implemented »  " // TODO
                       | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> "  « array access not yet implemented »  " // TODO
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"
-            sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
+            match e with
+            | BinaryExpression _
+            | TernaryExpression _
+            | Literal _
+            | UnaryExpression _ -> sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
+            | _ -> str e
         printexpr e

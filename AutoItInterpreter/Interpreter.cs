@@ -239,7 +239,7 @@ namespace AutoItInterpreter
             string prev = "";
             int lcnt = 0;
 
-            foreach (string line in raw.Replace("\r\n", "\n").Split('\n'))
+            foreach (string line in raw.SplitIntoLines())
             {
                 string tline = line.Trim();
 
@@ -882,23 +882,20 @@ namespace AutoItInterpreter
                     try
                     {
                         MULTI_EXPRESSIONS mes = p.Parse(expr);
-
-                        funccalls.AddRange(
-                            mes.SelectMany(me =>
+                        IEnumerable<EXPRESSION> exprs = mes.SelectMany(me =>
+                        {
+                            switch (me)
                             {
-                                switch (me)
-                                {
-                                    case MULTI_EXPRESSION.SingleValue sv:
-                                        return new[] { sv.Item };
-                                    case MULTI_EXPRESSION.ValueRange vr:
-                                        return new[] { vr.Item1, vr.Item2 };
-                                }
+                                case MULTI_EXPRESSION.SingleValue sv:
+                                    return new[] { sv.Item };
+                                case MULTI_EXPRESSION.ValueRange vr:
+                                    return new[] { vr.Item1, vr.Item2 };
+                            }
 
-                                return new EXPRESSION[0];
-                            })
-                            .SelectMany(Analyzer.GetFunctionCallExpressions)
-                            .Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray()))
-                        );
+                            return new EXPRESSION[0];
+                        });
+
+                        funccalls.AddRange(exprs.SelectMany(Analyzer.GetFunctionCallExpressions).Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray())));
 
                         return mes;
                     }
@@ -1408,7 +1405,7 @@ namespace AutoItInterpreter
                                     break; // TODO
                                 }
 
-                                var vars = expressions.Select(mexpr =>
+                                VARIABLE[] vars = expressions.Select(mexpr =>
                                 {
                                     if (mexpr is MULTI_EXPRESSION.SingleValue sv)
                                         return sv.Item;
@@ -1470,20 +1467,11 @@ namespace AutoItInterpreter
                                 .Where(expr => expr != null)
                                 .ToArray();
 
-
-
-                                warn("warnings.not_impl"); // TODO
-
-
-                                //return new AST_DECLARATION_STATEMENT
-                                //{
-                                //    Variable = new VARIABLE(....),
-                                //    DimensionExpressions = ....,
-                                //    InitExpression = ....
-                                //};
+                                return new AST_SCOPE
+                                {
+                                    Statements = statements.ToArray(),
+                                };
                             }
-
-                            break;
                         case REDIM i:
                             return new AST_REDIM_STATEMENT
                             {
@@ -1590,7 +1578,10 @@ namespace AutoItInterpreter
                         case AST_BREAK_STATEMENT s:
                             return new AST_GOTO_STATEMENT { Label = ls_exit[s.Level] };
                         case AST_WHILE_STATEMENT s:
-                             {
+                            {
+                                if (s.WhileBlock?.Condition is null)
+                                    return s;
+
                                 if (Analyzer.EvaluatesToFalse(s.WhileBlock.Condition))
                                 {
                                     state.ReportKnownNote("notes.optimized_away", s.Context);

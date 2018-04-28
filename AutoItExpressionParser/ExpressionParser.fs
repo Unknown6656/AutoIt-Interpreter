@@ -114,15 +114,15 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_variable                  = x.tf @"$[a-zA-Z_]\w*"                                        (fun s -> VARIABLE(s.Substring 1))
         let t_macro                     = x.tf @"@[a-zA-Z_]\w*"                                        (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
-        let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
-        let t_string_3                  = x.tf @"$'(([^']*\\'[^']*)*|[^']+)'"                          (fun s -> 
+        let t_string_2                  = x.tf @"'(([^']*''[^']*)*|[^']+)'"                            (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
+        let t_string_3                  = x.tf @"$""(([^""]*\\""[^""]*)*|[^""]+)"""                    (fun s -> 
                                                                                                             let mutable s = s.Remove(s.Length - 1)
                                                                                                                              .Remove(0, 2)
                                                                                                                              .Trim()
                                                                                                             let r = Regex(@"(?<!\\)(?:\\{2})*(\$(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
                                                                                                             let l = cslist<EXPRESSION>()
                                                                                                             let proc (s : string) =
-                                                                                                                s.Replace(@"\'", "'")
+                                                                                                                s.Replace(@"\""", "\"")
                                                                                                                  .Replace(@"\r", "\r")
                                                                                                                  .Replace(@"\n", "\n")
                                                                                                                  .Replace(@"\t", "\t")
