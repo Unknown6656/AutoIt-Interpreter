@@ -2,6 +2,7 @@
 
 open AutoItExpressionParser.ExpressionAST
 
+open System.Text.RegularExpressions
 open System.Globalization
 
 
@@ -112,6 +113,35 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_macro                     = x.tf @"@[a-zA-Z_]\w*"                                        (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
         let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
+        let t_string_3                  = x.tf @"\$'(([^']*\'[^']*)*|[^']+)'"                          (fun s -> 
+                                                                                                            let s = s.Remove(s.Length - 1)
+                                                                                                                     .Remove(0, 2)
+                                                                                                                     .Trim()
+                                                                                                            let r = Regex(@"(?<!\\)(?:\\{2})*(\$(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+                                                                                                            let vars = r.Matches(s)
+                                                                                                                       |> Seq.map (fun m -> m.Groups.["var"].ToString()
+                                                                                                                                            |> VARIABLE
+                                                                                                                                            |> Variable
+                                                                                                                                            |> VariableExpression)
+                                                                                                                       |> Seq.toArray
+                                                                                                            let strs = r.Split(s)
+                                                                                                                       |> Array.map (fun s -> s.Replace(@"\'", "'")
+                                                                                                                                               .Replace(@"\r", "\r")
+                                                                                                                                               .Replace(@"\n", "\n")
+                                                                                                                                               .Replace(@"\t", "\t")
+                                                                                                                                               .Replace(@"\v", "\v")
+                                                                                                                                               .Replace(@"\b", "\b")
+                                                                                                                                               .Replace(@"\0", "\0")
+                                                                                                                                               .Replace(@"\$", "$")
+                                                                                                                                               .Replace(@"\\", "\\")
+                                                                                                                                              |> String
+                                                                                                                                              |> Literal)
+                                                                                                            (Seq.zip vars strs
+                                                                                                             |> Seq.map (fun (x, y) -> BinaryExpression (StringConcat, x, y))
+                                                                                                             |> Seq.toList
+                                                                                                            ) @ [( if vars.Length > strs.Length then vars.[vars.Length - 1] else strs.[strs.Length - 1] )]
+                                                                                                            |> List.reduce (fun x y -> BinaryExpression (StringConcat, x, y))
+                                                                                                       )
         let t_identifier                = x.tf @"\w+"                                                  id
 
         let (!@) x = nt_subexpression.[x]
@@ -201,6 +231,7 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         reduce1 !@8 nt_funccall FunctionCall
         reduce1 !@8 nt_variable_expression VariableExpression
         reduce1 !@8 t_macro Macro
+        reduce0 !@8 t_string_3
         reduce3 !@8 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
         reduce4 !@8 nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
      // reduce5 !@8 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))

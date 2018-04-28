@@ -1524,7 +1524,16 @@ namespace AutoItInterpreter
             {
                 void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
 
-                if (!state.ASTFunctions.ContainsKey(func.ToLower()))
+                if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
+                {
+                    (_, int mac, int oac) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+
+                    if (args.Length < mac)
+                        err("errors.astproc.not_enough_args", func, mac, args.Length);
+                    else if (args.Length > mac + oac)
+                        err("errors.astproc.too_many_args", func, mac + oac);
+                }
+                else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
                     err("errors.astproc.func_not_declared", func);
                 else if (IsReservedCall(func.ToLower()))
                     err("errors.astproc.reserved_call", func);
@@ -1707,17 +1716,17 @@ namespace AutoItInterpreter
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
 
-        public static readonly string[] RESERVED_INTERNAL_FUNCTIONS =
+        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount)[] BUILT_IN_FUNCTIONS =
         {
-            "min",
-            "max",
-            "sin",
-            "cos",
-            "tan",
-            "eval",
-            "assign",
-            "isdeclared",
-            "autoit3",
+            ("min", 2, 0),
+            ("max", 2, 0),
+            ("sin", 1, 0),
+            ("cos", 1, 0),
+            ("tan", 1, 0),
+            ("eval", 1, 0),
+            ("assign", 2, 1),
+            ("isdeclared", 1, 0),
+            ("autoit3", 1, 0),
         };
 
 
@@ -1729,7 +1738,7 @@ namespace AutoItInterpreter
                 || name.Match("^__(<>.+|.+<>)$", out _);
         }
 
-        public static bool IsReservedName(string name) => RESERVED_INTERNAL_FUNCTIONS.Contains(name?.ToLower()) || IsReservedCall(name);
+        public static bool IsReservedName(string name) => BUILT_IN_FUNCTIONS.Any(x => x.Name == name?.ToLower()) || IsReservedCall(name);
     }
 
     internal sealed class ReversedLabelStack

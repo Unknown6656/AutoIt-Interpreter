@@ -99,7 +99,12 @@ type Serializer (settings : SerializerSettings) =
                             + printexpr e
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
-                      | FunctionCall (f, es) -> sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) f (String.Join (", ", (List.map printexpr es)))
+                      | FunctionCall (f, es) ->
+                            match f.ToLower() with
+                            | "eval"
+                            | "assign"
+                            | "isdeclared" -> ""
+                            | f -> sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) f (String.Join (", ", (List.map printexpr es)))
                       | AssignmentExpression (Assignment (o, v, e)) -> printass (printvar v) o e
                       | ArrayIndex (v, e) -> "  « array access not yet implemented »  " // TODO
                       | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> "  « array access not yet implemented »  " // TODO
