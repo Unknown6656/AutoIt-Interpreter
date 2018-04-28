@@ -6,6 +6,8 @@ open System.Text.RegularExpressions
 open System.Globalization
 
 
+type 'a cslist = System.Collections.Generic.List<'a>
+
 type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
     inherit AbstractParser<MULTI_EXPRESSION list>()
     member x.UseOptimization = optimize
@@ -113,36 +115,37 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_macro                     = x.tf @"@[a-zA-Z_]\w*"                                        (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
         let t_string_2                  = x.tf "'(([^']*''[^']*)*|[^']+)'"                             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
-        let t_string_3                  = x.tf @"\$'(([^']*\'[^']*)*|[^']+)'"                          (fun s -> 
-                                                                                                            let s = s.Remove(s.Length - 1)
-                                                                                                                     .Remove(0, 2)
-                                                                                                                     .Trim()
+        let t_string_3                  = x.tf @"$'(([^']*\\'[^']*)*|[^']+)'"                          (fun s -> 
+                                                                                                            let mutable s = s.Remove(s.Length - 1)
+                                                                                                                             .Remove(0, 2)
+                                                                                                                             .Trim()
                                                                                                             let r = Regex(@"(?<!\\)(?:\\{2})*(\$(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-                                                                                                            let vars = r.Matches(s)
-                                                                                                                       |> Seq.map (fun m -> m.Groups.["var"].ToString()
-                                                                                                                                            |> VARIABLE
-                                                                                                                                            |> Variable
-                                                                                                                                            |> VariableExpression)
-                                                                                                                       |> Seq.toArray
-                                                                                                            let strs = r.Split(s)
-                                                                                                                       |> Array.map (fun s -> s.Replace(@"\'", "'")
-                                                                                                                                               .Replace(@"\r", "\r")
-                                                                                                                                               .Replace(@"\n", "\n")
-                                                                                                                                               .Replace(@"\t", "\t")
-                                                                                                                                               .Replace(@"\v", "\v")
-                                                                                                                                               .Replace(@"\b", "\b")
-                                                                                                                                               .Replace(@"\0", "\0")
-                                                                                                                                               .Replace(@"\$", "$")
-                                                                                                                                               .Replace(@"\\", "\\")
-                                                                                                                                              |> String
-                                                                                                                                              |> Literal)
-                                                                                                            (Seq.zip vars strs
-                                                                                                             |> Seq.map (fun (x, y) -> BinaryExpression (StringConcat, x, y))
-                                                                                                             |> Seq.toList
-                                                                                                            ) @ [( if vars.Length > strs.Length then vars.[vars.Length - 1] else strs.[strs.Length - 1] )]
+                                                                                                            let l = cslist<EXPRESSION>()
+                                                                                                            let proc (s : string) =
+                                                                                                                s.Replace(@"\'", "'")
+                                                                                                                 .Replace(@"\r", "\r")
+                                                                                                                 .Replace(@"\n", "\n")
+                                                                                                                 .Replace(@"\t", "\t")
+                                                                                                                 .Replace(@"\v", "\v")
+                                                                                                                 .Replace(@"\b", "\b")
+                                                                                                                 .Replace(@"\0", "\0")
+                                                                                                                 .Replace(@"\$", "$")
+                                                                                                                 .Replace(@"\\", "\\")
+                                                                                                                |> String
+                                                                                                                |> Literal
+                                                                                                            while r.IsMatch s do
+                                                                                                                let m = (r.Match s).Groups.["var"]
+                                                                                                                l.Add(proc (s.Remove (m.Index - 1)))
+                                                                                                                l.Add(m.ToString()
+                                                                                                                      |> VARIABLE
+                                                                                                                      |> Variable
+                                                                                                                      |> VariableExpression)
+                                                                                                                s <- s.Substring (m.Index + m.Length)
+                                                                                                            l
+                                                                                                            |> Seq.toList
                                                                                                             |> List.reduce (fun x y -> BinaryExpression (StringConcat, x, y))
                                                                                                        )
-        let t_identifier                = x.tf @"\w+"                                                  id
+        let t_identifier                = x.tf @"[_a-z]\w*"                                            id
 
         let (!@) x = nt_subexpression.[x]
 

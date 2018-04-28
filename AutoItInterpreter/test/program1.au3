@@ -8,6 +8,7 @@ func f1()
         f2()
         $cnt += 1
     until $cnt >= 10
+    $jej = $' my string has $cnt and \$ \\$cnt \$cnt \n \t \r\n\n$test'
 endfunc
 
 Func f2()

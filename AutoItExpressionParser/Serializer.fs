@@ -87,7 +87,14 @@ type Serializer (settings : SerializerSettings) =
                                      | True -> !/"True"
                                      | False -> !/"False"
                                      | Number d -> d.ToString()
-                                     | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
+                                     | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\")
+                                                                      .Replace("\"", "\\\"")
+                                                                      .Replace("\r", "\\r")
+                                                                      .Replace("\n", "\\n")
+                                                                      .Replace("\t", "\\t")
+                                                                      .Replace("\b", "\\b")
+                                                                      .Replace("\0", "\\0")
+                                                                      .Replace("\v", "\\v"))
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->
