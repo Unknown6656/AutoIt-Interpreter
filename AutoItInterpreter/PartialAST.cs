@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System;
 
 using AutoItExpressionParser;
@@ -20,6 +21,7 @@ namespace AutoItInterpreter.PartialAST
 
     public abstract class AST_STATEMENT
     {
+        public abstract bool IsEmpty { get; }
         public DefinitionContext Context { set; get; }
     }
 
@@ -27,6 +29,7 @@ namespace AutoItInterpreter.PartialAST
         : AST_STATEMENT
     {
         public List<AST_LOCAL_VARIABLE> ExplicitLocalVariables { get; } = new List<AST_LOCAL_VARIABLE>();
+        public override bool IsEmpty => Statements.Length == 0;
         public AST_STATEMENT[] Statements { set; get; }
 
         public AST_LOCAL_VARIABLE this[string name] => ExplicitLocalVariables.Find(lv => lv.Variable.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
@@ -71,12 +74,14 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_ASSIGNMENT_STATEMNT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public ASSIGNMENT_EXPRESSION Expression { set; get; }
     }
 
     public sealed class AST_IF_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => If.IsEmpty && (ElseIf?.All(c => c.IsEmpty) ?? true) && (OptionalElse?.Length ?? 0) == 0;
         public AST_CONDITIONAL_BLOCK If { set; get; }
         public AST_CONDITIONAL_BLOCK[] ElseIf { set; get; }
         public AST_STATEMENT[] OptionalElse { set; get; }
@@ -85,12 +90,17 @@ namespace AutoItInterpreter.PartialAST
     public class AST_CONDITIONAL_BLOCK
         : AST_SCOPE
     {
+        public override bool IsEmpty => base.IsEmpty && Analyzer.IsStatic(Condition);
         public EXPRESSION Condition { set; get; }
+
+
+        public override string ToString() => $"condition ({Condition.Print()}) {{ ... }}";
     }
 
     public sealed class AST_WHILE_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => WhileBlock.IsEmpty;
         public AST_CONDITIONAL_BLOCK WhileBlock { set; get; }
         public AST_LABEL ContinueLabel { set; get; }
         public AST_LABEL ExitLabel { set; get; }
@@ -102,6 +112,7 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_WITH_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => (WithLines?.Length ?? 0) == 0;
         public EXPRESSION WithExpression { set; get; }
         public AST_WITH_LINE[] WithLines { set; get; }
     }
@@ -110,14 +121,16 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_WITH_LINE
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public dynamic Expression { set; get; }
     }
 
     public sealed class AST_LABEL
         : AST_STATEMENT
     {
-        private static long _tmp = 0L;
+        private static long _tmp;
 
+        public override bool IsEmpty => false;
         public string Name { set; get; }
 
         public static AST_LABEL NewLabel => new AST_LABEL { Name = $"__lb<>{++_tmp:x4}" };
@@ -126,12 +139,14 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_GOTO_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public AST_LABEL Label { set; get; }
     }
 
     public sealed class AST_SWITCH_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => (Cases?.Length ?? 0) == 0 && Analyzer.IsStatic(Expression);
         public AST_SWITCH_CASE[] Cases { set; get; }
         public EXPRESSION Expression { get; set; }
     }
@@ -155,6 +170,7 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_SELECT_CASE
         : AST_STATEMENT
     {
+        public override bool IsEmpty => CaseBlock.IsEmpty;
         public AST_CONDITIONAL_BLOCK CaseBlock { set; get; }
 
 
@@ -164,6 +180,7 @@ namespace AutoItInterpreter.PartialAST
     public abstract class AST_EXPR_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
     }
 
     public sealed class AST_EXPRESSION_STATEMENT
@@ -181,11 +198,13 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_CONTINUECASE_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
     }
 
     public class AST_RETURN_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
     }
 
     public sealed class AST_RETURN_VALUE_STATEMENT
@@ -197,18 +216,21 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_BREAK_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public uint Level { set; get; }
     }
 
     public sealed class AST_CONTINUE_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public uint Level { set; get; }
     }
 
     public sealed class AST_REDIM_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public VARIABLE Variable { set; get; }
         public EXPRESSION[] DimensionExpressions { set; get; }
     }
@@ -216,6 +238,7 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_DECLARATION_STATEMENT
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public VARIABLE Variable { set; get; }
         public EXPRESSION InitExpression { set; get; }
         public EXPRESSION[] DimensionExpressions { set; get; }
@@ -224,6 +247,7 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_INLINE_CSHARP
         : AST_STATEMENT
     {
+        public override bool IsEmpty => false;
         public string Code { set; get; }
     }
 }

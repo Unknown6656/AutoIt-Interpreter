@@ -3,10 +3,12 @@
 #include 'header-1.au3'
 
 
-do  
-    f2()
-    $cnt += 1
-until $cnt >= 10
+func f1()
+    do
+        f2()
+        $cnt += 1
+    until $cnt >= 10
+endfunc
 
 Func f2()
     select
@@ -14,6 +16,7 @@ Func f2()
             testing("top", "kek", 0x1488 << 12, $foo, "/blubb/")
             continuecase
         case else
+            $test = eval("4 + 9")
     endselect
 EndFunc
 

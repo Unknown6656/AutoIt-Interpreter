@@ -1,0 +1,109 @@
+﻿namespace AutoItExpressionParser
+
+open AutoItExpressionParser.ExpressionAST
+open System
+
+
+type SerializerSettings =
+    {
+        MacroDictionary : string
+        VariableDictionary : string
+        VariableTypeName : string
+        FunctionPrefix : string
+    }
+
+type Serializer (settings : SerializerSettings) =
+    let adict = dict [
+                         AssignAdd, Add
+                         AssignSubtract, Subtract
+                         AssignMultiply, Multiply
+                         AssignDivide, Divide
+                         AssignModulus, Modulus
+                         AssignConcat, StringConcat
+                         AssignPower, Power
+                         AssignNand, BitwiseNand
+                         AssignAnd, BitwiseAnd
+                         AssignNxor, BitwiseNxor
+                         AssignXor, BitwiseXor
+                         AssignNor, BitwiseNor
+                         AssignOr, BitwiseOr
+                         AssignRotateLeft, BitwiseRotateLeft
+                         AssignRotateRight, BitwiseRotateRight
+                         AssignShiftLeft, BitwiseShiftLeft
+                         AssignShiftRight, BitwiseShiftRight
+                     ]
+    member x.Settings with get() = settings
+    member x.Serialize e =
+        let (!/) = sprintf "%s.%s" x.Settings.VariableTypeName
+        let printvar = function
+                       | Variable v -> sprintf "%s[\"%s\"]" (x.Settings.VariableDictionary) v.Name
+                       | DotAccess (v, m) -> "  « object access not yet implemented »  " // TODO
+        let printbin a o b =
+            let (!!) = sprintf "(%%s %s %%s)"
+            let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
+            let f = match o with
+                    | StringConcat -> !!"&"
+                    | EqualCaseSensitive -> !!"=="
+                    | EqualCaseInsensitive
+                    | Unequal -> !!"!="
+                    | Greater -> !!">"
+                    | GreaterEqual -> !!">="
+                    | Lower -> !!"<"
+                    | LowerEqual -> !!"<="
+                    | And -> !<"And"
+                    | Xor -> !<"Xor"
+                    | Nxor -> !<"Nxor"
+                    | Nor -> !<"Nor"
+                    | Nand -> !<"Nand"
+                    | Or -> !<"Or"
+                    | Add -> !!"+"
+                    | Subtract -> !!"-"
+                    | Multiply -> !!"*"
+                    | Divide -> !!"/"
+                    | Modulus -> !!"%"
+                    | Power -> !!"^"
+                    | BitwiseAnd -> !<"BitwiseAnd"
+                    | BitwiseXor -> !<"BitwiseXor"
+                    | BitwiseNxor -> !<"BitwiseNxor"
+                    | BitwiseNor -> !<"BitwiseNor"
+                    | BitwiseNand -> !<"BitwiseNand"
+                    | BitwiseOr -> !<"BitwiseOr"
+                    | BitwiseRotateLeft -> !<"BitwiseRol"
+                    | BitwiseRotateRight -> !<"BitwiseRor"
+                    | BitwiseShiftLeft -> !<"BitwiseShl"
+                    | BitwiseShiftRight -> !<"BitwiseShr"
+                    |> Printf.StringFormat<string->string->string>
+            sprintf f a b
+        let rec printass v o e =
+            let e = if o = Assign
+                    then printexpr e
+                    else printbin v (adict.[o]) (printexpr e)
+            sprintf "%s = (%s)%s" v (x.Settings.VariableTypeName) e
+        and printexpr e =
+            let str = function
+                      | Literal l -> match l with
+                                     | Null -> !/"Null"
+                                     | Default -> !/"Default"
+                                     | True -> !/"True"
+                                     | False -> !/"False"
+                                     | Number d -> d.ToString()
+                                     | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
+                      | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
+                      | VariableExpression v -> printvar v
+                      | UnaryExpression (o, e) ->
+                            match o with
+                            | Identity -> ""
+                            | Negate -> "-"
+                            | Not -> "!"
+                            | BitwiseNot -> "~"
+                            + printexpr e
+                      | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
+                      | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
+                      | FunctionCall (f, es) -> sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) f (String.Join (", ", (List.map printexpr es)))
+                      | AssignmentExpression (Assignment (o, v, e)) -> printass (printvar v) o e
+                      | ArrayIndex (v, e) -> "  « array access not yet implemented »  " // TODO
+                      | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> "  « array access not yet implemented »  " // TODO
+                      | ArrayInitExpression _
+                      | ToExpression _ -> failwith "Invalid expression"
+            sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
+        printexpr e

@@ -44,14 +44,19 @@
             "no_range_allowed": "Der Ausdruck '{0}' darf kein Intervall-Ausdruck mit dem Schlüsselwort 'To' sein.",
             "func_not_declared": "Die Funktion '{0}' wurde nicht deklariert oder konnte nicht gefunden werden. Haben Sie eine #include-Direktive vergessen?",
             "parser_error_funcdecl": "Der Ausdruck '{0}' zur Deklaration der Funktionsparameter konnte aufgrund des foldenden Fehlers nicht nicht erkannt werden: {1}",
-            "reserved_call": "Die Funktion '{0}' ist auschließlich für interne Zwecke reserviert."
+            "reserved_call": "Die Funktion '{0}' ist auschließlich für interne Zwecke reserviert.",
+
+            ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
+
+            "too_many_args": "The function '{0}' expects only {1} arguments.",
+            "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} were given.",
+            "no_range_as_init": "The initialization expression is invalid, as it is a value range instead of an single-valued expression.",
+            "missing_value": "Constant variables must be initialized with a value upon declaration.",
+            "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead."
         }
     },
     "warnings": {
         "preproc": {
-
-            ////////////////////////////////////////////                    v-------------- TODO --------------v                    ////////////////////////////////////////////
-
             "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
@@ -66,6 +71,9 @@
         "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
     },
     "notes": {
-        "optimized_away": "This statement or block has been optimized away be the compiler. Consider removing it from the source code."
+        "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
+        "empty_block": "This block is either empty or has been optimized away. Consider removing it from the source code.",
+        "uncalled_function": "This function will never be called.",
+        "unsafe_autoit3": "Calling the function 'AutoIt3' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call."
     }
 }

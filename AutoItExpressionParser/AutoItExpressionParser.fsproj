@@ -16,6 +16,7 @@
     <Compile Include="Analyzer.fs" />
     <Compile Include="ExpressionParser.fs" />
     <Compile Include="FunctionparameterParser.fs" />
+    <Compile Include="Serializer.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PigletParser\PigletParser.csproj" />

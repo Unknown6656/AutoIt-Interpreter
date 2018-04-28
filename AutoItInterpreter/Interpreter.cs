@@ -649,7 +649,7 @@ namespace AutoItInterpreter
 
                     if (st.Functions.ContainsKey(lname))
                         err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
-                    else if (IsReserved(lname))
+                    else if (IsReservedName(lname))
                         err("errors.general.reserved_name", m.Get("name"));
                     else
                     {
@@ -1420,41 +1420,50 @@ namespace AutoItInterpreter
                                 .Where(expr => expr != null)
                                 .Select(expr =>
                                 {
-
-                                    // TODO
-
-
                                     if (expr is EXPRESSION.AssignmentExpression aexpr && aexpr?.Item is ASSIGNMENT_EXPRESSION.Assignment assg && assg?.Item3 is EXPRESSION ex)
                                         if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
                                         {
                                             VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
+                                            AST_LOCAL_VARIABLE prev = targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var));
 
-                                            targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                            if (prev is null)
                                             {
-                                                Constant = @const,
-                                                Variable = var
-                                            });
-                                            statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                            {
-                                                Context = i.DefinitionContext,
-                                                Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                    OPERATOR_ASSIGNMENT.Assign,
-                                                    VARIABLE_EXPRESSION.NewVariable(var),
-                                                    ex
-                                                )
-                                            });
+                                                targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                                {
+                                                    Constant = @const,
+                                                    Variable = var
+                                                });
+                                                statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                {
+                                                    Context = i.DefinitionContext,
+                                                    Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                        OPERATOR_ASSIGNMENT.Assign,
+                                                        VARIABLE_EXPRESSION.NewVariable(var),
+                                                        ex
+                                                    )
+                                                });
 
-                                            return var;
+                                                return var;
+                                            }
+                                            else
+                                                err("errors.astproc.variable_exists", var);
                                         }
                                         else
-                                            err("init_invalid_operator", assg.Item1);
+                                            err("errors.astproc.init_invalid_operator", assg.Item1);
                                     else if (@const)
-                                        err("missing_value");
+                                        err("errors.astproc.missing_value");
+                                    else if (expr is EXPRESSION.VariableExpression vexpr && vexpr.Item is VARIABLE_EXPRESSION.Variable variable)
+                                    {
+                                        VARIABLE var = variable.Item;
 
 
 
 
+                                        // TODO
 
+                                    }
+                                    else
+                                        ; // TODO : err - invalid declaration expression
 
                                     return null;
                                 })
@@ -1517,7 +1526,7 @@ namespace AutoItInterpreter
 
                 if (!state.ASTFunctions.ContainsKey(func.ToLower()))
                     err("errors.astproc.func_not_declared", func);
-                else if (IsReserved(func.ToLower()))
+                else if (IsReservedCall(func.ToLower()))
                     err("errors.astproc.reserved_call", func);
                 else
                 {
@@ -1538,8 +1547,15 @@ namespace AutoItInterpreter
 
                     if (index < mpcnt)
                         err("errors.astproc.not_enough_args", func, mpcnt, index);
+
+                    if (func.Equals("autoit3", StringComparison.InvariantCultureIgnoreCase))
+                        state.ReportKnownNote("notes.unsafe_autoit3", context);
                 }
             }
+
+            foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
+                if (uncalled != GLOBAL_FUNC_NAME)
+                    state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context);
         }
 
         private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
@@ -1565,86 +1581,104 @@ namespace AutoItInterpreter
                         case AST_BREAK_STATEMENT s:
                             return new AST_GOTO_STATEMENT { Label = ls_exit[s.Level] };
                         case AST_WHILE_STATEMENT s:
-                            ls_cont.Push(AST_LABEL.NewLabel);
-                            ls_exit.Push(AST_LABEL.NewLabel);
-
-                            AST_WHILE_STATEMENT w = new AST_WHILE_STATEMENT
-                            {
-                                WhileBlock = s.WhileBlock,
-                                ContinueLabel = ls_cont[1],
-                                ExitLabel = ls_exit[1],
-                                Context = e.Context,
-                            };
-                            AST_SCOPE sc = new AST_SCOPE
-                            {
-                                Statements = new AST_STATEMENT[]
+                             {
+                                if (Analyzer.EvaluatesToFalse(s.WhileBlock.Condition))
                                 {
-                                    w,
-                                    ls_exit[1]
+                                    state.ReportKnownNote("notes.optimized_away", s.Context);
+
+                                    return new AST_SCOPE { Statements = new AST_STATEMENT[0] };
                                 }
-                            };
 
-                            w.WhileBlock.Statements = new AST_STATEMENT[] { ls_cont[1] }.Concat(procas(w.WhileBlock.Statements)).ToArray();
+                                ls_cont.Push(AST_LABEL.NewLabel);
+                                ls_exit.Push(AST_LABEL.NewLabel);
 
-                            ls_cont.Pop();
-                            ls_exit.Pop();
+                                AST_WHILE_STATEMENT w = new AST_WHILE_STATEMENT
+                                {
+                                    WhileBlock = s.WhileBlock,
+                                    ContinueLabel = ls_cont[1],
+                                    ExitLabel = ls_exit[1],
+                                    Context = e.Context,
+                                };
+                                AST_SCOPE sc = new AST_SCOPE
+                                {
+                                    Statements = new AST_STATEMENT[]
+                                    {
+                                        w,
+                                        ls_exit[1]
+                                    }
+                                };
 
-                            return sc;
+                                w.WhileBlock.Statements = new AST_STATEMENT[] { ls_cont[1] }.Concat(procas(w.WhileBlock.Statements)).ToArray();
+
+                                ls_cont.Pop();
+                                ls_exit.Pop();
+
+                                return sc;
+                            }
                         case AST_SCOPE s:
                             s.Statements = procas(s.Statements);
 
                             return s;
                         case AST_IF_STATEMENT s:
-                            s.If = process(s.If) as AST_CONDITIONAL_BLOCK;
-                            s.ElseIf = procas(s.ElseIf);
-                            s.OptionalElse = procas(s.OptionalElse);
-
-                            AST_CONDITIONAL_BLOCK[] conditions =
-                                new[] { s.If }
-                                .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
-                                .Concat(new[] {
-                                    new AST_CONDITIONAL_BLOCK
-                                    {
-                                        Context = s.OptionalElse?.FirstOrDefault()?.Context ?? s.Context,
-                                        Condition = EXPRESSION.NewLiteral(LITERAL.True),
-                                        Statements = s.OptionalElse ?? new AST_STATEMENT[0]
-                                    }
-                                })
-                                .Where(b =>
-                                {
-                                    bool skippable = Analyzer.EvaluatesToFalse(b.Condition)
-                                                  || (b.Statements.Length == 0 && Analyzer.IsStatic(b.Condition));
-
-                                    if (skippable)
-                                        state.ReportKnownNote("notes.optimized_away", b.Context);
-
-                                    return !skippable;
-                                })
-                                .ToArray();
-
-                            int lastok = conditions.Length;
-
-                            for (int i = 0; i < conditions.Length; ++i)
-                                if (Analyzer.EvaluatesToTrue(conditions[i].Condition))
-                                    lastok = i;
-                                else if (i > lastok)
-                                    state.ReportKnownNote("notes.optimized_away", conditions[i].Context);
-
-                            conditions = conditions.Take(lastok + 1).ToArray();
-
-                            if (conditions.Length > 0)
                             {
-                                s.If = conditions[0];
-                                s.ElseIf = conditions.Skip(1).ToArray();
-                                s.OptionalElse = new AST_STATEMENT[0];
+                                s.If = process(s.If) as AST_CONDITIONAL_BLOCK;
+                                s.ElseIf = procas(s.ElseIf);
+                                s.OptionalElse = procas(s.OptionalElse);
 
-                                return s;
-                            }
-                            else
-                                return new AST_SCOPE
+                                AST_CONDITIONAL_BLOCK[] conditions =
+                                    new[] { s.If }
+                                    .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
+                                    .Concat(new[] {
+                                        new AST_CONDITIONAL_BLOCK
+                                        {
+                                            Context = s.OptionalElse?.FirstOrDefault()?.Context ?? default,
+                                            Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                            Statements = s.OptionalElse ?? new AST_STATEMENT[0]
+                                        }
+                                    })
+                                    .Where(b =>
+                                    {
+                                        if (b.Context.FilePath is null)
+                                            return true;
+                                        else
+                                        {
+                                            bool skippable = Analyzer.EvaluatesToFalse(b.Condition);
+
+                                            if (b.IsEmpty)
+                                                state.ReportKnownNote("notes.empty_block", b.Context);
+
+                                            if (skippable)
+                                                state.ReportKnownNote("notes.optimized_away", b.Context);
+
+                                            return !skippable;
+                                        }
+                                    })
+                                    .ToArray();
+
+                                int lastok = conditions.Length;
+
+                                for (int i = 0; i < conditions.Length; ++i)
+                                    if (Analyzer.EvaluatesToTrue(conditions[i].Condition))
+                                        lastok = i;
+                                    else if (i > lastok)
+                                        state.ReportKnownNote("notes.optimized_away", conditions[i].Context);
+
+                                conditions = conditions.Take(lastok + 1).ToArray();
+
+                                if (conditions.Length > 0)
                                 {
-                                    Statements = s.OptionalElse
-                                };
+                                    s.If = conditions[0];
+                                    s.ElseIf = conditions.Skip(1).ToArray();
+                                    s.OptionalElse = new AST_STATEMENT[0];
+
+                                    return s;
+                                }
+                                else
+                                    return new AST_SCOPE
+                                    {
+                                        Statements = s.OptionalElse
+                                    };
+                            }
                         case AST_WITH_STATEMENT s:
                             s.WithLines = procas(s.WithLines);
 
@@ -1673,13 +1707,29 @@ namespace AutoItInterpreter
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
 
+        public static readonly string[] RESERVED_INTERNAL_FUNCTIONS =
+        {
+            "min",
+            "max",
+            "sin",
+            "cos",
+            "tan",
+            "eval",
+            "assign",
+            "isdeclared",
+            "autoit3",
+        };
 
-        public static bool IsReserved(string name)
+
+        public static bool IsReservedCall(string name)
         {
             name = name?.ToLower() ?? "";
 
-            return new[] { GLOBAL_FUNC_NAME, ERROR_VARIBLE, DISCARD_VARIBLE, CSHARP_INLINE }.Contains(name) || name.Match("^__(<>.+|.+<>)$", out _);
+            return new[] { GLOBAL_FUNC_NAME, ERROR_VARIBLE, DISCARD_VARIBLE, CSHARP_INLINE }.Contains(name)
+                || name.Match("^__(<>.+|.+<>)$", out _);
         }
+
+        public static bool IsReservedName(string name) => RESERVED_INTERNAL_FUNCTIONS.Contains(name?.ToLower()) || IsReservedCall(name);
     }
 
     internal sealed class ReversedLabelStack

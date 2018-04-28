@@ -5,9 +5,13 @@ _The following image describes more or less the current state..._
 ![Exception Screenshot](wtf.png)
 
 
+# Preamble
 
+One should call this project _"An AutoIt **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
 
+It kind of interprets everything and transforms it into C# code, which then gets compiled. My component is therefore an interpreter - but the whole project is technically a compiler.
 
+So we call it an **Interpiler** for now...
 
 # AutoIt Interpreter
 

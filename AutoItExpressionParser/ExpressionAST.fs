@@ -138,19 +138,17 @@ type FUNCTION_PARAMETER =
         Type : FUNCTION_PARAMETER_TYPE
     }
 
-    
-let private (!/) = sprintf "AutoItVariantType.%s"
 
-let rec private VarToCSString =
+let rec private VarToAString =
     function
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with
                                                       | Field f -> f
-                                                      | Method m -> ToCSString(FunctionCall m)
+                                                      | Method m -> ToAString(FunctionCall m)
                                       )
                           |> List.fold (+) v.Name
     | Variable v -> sprintf "$%s" (v.Name)
-and private AssToCSString =
+and private AssToAString =
     function
     | Assign -> "="
     | AssignAdd -> "+="
@@ -160,8 +158,6 @@ and private AssToCSString =
     | AssignModulus -> "%="
     | AssignConcat -> "&="
     | AssignPower -> "^="
-
-    // TODO
     | AssignNand -> "~&&="
     | AssignAnd -> "&&="
     | AssignNxor -> "~^^="
@@ -172,70 +168,70 @@ and private AssToCSString =
     | AssignRotateRight -> ">>>="
     | AssignShiftLeft -> "<<="
     | AssignShiftRight -> ">>="
-and private BinToCSString o a b =
+and private BinToAString o a b =
     sprintf (match o with
             | StringConcat -> "(%s & %s)"
             | EqualCaseSensitive -> "(%s == %s)"
-            | EqualCaseInsensitive -> "AutoItVariantType.Equals(%s, %s, true)"
+            | EqualCaseInsensitive -> "(%s = %s)"
             | Unequal -> "(%s != %s)"
             | Greater -> "(%s > %s)"
             | GreaterEqual -> "(%s >= %s)"
             | Lower -> "(%s < %s)"
             | LowerEqual -> "(%s <= %s)"
-            | And -> "(%s && %s)"
-            | Xor -> "((bool)%s ^ (bool)%s)"
-            | Nxor -> "!((bool)%s ^ (bool)%s)"
-            | Nor -> "!(%s || %s)"
-            | Nand -> "!(%s && %s)"
-            | Or -> "(%s || %s)"
+            | And -> "(%s And %s)"
+            | Xor -> "(%s Xor %s)"
+            | Nxor -> "(%s Nxor %s)"
+            | Nor -> "(%s Nor %s)"
+            | Nand -> "(%s Nand %s)"
+            | Or -> "(%s Or %s)"
             | Add -> "(%s + %s)"
             | Subtract -> "(%s - %s)"
             | Multiply -> "(%s * %s)"
             | Divide -> "(%s / %s)"
             | Modulus -> "(%s %% %s)"
             | Power -> "(%s ^ %s)"
-            | BitwiseNand -> "AutoItVariantType.BitwiseNand(%s, %s)"
-            | BitwiseAnd -> "AutoItVariantType.BitwiseAnd(%s, %s)"
-            | BitwiseNxor -> "AutoItVariantType.BitwiseNxor(%s, %s)"
-            | BitwiseXor -> "AutoItVariantType.BitwiseXor(%s, %s)"
-            | BitwiseNor -> "AutoItVariantType.BitwiseNor(%s, %s)"
-            | BitwiseOr -> "AutoItVariantType.BitwiseOr(%s, %s)"
-            | BitwiseRotateLeft -> "AutoItVariantType.BitwiseRol(%s, %s)"
-            | BitwiseRotateRight -> "AutoItVariantType.BitwiseRor(%s, %s)"
-            | BitwiseShiftLeft -> "AutoItVariantType.BitwiseShl(%s, %s)"
-            | BitwiseShiftRight -> "AutoItVariantType.BitwiseShr(%s, %s)"
+            | BitwiseNand -> "(%s ~&& %s)"
+            | BitwiseAnd -> "(%s && %s)"
+            | BitwiseNxor -> "(%s ~^^ %s)"
+            | BitwiseXor -> "(%s ^^ %s)"
+            | BitwiseNor -> "(%s ~|| %s)"
+            | BitwiseOr -> "(%s || %s)"
+            | BitwiseRotateLeft -> "(%s <<< %s)"
+            | BitwiseRotateRight -> "(%s >>> %s)"
+            | BitwiseShiftLeft -> "(%s << %s)"
+            | BitwiseShiftRight -> "(%s >> %s)"
             ) a b
-and private ToCSString =
+and private ToAString =
     function
     | Literal l ->
         match l with
-        | Null -> !/"Null"
-        | Default -> !/"Default"
+        | Null -> "null"
+        | Default -> "default"
         | True -> "true"
         | False -> "false"
         | Number d -> d.ToString()
         | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
-    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToCSString es)))
-    | VariableExpression v -> VarToCSString v
-    | Macro m -> sprintf "___macros___[\"%s\"]" m.Name
-    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToCSString v) (ToCSString e)
+    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
+    | VariableExpression v -> VarToAString v
+    | Macro m -> sprintf "@%s" m.Name
+    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToAString v) (ToAString e)
     | UnaryExpression (o, e) ->
         match o with
         | Identity -> ""
         | Negate -> "-"
         | Not -> "!"
         | BitwiseNot -> "~"
-        + ToCSString e
-    | BinaryExpression (o, x, y) -> BinToCSString o (ToCSString x) (ToCSString y)
-    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToCSString x) (ToCSString y) (ToCSString z)
-    | ToExpression (f, t) -> sprintf "%s to %s" (ToCSString f) (ToCSString t)
+        + ToAString e
+    | BinaryExpression (o, x, y) -> BinToAString o (ToAString x) (ToAString y)
+    | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
+    | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
     | AssignmentExpression a ->
         match a with
-        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToCSString v) (AssToCSString o) (ToCSString e)
-        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToCSString v) (ToCSString i) (AssToCSString o) (ToCSString e)
+        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
+        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToAString v) (ToAString i) (AssToAString o) (ToAString e)
     | ArrayInitExpression e -> sprintf "[ %s ]" (e
-                                                 |> List.map ToCSString
+                                                 |> List.map ToAString
                                                  |> String.concat ", ")
 
 [<ExtensionAttribute>]
-let Print e = ToCSString e
+let Print e = ToAString e
