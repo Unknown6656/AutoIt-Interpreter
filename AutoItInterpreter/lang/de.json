@@ -53,6 +53,9 @@
             "no_range_as_init": "The initialization expression is invalid, as it is a value range instead of an single-valued expression.",
             "missing_value": "Constant variables must be initialized with a value upon declaration.",
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead."
+        },
+        "generator": {
+            "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured."
         }
     },
     "warnings": {

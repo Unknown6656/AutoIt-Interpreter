@@ -289,6 +289,8 @@ namespace AutoItInterpreter
     {
         public InterpreterSettings Settings { get; }
         public bool UseMSBuildErrorOutput { set; get; }
+        public bool DontGenerateTempFiles { set; get; }
+        public bool DeleteTempFilesAfterSuccess { set; get; }
         public bool UseVerboseOutput { set; get; }
         public Language Language { set; get; }
 

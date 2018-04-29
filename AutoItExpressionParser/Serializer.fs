@@ -113,18 +113,15 @@ type Serializer (settings : SerializerSettings) =
                             | "assign" -> sprintf "%s[%s] = %s" (x.Settings.VariableDictionary) (printexpr es.[0]) (printexpr es.[1])
                             | "isdeclared" -> sprintf "%s.ContainsVariable(%s)" (x.Settings.VariableDictionary) (printexpr es.[0])
                             | f -> let fs = match x.Settings.FunctionResolver.Invoke f with
-                                            | null -> f
+                                            | null -> x.Settings.FunctionPrefix + f
                                             | f -> f
-                                   sprintf "%s%s(%s)" (x.Settings.FunctionPrefix) fs (String.Join (", ", (List.map printexpr es)))
+                                   sprintf "%s(%s)" fs (String.Join (", ", (List.map printexpr es)))
                       | AssignmentExpression (Assignment (o, v, e)) -> printass (printvar v) o e
                       | ArrayIndex (v, e) -> "  « array access not yet implemented »  " // TODO
                       | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> "  « array access not yet implemented »  " // TODO
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
-            | BinaryExpression _
-            | TernaryExpression _
-            | Literal _
-            | UnaryExpression _ -> sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
+            | Literal _ -> sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
             | _ -> str e
         printexpr e

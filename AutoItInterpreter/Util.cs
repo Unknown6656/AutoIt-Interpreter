@@ -1,21 +1,13 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.IO;
 using System;
 
 using Newtonsoft.Json.Linq;
 
-using AutoItInterpreter.PartialAST;
-using AutoItExpressionParser;
-
 namespace AutoItInterpreter
 {
-    using static InterpreterConstants;
-    using static ExpressionAST;
-
-
     public static class Util
     {
         public static string[] SplitIntoLines(this string s) => (s ?? "").Replace("\r\n", "\n").Split('\n');
@@ -96,14 +88,14 @@ namespace AutoItInterpreter
             Console.WriteLine(new string('=', 200));
         }
 
-        public static void DisplayPartialAST(InterpreterState state, InterpreterOptions options)
+        public static void DisplayGeneratedCode(string code)
         {
             PrintSeperator();
 
             int lastpadl = 0;
             int linecnt = 0;
 
-            foreach (string line in Generator.Generate(state, options).SplitIntoLines())
+            foreach (string line in code.SplitIntoLines())
             {
                 ++linecnt;
 
@@ -124,7 +116,7 @@ namespace AutoItInterpreter
                     string pad = line.Remove(line.Length - tline.Length);
                     int left = Console.CursorLeft;
 
-                    Console.Write(pad.Replace("\t", "    "));
+                    Console.Write(pad);
 
                     int pleft = Console.CursorLeft;
 
@@ -132,13 +124,12 @@ namespace AutoItInterpreter
 
                     lastpadl = 0;
 
-                    do
+                    while (Console.CursorLeft < pleft)
                     {
                         Console.Write("|   ");
 
                         ++lastpadl;
                     }
-                    while (Console.CursorLeft < pleft);
 
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.WriteLine(tline);
@@ -148,17 +139,17 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
-        public static void DisplayCodeAndErrors(FileInfo root, InterpreterState state)
+        public static void DisplayCodeAndErrors(InterpreterState state)
         {
             PrintSeperator();
 
-            foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
+            foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer()))
             {
                 if (path is null)
                     continue;
 
                 Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine($"     _ |> {path.FullName}");
+                Console.WriteLine($"   ___ |> {path.FullName}");
 
                 InterpreterError[] localerrors = state.Errors.Where(e => e.ErrorContext.FilePath is FileInfo fi && Util.ArePathsEqual(fi, path)).ToArray();
                 string[] lines = (File.ReadAllText(path.FullName) + "\n").SplitIntoLines();
@@ -255,22 +246,27 @@ namespace AutoItInterpreter
             }
         }
 
-        public static void DisplayErrors(FileInfo root, InterpreterState state, InterpreterOptions options)
+        public static void DisplayErrors(InterpreterState state, InterpreterOptions options)
         {
             PrintSeperator();
 
-            foreach (InterpreterError err in state.Errors)
+            string root = state.RootDocument.FullName;
+
+            Console.WriteLine($"{state.Errors.Length} Errors, warnings and notes:\n");
+
+            foreach (IGrouping<ErrorType, InterpreterError> g in state.Errors.GroupBy(err => err.Type).OrderBy(g => g.Key))
             {
-                Console.ForegroundColor = err.Type == ErrorType.Fatal ? ConsoleColor.DarkRed : err.Type == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.Blue;
+                // Console.ForegroundColor = g.Key == ErrorType.Fatal ? ConsoleColor.DarkRed : g.Key == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.Blue;
 
-                if (options.UseMSBuildErrorOutput)
-                {
-                    string tstr = err.Type == ErrorType.Fatal ? "error" : err.Type == ErrorType.Warning ? "warning" : "information";
+                foreach (InterpreterError err in g)
+                    if (options.UseMSBuildErrorOutput)
+                    {
+                        string tstr = err.Type == ErrorType.Fatal ? "error" : err.Type == ErrorType.Warning ? "warning" : "information";
 
-                    Console.WriteLine($"{err.ErrorContext.FilePath?.FullName ?? "<unknown>"}({err.ErrorContext.StartLine},0): {tstr} {err.ErrorNumber}: {err.ErrorMessage} [{root.FullName}]");
-                }
-                else
-                    Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
+                        Console.WriteLine($"{err.ErrorContext.FilePath?.FullName ?? "<unknown>"}({err.ErrorContext.StartLine},0): {tstr} {err.ErrorNumber}: {err.ErrorMessage} [{root}]");
+                    }
+                    else
+                        Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
             }
         }
     }

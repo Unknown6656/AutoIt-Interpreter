@@ -15,7 +15,7 @@ So we call it an **Interpiler** for now...
 
 # AutoIt ~Interpreter~ Interpiler
 
-This AutoIt-~Interpreter~Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+This AutoIt-~Interpreter~ Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
 
 It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
 All credits go to him for the wonderful LR-Parser-Library!!
@@ -33,13 +33,13 @@ Download the `.NET SDK` either using the VisualStudio-Installer or via the follo
 ### Requirements [Linux]
 
 Sometimes, the Linux installation requires you to install the Microsoft signature keys. Refer to [to these instructions on github](https://github.com/dotnet/core/blob/master/release-notes/download-archives/2.0.0-download.md) or [this microsoft-link](https://www.microsoft.com/net/learn/get-started/linux/ubuntu17-10).
-Then install v2.0 or higher as follows:
+Then install v2.1 or higher as follows:
 
 #### APT
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install dotnet-sdk-2.0.0
+$ sudo apt-get install dotnet-sdk-2.1.0
 ```
 
 #### DFN
@@ -47,7 +47,7 @@ $ sudo apt-get install dotnet-sdk-2.0.0
 ```bash
 $ sudo dfn update
 $ sudo dfn install libunwind libicu compat -openssl10
-$ sudo dfn install dotnet-sdk-2.0.0
+$ sudo dfn install dotnet-sdk-2.1.0
 ```
 
 #### YUM
@@ -55,7 +55,7 @@ $ sudo dfn install dotnet-sdk-2.0.0
 ```bash
 $ sudo yum update
 $ sudo yum install libunwind libicu
-$ sudo yum install dotnet-sdk-2.0.0
+$ sudo yum install dotnet-sdk-2.1.0
 ```
 
 ### Build/Run [VisualStudio and VisualStudio Code]
@@ -75,7 +75,7 @@ $ dotnet run
 
 ## Usage
 
-After having built the ~interpreter~interpiler from source (via cmd line or VS), use the following command to execute it as follows:
+After having built the ~interpreter~ interpiler from source (via cmd line or VS), use the following command to execute it as follows:
 ```bash
 # linux/unix/mac:
 $ cd CSAutoItInterpreter/bin

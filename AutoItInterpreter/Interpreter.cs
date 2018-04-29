@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Linq;
 using System.IO;
@@ -10,6 +11,7 @@ using Microsoft.FSharp.Collections;
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
+using AutoItCoreLibrary;
 
 /* ====================== GLOBAL VARIABLE TRANSFORMATION =======================
 
@@ -140,22 +142,45 @@ namespace AutoItInterpreter
 
         public InterpreterState DoMagic()
         {
-            InterpreterState state = InterpretScript(RootContext, Options);
+            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".tmp.au3");
+            InterpreterState state;
+            bool success = false;
 
-            ParseExpressionAST(state, Options);
-
-
-
-
-
-            if (Options.UseVerboseOutput)
+            try
             {
-                DebugPrintUtil.DisplayPartialAST(state, Options);
-                DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
-            }
+                subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
+                state = InterpretScript(RootContext, Options);
+                state.RootDocument = RootContext.SourcePath;
 
-            DebugPrintUtil.DisplayErrors(RootContext.SourcePath, state, Options);
-            DebugPrintUtil.PrintSeperator();
+                ParseExpressionAST(state, Options);
+
+                string cs_code = Generator.Generate(state, Options);
+
+                if (!Options.DontGenerateTempFiles)
+                    File.WriteAllText($"{subdir.FullName}/{state.RootDocument.Name}.cs", cs_code);
+
+
+                // TODO
+
+
+                if (Options.UseVerboseOutput)
+                {
+                    if (!state.Fatal)
+                        DebugPrintUtil.DisplayGeneratedCode(cs_code);
+
+                    DebugPrintUtil.DisplayCodeAndErrors(state);
+                }
+
+                DebugPrintUtil.DisplayErrors(state, Options);
+                DebugPrintUtil.PrintSeperator();
+
+                success = true;
+            }
+            finally
+            {
+                if (!success || Options.DeleteTempFilesAfterSuccess)
+                    subdir.Delete(true);
+            }
 
             return state;
         }
@@ -958,7 +983,10 @@ namespace AutoItInterpreter
                                 if (i.Name == GLOBAL_FUNC_NAME)
                                     state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
 
-                                _currfunc.Statements = proclines().Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
+                                _currfunc.Statements = proclines();
+
+                                if (i.Name != GLOBAL_FUNC_NAME)
+                                    _currfunc.Statements = _currfunc.Statements.Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
 
                                 return _currfunc;
                             }
@@ -1397,7 +1425,7 @@ namespace AutoItInterpreter
 
                                 if (expressions is null)
                                 {
-                                    state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, -1);
+                                    state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, 0);
                                     break; // TODO
                                 }
 
@@ -1703,18 +1731,18 @@ namespace AutoItInterpreter
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
 
-        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount)[] BUILT_IN_FUNCTIONS =
+
+        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount)[] BUILT_IN_FUNCTIONS = new[]
         {
-            ("min", 2, 0),
-            ("max", 2, 0),
-            ("sin", 1, 0),
-            ("cos", 1, 0),
-            ("tan", 1, 0),
             ("eval", 1, 0),
             ("assign", 2, 1),
-            ("isdeclared", 1, 0),
-            ("autoit3", 1, 0),
-        };
+            ("isdeclared", 1, 0)
+        }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
+                 let attr = m.GetCustomAttributes(typeof(BuiltinFunctionAttribute), true)
+                 where attr.Length > 0
+                 let pars = m.GetParameters()
+                 let opars = pars.Where(p => p.IsOptional).ToArray()
+                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length)).ToArray();
 
 
         public static bool IsReservedCall(string name)
@@ -1760,8 +1788,10 @@ namespace AutoItInterpreter
     {
         private protected List<InterpreterError> _errors;
 
+        public bool Fatal => Errors.Any(err => err.Type == ErrorType.Fatal);
         public InterpreterError[] Errors => _errors.ToArray();
         public CompileInfo CompileInfo { private protected set; get; }
+        public FileInfo RootDocument { get; set; }
         public Language Language { get; set; }
         public bool IsIncludeOnce { set; get; }
         public bool RequireAdmin { set; get; }

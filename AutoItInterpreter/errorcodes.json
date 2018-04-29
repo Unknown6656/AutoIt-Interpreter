@@ -30,7 +30,7 @@
             "no_closing_csharp": 1122
         },
         "astproc": {
-            "unknown_entity": 1001,
+            "unknown_entity": 1201,
             "parser_error": 1202,
             "obj_expression_required": 1203,
             "multiple_switch_case_else": 1204,
@@ -44,6 +44,9 @@
             "no_range_as_init": 1212,
             "missing_value": 1213,
             "init_invalid_operator": 1214
+        },
+        "generator": {
+            "cannot_create": 1301
         }
     },
     "warnings": {
