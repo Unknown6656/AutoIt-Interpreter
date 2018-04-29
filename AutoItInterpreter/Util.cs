@@ -263,7 +263,7 @@ namespace AutoItInterpreter
                     {
                         string tstr = err.Type == ErrorType.Fatal ? "error" : err.Type == ErrorType.Warning ? "warning" : "information";
 
-                        Console.WriteLine($"{err.ErrorContext.FilePath?.FullName ?? "<unknown>"}({err.ErrorContext.StartLine},0): {tstr} {err.ErrorNumber}: {err.ErrorMessage} [{root}]");
+                        Console.WriteLine($"{err.ErrorContext.FilePath?.FullName ?? "<unknown>"}({err.ErrorContext.StartLine},0): {tstr} AU{err.ErrorNumber}: {err.ErrorMessage} [{root}]");
                     }
                     else
                         Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");

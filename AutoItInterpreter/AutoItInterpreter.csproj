@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <ApplicationIcon />
@@ -7,7 +6,6 @@
     <StartupObject>AutoItInterpreter.Program</StartupObject>
     <AssemblyName>autoitipt</AssemblyName>
   </PropertyGroup>
-
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
@@ -15,52 +13,46 @@
     <LangVersion>latest</LangVersion>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
-
   <ItemGroup>
     <None Remove="errorcodes.json" />
-    <None Remove="lang\de.json" />
-    <None Remove="lang\en.json" />
+    <None Remove="lang/de.json" />
+    <None Remove="lang/en.json" />
   </ItemGroup>
-
+    <ItemGroup>
+        <EmbeddedResource Include="../bin/autoitcorlib.dll" />
+    </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="errorcodes.json" />
   </ItemGroup>
-
   <ItemGroup>
-    <EmbeddedResource Include="lang\de.json" />
-    <EmbeddedResource Include="lang\en.json" />
+    <EmbeddedResource Include="lang/de.json" />
+    <EmbeddedResource Include="lang/en.json" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\AutoItCoreLibrary\AutoItCoreLibrary.csproj" />
-    <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
-    <ProjectReference Include="..\PigletParser\PigletParser.csproj" />
+    <ProjectReference Include="../AutoItCoreLibrary/AutoItCoreLibrary.csproj" />
+    <ProjectReference Include="../AutoItExpressionParser/AutoItExpressionParser.fsproj" />
+    <ProjectReference Include="../PigletParser/PigletParser.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
+    <Compile Update="Properties/Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-
   <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
+    <EmbeddedResource Update="Properties/Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-
   <ItemGroup>
     <None Update="autoit.bat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -68,19 +60,19 @@
     <None Update="autoit.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="test\header-2.au3">
+    <None Update="test/header-2.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="test\header-1.au3">
+    <None Update="test/header-1.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="test\NPCBrainibot.au3">
+    <None Update="test/NPCBrainibot.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="test\program2.au3">
+    <None Update="test/program2.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="test\program1.au3">
+    <None Update="test/program1.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

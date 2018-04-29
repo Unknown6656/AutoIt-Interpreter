@@ -21,6 +21,7 @@ namespace AutoItInterpreter
             int __inner__()
             {
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
+                    ("o", "output"),
                     ("i", "input"),
                     ("h", "help"),
                     ("?", "help"),
@@ -101,7 +102,6 @@ namespace AutoItInterpreter
                     UseVerboseOutput = Cont("verbose"),
                     UseMSBuildErrorOutput = Cont("msbuild-error-format"),
                     DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
-                    DontGenerateTempFiles = Cont("no-temp"),
                     GenerateCodeEvenWithErrors = Cont("generate-always"),
                     RawCommandLine = Environment.CommandLine,
                 };
@@ -200,7 +200,6 @@ namespace AutoItInterpreter
 | -q                | --quiet               | Displays no output (Returns only the exit code).          |
 | -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild |
 |                   |                       | error string format.                                      |
-|                   | --no-temp             | Doesn't generate temporary code files.                    |
 | -k                | --keep-temp           | Keeps temporary generated code files.                     |
 | -g                | --generate-always     | Generates always temporary code files. (Even if some fatal|
 |                   |                       | errors have occured)                                      |
@@ -217,9 +216,10 @@ namespace AutoItInterpreter
 | If the compiler's return code is positive, it indicates how many fatal compiler errors exist. Zero    |
 | represents a successful operation.                                                                    |
 |                                                                                                       |
-|    Example:                                                                                           |
+|    Examples:                                                                                          |
 |    {ASM_FILE.Name,18} -i=script.au3                                                                   |
 |    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                 |
+|    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms                                          |
 |                                                                                                       |
 +-------------------------------------------------------------------------------------------------------+
 ".TrimStart().PrintC(ConsoleColor.Cyan);
@@ -326,7 +326,6 @@ namespace AutoItInterpreter
         public InterpreterSettings Settings { get; }
         public string RawCommandLine { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }
-        public bool DontGenerateTempFiles { set; get; }
         public bool DeleteTempFilesAfterSuccess { set; get; } = true;
         public bool GenerateCodeEvenWithErrors { set; get; }
         public bool UseVerboseOutput { set; get; }

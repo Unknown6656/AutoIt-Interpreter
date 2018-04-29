@@ -128,6 +128,7 @@ namespace AutoItInterpreter
         };
         public InterpreterContext RootContext { get; }
         private InterpreterOptions Options { get; }
+        public string ProjectName { get; }
 
 
         public Interpreter(string path, InterpreterOptions options)
@@ -138,30 +139,54 @@ namespace AutoItInterpreter
 
             if (RootContext.Content is null)
                 throw new FileNotFoundException(Options.Language["errors.general.file_nopen"], path);
+
+            string projectname = RootContext.SourcePath.Name;
+            string ext = RootContext.SourcePath.Extension;
+
+            if (projectname.EndsWith(ext) && (projectname.Length > ext.Length))
+                projectname = projectname.Remove(projectname.Length - ext.Length);
+
+            ProjectName = projectname.Replace(' ', '_');
         }
 
         public InterpreterState DoMagic()
         {
-            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".tmp.au3");
+            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit3~temp");
             InterpreterState state;
             bool success = false;
 
             try
             {
                 subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
+
                 state = InterpretScript(RootContext, Options);
                 state.RootDocument = RootContext.SourcePath;
 
                 ParseExpressionAST(state, Options);
 
-                string cs_code = Generator.Generate(state, Options);
+                string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
+                int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName);
 
-                if (!Options.DontGenerateTempFiles)
-                    File.WriteAllText($"{subdir.FullName}/{state.RootDocument.Name}.cs", cs_code);
+                if (ret != 0)
+                    state.ReportKnownError("errors.generator.cannot_create_dotnet", new DefinitionContext(null, 0), ret);
+                else
+                {
+                    ApplicationGenerator.EditDotnetProject(state, subdir, ProjectName);
+
+                    File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
+                    File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
+
+                    DebugPrintUtil.PrintSeperator();
+
+                    ret = ApplicationGenerator.BuildDotnetProject(subdir);
+
+                    if (ret != 0)
+                        state.ReportKnownError("errors.generator.build_failed", new DefinitionContext(null, 0), ret);
+
+                    // TODO
 
 
-                // TODO
-
+                }
 
                 if (Options.UseVerboseOutput)
                 {

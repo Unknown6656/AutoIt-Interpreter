@@ -56,7 +56,9 @@
             "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations."
         },
         "generator": {
-            "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured."
+            "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
+            "cannot_create_dotnet": "The engine could not create the .NET project system. Exit code {0} (0x{0:x8})",
+            "build_failed": "The .NET project system build failed. Exit code {0} (0x{0:x8})"
         }
     },
     "warnings": {
