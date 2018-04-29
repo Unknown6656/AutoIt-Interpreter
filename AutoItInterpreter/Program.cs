@@ -25,7 +25,9 @@ namespace AutoItInterpreter
                     ("ll", "list-languages"),
                     ("s", "settings"),
                     ("rs", "reset-settings"),
-                    ("v", "verbose")
+                    ("v", "verbose"),
+                    ("mef", "msbuild-error-format"),
+                    ("msberr", "msbuild-error-format")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -80,10 +82,16 @@ namespace AutoItInterpreter
                 #region DO MAGIC
 
                 Interpreter intp;
+                InterpreterOptions opt = new InterpreterOptions(settings)
+                {
+                    Language = lang,
+                    UseVerboseOutput = Cont("verbose"),
+                    UseMSBuildErrorOutput = Cont("msbuild-error-format")
+                };
 
                 try
                 {
-                    intp = new Interpreter(GetF("input"), lang, settings, Cont("verbose"));
+                    intp = new Interpreter(GetF("input"), opt);
                 }
                 catch
                 {
@@ -95,11 +103,11 @@ namespace AutoItInterpreter
                     return -1;
                 }
 
-                intp.DoMagic();
+                InterpreterState result = intp.DoMagic();
 
                 #endregion
 
-                return 0;
+                return result.Errors.Count(x => x.Type == ErrorType.Fatal);
             }
 
             int ret = __inner__();
@@ -138,53 +146,62 @@ namespace AutoItInterpreter
             return dic;
         }
 
-        private static void PrintUsage() => $@"
-+----------------------------------- C#/F# AutoIt Interpreter ----------------------------------+
-|                     AutoIt Interpreter : Copyright (c) Unknown6656, 2018                      |
-|                  Piglet Parser Library : Copyright (c) Dervall, 2012                          |
-|                                                                                               |
-|    Usage:                                                                                     |
-|    {ASM_FILE.Name,18} <options>                                                               |
-|                                                                                               |
-+-------------------+-------------------+-------------------------------------------------------+
-| OPTION (short)    | OPTION (long)     | Effect                                                |
-+-------------------+-------------------+-------------------------------------------------------+
-| -h, -?            | --help            | Displays this help menu                               |
-| -i=...            | --input=...       | The input .au3 AutoIt Script file          [required] |
-| -s=...            | --settings=...    | The path to the .json settings file                   |
-| -rs               | --reset-settings  | Resets the .json settings file to its defaults        |
-| -l=....           | --lang=...        | Sets the language for the current session using the   |
-|                   |                   | given language code. (Doesn't affect the settings)    |
-| -v                | --verbose         | Displays verbose compilation output (instead of only  |
-|                   |                   | the compiler errors and warnings).                    |
-+-------------------+-------------------+-------------------------------------------------------+
-|                                                                                               |
-| Most options can be used as follows:                                                          |
-|     x                   simple argument                                                       |
-|     -x                  short variant without value                                           |
-|     -x=abc              short variant                                                         |
-|     --xy-z=abc          long variant                                                          |
-|     /xy-z:abc           alternative long variant                                              |
-|                                                                                               |
-+-----------------------------------------------------------------------------------------------+
-|                                                                                               |
-|    Example:                                                                                   |
-|    {ASM_FILE.Name,18} -i=script.au3                                                           |
-|                                                                                               |
-+-----------------------------------------------------------------------------------------------+
-".PrintC(ConsoleColor.Cyan);
+        private static void PrintUsage()
+        {
+            PrintCopyrightHeader(ConsoleColor.Cyan, true);
+
+            $@"
+|                                                                                                       |
+|    Usage:                                                                                             |
+|    {ASM_FILE.Name,18} <options>                                                                       |
+|                                                                                                       |
++-------------------+-----------------------+-----------------------------------------------------------+
+| OPTION (short)    | OPTION (long)         | Effect                                                    |
++-------------------+-----------------------+-----------------------------------------------------------+
+| -h, -?            | --help                | Displays this help menu.                                  |
+| -i=...            | --input=...           | The input .au3 AutoIt Script file.             [required] |
+| -s=...            | --settings=...        | The path to the .json settings file.                      |
+| -rs               | --reset-settings      | Resets the .json settings file to its defaults.           |
+| -l=....           | --lang=...            | Sets the language for the current session using the given |
+|                   |                       | language code. (Doesn't affect the stored settings)       |
+| -ll               | --list-languages      | Displays a list of all available display languages.       |
+| -v                | --verbose             | Displays verbose compilation output (instead of only the  |
+|                   |                       | compiler errors and warnings).                            |
+| -mef, -msberr     | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild |
+|                   |                       | error string format.                                      |
++-------------------+-----------------------+-----------------------------------------------------------+
+|                                                                                                       |
+| Most options can be used as follows:                                                                  |
+|     x                   simple argument                                                               |
+|     -x                  short variant without value                                                   |
+|     -x=abc              short variant                                                                 |
+|     --xy-z=abc          long variant                                                                  |
+|     /xy-z:abc           alternative long variant                                                      |
+|                                                                                                       |
++-------------------------------------------------------------------------------------------------------+
+| If the compiler's return code is positive, it indicates how many fatal compiler errors exist. Zero    |
+| represents a successful operation.                                                                    |
+|                                                                                                       |
+|    Example:                                                                                           |
+|    {ASM_FILE.Name,18} -i=script.au3                                                                   |
+|                                                                                                       |
++-------------------------------------------------------------------------------------------------------+
+".TrimStart().PrintC(ConsoleColor.Cyan);
+        }
+
+        private static void PrintCopyrightHeader(ConsoleColor c, bool open = false) => PrintC($@"
++--------------------------------------- C#/F# AutoIt Interpreter --------------------------------------+
+|                         AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                     |
+|                      Piglet Parser Library : Copyright (c) Dervall, 2012                              |
+{(open ? "" : "+-------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
 
         private static void PrintLanguages()
         {
             string[] lcodes = Language.LanugageCodes;
 
-            $@"
-+----------------------------------- C#/F# AutoIt Interpreter ----------------------------------+
-|                     AutoIt Interpreter : Copyright (c) Unknown6656, 2018                      |
-|                  Piglet Parser Library : Copyright (c) Dervall, 2012                          |
-+-----------------------------------------------------------------------------------------------+
+            PrintCopyrightHeader(ConsoleColor.Cyan);
 
-    Avaialable Languages ({lcodes.Length}):".PrintC(ConsoleColor.Cyan);
+            $"\n    Avaialable Languages ({lcodes.Length}):".PrintC(ConsoleColor.Cyan);
 
             foreach (string code in lcodes)
             {
@@ -266,6 +283,17 @@ namespace AutoItInterpreter
         }
 
         internal static InterpreterSettings FromJSONString(string json) => JsonConvert.DeserializeObject<InterpreterSettings>(json);
+    }
+
+    public sealed class InterpreterOptions
+    {
+        public InterpreterSettings Settings { get; }
+        public bool UseMSBuildErrorOutput { set; get; }
+        public bool UseVerboseOutput { set; get; }
+        public Language Language { set; get; }
+
+
+        public InterpreterOptions(InterpreterSettings settings) => Settings = settings;
     }
 
     public enum IndentationStyle

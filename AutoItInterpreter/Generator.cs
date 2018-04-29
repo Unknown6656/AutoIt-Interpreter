@@ -5,6 +5,7 @@ using System.Text;
 
 using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
+using AutoItCoreLibrary;
 
 namespace AutoItInterpreter
 {
@@ -15,11 +16,12 @@ namespace AutoItInterpreter
     public static class Generator
     {
 #pragma warning disable RCS1197
-        public static string Generate(InterpreterState state, InterpreterSettings settings)
+        public static string Generate(InterpreterState state, InterpreterOptions options)
         {
             const string TYPE = nameof(AutoItVariantType);
             const string FUNC_MODULE = "__functions";
             const string FUNC_PREFIX = "__userfunc_";
+            const string PARAM_PREFIX = "__param_";
             const string MACROS = "__macros";
             const string VARS = "__vars";
 
@@ -35,34 +37,84 @@ namespace AutoItInterpreter
                     return FUNC_MODULE + '.' + func;
             }
             Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, FUNC_PREFIX, funcresv));
-            bool allman = settings.IndentationStyle == IndentationStyle.AllmanStyle;
-
+            string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
+            bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
 
             foreach (string fn in state.ASTFunctions.Keys.Except(glob).OrderByDescending(fn => fn).Concat(glob).Reverse())
             {
-                sb.AppendLine($@"
-    public static {TYPE} {FUNC_PREFIX}{fn}( /* TODO */ )
+                AST_FUNCTION function = state.ASTFunctions[fn];
+                var paramters = function.Parameters.Select(par =>
+                {
+                    bool opt = par is AST_FUNCTION_PARAMETER_OPT;
+
+                    return $"{(par.ByRef ? "ref " : "")}{TYPE}{(opt ? "?" : "")} {PARAM_PREFIX}{par.Name.Name}{(opt ? " = null" : "")}";
+                });
+
+                if (fn == GLOBAL_FUNC_NAME)
+                {
+                    sb.AppendLine($@"
+    public static void Main(string[] argv)
+    {{
+        {TYPE} result = ___globalentrypoint();
+
+        // TODO : do something with the main result ?
+    }}
+
+    public static {TYPE} ___globalentrypoint()
     {{
 ".TrimEnd());
 
-                _print(state.ASTFunctions[fn], 3);
+                    foreach (AST_LOCAL_VARIABLE v in function.ExplicitLocalVariables)
+                        sb.AppendLine($@"        {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e) : TYPE + ".Default")}");
 
-                sb.AppendLine($@"
+                    _print(function, 3);
+
+                    sb.AppendLine($@"
         return {TYPE}.Default;
     }}
 ".TrimEnd());
+                }
+                else
+                {
+                    sb.AppendLine($@"
+    public static {TYPE} {FUNC_PREFIX}{fn}({string.Join(", ", paramters)})
+    {{
+        {TYPE} inner()
+        {{
+".TrimEnd());
+                    foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
+                        sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")});");
+
+                    // TODO ?
+
+                    _print(function, 4);
+
+                    sb.AppendLine($@"
+            return {TYPE}.Default;
+        }}
+        {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
+
+                    foreach (VARIABLE v in function.Parameters.Select(x => x.Name).Concat(function.ExplicitLocalVariables.Select(x => x.Variable)))
+                        sb.AppendLine($@"        {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"")");
+
+                    sb.AppendLine($@"
+        {TYPE} result = inner();
+        {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();
+        return result;
+    }}
+".TrimEnd());
+                }
             }
 
             void _print(AST_STATEMENT e, int indent)
             {
-                string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
                 void println(string s, int i = -1) => sb.Append(new string(' ', 4 * ((i < 1 ? indent : i) - 1))).AppendLine(s);
                 void print(AST_STATEMENT s) => _print(s, indent + 1);
                 void printblock(AST_STATEMENT[] xs, string p = "", string s = "")
                 {
                     xs = xs ?? new AST_STATEMENT[0];
 
-                    if (xs.Length > 1 || (p + s).Length == 0 || !allman)
+                    if (xs.Count(x => !(x is AST_LABEL)) > 1 || (p + s).Length == 0 || !allman)
                     {
                         if (allman)
                         {
@@ -121,12 +173,6 @@ namespace AutoItInterpreter
                     case AST_SCOPE s:
                         println("{");
 
-                        foreach (AST_LOCAL_VARIABLE ls in s.ExplicitLocalVariables)
-                            if (ls.InitExpression is null)
-                                println($"{ls.Variable};", indent + 1);
-                            else
-                                println($"{ls.Variable} = {tstr(ls.InitExpression)};", indent + 1);
-
                         foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
                             print(ls);
 
@@ -155,6 +201,10 @@ namespace AutoItInterpreter
                         return;
                     case AST_INLINE_CSHARP s:
                         println(s.Code);
+
+                        return;
+                    case AST_RETURN_STATEMENT s:
+                        println($"return {tstr(s.Expression)};");
 
                         return;
                     default:

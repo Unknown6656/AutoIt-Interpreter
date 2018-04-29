@@ -201,16 +201,12 @@ namespace AutoItInterpreter.PartialAST
         public override bool IsEmpty => false;
     }
 
-    public class AST_RETURN_STATEMENT
+    public sealed class AST_RETURN_STATEMENT
         : AST_STATEMENT
     {
-        public override bool IsEmpty => false;
-    }
-
-    public sealed class AST_RETURN_VALUE_STATEMENT
-        : AST_RETURN_STATEMENT
-    {
         public EXPRESSION Expression { set; get; }
+
+        public override bool IsEmpty => false;
     }
 
     public sealed class AST_BREAK_STATEMENT

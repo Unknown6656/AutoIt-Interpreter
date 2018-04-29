@@ -90,15 +90,20 @@ namespace AutoItInterpreter
 
     internal static class DebugPrintUtil
     {
-        public static void DisplayPartialAST(InterpreterState state, InterpreterSettings settings)
+        public static void PrintSeperator()
         {
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine(new string('=', 200));
+        }
+
+        public static void DisplayPartialAST(InterpreterState state, InterpreterOptions options)
+        {
+            PrintSeperator();
 
             int lastpadl = 0;
             int linecnt = 0;
 
-            foreach (string line in Generator.Generate(state, settings).SplitIntoLines())
+            foreach (string line in Generator.Generate(state, options).SplitIntoLines())
             {
                 ++linecnt;
 
@@ -145,14 +150,17 @@ namespace AutoItInterpreter
 
         public static void DisplayCodeAndErrors(FileInfo root, InterpreterState state)
         {
-            Console.WriteLine(new string('=', 200));
+            PrintSeperator();
 
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { root }).Distinct(new PathEqualityComparer()))
             {
+                if (path is null)
+                    continue;
+
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"     _ |> {path.FullName}");
 
-                InterpreterError[] localerrors = state.Errors.Where(e => Util.ArePathsEqual(e.ErrorContext.FilePath, path)).ToArray();
+                InterpreterError[] localerrors = state.Errors.Where(e => e.ErrorContext.FilePath is FileInfo fi && Util.ArePathsEqual(fi, path)).ToArray();
                 string[] lines = (File.ReadAllText(path.FullName) + "\n").SplitIntoLines();
                 List<int> vlines = new List<int>();
 
@@ -227,7 +235,7 @@ namespace AutoItInterpreter
 
         public static void DisplayPreState(PreInterpreterState state)
         {
-            Console.WriteLine(new string('=', 200));
+            PrintSeperator();
 
             foreach (string fn in state.Functions.Keys)
             {
@@ -246,6 +254,25 @@ namespace AutoItInterpreter
                 }
             }
         }
+
+        public static void DisplayErrors(FileInfo root, InterpreterState state, InterpreterOptions options)
+        {
+            PrintSeperator();
+
+            foreach (InterpreterError err in state.Errors)
+            {
+                Console.ForegroundColor = err.Type == ErrorType.Fatal ? ConsoleColor.DarkRed : err.Type == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.Blue;
+
+                if (options.UseMSBuildErrorOutput)
+                {
+                    string tstr = err.Type == ErrorType.Fatal ? "error" : err.Type == ErrorType.Warning ? "warning" : "information";
+
+                    Console.WriteLine($"{err.ErrorContext.FilePath?.FullName ?? "<unknown>"}({err.ErrorContext.StartLine},0): {tstr} {err.ErrorNumber}: {err.ErrorMessage} [{root.FullName}]");
+                }
+                else
+                    Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
+            }
+        }
     }
 
     public sealed class PathEqualityComparer
@@ -254,76 +281,5 @@ namespace AutoItInterpreter
         public bool Equals(FileInfo x, FileInfo y) => Util.ArePathsEqual(x, y);
 
         public int GetHashCode(FileInfo obj) => obj is null ? 0 : Path.GetFullPath(obj.FullName).GetHashCode();
-    }
-
-
-
-
-
-    // only used inside the interpreted script
-    internal unsafe struct AutoItVariantType
-    {
-        private readonly string _sdata;
-
-
-        public AutoItVariantType(string s) => _sdata = s ?? "";
-
-        public override string ToString() => _sdata ?? "";
-        public override int GetHashCode() => _sdata.GetHashCode();
-        public override bool Equals(object obj) => obj is AutoItVariantType o ? this == o : false;
-
-        public static AutoItVariantType Not(AutoItVariantType v) => !(bool)v;
-        public static AutoItVariantType Or(AutoItVariantType v1, AutoItVariantType v2) => v1 || v2;
-        public static AutoItVariantType And(AutoItVariantType v1, AutoItVariantType v2) => (bool)v1 && (bool)v2;
-        public static AutoItVariantType Xor(AutoItVariantType v1, AutoItVariantType v2) => (bool)v1 ^ (bool)v2;
-        public static AutoItVariantType Nor(AutoItVariantType v1, AutoItVariantType v2) => Not(Or(v1, v2));
-        public static AutoItVariantType Nand(AutoItVariantType v1, AutoItVariantType v2) => Not(And(v1, v2));
-        public static AutoItVariantType Nxor(AutoItVariantType v1, AutoItVariantType v2) => Not(Xor(v1, v2));
-
-        public static AutoItVariantType BitwiseNot(AutoItVariantType v) => ~(long)v;
-        public static AutoItVariantType BitwiseOr(AutoItVariantType v1, AutoItVariantType v2) => (long)v1 | v2;
-        public static AutoItVariantType BitwiseAnd(AutoItVariantType v1, AutoItVariantType v2) => (long)v1 & (long)v2;
-        public static AutoItVariantType BitwiseXor(AutoItVariantType v1, AutoItVariantType v2) => (long)v1 ^ (long)v2;
-        public static AutoItVariantType BitwiseNand(AutoItVariantType v1, AutoItVariantType v2) => BitwiseNot(BitwiseAnd(v1, v2));
-        public static AutoItVariantType BitwiseNor(AutoItVariantType v1, AutoItVariantType v2) => BitwiseNot(BitwiseOr(v1, v2));
-        public static AutoItVariantType BitwiseNxor(AutoItVariantType v1, AutoItVariantType v2) => BitwiseNot(BitwiseXor(v1, v2));
-        public static AutoItVariantType BitwiseShr(AutoItVariantType v1, AutoItVariantType v2) => v1 >> ((int)(v2 % 64));
-        public static AutoItVariantType BitwiseShl(AutoItVariantType v1, AutoItVariantType v2) => v1 << ((int)(v2 % 64));
-        public static AutoItVariantType BitwiseRor(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShr(v1, v2), BitwiseShl(v1, 64 - v2));
-        public static AutoItVariantType BitwiseRol(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShl(v1, v2), BitwiseShr(v1, 64 - v2));
-
-        public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
-        public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
-
-        public static implicit operator bool(AutoItVariantType v) => string.IsNullOrEmpty(v) ? false : bool.TryParse(v, out bool b) ? true : b;
-        public static implicit operator AutoItVariantType(bool b) => b.ToString();
-        public static implicit operator string(AutoItVariantType v) => v.ToString();
-        public static implicit operator AutoItVariantType(string s) => new AutoItVariantType(s);
-        public static implicit operator decimal(AutoItVariantType v) => decimal.TryParse(v, out decimal d) ? d : (long)v;
-        public static implicit operator AutoItVariantType(decimal d) => d.ToString();
-        public static implicit operator long(AutoItVariantType v) => long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : 0L;
-        public static implicit operator AutoItVariantType(long l) => l.ToString();
-        public static implicit operator void* (AutoItVariantType v) => (void*)(long)v;
-        public static implicit operator AutoItVariantType(void* l) => (long)l;
-        public static implicit operator IntPtr(AutoItVariantType v) => (IntPtr)(void*)v;
-        public static implicit operator AutoItVariantType(IntPtr p) => (void*)p;
-
-        public static AutoItVariantType operator !(AutoItVariantType v) => Not(v);
-        public static AutoItVariantType operator ~(AutoItVariantType v) => BitwiseNot(v);
-        public static AutoItVariantType operator -(AutoItVariantType v) => -(long)v;
-        public static AutoItVariantType operator +(AutoItVariantType v) => v;
-        public static AutoItVariantType operator &(AutoItVariantType v1, AutoItVariantType v2) => v1.ToString() + v2.ToString();
-        public static AutoItVariantType operator +(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 + (decimal)v2;
-        public static AutoItVariantType operator -(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 - (decimal)v2;
-        public static AutoItVariantType operator *(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 * (decimal)v2;
-        public static AutoItVariantType operator /(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 / (decimal)v2;
-        public static AutoItVariantType operator %(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 % (decimal)v2;
-        public static AutoItVariantType operator ^(AutoItVariantType v1, AutoItVariantType v2) => (decimal)Math.Pow((double)(decimal)v1, (double)(decimal)v2);
-        public static bool operator !=(AutoItVariantType v1, AutoItVariantType v2) => !(v1 == v2);
-        public static bool operator ==(AutoItVariantType v1, AutoItVariantType v2) => v1._sdata == v2._sdata;
-        public static bool operator <(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 < (decimal)v2;
-        public static bool operator >(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 > (decimal)v2;
-        public static bool operator <=(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 <= (decimal)v2;
-        public static bool operator >=(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 >= (decimal)v2;
     }
 }

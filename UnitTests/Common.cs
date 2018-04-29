@@ -256,6 +256,12 @@ namespace UnitTests
 
     public abstract class TestCommons
     {
+        private static readonly InterpreterOptions _defoptions = new InterpreterOptions(InterpreterSettings.DefaultSettings)
+        {
+            Language = Language.Languages["en"],
+            UseMSBuildErrorOutput = false,
+            UseVerboseOutput = false
+        };
         private static readonly ExpressionParser _aparser = new ExpressionParser(true, true, false);
         private static readonly ExpressionParser _parser = new ExpressionParser(true, false, false);
         private static readonly DirectoryInfo _testdir;
@@ -289,7 +295,7 @@ namespace UnitTests
                 {
                     SetOut(wr);
 
-                    Interpreter intp = new Interpreter(tmp.FullName, Language.Languages["en"], InterpreterSettings.DefaultSettings, false);
+                    Interpreter intp = new Interpreter(tmp.FullName, _defoptions);
 
                     callback(intp.DoMagic());
                 }

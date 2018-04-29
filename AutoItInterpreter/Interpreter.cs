@@ -124,52 +124,48 @@ namespace AutoItInterpreter
             [Do] = "Until ...",
             [With] = "EndWith",
         };
-        private InterpreterSettings Settings { get; }
         public InterpreterContext RootContext { get; }
-        public bool UseVerboseOutput { get; }
-        internal Language Language { get; }
+        private InterpreterOptions Options { get; }
 
 
-        public Interpreter(string path, Language lang, InterpreterSettings settings, bool verbose)
+        public Interpreter(string path, InterpreterOptions options)
         {
             RootContext = new InterpreterContext(path);
-            Language = lang;
-            Settings = settings;
-            UseVerboseOutput = verbose;
-            Settings.IncludeDirectories = Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
+            Options = options;
+            Options. Settings.IncludeDirectories = Options.Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
 
             if (RootContext.Content is null)
-                throw new FileNotFoundException(lang["errors.general.file_nopen"], path);
+                throw new FileNotFoundException(Options.Language["errors.general.file_nopen"], path);
         }
 
         public InterpreterState DoMagic()
         {
-            InterpreterState state = InterpretScript(RootContext, Settings, Language, UseVerboseOutput);
+            InterpreterState state = InterpretScript(RootContext, Options);
 
-            ParseExpressionAST(state, Settings);
-
-
+            ParseExpressionAST(state, Options);
 
 
 
-            if (UseVerboseOutput)
+
+
+            if (Options.UseVerboseOutput)
             {
-                DebugPrintUtil.DisplayPartialAST(state, Settings);
+                DebugPrintUtil.DisplayPartialAST(state, Options);
                 DebugPrintUtil.DisplayCodeAndErrors(RootContext.SourcePath, state);
             }
-            else
-                foreach (InterpreterError err in state.Errors)
-                    Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
+
+            DebugPrintUtil.DisplayErrors(RootContext.SourcePath, state, Options);
+            DebugPrintUtil.PrintSeperator();
 
             return state;
         }
 
-        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterSettings settings, Language lang, bool verbose)
+        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterOptions options)
         {
             List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
             PreInterpreterState pstate = new PreInterpreterState
             {
-                Language = lang,
+                Language = options.Language,
                 CurrentContext = context,
                 GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1), "")
             };
@@ -190,7 +186,7 @@ namespace AutoItInterpreter
 
                 if (Line.StartsWith('#'))
                 {
-                    string path = ProcessDirective(Line.Substring(1), pstate, settings, err);
+                    string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err);
 
                     try
                     {
@@ -216,7 +212,7 @@ namespace AutoItInterpreter
                 ++locindx;
             }
 
-            if (verbose)
+            if (options.UseVerboseOutput)
                 DebugPrintUtil.DisplayPreState(pstate);
 
             Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate);
@@ -802,13 +798,13 @@ namespace AutoItInterpreter
             return inclpath;
         }
 
-        private static void ParseExpressionAST(InterpreterState state, InterpreterSettings settings)
+        private static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
         {
             List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
-            FunctionparameterParser fpparser = new FunctionparameterParser(settings.UseOptimization);
-            ExpressionParser aexparser = new ExpressionParser(settings.UseOptimization, true, false);
-            ExpressionParser exparser = new ExpressionParser(settings.UseOptimization, false, false);
-            ExpressionParser dexparser = new ExpressionParser(settings.UseOptimization, true, true);
+            FunctionparameterParser fpparser = new FunctionparameterParser(options.Settings.UseOptimization);
+            ExpressionParser aexparser = new ExpressionParser(options.Settings.UseOptimization, true, false);
+            ExpressionParser exparser = new ExpressionParser(options.Settings.UseOptimization, false, false);
+            ExpressionParser dexparser = new ExpressionParser(options.Settings.UseOptimization, true, true);
             AST_FUNCTION _currfunc = null;
 
             foreach (dynamic parser in new dynamic[] { fpparser, aexparser, exparser, dexparser })
@@ -962,7 +958,7 @@ namespace AutoItInterpreter
                                 if (i.Name == GLOBAL_FUNC_NAME)
                                     state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
 
-                                _currfunc.Statements = proclines();
+                                _currfunc.Statements = proclines().Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
 
                                 return _currfunc;
                             }
@@ -1118,9 +1114,9 @@ namespace AutoItInterpreter
                                 if (_currfunc.Name == GLOBAL_FUNC_NAME)
                                     warn("warnings.astproc.global_return");
 
-                                return i.Expression is null ? new AST_RETURN_STATEMENT() : new AST_RETURN_VALUE_STATEMENT
+                                return new AST_RETURN_STATEMENT
                                 {
-                                    Expression = parseexpr(i.Expression, false)
+                                    Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parseexpr(i.Expression, false)
                                 };
                             }
                         case CONTINUECASE _:
@@ -1973,7 +1969,7 @@ namespace AutoItInterpreter
             EndLine = end is int i && i > start ? (int?)(i + 1) : null;
         }
 
-        public override string ToString() => $"[{FilePath.Name}] l. {StartLine}{(EndLine is int i ? $"-{i}" : "")}";
+        public override string ToString() => $"[{FilePath?.Name ?? "<unknown>"}] l. {StartLine}{(EndLine is int i ? $"-{i}" : "")}";
     }
 
     public enum ExecutionLevel

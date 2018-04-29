@@ -63,7 +63,7 @@
             "invalid_local": "A local variable cannot be declared in the global scope. Consider either replacing 'Local' with 'Global' or 'Dim', or removing the scope modifier completely."
         },
         "astproc": {
-            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
+            "expression_result_discarded": "The result of this expression is implicitly discarded. Consider assigning the expression to a local or global variable.",
             "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call."
         },
         "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"

@@ -1,11 +1,9 @@
-Func test()
-   Local $b;
+func test($b)
+   $b = 42
+endfunc
 
-   $b = 1;
-EndFunc
+$b = 9
 
-Local $b = 0;
-
-test()
+test($b)
 
 ConsoleWrite($b & @CRLF);
