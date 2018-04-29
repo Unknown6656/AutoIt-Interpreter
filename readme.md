@@ -13,9 +13,9 @@ It kind of interprets everything and transforms it into C# code, which then gets
 
 So we call it an **Interpiler** for now...
 
-# AutoIt Interpreter
+# AutoIt ~Interpreter~ Interpiler
 
-This AutoIt-Interpreter is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+This AutoIt-~Interpreter~Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
 
 It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
 All credits go to him for the wonderful LR-Parser-Library!!
@@ -75,7 +75,7 @@ $ dotnet run
 
 ## Usage
 
-After having built the interpreter from source (via cmd line or VS), use the following command to execute it as follows:
+After having built the ~interpreter~interpiler from source (via cmd line or VS), use the following command to execute it as follows:
 ```bash
 # linux/unix/mac:
 $ cd CSAutoItInterpreter/bin
