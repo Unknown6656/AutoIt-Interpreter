@@ -50,7 +50,8 @@
             "no_range_as_init": "The initialization expression is invalid, as it is a value range instead of an single-valued expression.",
             "missing_value": "Constant variables must be initialized with a value upon declaration.",
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead.",
-            "variable_exists": "The variable '{0}' has already been declared prior to this statement."
+            "variable_exists": "The variable '{0}' has already been declared prior to this statement.",
+            "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured."
@@ -74,7 +75,8 @@
     "notes": {
         "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
         "empty_block": "This block is either empty or has been optimized away. Consider removing it from the source code.",
-        "uncalled_function": "This function will never be called.",
-        "unsafe_autoit3": "Calling the function 'AutoIt3' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call."
+        "uncalled_function": "The function '{0}' will never be called.",
+        "unsafe_autoit3": "Calling the function 'AutoIt3' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
+        "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics."
     }
 }

@@ -165,7 +165,7 @@ namespace AutoItInterpreter
 
                 if (Options.UseVerboseOutput)
                 {
-                    if (!state.Fatal)
+                    if (!state.Fatal || Options.GenerateCodeEvenWithErrors)
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
 
                     DebugPrintUtil.DisplayCodeAndErrors(state);
@@ -983,7 +983,8 @@ namespace AutoItInterpreter
                                 if (i.Name == GLOBAL_FUNC_NAME)
                                     state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
 
-                                _currfunc.Statements = proclines();
+                                if ((_currfunc.Statements = proclines()).Length == 0)
+                                    note("notes.empty_function", i.Name);
 
                                 if (i.Name != GLOBAL_FUNC_NAME)
                                     _currfunc.Statements = _currfunc.Statements.Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
@@ -1426,6 +1427,7 @@ namespace AutoItInterpreter
                                 if (expressions is null)
                                 {
                                     state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, 0);
+
                                     break; // TODO
                                 }
 
@@ -1484,7 +1486,7 @@ namespace AutoItInterpreter
 
                                     }
                                     else
-                                        ; // TODO : err - invalid declaration expression
+                                        err("errors.astproc.init_invalid_expression");
 
                                     return null;
                                 })
@@ -1576,7 +1578,7 @@ namespace AutoItInterpreter
 
             foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
                 if (uncalled != GLOBAL_FUNC_NAME)
-                    state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context);
+                    state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
         }
 
         private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)

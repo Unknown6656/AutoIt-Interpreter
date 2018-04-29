@@ -11,10 +11,13 @@ namespace AutoItInterpreter
     public static class Program
     {
         public static readonly FileInfo ASM_FILE = new FileInfo(typeof(Program).Assembly.Location);
+        private static readonly MemoryStream ms = new MemoryStream();
+        private static TextWriter @out = null;
 
 
         public static int Main(string[] argv)
         {
+            int ret;
             int __inner__()
             {
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
@@ -22,12 +25,15 @@ namespace AutoItInterpreter
                     ("h", "help"),
                     ("?", "help"),
                     ("l", "lang"),
+                    ("q", "quiet"),
                     ("ll", "list-languages"),
                     ("s", "settings"),
                     ("rs", "reset-settings"),
                     ("v", "verbose"),
                     ("mef", "msbuild-error-format"),
-                    ("msberr", "msbuild-error-format")
+                    ("ms", "msbuild-error-format"),
+                    ("k", "keep-temp"),
+                    ("g", "generate-always")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -47,6 +53,13 @@ namespace AutoItInterpreter
                 }
 
                 #region SETTINGS
+
+                if (Cont("quiet"))
+                {
+                    @out = Console.Out;
+
+                    Console.SetOut(new StreamWriter(ms));
+                }
 
                 string stgpath = GetF("settings", InterpreterSettings.DefaultSettingsPath);
                 InterpreterSettings settings;
@@ -86,7 +99,11 @@ namespace AutoItInterpreter
                 {
                     Language = lang,
                     UseVerboseOutput = Cont("verbose"),
-                    UseMSBuildErrorOutput = Cont("msbuild-error-format")
+                    UseMSBuildErrorOutput = Cont("msbuild-error-format"),
+                    DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
+                    DontGenerateTempFiles = Cont("no-temp"),
+                    GenerateCodeEvenWithErrors = Cont("generate-always"),
+                    RawCommandLine = Environment.CommandLine,
                 };
 
                 try
@@ -110,7 +127,20 @@ namespace AutoItInterpreter
                 return result.Errors.Count(x => x.Type == ErrorType.Fatal);
             }
 
-            int ret = __inner__();
+            try
+            {
+                ret  = __inner__();
+            }
+            finally
+            {
+                if (@out != null)
+                {
+                    Console.Out.Dispose();
+                    Console.SetOut(@out);
+
+                    ms.Dispose();
+                }
+            }
 
             if (Debugger.IsAttached)
             {
@@ -167,8 +197,13 @@ namespace AutoItInterpreter
 | -ll               | --list-languages      | Displays a list of all available display languages.       |
 | -v                | --verbose             | Displays verbose compilation output (instead of only the  |
 |                   |                       | compiler errors and warnings).                            |
-| -mef, -msberr     | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild |
+| -q                | --quiet               | Displays no output (Returns only the exit code).          |
+| -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild |
 |                   |                       | error string format.                                      |
+|                   | --no-temp             | Doesn't generate temporary code files.                    |
+| -k                | --keep-temp           | Keeps temporary generated code files.                     |
+| -g                | --generate-always     | Generates always temporary code files. (Even if some fatal|
+|                   |                       | errors have occured)                                      |
 +-------------------+-----------------------+-----------------------------------------------------------+
 |                                                                                                       |
 | Most options can be used as follows:                                                                  |
@@ -184,6 +219,7 @@ namespace AutoItInterpreter
 |                                                                                                       |
 |    Example:                                                                                           |
 |    {ASM_FILE.Name,18} -i=script.au3                                                                   |
+|    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                 |
 |                                                                                                       |
 +-------------------------------------------------------------------------------------------------------+
 ".TrimStart().PrintC(ConsoleColor.Cyan);
@@ -288,9 +324,11 @@ namespace AutoItInterpreter
     public sealed class InterpreterOptions
     {
         public InterpreterSettings Settings { get; }
+        public string RawCommandLine { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }
         public bool DontGenerateTempFiles { set; get; }
-        public bool DeleteTempFilesAfterSuccess { set; get; }
+        public bool DeleteTempFilesAfterSuccess { set; get; } = true;
+        public bool GenerateCodeEvenWithErrors { set; get; }
         public bool UseVerboseOutput { set; get; }
         public Language Language { set; get; }
 

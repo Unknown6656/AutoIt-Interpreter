@@ -43,10 +43,6 @@ redim $test[2]
 
 
 func testing($a, byref $b, const $c, const byref $d, $e = 0x42, $f = "88")
-    if $a > $b then
-        while $d
-        wend
-    endif
 endfunc
 
 #css

@@ -43,7 +43,8 @@
             "not_enough_args": 1211,
             "no_range_as_init": 1212,
             "missing_value": 1213,
-            "init_invalid_operator": 1214
+            "init_invalid_operator": 1214,
+            "init_invalid_expression": 1215
         },
         "generator": {
             "cannot_create": 1301
@@ -68,6 +69,7 @@
         "optimized_away": 3001,
         "empty_block": 3002,
         "uncalled_function": 3003,
-        "unsafe_autoit3": 3004
+        "unsafe_autoit3": 3004,
+        "empty_function": 3005
     }
 }
