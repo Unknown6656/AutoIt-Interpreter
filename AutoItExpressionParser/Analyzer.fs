@@ -107,36 +107,41 @@ let rec ProcessConstants e =
         match e with
         | BinaryExpression (o, x, y) ->
             match o, x, y with
-            | And, Constant c, e when c = 0m -> num 0m
-            | And, e, Constant c when c = 0m -> num 0m
-            | BitwiseAnd, Constant c, e when c = 0m -> num 0m
-            | BitwiseAnd, e, Constant c when c = 0m -> num 0m
-            | Nand, Constant c, e when c = 0m -> num 1m
-            | Nand, e, Constant c when c = 0m -> num 1m
-            | Nor, Constant c, e when c = 1m -> num 0m
-            | Nor, e, Constant c when c = 1m -> num 0m
+            | And, Constant c, _ when c = 0m -> num 0m
+            | And, _, Constant c when c = 0m -> num 0m
+            | BitwiseAnd, Constant c, _ when c = 0m -> num 0m
+            | BitwiseAnd, _, Constant c when c = 0m -> num 0m
+            | Nand, Constant c, _ when c = 0m -> num 1m
+            | Nand, _, Constant c when c = 0m -> num 1m
+            | Nor, Constant c, _ when c = 1m -> num 0m
+            | Nor, _, Constant c when c = 1m -> num 0m
             | BitwiseOr, Constant c, e when c = 0m -> ProcessConstants e
             | BitwiseOr, e, Constant c when c = 0m -> ProcessConstants e
             | BitwiseXor, Constant c, e when c = 0m -> ProcessConstants e
             | BitwiseXor, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseRotateLeft, Constant c, e when c = 0m -> num 0m
+            | BitwiseRotateLeft, Constant c, _ when c = 0m -> num 0m
             | BitwiseRotateLeft, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseRotateRight, Constant c, e when c = 0m -> num 0m
+            | BitwiseRotateRight, Constant c, _ when c = 0m -> num 0m
             | BitwiseRotateRight, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseShiftLeft, Constant c, e when c = 0m -> num 0m
+            | BitwiseShiftLeft, Constant c, _ when c = 0m -> num 0m
             | BitwiseShiftLeft, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseShiftRight, Constant c, e when c = 0m -> num 0m
+            | BitwiseShiftRight, Constant c, _ when c = 0m -> num 0m
             | BitwiseShiftRight, e, Constant c when c = 0m -> ProcessConstants e
             | Add, Constant c, e when c = 0m -> ProcessConstants e
             | Add, e, Constant c when c = 0m -> ProcessConstants e
             | Subtract, e, Constant c when c = 0m -> ProcessConstants e
-            | Multiply, Constant c, e when c = 0m -> num 0m
-            | Multiply, e, Constant c when c = 0m -> num 0m
+            | Subtract, Constant c, e when c = 0m -> UnaryExpression(Negate, ProcessConstants e)
+            | Multiply, Constant c, _ when c = 0m -> num 0m
+            | Multiply, _, Constant c when c = 0m -> num 0m
             | Multiply, Constant c, e when c = 1m -> ProcessConstants e
             | Multiply, e, Constant c when c = 1m -> ProcessConstants e
+            | Multiply, Constant c, e when c = 2m -> let pc = ProcessConstants e
+                                                     BinaryExpression(Add, pc, pc)
+            | Multiply, e, Constant c when c = 2m -> let pc = ProcessConstants e
+                                                     BinaryExpression(Add, pc, pc)
             | Divide, e, Constant c when c = 1m -> ProcessConstants e
-            | Power, Constant c, e when c = 0m -> num 0m
-            | Power, e, Constant c when c = 0m -> num 1m
+            | Power, Constant c, _ when c = 0m -> num 0m
+            | Power, _, Constant c when c = 0m -> num 1m
             | Power, e, Constant c when c = 1m -> ProcessConstants e
             | _ ->
                 let stat = IsStatic e

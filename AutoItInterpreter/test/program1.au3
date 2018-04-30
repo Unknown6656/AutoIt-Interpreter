@@ -17,9 +17,11 @@ $old = 42
 
 consolewriteline($"\$old = $old")
 
-$old += 88
+$old += 1
 
-for $cnt1 = 0 to 7
+consolewriteline($"eval(\"old\") = " & eval("old"))
+
+for $cnt = 0 to 7
     f2($cnt * 2, $old)
 
     $old = $cnt

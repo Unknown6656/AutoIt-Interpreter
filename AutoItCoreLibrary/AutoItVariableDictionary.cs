@@ -5,8 +5,8 @@ namespace AutoItCoreLibrary
 {
     public sealed class AutoItVariableDictionary
     {
-        private readonly Stack<Dictionary<string, AutoItVariantType>> _locals = new Stack<Dictionary<string, AutoItVariantType>>();
-        private readonly Dictionary<string, AutoItVariantType> _globals = new Dictionary<string, AutoItVariantType>();
+        internal readonly Stack<Dictionary<string, AutoItVariantType>> _locals = new Stack<Dictionary<string, AutoItVariantType>>();
+        internal readonly Dictionary<string, AutoItVariantType> _globals = new Dictionary<string, AutoItVariantType>();
 
 
         public AutoItVariantType this[string name]

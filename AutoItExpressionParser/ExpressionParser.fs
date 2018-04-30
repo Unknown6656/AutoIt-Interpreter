@@ -258,8 +258,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         reduce0 nt_literal t_bin
         
         if x.AllowAssignment then
-            reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignSubtract)
-            reduce1 nt_operator_binary_ass t_operator_assign_sub (fun _ -> AssignAdd)
+            reduce1 nt_operator_binary_ass t_operator_assign_sub (fun _ -> AssignSubtract)
+            reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignAdd)
             reduce1 nt_operator_binary_ass t_operator_assign_mul (fun _ -> AssignMultiply)
             reduce1 nt_operator_binary_ass t_operator_assign_div (fun _ -> AssignDivide)
             reduce1 nt_operator_binary_ass t_operator_assign_mod (fun _ -> AssignModulus)

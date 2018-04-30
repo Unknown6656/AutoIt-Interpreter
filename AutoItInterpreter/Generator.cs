@@ -135,11 +135,11 @@ namespace {NAMESPACE}
             }}
             {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
 
-                    foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
-                        sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")});");
-
                     foreach (VARIABLE v in function.Parameters.Select(x => x.Name).Concat(function.ExplicitLocalVariables.Select(x => x.Variable)))
                         sb.AppendLine($@"            {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
+
+                    foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
+                        sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")});");
 
                     sb.AppendLine($"            {TYPE} result = inner();");
 

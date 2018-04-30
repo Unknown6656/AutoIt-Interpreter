@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+﻿using System.Collections.Generic;
 using System;
 
 namespace AutoItCoreLibrary
@@ -35,6 +35,24 @@ namespace AutoItCoreLibrary
 
         public static var __InvalidFunction__(params var[] _) =>
             throw new InvalidProgramException("The application tried to call an non-existing function ...");
+
+        public static var __Debug__(AutoItVariableDictionary vardic) => __(() =>
+        {
+            Console.WriteLine("globals:");
+
+            foreach (string var in vardic._globals.Keys)
+                Console.WriteLine($"    ${var} = \"{vardic._globals[var]}\"");
+
+            if (vardic._locals.Count > 0)
+            {
+                Dictionary<string, var> topframe = vardic._locals.Peek();
+
+                Console.WriteLine("locals:");
+
+                foreach (string var in topframe.Keys)
+                    Console.WriteLine($"    ${var} = \"{topframe[var]}\"");
+            }
+        });
 
 #pragma warning restore RCS1057
 #pragma warning restore IDE1006
