@@ -353,14 +353,21 @@ using System.Reflection;
         <LangVersion>latest</LangVersion>
         <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
         <OutputPath>bin</OutputPath>
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>{   TODO   }</RuntimeIdentifier>
         <Prefer32Bit>{(!state.CompileInfo.X64).ToString().ToLower()}</Prefer32Bit>
+        <DebugType>None</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+        <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
     </PropertyGroup>
     <ItemGroup>
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">
             <HintPath>{dllpath}</HintPath>
         </Reference>
     </ItemGroup>
+<!--
     <ItemGroup>
         <Compile Update=""{respath}.cs"">
             <DesignTime>True</DesignTime>
@@ -374,6 +381,7 @@ using System.Reflection;
             <LastGenOutput>{respath}.cs</LastGenOutput>
         </EmbeddedResource>
     </ItemGroup>
+-->
     <ItemGroup>
         <EmbeddedResource Include=""{dllpath}""/>
     </ItemGroup>
@@ -382,6 +390,8 @@ using System.Reflection;
     </ItemGroup>
 </Project>
 ".Trim());
+            return;
+            // the following is now obsolete
             File.WriteAllText(respath, $@"
 <?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -451,7 +461,7 @@ using System.Reflection;
                 StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = dir.FullName,
-                    Arguments = "build",
+                    Arguments = "publish --self-contained",
                     FileName = "dotnet",
                 }
             })

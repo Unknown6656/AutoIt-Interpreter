@@ -36,7 +36,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../AutoItCoreLibrary/AutoItCoreLibrary.csproj" />
+      <ProjectReference Include="../AutoItCoreLibrary/AutoItCoreLibrary.csproj" />
     <ProjectReference Include="../AutoItExpressionParser/AutoItExpressionParser.fsproj" />
     <ProjectReference Include="../PigletParser/PigletParser.csproj" />
   </ItemGroup>

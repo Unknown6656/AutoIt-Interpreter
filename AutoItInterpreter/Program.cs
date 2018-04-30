@@ -7,7 +7,6 @@ using System.IO;
 using System;
 
 using Newtonsoft.Json;
-using System.Resources;
 
 namespace AutoItInterpreter
 {
@@ -21,13 +20,6 @@ namespace AutoItInterpreter
 
         public static int Main(string[] argv)
         {
-                
-
-
-
-
-
-
             int ret;
             int __inner__()
             {
