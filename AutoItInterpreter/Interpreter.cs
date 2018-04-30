@@ -204,7 +204,19 @@ namespace AutoItInterpreter
             finally
             {
                 if (!success || Options.DeleteTempFilesAfterSuccess)
+                {
                     subdir.Delete(true);
+                    subdir = subdir.Parent;
+
+                    if (subdir.GetDirectories().Length == 0)
+                        try
+                        {
+                            subdir.Delete(true);
+                        }
+                        catch
+                        {
+                        }
+                }
             }
 
             return state;

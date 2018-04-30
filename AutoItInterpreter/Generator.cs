@@ -75,15 +75,17 @@ namespace AutoItInterpreter
 
             sb.AppendLine($@"
 using {nameof(AutoItCoreLibrary)};
+using System.Reflection;
+using System.Resources;
 using System;
 
 namespace {NAMESPACE}
 {{
     public static class {APPLICATION_MODULE}
     {{
-        private static readonly {TYPE_MAC_RPOVIDER} {MACROS} = new {TYPE_MAC_RPOVIDER}( null /* TODO */ );
-        private static readonly {TYPE_VAR_RPOVIDER} {VARS} = new {TYPE_VAR_RPOVIDER}();
-        private static {TYPE} __discard = {TYPE}.Null;
+        private static {TYPE_MAC_RPOVIDER} {MACROS};
+        private static {TYPE_VAR_RPOVIDER} {VARS};
+        private static {TYPE} {DISCARD};
 ".TrimEnd());
 
             foreach (string fn in state.ASTFunctions.Keys.Except(glob).OrderByDescending(fn => fn).Concat(glob).Reverse())
@@ -101,6 +103,21 @@ namespace {NAMESPACE}
                     sb.AppendLine($@"
         public static void Main(string[] argv)
         {{
+            AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
+            {{
+                string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");
+
+                if (dll.EndsWith(""_resources""))
+                    return null;
+
+                ResourceManager rm = new ResourceManager(""{NAMESPACE}.Properties.Resources"", Assembly.GetExecutingAssembly());
+
+                return Assembly.Load(rm.GetObject(dll) as byte[]);
+            }};
+
+            {MACROS} = new {TYPE_MAC_RPOVIDER}( null /* TODO */ );
+            {VARS} = new {TYPE_VAR_RPOVIDER}();
+            {DISCARD} = {TYPE}.Null;
             {TYPE} result = ___globalentrypoint();
 
             // TODO : do something with the main result ?
@@ -319,7 +336,10 @@ using System.Reflection;
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
 
-            File.WriteAllBytes($"{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll", Resources.autoitcorlib);
+            string dllpath = $"{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll";
+            string respath = $"{dir.FullName}/resources.resx";
+
+            File.WriteAllBytes(dllpath, Resources.autoitcorlib);
             File.WriteAllText($"{dir.FullName}/{name}.csproj", $@"
 <Project Sdk=""Microsoft.NET.Sdk"">
     <PropertyGroup>
@@ -338,14 +358,90 @@ using System.Reflection;
     </PropertyGroup>
     <ItemGroup>
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">
-            <HintPath>{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll</HintPath>
+            <HintPath>{dllpath}</HintPath>
         </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Update=""{respath}.cs"">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>{respath}</DependentUpon>
+        </Compile>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Update=""{respath}"">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>{respath}.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include=""{dllpath}""/>
     </ItemGroup>
     <ItemGroup>
         <Compile Include=""{name}.cs""/>
     </ItemGroup>
 </Project>
-");
+".Trim());
+            File.WriteAllText(respath, $@"
+<?xml version=""1.0"" encoding=""utf-8""?>
+<root>
+  <xsd:schema id=""root"" xmlns="""" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
+    <xsd:import namespace=""http://www.w3.org/XML/1998/namespace""/>
+    <xsd:element name=""root"" msdata:IsDataSet=""true"">
+      <xsd:complexType>
+        <xsd:choice maxOccurs=""unbounded"">
+          <xsd:element name=""metadata"">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0""/>
+              </xsd:sequence>
+              <xsd:attribute name=""name"" use=""required"" type=""xsd:string""/>
+              <xsd:attribute name=""type"" type=""xsd:string""/>
+              <xsd:attribute name=""mimetype"" type=""xsd:string""/>
+              <xsd:attribute ref=""xml:space""/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name=""assembly"">
+            <xsd:complexType>
+              <xsd:attribute name=""alias"" type=""xsd:string""/>
+              <xsd:attribute name=""name"" type=""xsd:string""/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name=""data"">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""1""/>
+                <xsd:element name=""comment"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""2""/>
+              </xsd:sequence>
+              <xsd:attribute name=""name"" type=""xsd:string"" use=""required"" msdata:Ordinal=""1""/>
+              <xsd:attribute name=""type"" type=""xsd:string"" msdata:Ordinal=""3""/>
+              <xsd:attribute name=""mimetype"" type=""xsd:string"" msdata:Ordinal=""4""/>
+              <xsd:attribute ref=""xml:space""/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name=""resheader"">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""1""/>
+              </xsd:sequence>
+              <xsd:attribute name=""name"" type=""xsd:string"" use=""required""/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name=""resmimetype"">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name=""version"">
+    <value>2.0</value>
+  </resheader>
+  <data name=""autoitcorlib"" type=""System.Resources.ResXFileRef, System.Windows.Forms"">
+    <value>{dllpath};System.Byte[], mscorlib</value>
+  </data>
+</root>
+".Trim());
         }
 
         public static int BuildDotnetProject(DirectoryInfo dir)
