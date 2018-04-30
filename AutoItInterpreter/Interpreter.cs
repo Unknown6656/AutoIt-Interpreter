@@ -173,6 +173,10 @@ namespace AutoItInterpreter
                 else
                 {
                     TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
+
+                    if (target.Compatibility == Compatibility.android)
+                        target = new TargetSystem(Compatibility.android, null);
+
                     ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
@@ -181,25 +185,33 @@ namespace AutoItInterpreter
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
 
+                    if (Options.UseVerboseOutput && (!state.Fatal || Options.GenerateCodeEvenWithErrors))
+                        DebugPrintUtil.DisplayGeneratedCode(cs_code);
+
                     DebugPrintUtil.PrintSeperator("ROSLYN COMPILE OUTPUT");
 
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 
                     if (ret != 0)
                         state.ReportKnownError("errors.generator.build_failed", new DefinitionContext(null, 0), ret);
+                    else
+                    {
+                        DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}");
+                        DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName);
 
-                    // TODO
+                        foreach (FileInfo file in bindir.GetFiles("*.json").Concat(bindir.GetFiles("*.pdb")))
+                            file.Delete();
 
+                        if (!targetdir.Exists)
+                            targetdir.Create();
 
+                        foreach (FileInfo file in bindir.EnumerateFiles())
+                            file.CopyTo($"{targetdir.FullName}/{file.Name}", true);
+                    }
                 }
 
                 if (Options.UseVerboseOutput)
-                {
-                    if (!state.Fatal || Options.GenerateCodeEvenWithErrors)
-                        DebugPrintUtil.DisplayGeneratedCode(cs_code);
-
                     DebugPrintUtil.DisplayCodeAndErrors(state);
-                }
 
                 DebugPrintUtil.DisplayErrors(state, Options);
                 DebugPrintUtil.PrintSeperator(null);
@@ -238,6 +250,9 @@ namespace AutoItInterpreter
             };
             int ivalfunc = 0;
             int locindx = 0;
+
+            pstate.CompileInfo.Compatibility = options.Compatibility;
+            pstate.CompileInfo.TargetArchitecture = options.TargetArchitecture;
 
             lines.AddRange(FetchLines(pstate, context, options));
 

@@ -76,4 +76,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="rm -rf &quot;$(TargetDir)*.pdb&quot;&#xD;&#xA;rm -rf &quot;$(TargetDir)*.json&quot;" />
+  </Target>
 </Project>

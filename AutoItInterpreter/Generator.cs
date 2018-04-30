@@ -297,6 +297,19 @@ using System.Reflection;
 #pragma warning restore IDE1006
 #pragma warning restore RCS1197
 
+        public static string GetAssemblyName(InterpreterState state, string projname)
+        {
+            string asmname = state.CompileInfo.FileName?.Trim('.') ?? projname;
+
+            if (asmname.Contains('.'))
+                asmname = asmname.Remove(asmname.IndexOf('.')).Trim();
+
+            if (asmname.Length == 0)
+                asmname = projname;
+
+            return asmname.Replace(' ', '_');
+        }
+
         public static int GenerateDotnetProject(ref DirectoryInfo dir, string name)
         {
             DirectoryInfo ndir = new DirectoryInfo($"{dir.FullName}/{name}");
@@ -343,8 +356,8 @@ using System.Reflection;
             File.WriteAllText($"{dir.FullName}/{name}.csproj", $@"
 <Project Sdk=""Microsoft.NET.Sdk"">
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <AssemblyName>{state.CompileInfo.FileName}</AssemblyName>
+        <OutputType>exe</OutputType>
+        <AssemblyName>{GetAssemblyName(state, name)}</AssemblyName>
         <ApplicationIcon>{state.CompileInfo.IconPath ?? ""}</ApplicationIcon>
         <StartupObject>{NAMESPACE}.{APPLICATION_MODULE}</StartupObject>
         <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -384,7 +397,7 @@ using System.Reflection;
                 StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = dir.FullName,
-                    Arguments = "publish --self-contained",
+                    Arguments = "build",
                     FileName = "dotnet",
                 }
             })

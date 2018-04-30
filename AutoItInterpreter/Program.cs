@@ -12,7 +12,7 @@ namespace AutoItInterpreter
 {
     public static class Program
     {
-        public const string TITLE = "AutoIt 3 Interpreter and Compiler by Unknown6656";
+        public const string TITLE = "AutoIt3 Interpreter and Compiler by Unknown6656";
         public static readonly FileInfo ASM_FILE = new FileInfo(typeof(Program).Assembly.Location);
         private static readonly MemoryStream ms = new MemoryStream();
         private static TextWriter @out;
@@ -115,6 +115,7 @@ namespace AutoItInterpreter
                     GenerateCodeEvenWithErrors = Cont("generate-always"),
                     AllowUnsafeCode = Cont("unsafe"),
                     RawCommandLine = Environment.CommandLine,
+                    TargetDirectory = GetF("output", null),
                 };
 
                 if (Cont("target-system"))
@@ -208,7 +209,7 @@ namespace AutoItInterpreter
             Dictionary<string, string> trans = translator.ToDictionary(x => x.Short, x => x.Long);
             Dictionary<string, List<string>> dic = new Dictionary<string, List<string>>();
 
-            foreach ( string arg in argv)
+            foreach (string arg in argv)
             {
                 string name = "", value = null;
 
@@ -229,7 +230,7 @@ namespace AutoItInterpreter
         }
 
         private static void PrintCopyrightHeader(ConsoleColor c, bool open = false) => PrintC($@"
-+-------------------------------- C#/F# AutoIt 3 Interpreter and Compiler ------------------------------+
++-------------------------------- C#/F# AutoIt3 Interpreter and Compiler -------------------------------+
 |                         AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                     |
 |                      Piglet Parser Library : Copyright (c) Dervall, 2012                              |
 {(open ? "" : "+-------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
@@ -248,7 +249,10 @@ namespace AutoItInterpreter
 +-------------------+-----------------------+-----------------------------------------------------------+
 | -h, -?            | --help                | Displays this help menu.                                  |
 | -i=...            | --input=...           | The input .au3 AutoIt Script file.             [required] |
-| -o=...            | --output=...          | <<<<<<<<<<<<<<<<<<<< TODO >>>>>>>>>>>>>>>>>>>>>>
+| -o=...            | --output=...          | The output directory, to which the application will be    |
+|                   |                       | written. If no output directory is given, the directory   |
+|                   |                       | will be created in the same directory as the input source |
+|                   |                       | file and named accordingly.                               |
 | -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.         |
 | -s=...            | --settings=...        | The path to the .json settings file.                      |
 | -rs               | --reset-settings      | Resets the .json settings file to its defaults.           |
@@ -287,7 +291,7 @@ namespace AutoItInterpreter
 | represents a successful operation.                                                                    |
 |                                                                                                       |
 |    Examples:                                                                                          |
-|    {ASM_FILE.Name,18} -i=script.au3                                                                   |
+|    {ASM_FILE.Name,18} -i=myapp.au3 -t=/bin/myapp/                                                     |
 |    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                 |
 |    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms -t=win10 --unsafe                        |
 |                                                                                                       |
@@ -420,6 +424,7 @@ namespace AutoItInterpreter
                                                          : DirectoryProvider.System == OperatingSystem.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
         public string RawCommandLine { set; get; }
+        public string TargetDirectory { set; get; }
         public bool AllowUnsafeCode { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }
         public bool DeleteTempFilesAfterSuccess { set; get; } = true;
