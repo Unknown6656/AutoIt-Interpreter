@@ -16,7 +16,7 @@ namespace AutoItInterpreter
 {
     using static InterpreterConstants;
     using static ExpressionAST;
-
+    using System.Runtime.InteropServices;
 
     public static class ApplicationGenerator
     {
@@ -331,7 +331,7 @@ using System.Reflection;
             }
         }
 
-        public static void EditDotnetProject(InterpreterState state, DirectoryInfo dir, string name)
+        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, string name)
         {
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
@@ -356,8 +356,8 @@ using System.Reflection;
         <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
         <OutputPath>bin</OutputPath>
         <SelfContained>true</SelfContained>
-        <RuntimeIdentifier>{   TODO   }</RuntimeIdentifier>
-        <Prefer32Bit>{(!state.CompileInfo.X64).ToString().ToLower()}</Prefer32Bit>
+        <RuntimeIdentifier>{target.Identifier}</RuntimeIdentifier>
+        <Prefer32Bit>{(!target.Is64Bit).ToString().ToLower()}</Prefer32Bit>
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
         <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
@@ -367,21 +367,6 @@ using System.Reflection;
             <HintPath>{dllpath}</HintPath>
         </Reference>
     </ItemGroup>
-<!--
-    <ItemGroup>
-        <Compile Update=""{respath}.cs"">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>{respath}</DependentUpon>
-        </Compile>
-    </ItemGroup>
-    <ItemGroup>
-        <EmbeddedResource Update=""{respath}"">
-            <Generator>ResXFileCodeGenerator</Generator>
-            <LastGenOutput>{respath}.cs</LastGenOutput>
-        </EmbeddedResource>
-    </ItemGroup>
--->
     <ItemGroup>
         <EmbeddedResource Include=""{dllpath}""/>
     </ItemGroup>
@@ -389,69 +374,7 @@ using System.Reflection;
         <Compile Include=""{name}.cs""/>
     </ItemGroup>
 </Project>
-".Trim());
-            return;
-            // the following is now obsolete
-            File.WriteAllText(respath, $@"
-<?xml version=""1.0"" encoding=""utf-8""?>
-<root>
-  <xsd:schema id=""root"" xmlns="""" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
-    <xsd:import namespace=""http://www.w3.org/XML/1998/namespace""/>
-    <xsd:element name=""root"" msdata:IsDataSet=""true"">
-      <xsd:complexType>
-        <xsd:choice maxOccurs=""unbounded"">
-          <xsd:element name=""metadata"">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0""/>
-              </xsd:sequence>
-              <xsd:attribute name=""name"" use=""required"" type=""xsd:string""/>
-              <xsd:attribute name=""type"" type=""xsd:string""/>
-              <xsd:attribute name=""mimetype"" type=""xsd:string""/>
-              <xsd:attribute ref=""xml:space""/>
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name=""assembly"">
-            <xsd:complexType>
-              <xsd:attribute name=""alias"" type=""xsd:string""/>
-              <xsd:attribute name=""name"" type=""xsd:string""/>
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name=""data"">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""1""/>
-                <xsd:element name=""comment"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""2""/>
-              </xsd:sequence>
-              <xsd:attribute name=""name"" type=""xsd:string"" use=""required"" msdata:Ordinal=""1""/>
-              <xsd:attribute name=""type"" type=""xsd:string"" msdata:Ordinal=""3""/>
-              <xsd:attribute name=""mimetype"" type=""xsd:string"" msdata:Ordinal=""4""/>
-              <xsd:attribute ref=""xml:space""/>
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name=""resheader"">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name=""value"" type=""xsd:string"" minOccurs=""0"" msdata:Ordinal=""1""/>
-              </xsd:sequence>
-              <xsd:attribute name=""name"" type=""xsd:string"" use=""required""/>
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
-  <resheader name=""resmimetype"">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name=""version"">
-    <value>2.0</value>
-  </resheader>
-  <data name=""autoitcorlib"" type=""System.Resources.ResXFileRef, System.Windows.Forms"">
-    <value>{dllpath};System.Byte[], mscorlib</value>
-  </data>
-</root>
-".Trim());
+");
         }
 
         public static int BuildDotnetProject(DirectoryInfo dir)
@@ -472,5 +395,16 @@ using System.Reflection;
                 return proc.ExitCode;
             }
         }
+    }
+
+    public sealed class TargetSystem
+    {
+        public Compatibility Compatibility { get; }
+        public Architecture? TargetArchitecture { get; }
+        public bool Is64Bit => TargetArchitecture is Architecture a ? a == Architecture.Arm64 || a == Architecture.X64 : false;
+        public string Identifier => Compatibility.ToString().Replace('_', '.') + (TargetArchitecture is null ? "" : '-' + TargetArchitecture.ToString().ToLower());
+
+
+        public TargetSystem(Compatibility comp, Architecture? arch) => (Compatibility, TargetArchitecture) = (comp, arch);
     }
 }

@@ -51,7 +51,8 @@
         "generator": {
             "cannot_create": 1301,
             "cannot_create_dotnet": 1302,
-            "build_failed": 1303
+            "build_failed": 1303,
+            "target_deprecated": 1304
         }
     },
     "warnings": {

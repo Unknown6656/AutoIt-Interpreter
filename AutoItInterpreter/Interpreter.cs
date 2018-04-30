@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -171,7 +172,11 @@ namespace AutoItInterpreter
                     state.ReportKnownError("errors.generator.cannot_create_dotnet", new DefinitionContext(null, 0), ret);
                 else
                 {
-                    ApplicationGenerator.EditDotnetProject(state, subdir, ProjectName);
+                    TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
+                    ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName);
+
+                    if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
+                        state.ReportKnownError("errors.generator.target_deprecated", new DefinitionContext(null, 0), target.Compatibility);
 
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
@@ -758,8 +763,25 @@ namespace AutoItInterpreter
                 ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
                 ["console"] = () => ci.ConsoleMode = bool.Parse(value),
                 ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
-                ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value, true),
-                ["x64"] = () => ci.X64 = bool.Parse(value),
+                ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value.ToLower(), true),
+                ["architecture"] = () => ci.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), value.ToLower(), true),
+                ["x64"] = () => {
+                    bool x64 = bool.Parse(value);
+
+                    switch (ci.TargetArchitecture)
+                    {
+                        case Architecture.X86:
+                        case Architecture.X64:
+                            ci.TargetArchitecture = x64 ? Architecture.X64 : Architecture.X86;
+
+                            return;
+                        case Architecture.Arm:
+                        case Architecture.Arm64:
+                            ci.TargetArchitecture = x64 ? Architecture.Arm64 : Architecture.Arm;
+
+                            return;
+                    }
+                },
                 ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
                 ["comments"] = () => ci.AssemblyComment = value,
                 ["companyname"] = () => ci.AssemblyCompanyName = value,
@@ -1982,11 +2004,11 @@ namespace AutoItInterpreter
         public string IconPath { set; get; }
         public ExecutionLevel ExecLevel { set; get; }
         public Compatibility Compatibility { set; get; }
+        public Architecture TargetArchitecture { set; get; }
         public bool AutoItExecuteAllowed { set; get; }
         public bool ConsoleMode { set; get; }
         public byte Compression { set; get; }
         public bool UPX { set; get; }
-        public bool X64 { set; get; }
         public bool InputBoxRes { set; get; }
         public string AssemblyComment { set; get; }
         public string AssemblyCompanyName { set; get; }
@@ -2065,11 +2087,26 @@ namespace AutoItInterpreter
 
     public enum Compatibility
     {
+        winxp,
         vista,
         win7,
         win8,
         win81,
-        win10
+        win10,
+        win,
+        linux,
+        centos,
+        debian,
+        fedora,
+        gentoo,
+        opensuse,
+        ol,
+        rhel,
+        tizen,
+        ubuntu,
+        linuxmint,
+        osx,
+        android,
     }
 
     public enum ControlBlock

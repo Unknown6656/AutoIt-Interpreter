@@ -42,7 +42,9 @@ namespace AutoItInterpreter
                     ("mef", "msbuild-error-format"),
                     ("ms", "msbuild-error-format"),
                     ("k", "keep-temp"),
-                    ("g", "generate-always")
+                    ("g", "generate-always"),
+                    ("t", "target-system"),
+                    ("a", "architecture")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -114,6 +116,26 @@ namespace AutoItInterpreter
                     AllowUnsafeCode = Cont("unsafe"),
                     RawCommandLine = Environment.CommandLine,
                 };
+
+                if (Cont("target-system"))
+                    try
+                    {
+                        opt.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), GetF("target-system").ToLower(), true);
+                    }
+                    catch
+                    {
+                        throw new ArgumentException($"The argument '{GetF("target-system")}' is not a valid target system.");
+                    }
+
+                if (Cont("architecture"))
+                    try
+                    {
+                        opt.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), GetF("architecture").ToLower(), true);
+                    }
+                    catch
+                    {
+                        throw new ArgumentException($"The argument '{GetF("architecture")}' is not a valid architecture.");
+                    }
 
                 try
                 {
@@ -241,6 +263,16 @@ namespace AutoItInterpreter
 | -k                | --keep-temp           | Keeps temporary generated code files.                     |
 | -g                | --generate-always     | Generates always temporary code files. (Even if some fatal|
 |                   |                       | errors have occured)                                      |
+| -t=...            | --target-system=...   | Compiles the application against the given target system. |
+|                   |                       | Possible values are:                                      |
+|                   |                       |   win7, win8, win81, win10, win, linux, osx, android, ol, |
+|                   |                       |   centos, debian, fedora, gentoo, opensuse, rhel, tizen,  |
+|                   |                       |   ubuntu, linuxmint                                       |
+|                   |                       | The default value for this system is '{new InterpreterOptions(null).Compatibility,5}'.             |
+| -a=...            | --architecture=...    | Compiles the application against the given target archi-  |
+|                   |                       | tecture. Possible values are:                             |
+|                   |                       |   x86, x64, arm86, arm64                                  |
+|                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.             |
 +-------------------+-----------------------+-----------------------------------------------------------+
 |                                                                                                       |
 | Most options can be used as follows:                                                                  |
@@ -257,8 +289,11 @@ namespace AutoItInterpreter
 |    Examples:                                                                                          |
 |    {ASM_FILE.Name,18} -i=script.au3                                                                   |
 |    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                 |
-|    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms --unsafe                                 |
+|    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms -t=win10 --unsafe                        |
 |                                                                                                       |
+| When compiling against an different runtime environment/system/architecture from the current one, be  |
+| aware that the compiler might require the target runtime also to be installed, e.g. the Debian distr. |
+| of the .NET SDK should be installed on a Windows host, if the target machine also runs on Debian.     |
 +-------------------------------------------------------------------------------------------------------+
 ".TrimStart().PrintC(ConsoleColor.Cyan);
         }
@@ -381,6 +416,9 @@ namespace AutoItInterpreter
     public sealed class InterpreterOptions
     {
         public InterpreterSettings Settings { get; }
+        public Compatibility Compatibility { set; get; } = DirectoryProvider.System == OperatingSystem.Windows ? Compatibility.win
+                                                         : DirectoryProvider.System == OperatingSystem.Linux ? Compatibility.linux : Compatibility.osx;
+        public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
         public string RawCommandLine { set; get; }
         public bool AllowUnsafeCode { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }
