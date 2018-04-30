@@ -151,7 +151,7 @@ namespace AutoItInterpreter
 
         public InterpreterState DoMagic()
         {
-            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit3~temp");
+            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit3-compiler");
             InterpreterState state;
             bool success = false;
 

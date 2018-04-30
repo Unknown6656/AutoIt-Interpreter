@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.IO;
@@ -12,7 +13,7 @@ namespace AutoItInterpreter
     {
         public static readonly FileInfo ASM_FILE = new FileInfo(typeof(Program).Assembly.Location);
         private static readonly MemoryStream ms = new MemoryStream();
-        private static TextWriter @out = null;
+        private static TextWriter @out;
 
 
         public static int Main(string[] argv)
@@ -20,6 +21,8 @@ namespace AutoItInterpreter
             int ret;
             int __inner__()
             {
+                Directory.SetCurrentDirectory(ASM_FILE.Directory.FullName);
+
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
                     ("o", "output"),
                     ("i", "input"),
@@ -263,9 +266,34 @@ namespace AutoItInterpreter
         public static void OK(this string msg) => msg.PrintC(ConsoleColor.Green);
     }
 
+    public static class DirectoryProvider
+    {
+        public static DirectoryInfo SettingsFolder { get; }
+        public static OperatingSystem System { get; }
+
+
+        static DirectoryProvider()
+        {
+            foreach (var os in new[] {
+                (OSPlatform.OSX, OperatingSystem.MacOS),
+                (OSPlatform.Linux, OperatingSystem.Linux),
+                (OSPlatform.Windows, OperatingSystem.Windows),
+            })
+                if (RuntimeInformation.IsOSPlatform(os.Item1))
+                {
+                    System = os.Item2;
+
+                    break;
+                }
+
+            SettingsFolder = new DirectoryInfo(System == OperatingSystem.Windows ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) : "~");
+            SettingsFolder = SettingsFolder.CreateSubdirectory(".autoit3");
+        }
+    }
+
     public sealed class InterpreterSettings
     {
-        public static string DefaultSettingsPath => "./settings.json";
+        public static string DefaultSettingsPath => $"{DirectoryProvider.SettingsFolder.FullName}/settings.json";
 
         public static InterpreterSettings DefaultSettings => new InterpreterSettings
         {
@@ -340,5 +368,12 @@ namespace AutoItInterpreter
     {
         AllmanStyle,
         Shit
+    }
+
+    public enum OperatingSystem
+    {
+        Windows,
+        Linux,
+        MacOS
     }
 }

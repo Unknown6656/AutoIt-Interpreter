@@ -67,7 +67,7 @@ namespace AutoItInterpreter
                 }
                 catch
                 {
-                    return nameof(AutoItFunctions.__InvalidFunction__);
+                    return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
                 }
             }));
             string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
@@ -282,7 +282,14 @@ using System.Reflection;
             DirectoryInfo ndir = new DirectoryInfo($"{dir.FullName}/{name}");
 
             if (ndir.Exists)
-                ndir.Delete(true);
+                try
+                {
+                    ndir.Delete(true);
+                }
+                catch
+                {
+                    ndir.Delete(true); // second time's a chrarm?
+                }
 
             using (Process proc = new Process
             {
@@ -309,7 +316,7 @@ using System.Reflection;
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
 
-            File.WriteAllBytes($"{dir.FullName}/{nameof(Resources.autoitcorlib)}.dll", Resources.autoitcorlib);
+            File.WriteAllBytes($"{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll", Resources.autoitcorlib);
             File.WriteAllText($"{dir.FullName}/{name}.csproj", $@"
 <Project Sdk=""Microsoft.NET.Sdk"">
     <PropertyGroup>
@@ -328,7 +335,7 @@ using System.Reflection;
     </PropertyGroup>
     <ItemGroup>
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">
-            <HintPath>{dir.FullName}/{nameof(Resources.autoitcorlib)}.dll</HintPath>
+            <HintPath>{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
