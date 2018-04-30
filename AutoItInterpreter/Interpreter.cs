@@ -150,7 +150,7 @@ namespace AutoItInterpreter
             ProjectName = projectname.Replace(' ', '_');
         }
 
-        public InterpreterState DoMagic()
+        public InterpreterState Compile()
         {
             DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit3-compiler");
             InterpreterState state;
@@ -167,9 +167,10 @@ namespace AutoItInterpreter
 
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName);
+                void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null, 0), args);
 
                 if (ret != 0)
-                    state.ReportKnownError("errors.generator.cannot_create_dotnet", new DefinitionContext(null, 0), ret);
+                    cmperr("errors.generator.cannot_create_dotnet", ret);
                 else
                 {
                     TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
@@ -180,7 +181,7 @@ namespace AutoItInterpreter
                     ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
-                        state.ReportKnownError("errors.generator.target_deprecated", new DefinitionContext(null, 0), target.Compatibility);
+                        cmperr("errors.generator.target_deprecated", target.Compatibility);
 
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
@@ -193,17 +194,25 @@ namespace AutoItInterpreter
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 
                     if (ret != 0)
-                        state.ReportKnownError("errors.generator.build_failed", new DefinitionContext(null, 0), ret);
+                        cmperr("errors.generator.build_failed", ret);
                     else
                     {
                         DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}");
-                        DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName);
+                        DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName + "-compiled");
 
                         foreach (FileInfo file in bindir.GetFiles("*.json").Concat(bindir.GetFiles("*.pdb")))
                             file.Delete();
 
                         if (!targetdir.Exists)
                             targetdir.Create();
+
+                        FileInfo[] ovf = targetdir.EnumerateFiles().ToArray();
+
+                        if ((ovf.Length > 0) && (!Options.CleanTargetFolder))
+                            state.ReportKnownWarning("warnings.generator.failed_clean_output", new DefinitionContext(null, 0), targetdir.FullName);
+                        else
+                            foreach (FileInfo file in ovf)
+                                file.Delete();
 
                         foreach (FileInfo file in bindir.EnumerateFiles())
                             file.CopyTo($"{targetdir.FullName}/{file.Name}", true);

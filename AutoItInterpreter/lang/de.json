@@ -75,6 +75,9 @@
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
             "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call."
         },
+        "generator": {
+            "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given."
+        },
         "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
     },
     "notes": {

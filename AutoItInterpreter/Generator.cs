@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -16,7 +17,6 @@ namespace AutoItInterpreter
 {
     using static InterpreterConstants;
     using static ExpressionAST;
-    using System.Runtime.InteropServices;
 
     public static class ApplicationGenerator
     {

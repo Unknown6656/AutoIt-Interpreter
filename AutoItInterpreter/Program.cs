@@ -30,6 +30,7 @@ namespace AutoItInterpreter
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
                     ("o", "output"),
                     ("u", "unsafe"),
+                    ("c", "clean-output"),
                     ("i", "input"),
                     ("h", "help"),
                     ("?", "help"),
@@ -116,6 +117,7 @@ namespace AutoItInterpreter
                     AllowUnsafeCode = Cont("unsafe"),
                     RawCommandLine = Environment.CommandLine,
                     TargetDirectory = GetF("output", null),
+                    CleanTargetFolder = Cont("clean-output")
                 };
 
                 if (Cont("target-system"))
@@ -152,7 +154,7 @@ namespace AutoItInterpreter
                     return -1;
                 }
 
-                InterpreterState result = intp.DoMagic();
+                InterpreterState result = intp.Compile();
 
                 #endregion
 
@@ -230,75 +232,75 @@ namespace AutoItInterpreter
         }
 
         private static void PrintCopyrightHeader(ConsoleColor c, bool open = false) => PrintC($@"
-+-------------------------------- C#/F# AutoIt3 Interpreter and Compiler -------------------------------+
-|                         AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                     |
-|                      Piglet Parser Library : Copyright (c) Dervall, 2012                              |
-{(open ? "" : "+-------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
++------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
+|                             AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                         |
+|                          Piglet Parser Library : Copyright (c) Dervall, 2012                                  |
+{(open ? "" : "+---------------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
 
         private static void PrintUsage()
         {
             PrintCopyrightHeader(ConsoleColor.Cyan, true);
 
             $@"
-|                                                                                                       |
-|    Usage:                                                                                             |
-|    {ASM_FILE.Name,18} <options>                                                                       |
-|                                                                                                       |
-+-------------------+-----------------------+-----------------------------------------------------------+
-| OPTION (short)    | OPTION (long)         | Effect                                                    |
-+-------------------+-----------------------+-----------------------------------------------------------+
-| -h, -?            | --help                | Displays this help menu.                                  |
-| -i=...            | --input=...           | The input .au3 AutoIt Script file.             [required] |
-| -o=...            | --output=...          | The output directory, to which the application will be    |
-|                   |                       | written. If no output directory is given, the directory   |
-|                   |                       | will be created in the same directory as the input source |
-|                   |                       | file and named accordingly.                               |
-| -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.         |
-| -s=...            | --settings=...        | The path to the .json settings file.                      |
-| -rs               | --reset-settings      | Resets the .json settings file to its defaults.           |
-| -l=....           | --lang=...            | Sets the language for the current session using the given |
-|                   |                       | language code. (Doesn't affect the stored settings)       |
-| -ll               | --list-languages      | Displays a list of all available display languages.       |
-| -v                | --verbose             | Displays verbose compilation output (instead of only the  |
-|                   |                       | compiler errors and warnings).                            |
-| -q                | --quiet               | Displays no output (Returns only the exit code).          |
-| -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild |
-|                   |                       | error string format.                                      |
-| -k                | --keep-temp           | Keeps temporary generated code files.                     |
-| -g                | --generate-always     | Generates always temporary code files. (Even if some fatal|
-|                   |                       | errors have occured)                                      |
-| -t=...            | --target-system=...   | Compiles the application against the given target system. |
-|                   |                       | Possible values are:                                      |
-|                   |                       |   win7, win8, win81, win10, win, linux, osx, android, ol, |
-|                   |                       |   centos, debian, fedora, gentoo, opensuse, rhel, tizen,  |
-|                   |                       |   ubuntu, linuxmint                                       |
-|                   |                       | The default value for this system is '{new InterpreterOptions(null).Compatibility,5}'.             |
-| -a=...            | --architecture=...    | Compiles the application against the given target archi-  |
-|                   |                       | tecture. Possible values are:                             |
-|                   |                       |   x86, x64, arm86, arm64                                  |
-|                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.             |
-+-------------------+-----------------------+-----------------------------------------------------------+
-|                                                                                                       |
-| Most options can be used as follows:                                                                  |
-|     x                   simple argument                                                               |
-|     -x                  short variant without value                                                   |
-|     -x=abc              short variant                                                                 |
-|     --xy-z=abc          long variant                                                                  |
-|     /xy-z:abc           alternative long variant                                                      |
-|                                                                                                       |
-+-------------------------------------------------------------------------------------------------------+
-| If the compiler's return code is positive, it indicates how many fatal compiler errors exist. Zero    |
-| represents a successful operation.                                                                    |
-|                                                                                                       |
-|    Examples:                                                                                          |
-|    {ASM_FILE.Name,18} -i=myapp.au3 -t=/bin/myapp/                                                     |
-|    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                 |
-|    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms -t=win10 --unsafe                        |
-|                                                                                                       |
-| When compiling against an different runtime environment/system/architecture from the current one, be  |
-| aware that the compiler might require the target runtime also to be installed, e.g. the Debian distr. |
-| of the .NET SDK should be installed on a Windows host, if the target machine also runs on Debian.     |
-+-------------------------------------------------------------------------------------------------------+
+|                                                                                                               |
+|    Usage:                                                                                                     |
+|    {ASM_FILE.Name,18} <options>                                                                               |
+|                                                                                                               |
++-------------------+-----------------------+-------------------------------------------------------------------+
+| OPTION (short)    | OPTION (long)         | Effect                                                            |
++-------------------+-----------------------+-------------------------------------------------------------------+
+| -h, -?            | --help                | Displays this help menu.                                          |
+| -i=...            | --input=...           | The input .au3 AutoIt Script file.                     [required] |
+| -o=...            | --output=...          | The output directory, to which the application will be written.   |
+|                   |                       | If no output directory is given, the directory will be created in |
+|                   |                       | the same directory as the input source file and named accordingly.|
+| -c                | --clean-output        | Cleans-up the output folder before compiling        [recommended] |
+| -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.                 |
+| -s=...            | --settings=...        | The path to the .json settings file.                              |
+| -rs               | --reset-settings      | Resets the .json settings file to its defaults.                   |
+| -l=....           | --lang=...            | Sets the language for the current session using the given language|
+|                   |                       | code. (Doesn't affect the stored settings)                        |
+| -ll               | --list-languages      | Displays a list of all available display languages.               |
+| -v                | --verbose             | Displays verbose compilation output (instead of only the compiler |
+|                   |                       | errors and warnings).                                             |
+| -q                | --quiet               | Displays no output (Returns only the exit code).                  |
+| -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild error   |
+|                   |                       | string format.                                                    |
+| -k                | --keep-temp           | Keeps temporary generated code files.                             |
+| -g                | --generate-always     | Generates always temporary code files. (Even if some fatal errors |
+|                   |                       | have occured)                                                     |
+| -t=...            | --target-system=...   | Compiles the application against the given target system.         |
+|                   |                       | Possible values are:                                              |
+|                   |                       |   win7, win8, win81, win10, win, linux, osx, android, centos, ol, |
+|                   |                       |   debian, fedora, gentoo, opensuse, rhel, tizen, ubuntu, linuxmint|
+|                   |                       | The default value for this system is '{new InterpreterOptions(null).Compatibility,5}'.                     |
+| -a=...            | --architecture=...    | Compiles the application against the given target architecture.   |
+|                   |                       | Possible values are:                                              |
+|                   |                       |   x86, x64, arm86, arm64                                          |
+|                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.                     |
++-------------------+-----------------------+-------------------------------------------------------------------+
+|                                                                                                               |
+| Most options can be used as follows:                                                                          |
+|     x                   simple argument                                                                       |
+|     -x                  short variant without value                                                           |
+|     -x=abc              short variant                                                                         |
+|     --xy-z=abc          long variant                                                                          |
+|     /xy-z:abc           alternative long variant                                                              |
+|                                                                                                               |
++---------------------------------------------------------------------------------------------------------------+
+| If the compiler's return code is positive, it indicates how many fatal compiler errors exist. Zero represents |
+| a successful operation.                                                                                       |
+|                                                                                                               |
+|    Examples:                                                                                                  |
+|    {ASM_FILE.Name,18} -i=myapp.au3 -t=/bin/myapp/ -c                                                          |
+|    {ASM_FILE.Name,18} -i=/usr/scripts/my_script1.au3 -v -k -l=de -mef                                         |
+|    {ASM_FILE.Name,18} -i=//192.168.0.2/C:/file.au3 -g -k -ms -t=win10 --unsafe                                |
+|                                                                                                               |
+| When compiling against an different runtime environment/system/architecture from the current one, be aware    |
+| that the compiler might require the target runtime also to be installed, e.g. the Debian distribution of the  |
+| .NET SDK should be installed on a Windows host, if the target machine also runs on Debian. This is usually    |
+| handled automatically by the ROSLYN compiler engine, however, sometimes a manual installation is required.    |
++---------------------------------------------------------------------------------------------------------------+
 ".TrimStart().PrintC(ConsoleColor.Cyan);
         }
 
@@ -423,6 +425,7 @@ namespace AutoItInterpreter
         public Compatibility Compatibility { set; get; } = DirectoryProvider.System == OperatingSystem.Windows ? Compatibility.win
                                                          : DirectoryProvider.System == OperatingSystem.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
+        public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }
         public string TargetDirectory { set; get; }
         public bool AllowUnsafeCode { set; get; }

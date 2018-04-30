@@ -1,10 +1,3 @@
-# **THIS PROJECT IS ~FAR~** a few steps away **FROM FINISHED !!**
-
-_The following image describes more or less the current state..._
-
-![Exception Screenshot](wtf.png)
-
-
 # Preamble
 
 One should call this project _"An AutoIt **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
@@ -16,6 +9,18 @@ So we call it an **Interpiler** for now...
 # AutoIt ~Interpreter~ Interpiler
 
 This AutoIt-~Interpreter~ Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+<br/>
+The ~Interpreter~ Interpiler can currently target the following systems (can be specified via the flag `-t`):
+ - `win7`, `win8`, `win81`, `win10`
+ - `centos`, `fedora`, `gentoo`, `opensuse`
+ - `debian`, `ubuntu`, `linuxmint`
+ - `osx`
+ - `android` _comming soon_
+ - and much more...
+
+The following architectures are currently supported:
+ - `x86`, `x64` (The 32Bit- and 64Bit-compatible systems from Intel or AMD)
+ - `arm`, `arm64` (ARM's equivalent)
 
 It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
 All credits go to him for the wonderful LR-Parser-Library!!
@@ -77,13 +82,17 @@ $ dotnet run
 
 After having built the ~interpreter~ interpiler from source (via cmd line or VS), use the following command to execute it as follows:
 ```bash
-# linux/unix/mac:
+### linux/unix/mac:
 $ cd CSAutoItInterpreter/bin
 $ chmod a+rwx autoit.sh
 $ ./autoit.sh <arguments>
 
-# windows
+### windows
 $ cd CSAutoItInterpreter/bin
 $ autoit <arguments> 
 ```
+
+# HISTORIC IMAGE
+
+![Exception Screenshot](wtf.png)
 

@@ -68,6 +68,9 @@
             "expression_result_discarded": 2101,
             "global_return": 2102
         },
+        "generator": {
+            "failed_clean_output": 2201
+        },
         "not_impl": 9999
     },
     "notes": {

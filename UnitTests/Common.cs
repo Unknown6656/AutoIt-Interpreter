@@ -297,7 +297,7 @@ namespace UnitTests
 
                     Interpreter intp = new Interpreter(tmp.FullName, _defoptions);
 
-                    callback(intp.DoMagic());
+                    callback(intp.Compile());
                 }
                 finally
                 {
