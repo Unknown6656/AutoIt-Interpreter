@@ -82,15 +82,25 @@ namespace AutoItInterpreter
 
     internal static class DebugPrintUtil
     {
-        public static void PrintSeperator()
+        public static void PrintSeperator(string title, int width = 200)
         {
             Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine(new string('=', 200));
+
+            if (title is null)
+                Console.WriteLine(new string('=', 200));
+            else
+            {
+                title = title.Trim();
+
+                int w = (width - title.Length - 1) / 2;
+
+                Console.WriteLine($"{new string('=', w)} {title} {new string('=', w)}");
+            }
         }
 
         public static void DisplayGeneratedCode(string code)
         {
-            PrintSeperator();
+            PrintSeperator("GENERATED CODE");
 
             int lastpadl = 0;
             int linecnt = 0;
@@ -141,7 +151,7 @@ namespace AutoItInterpreter
 
         public static void DisplayCodeAndErrors(InterpreterState state)
         {
-            PrintSeperator();
+            PrintSeperator("ERRORS, WARNINGS AND NOTES");
 
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer()))
             {
@@ -226,7 +236,7 @@ namespace AutoItInterpreter
 
         public static void DisplayPreState(PreInterpreterState state)
         {
-            PrintSeperator();
+            PrintSeperator("PRE-INTERPRETER STATE");
 
             foreach (string fn in state.Functions.Keys)
             {
@@ -248,7 +258,7 @@ namespace AutoItInterpreter
 
         public static void DisplayErrors(InterpreterState state, InterpreterOptions options)
         {
-            PrintSeperator();
+            PrintSeperator("ERROR LIST");
 
             string root = state.RootDocument.FullName;
 

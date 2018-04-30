@@ -222,7 +222,10 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_GOTO_STATEMENT s:
-                        println($"goto {s.Label.Name.Replace("<>", "")};");
+                        if (s.Label is null)
+                            println($"// called `goto´ on non-existent label ----> possible error?");
+                        else
+                            println($"goto {s.Label.Name.Replace("<>", "")};");
 
                         return;
                     case AST_ASSIGNMENT_EXPRESSION_STATEMENT s:

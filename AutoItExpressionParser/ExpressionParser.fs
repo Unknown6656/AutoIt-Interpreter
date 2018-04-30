@@ -122,7 +122,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                             let r = Regex(@"(?<!\\)(?:\\{2})*(\$(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
                                                                                                             let l = cslist<EXPRESSION>()
                                                                                                             let proc (s : string) =
-                                                                                                                s.Replace(@"\""", "\"")
+                                                                                                                s.Replace(@"\\", "\ufffe")
+                                                                                                                 .Replace(@"\""", "\"")
                                                                                                                  .Replace(@"\r", "\r")
                                                                                                                  .Replace(@"\n", "\n")
                                                                                                                  .Replace(@"\t", "\t")
@@ -130,7 +131,7 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                                  .Replace(@"\b", "\b")
                                                                                                                  .Replace(@"\0", "\0")
                                                                                                                  .Replace(@"\$", "$")
-                                                                                                                 .Replace(@"\\", "\\")
+                                                                                                                 .Replace(@"\ufffe", "\\")
                                                                                                                 |> String
                                                                                                                 |> Literal
                                                                                                             while r.IsMatch s do

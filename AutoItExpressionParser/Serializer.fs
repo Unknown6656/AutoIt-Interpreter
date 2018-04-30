@@ -99,12 +99,12 @@ type Serializer (settings : SerializerSettings) =
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->
-                            match o with
-                            | Identity -> ""
-                            | Negate -> "-"
-                            | Not -> "!"
-                            | BitwiseNot -> "~"
-                            + printexpr e
+                            "(" + match o with
+                                  | Identity -> ""
+                                  | Negate -> "-"
+                                  | Not -> "!"
+                                  | BitwiseNot -> "~"
+                                  + printexpr e + ")"
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
@@ -122,6 +122,6 @@ type Serializer (settings : SerializerSettings) =
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
-            | Literal _ -> sprintf "(%s)%s" (x.Settings.VariableTypeName) (str e)
+            | Literal _ -> sprintf "(%s)(%s)" (x.Settings.VariableTypeName) (str e)
             | _ -> str e
         printexpr e

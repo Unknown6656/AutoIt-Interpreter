@@ -33,7 +33,8 @@
             "misplaced_exitloop": "The 'ExitLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
             "misplaced_continueloop": "The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
             "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely.",
-            "no_closing_csharp": "The currently open C# block has not been closed properly using an '#cse'-directive."
+            "no_closing_csharp": "The currently open C# block has not been closed properly using an '#cse'-directive.",
+            "csharp_requires_unsafe": "A inline-C# code block can only be used when compiled with the compiler-flag '--unsafe' or '-u'."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",
@@ -51,7 +52,8 @@
             "missing_value": "Constant variables must be initialized with a value upon declaration.",
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead.",
             "variable_exists": "The variable '{0}' has already been declared prior to this statement.",
-            "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations."
+            "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
+            "requires_unsafe": "This statement or expression can only be used when compiled with the compiler-flag '--unsafe' or '-u'."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",

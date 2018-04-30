@@ -27,7 +27,8 @@
             "misplaced_exitloop": 1118,
             "misplaced_continueloop": 1119,
             "invalid_global": 1121,
-            "no_closing_csharp": 1122
+            "no_closing_csharp": 1122,
+            "csharp_requires_unsafe": 1123
         },
         "astproc": {
             "unknown_entity": 1201,
@@ -44,7 +45,8 @@
             "no_range_as_init": 1212,
             "missing_value": 1213,
             "init_invalid_operator": 1214,
-            "init_invalid_expression": 1215
+            "init_invalid_expression": 1215,
+            "requires_unsafe": 1216
         },
         "generator": {
             "cannot_create": 1301,

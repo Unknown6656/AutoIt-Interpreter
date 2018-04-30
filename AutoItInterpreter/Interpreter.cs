@@ -176,7 +176,7 @@ namespace AutoItInterpreter
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
 
-                    DebugPrintUtil.PrintSeperator();
+                    DebugPrintUtil.PrintSeperator("ROSLYN COMPILE OUTPUT");
 
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 
@@ -197,7 +197,7 @@ namespace AutoItInterpreter
                 }
 
                 DebugPrintUtil.DisplayErrors(state, Options);
-                DebugPrintUtil.PrintSeperator();
+                DebugPrintUtil.PrintSeperator(null);
 
                 success = true;
             }
@@ -222,7 +222,7 @@ namespace AutoItInterpreter
             int ivalfunc = 0;
             int locindx = 0;
 
-            lines.AddRange(FetchLines(pstate, context));
+            lines.AddRange(FetchLines(pstate, context, options));
 
             while (locindx < lines.Count)
             {
@@ -246,7 +246,7 @@ namespace AutoItInterpreter
                             using (StreamReader rd = inclpath.OpenText())
                             {
                                 lines.RemoveAt(locindx);
-                                lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath)));
+                                lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
 
                                 --locindx;
                             }
@@ -265,7 +265,7 @@ namespace AutoItInterpreter
             if (options.UseVerboseOutput)
                 DebugPrintUtil.DisplayPreState(pstate);
 
-            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate);
+            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate, options);
             InterpreterState state = InterpreterState.Convert(pstate);
 
             foreach (string func in ppfuncdir.Keys)
@@ -274,7 +274,7 @@ namespace AutoItInterpreter
             return state;
         }
 
-        private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context)
+        private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context, InterpreterOptions options)
         {
             string raw = context.Content;
 
@@ -291,6 +291,9 @@ namespace AutoItInterpreter
 
                 if (tline.Match(@"^\#(csharp\-start|css)(\b|\s+|$)", out _))
                 {
+                    if (!options.AllowUnsafeCode)
+                        state.ReportKnownError("errors.preproc.csharp_requires_unsafe", new DefinitionContext(context.SourcePath, lcnt));
+
                     ls |= LineState.CSharp;
                     csharp.start = lcnt;
                 }
@@ -377,7 +380,7 @@ namespace AutoItInterpreter
                     select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
         }
 
-        private static Dictionary<string, FUNCTION> PreProcessFunctions(PreInterpreterState state)
+        private static Dictionary<string, FUNCTION> PreProcessFunctions(PreInterpreterState state, InterpreterOptions options)
         {
             Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
             {
@@ -482,7 +485,11 @@ namespace AutoItInterpreter
 
                     line.Match(new(string, ControlBlock[], Action<Match>)[]
                     {
-                        ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m => Append(new CS_INLINE(curr, Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))))),
+                        ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m =>
+                        {
+                            if (options.AllowUnsafeCode)
+                                Append(new CS_INLINE(curr, Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))));
+                        }),
                         (@"^(?<optelse>else)?if\s+(?<cond>.+)\s+then$", new[] { Switch, Select }, m =>
                         {
                             string cond = m.Get("cond").Trim();
@@ -865,7 +872,7 @@ namespace AutoItInterpreter
                                                                                                                             select (kvp.Key, kvp.Value)))
                 state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
 
-            ValidateFunctionCalls(state, funccalls.ToArray());
+            ValidateFunctionCalls(state, options, funccalls.ToArray());
 
             dynamic process(Entity e)
             {
@@ -1225,6 +1232,42 @@ namespace AutoItInterpreter
                                         stop
                                     ))
                                 };
+                                EXPRESSION upcond = EXPRESSION.NewBinaryExpression(
+                                    OPERATOR_BINARY.LowerEqual,
+                                    EXPRESSION.NewVariableExpression(
+                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                    ),
+                                    stop
+                                );
+                                EXPRESSION downcond = EXPRESSION.NewBinaryExpression(
+                                    OPERATOR_BINARY.GreaterEqual,
+                                    EXPRESSION.NewVariableExpression(
+                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                    ),
+                                    stop
+                                );
+                                EXPRESSION cond = Analyzer.EvaluatesToFalse(upvar.InitExpression) ? downcond
+                                                : Analyzer.EvaluatesToTrue(upvar.InitExpression) ? upcond
+                                                : EXPRESSION.NewBinaryExpression(
+                                                    OPERATOR_BINARY.Or,
+                                                    EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.And,
+                                                        EXPRESSION.NewVariableExpression(
+                                                            VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                        ),
+                                                        upcond
+                                                    ),
+                                                    EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.And,
+                                                        EXPRESSION.NewUnaryExpression(
+                                                            OPERATOR_UNARY.Not,
+                                                            EXPRESSION.NewVariableExpression(
+                                                                VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                            )
+                                                        ),
+                                                        downcond
+                                                    )
+                                                );
                                 AST_SCOPE scope = new AST_SCOPE
                                 {
                                     Context = defctx,
@@ -1245,58 +1288,26 @@ namespace AutoItInterpreter
                                                         If = new AST_CONDITIONAL_BLOCK
                                                         {
                                                             Context = defctx,
-                                                            Condition = EXPRESSION.NewBinaryExpression(
-                                                                OPERATOR_BINARY.Or,
-                                                                EXPRESSION.NewBinaryExpression(
-                                                                    OPERATOR_BINARY.And,
-                                                                    EXPRESSION.NewVariableExpression(
-                                                                        VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
-                                                                    ),
-                                                                    EXPRESSION.NewBinaryExpression(
-                                                                        OPERATOR_BINARY.Greater,
-                                                                        EXPRESSION.NewVariableExpression(
-                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                                                        ),
-                                                                        stop
-                                                                    )
-                                                                ),EXPRESSION.NewBinaryExpression(
-                                                                    OPERATOR_BINARY.And,
-                                                                    EXPRESSION.NewUnaryExpression(
-                                                                        OPERATOR_UNARY.Not,
-                                                                        EXPRESSION.NewVariableExpression(
-                                                                            VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
-                                                                        )
-                                                                    ),
-                                                                    EXPRESSION.NewBinaryExpression(
-                                                                        OPERATOR_BINARY.Lower,
-                                                                        EXPRESSION.NewVariableExpression(
-                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                                                        ),
-                                                                        start
-                                                                    )
-                                                                )
-                                                            ),
-                                                            Statements = new AST_STATEMENT[]
+                                                            Condition = cond,
+                                                            Statements = proclines().Concat(new AST_STATEMENT[]
                                                             {
-                                                                new AST_BREAK_STATEMENT { Level = 1 }
-                                                            }
+                                                                new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                                {
+                                                                    Context = defctx,
+                                                                    Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                                        OPERATOR_ASSIGNMENT.AssignAdd,
+                                                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                                        EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
+                                                                    )
+                                                                }
+                                                            }).ToArray()
+                                                        },
+                                                        OptionalElse = new AST_STATEMENT[]
+                                                        {
+                                                            new AST_BREAK_STATEMENT { Level = 1 }
                                                         }
-                                                    },
-                                                }
-                                                .Concat(proclines())
-                                                .Concat(new AST_STATEMENT[]
-                                                {
-                                                    new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                                    {
-                                                        Context = defctx,
-                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                            OPERATOR_ASSIGNMENT.AssignAdd,
-                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
-                                                            EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
-                                                        )
                                                     }
-                                                })
-                                                .ToArray()
+                                                }
                                             }
                                         }
                                     }
@@ -1557,7 +1568,7 @@ namespace AutoItInterpreter
             }
         }
 
-        private static void ValidateFunctionCalls(InterpreterState state, params (DefinitionContext, string, EXPRESSION[])[] calls)
+        private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, params (DefinitionContext, string, EXPRESSION[])[] calls)
         {
             foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
             {
@@ -1566,6 +1577,9 @@ namespace AutoItInterpreter
                 if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
                 {
                     (_, int mac, int oac) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+
+                    if (func == "autoit3" && !options.AllowUnsafeCode)
+                        err("errors.astproc.requires_unsafe");
 
                     if (args.Length < mac)
                         err("errors.astproc.not_enough_args", func, mac, args.Length);
