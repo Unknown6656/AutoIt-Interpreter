@@ -192,8 +192,10 @@ The target system specified with `-t` can be one of the following values:
 
 The target system can be alternativly also specified inside the AutoIt-code using the line:
 ```autoit
-#pragma compile(Compatibility, win7) ; target Windows7
-#pragma compile(Compatibility, debian) ; target Debian
+; target Windows7
+#pragma compile(Compatibility, win7)
+; target Debian
+#pragma compile(Compatibility, debian)
 ```
 You can refer to [this link](https://www.autoitscript.com/autoit3/docs/keywords/pragma.htm) concerning the `#pragma`-directive.<br/>
 If no value has been given for the target system (either in code or via command line), the current system will be selected as target system.
@@ -213,6 +215,9 @@ When compiling against an different runtime environment/system/architecture from
 the Debian distribution of the `.NET Core SDK` should be installed on a Windows host, if the target machine also runs on Debian.
 This is usually handled automatically by the Roslyn compiler engine, however, sometimes a manual installation is required.
 
+## Command line examples:
+
+TODO
 
 # Running compiled applications
 
