@@ -256,7 +256,7 @@ namespace AutoItInterpreter
 | -o=...            | --output=...          | The output directory, to which the application will be written.   |
 |                   |                       | If no output directory is given, the directory will be created in |
 |                   |                       | the same directory as the input source file and named accordingly.|
-| -c                | --clean-output        | Cleans-up the output folder before compiling        [recommended] |
+| -c                | --clean-output        | Cleans-up the output folder before compiling.       [recommended] |
 | -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.                 |
 | -s=...            | --settings=...        | The path to the .json settings file.                              |
 | -rs               | --reset-settings      | Resets the .json settings file to its defaults.                   |
@@ -278,7 +278,7 @@ namespace AutoItInterpreter
 |                   |                       | The default value for this system is '{new InterpreterOptions(null).Compatibility,5}'.                     |
 | -a=...            | --architecture=...    | Compiles the application against the given target architecture.   |
 |                   |                       | Possible values are:                                              |
-|                   |                       |   x86, x64, arm86, arm64                                          |
+|                   |                       |   x86, x64, arm, arm64                                            |
 |                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.                     |
 +-------------------+-----------------------+-------------------------------------------------------------------+
 |                                                                                                               |

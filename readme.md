@@ -10,9 +10,9 @@ So we call it an **Interpiler** for now...
 _or 'Autoit--' - depends on how you see it_
 
 
-This project is an ~Interpreter~ Interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing todo with C++).
+This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing todo with C++).
 
-The most important aspect of this project is the fact, that the ~Interpreter~ Interpiler is not only platform-independent, but can also cross-platform and cross-architecture target applications.
+The most important aspect of this project is the fact, that the interpiler is not only platform-independent, but can also cross-platform and cross-architecture target applications.
 
 The ~Interpreter~ Interpiler can currently target the following systems (can be specified via the flag `-t`):
  - `win7`, `win8`, `win81`, `win10`
@@ -26,7 +26,7 @@ The following architectures are currently supported:
  - `x86`, `x64` (The 32Bit- and 64Bit-compatible systems from Intel or AMD)
  - `arm`, `arm64` (ARM's equivalent)
 
-For more information about the usage of the ~Interpreter~ Interpiler, refer to the [usage page](doc/usage.md).
+For more information about the usage of the interpiler, refer to the [usage page](doc/usage.md).
 
 ## Links
 
@@ -37,7 +37,7 @@ For more information about the usage of the ~Interpreter~ Interpiler, refer to t
 
 ## Credits
 
-This AutoIt-~Interpreter~ Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+This AutoIt++-interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
 
 A big shoutout to the [Roslyn Dev Team](https://github.com/dotnet/roslyn) and the [.NET Core Dev Team](https://github.com/dotnet/coreclr) for making such an awesome framework possible!
 
