@@ -1650,9 +1650,9 @@ namespace AutoItInterpreter
                         err("errors.astproc.too_many_args", f, mac + oac);
                 }
                 else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
-                    err("errors.astproc.func_not_declared", f);
+                    err("errors.astproc.func_not_declared", func);
                 else if (IsReservedCall(func.ToLower()))
-                    err("errors.astproc.reserved_call", f);
+                    err("errors.astproc.reserved_call", func);
                 else
                 {
                     AST_FUNCTION f = state.ASTFunctions[func.ToLower()];

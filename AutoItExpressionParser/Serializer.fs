@@ -44,6 +44,7 @@ type Serializer (settings : SerializerSettings) =
             let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
             let f = match o with
                     | StringConcat -> !!"&"
+                    | StringIndex -> "%s[%s]"
                     | EqualCaseSensitive -> !!"=="
                     | EqualCaseInsensitive
                     | Unequal -> !!"!="
@@ -99,12 +100,13 @@ type Serializer (settings : SerializerSettings) =
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->
-                            "(" + match o with
-                                  | Identity -> ""
-                                  | Negate -> "-"
-                                  | Not -> "!"
-                                  | BitwiseNot -> "~"
-                                  + printexpr e + ")"
+                            let (!/) s = sprintf "(%s%s)" s (printexpr e)
+                            match o with
+                            | Identity -> !/""
+                            | Negate -> !/"-"
+                            | Not -> !/"!"
+                            | BitwiseNot -> !/"~"
+                            | Length -> printexpr e + ".Length"
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->

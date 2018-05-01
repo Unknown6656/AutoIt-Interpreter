@@ -22,9 +22,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItCoreLibrary", "AutoIt
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118B-4538-8A35-36D3A68DB14C}"
 	ProjectSection(SolutionItems) = preProject
-		language.md = language.md
-		syntax.md = syntax.md
-		usage.md = usage.md
+		doc\language.md = doc\language.md
+		doc\syntax.md = doc\syntax.md
+		doc\usage.md = doc\usage.md
+		doc\wtf.png = doc\wtf.png
 	EndProjectSection
 EndProject
 Global

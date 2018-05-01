@@ -1,15 +1,19 @@
 # Preamble
 
-One should call this project _"An AutoIt **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
+One should call this project _"AutoIt++ **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
 
 It kind of interprets everything and transforms it into C# code, which then gets compiled. My component is therefore an interpreter - but the whole project is technically a compiler.
 
 So we call it an **Interpiler** for now...
 
-# AutoIt ~Interpreter~ Interpiler
+# The AutoIt++ ~Interpreter~ Interpiler
+_or 'Autoit--' - depends on how you see it_
 
-This AutoIt-~Interpreter~ Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
-<br/>
+
+This project is an ~Interpreter~ Interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing todo with C++).
+
+The most important aspect of this project is the fact, that the ~Interpreter~ Interpiler is not only platform-independent, but can also cross-platform and cross-architecture target applications.
+
 The ~Interpreter~ Interpiler can currently target the following systems (can be specified via the flag `-t`):
  - `win7`, `win8`, `win81`, `win10`
  - `centos`, `fedora`, `gentoo`, `opensuse`
@@ -17,82 +21,30 @@ The ~Interpreter~ Interpiler can currently target the following systems (can be 
  - `osx`
  - `android` _comming soon_
  - and much more...
-
+ 
 The following architectures are currently supported:
  - `x86`, `x64` (The 32Bit- and 64Bit-compatible systems from Intel or AMD)
  - `arm`, `arm64` (ARM's equivalent)
 
+For more information about the usage of the ~Interpreter~ Interpiler, refer to the [usage page](doc/usage.md).
+
+## Links
+
+ - [Usage page](doc/usage.md)
+ - [AutoIt++ Language reference](doc/language.md)
+ - [AutoIt++ Syntax reference](doc/syntax.md)
+ - [Official AutoIt3 documentation](https://www.autoitscript.com/autoit3/docs/)
+
+## Credits
+
+This AutoIt-~Interpreter~ Interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
+
+A big shoutout to the [Roslyn Dev Team](https://github.com/dotnet/roslyn) and the [.NET Core Dev Team](https://github.com/dotnet/coreclr) for making such an awesome framework possible!
+
 It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
 All credits go to him for the wonderful LR-Parser-Library!!
 
-## Build
+-----------------
 
-The project requires the v2.1-installation of the `.NET SDK`.
-
-### Requirements [Windows and MacOS]
-
-Download the `.NET SDK` either using the VisualStudio-Installer or via the following links:
- - [Windows](https://www.microsoft.com/net/learn/get-started/windows)
- - [MacOS](https://www.microsoft.com/net/learn/get-started/macos)
-
-### Requirements [Linux]
-
-Sometimes, the Linux installation requires you to install the Microsoft signature keys. Refer to [to these instructions on github](https://github.com/dotnet/core/blob/master/release-notes/download-archives/2.0.0-download.md) or [this microsoft-link](https://www.microsoft.com/net/learn/get-started/linux/ubuntu17-10).
-Then install v2.1 or higher as follows:
-
-#### APT
-
-```bash
-$ sudo apt-get update
-$ sudo apt-get install dotnet-sdk-2.1.0
-```
-
-#### DFN
-
-```bash
-$ sudo dfn update
-$ sudo dfn install libunwind libicu compat -openssl10
-$ sudo dfn install dotnet-sdk-2.1.0
-```
-
-#### YUM
-
-```bash
-$ sudo yum update
-$ sudo yum install libunwind libicu
-$ sudo yum install dotnet-sdk-2.1.0
-```
-
-### Build/Run [VisualStudio and VisualStudio Code]
-
-1) Open the Project by opening the `.sln`-file in VisualStudio
-2) Press `Run` or <kbd>F5</kbd>
-3) ???
-4) Profit!
-
-### Build/Run [Command line]
-
-Then switch to your downloaded copy of this repository and execute:
-```bash
-$ cd <location of the downloaded repository folder>
-$ dotnet run
-```
-
-## Usage
-
-After having built the ~interpreter~ interpiler from source (via cmd line or VS), use the following command to execute it as follows:
-```bash
-### linux/unix/mac:
-$ cd CSAutoItInterpreter/bin
-$ chmod a+rwx autoit.sh
-$ ./autoit.sh <arguments>
-
-### windows
-$ cd CSAutoItInterpreter/bin
-$ autoit <arguments> 
-```
-
-# HISTORIC IMAGE
-
-![Exception Screenshot](wtf.png)
-
+_An historic image:_<br/>
+![Exception Screenshot](doc/wtf.png)

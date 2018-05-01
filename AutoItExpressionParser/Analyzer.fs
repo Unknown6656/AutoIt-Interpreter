@@ -38,23 +38,25 @@ let rec IsStatic =
 
 let rec ProcessConstants e =
     let rec procconst e =
-        let bit (f : int64 -> int64) = int64 >> f >> decimal >> Some
+        let bit (f : int64 -> int64) = int64 >> f >> decimal
         match e with
         | Literal l ->
             match l with
-            | Number d -> Some d
+            | Number d -> d
             | False
             | Null
-            | Default -> Some 0m
-            | True -> Some 1m
-            | String s -> Some (AutoItVariantType s)
+            | Default -> 0m
+            | True -> 1m
+            | String s -> (AutoItVariantType s).ToDecimal()
+            |> Some
         | UnaryExpression (o, Constant x) ->
             match o with
-            | Identity -> Some x
-            | Negate -> Some -x
-            | Not -> Some (if x = 0m then 1m else 0m)
+            | Identity -> x
+            | Negate -> -x
+            | Not -> if x = 0m then 1m else 0m
             | BitwiseNot -> bit (~~~) x
-            | Length -> Some (decimal (AutoItVariantType x).Length)
+            | Length -> decimal (AutoItVariantType.FromDecimal x).Length
+            |> Some
         | BinaryExpression (o, Constant x, Constant y) ->
             let (!%) r = Some (if r x y then 1m else 0m)
             let (!@) r = Some (if r (x <> 0m) (y <> 0m) then 1m else 0m)

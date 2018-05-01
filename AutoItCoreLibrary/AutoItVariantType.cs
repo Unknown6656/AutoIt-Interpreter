@@ -54,7 +54,18 @@ namespace AutoItCoreLibrary
         public override bool Equals(object obj) => obj is AutoItVariantType o ? this == o : false;
         public AutoItVariantType ToLower() => ToString().ToLower();
         public AutoItVariantType ToUpper() => ToString().ToUpper();
+        public bool ToBool() => this;
+        public decimal ToDecimal() => this;
+        public long ToLong() => (long)this;
+        public void* ToVoidPtr() => this;
+        public IntPtr ToIntPtr() => this;
 
+        public static AutoItVariantType FromString(string v) => v;
+        public static AutoItVariantType FromBool(bool v) => v;
+        public static AutoItVariantType FromDecimal(decimal v) => v;
+        public static AutoItVariantType FromLong(long v) => v;
+        public static AutoItVariantType FromIntPtr(IntPtr v) => v;
+        public static AutoItVariantType FromVoidPtr(void* v) => v;
         public static AutoItVariantType Not(AutoItVariantType v) => !(bool)v;
         public static AutoItVariantType Or(AutoItVariantType v1, AutoItVariantType v2) => v1 || v2;
         public static AutoItVariantType And(AutoItVariantType v1, AutoItVariantType v2) => (bool)v1 && (bool)v2;
@@ -62,7 +73,6 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType Nor(AutoItVariantType v1, AutoItVariantType v2) => Not(Or(v1, v2));
         public static AutoItVariantType Nand(AutoItVariantType v1, AutoItVariantType v2) => Not(And(v1, v2));
         public static AutoItVariantType Nxor(AutoItVariantType v1, AutoItVariantType v2) => Not(Xor(v1, v2));
-
         public static AutoItVariantType BitwiseNot(AutoItVariantType v) => ~(long)v;
         public static AutoItVariantType BitwiseOr(AutoItVariantType v1, AutoItVariantType v2) => (long)v1 | (long)v2;
         public static AutoItVariantType BitwiseAnd(AutoItVariantType v1, AutoItVariantType v2) => (long)v1 & (long)v2;
@@ -74,7 +84,6 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType BitwiseShl(AutoItVariantType v1, AutoItVariantType v2) => v2 < 0 ? BitwiseShr(v1, -v2) : (long)v1 << ((int)Math.Min(v2, 64));
         public static AutoItVariantType BitwiseRor(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShr(v1, v2), BitwiseShl(v1, 64 - v2));
         public static AutoItVariantType BitwiseRol(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShl(v1, v2), BitwiseShr(v1, 64 - v2));
-
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
 
@@ -90,7 +99,6 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(void* l) => (long)l;
         public static implicit operator IntPtr(AutoItVariantType v) => (IntPtr)(void*)v;
         public static implicit operator AutoItVariantType(IntPtr p) => (void*)p;
-
         public static bool operator true(AutoItVariantType v) => v == true;
         public static bool operator false(AutoItVariantType v) => v == false;
         public static AutoItVariantType operator !(AutoItVariantType v) => Not(v);
