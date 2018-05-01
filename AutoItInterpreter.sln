@@ -18,7 +18,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{2FE2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "UnitTests\UnitTests.csproj", "{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoItCoreLibrary", "AutoItCoreLibrary\AutoItCoreLibrary.csproj", "{383B9D39-32AC-4E73-848F-1ECB88E44F6B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItCoreLibrary", "AutoItCoreLibrary\AutoItCoreLibrary.csproj", "{383B9D39-32AC-4E73-848F-1ECB88E44F6B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118B-4538-8A35-36D3A68DB14C}"
+	ProjectSection(SolutionItems) = preProject
+		language.md = language.md
+		syntax.md = syntax.md
+		usage.md = usage.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
