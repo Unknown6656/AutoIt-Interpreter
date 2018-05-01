@@ -8,6 +8,8 @@ using System;
 
 using Newtonsoft.Json;
 
+using AutoItCoreLibrary;
+
 namespace AutoItInterpreter
 {
     public static class Program
@@ -339,24 +341,11 @@ namespace AutoItInterpreter
     public static class DirectoryProvider
     {
         public static DirectoryInfo SettingsFolder { get; }
-        public static OperatingSystem System { get; }
 
 
         static DirectoryProvider()
         {
-            foreach (var os in new[] {
-                (OSPlatform.OSX, OperatingSystem.MacOS),
-                (OSPlatform.Linux, OperatingSystem.Linux),
-                (OSPlatform.Windows, OperatingSystem.Windows),
-            })
-                if (RuntimeInformation.IsOSPlatform(os.Item1))
-                {
-                    System = os.Item2;
-
-                    break;
-                }
-
-            SettingsFolder = new DirectoryInfo(System == OperatingSystem.Windows ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) : "~");
+            SettingsFolder = new DirectoryInfo(Win32.System == OS.Windows ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) : "~");
             SettingsFolder = SettingsFolder.CreateSubdirectory(".autoit3");
         }
     }
@@ -422,8 +411,8 @@ namespace AutoItInterpreter
     public sealed class InterpreterOptions
     {
         public InterpreterSettings Settings { get; }
-        public Compatibility Compatibility { set; get; } = DirectoryProvider.System == OperatingSystem.Windows ? Compatibility.win
-                                                         : DirectoryProvider.System == OperatingSystem.Linux ? Compatibility.linux : Compatibility.osx;
+        public Compatibility Compatibility { set; get; } = Win32.System == OS.Windows ? Compatibility.win
+                                                         : Win32.System == OS.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
         public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }
@@ -444,12 +433,5 @@ namespace AutoItInterpreter
     {
         AllmanStyle,
         Shit
-    }
-
-    public enum OperatingSystem
-    {
-        Windows,
-        Linux,
-        MacOS
     }
 }

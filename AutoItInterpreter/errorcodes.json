@@ -46,7 +46,8 @@
             "missing_value": 1213,
             "init_invalid_operator": 1214,
             "init_invalid_expression": 1215,
-            "requires_unsafe": 1216
+            "unsafe_func": 1216,
+            "invalid_system": 1217
         },
         "generator": {
             "cannot_create": 1301,

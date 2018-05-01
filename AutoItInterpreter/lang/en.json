@@ -53,7 +53,8 @@
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead.",
             "variable_exists": "The variable '{0}' has already been declared prior to this statement.",
             "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
-            "requires_unsafe": "This statement or expression can only be used when compiled with the compiler-flag '--unsafe' or '-u'."
+            "unsafe_func": "The function '{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
+            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",

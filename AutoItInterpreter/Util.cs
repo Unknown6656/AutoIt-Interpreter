@@ -6,6 +6,8 @@ using System;
 
 using Newtonsoft.Json.Linq;
 
+using AutoItCoreLibrary;
+
 namespace AutoItInterpreter
 {
     public static class Util
@@ -78,6 +80,39 @@ namespace AutoItInterpreter
         public static bool ArePathsEqual(string path1, string path2) => string.Equals(Path.GetFullPath(path1), Path.GetFullPath(path2), StringComparison.InvariantCultureIgnoreCase);
 
         public static bool ArePathsEqual(FileInfo nfo1, FileInfo nfo2) => ArePathsEqual(nfo1.FullName, nfo2.FullName);
+
+        public static OS GetOperatingSystem(this Compatibility comp)
+        {
+            switch (comp)
+            {
+                case Compatibility.winxp:
+                case Compatibility.vista:
+                case Compatibility.win7:
+                case Compatibility.win8:
+                case Compatibility.win81:
+                case Compatibility.win10:
+                case Compatibility.win:
+                    return OS.Windows;
+                case Compatibility.linux:
+                case Compatibility.centos:
+                case Compatibility.debian:
+                case Compatibility.fedora:
+                case Compatibility.gentoo:
+                case Compatibility.opensuse:
+                case Compatibility.ol:
+                case Compatibility.rhel:
+                case Compatibility.tizen:
+                case Compatibility.ubuntu:
+                case Compatibility.linuxmint:
+                    return OS.Linux;
+                case Compatibility.osx:
+                    return OS.MacOS;
+                case Compatibility.android:
+                    // return something else?
+                default:
+                    return OS.Linux;
+            }
+        }
     }
 
     internal static class DebugPrintUtil

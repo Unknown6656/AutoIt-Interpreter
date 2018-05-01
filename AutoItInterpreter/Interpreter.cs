@@ -1628,26 +1628,31 @@ namespace AutoItInterpreter
 
         private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, params (DefinitionContext, string, EXPRESSION[])[] calls)
         {
+            OS target = options.Compatibility.GetOperatingSystem();
+
             foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
             {
                 void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
 
                 if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
                 {
-                    (_, int mac, int oac) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+                    (string f, int mac, int oac, OS[] os, bool us) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
 
-                    if (func == "autoit3" && !options.AllowUnsafeCode)
-                        err("errors.astproc.requires_unsafe");
+                    if (!os.Contains(target))
+                        err("errors.astproc.invalid_system", target, string.Join(",", os.Select(x => x.ToString())));
+
+                    if (us && !options.AllowUnsafeCode)
+                        err("errors.astproc.unsafe_func", f);
 
                     if (args.Length < mac)
-                        err("errors.astproc.not_enough_args", func, mac, args.Length);
+                        err("errors.astproc.not_enough_args", f, mac, args.Length);
                     else if (args.Length > mac + oac)
-                        err("errors.astproc.too_many_args", func, mac + oac);
+                        err("errors.astproc.too_many_args", f, mac + oac);
                 }
                 else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
-                    err("errors.astproc.func_not_declared", func);
+                    err("errors.astproc.func_not_declared", f);
                 else if (IsReservedCall(func.ToLower()))
-                    err("errors.astproc.reserved_call", func);
+                    err("errors.astproc.reserved_call", f);
                 else
                 {
                     AST_FUNCTION f = state.ASTFunctions[func.ToLower()];
@@ -1666,7 +1671,7 @@ namespace AutoItInterpreter
                     int mpcnt = f.Parameters.Count(p => !(p is AST_FUNCTION_PARAMETER_OPT));
 
                     if (index < mpcnt)
-                        err("errors.astproc.not_enough_args", func, mpcnt, index);
+                        err("errors.astproc.not_enough_args", f, mpcnt, index);
 
                     if (func.Equals("autoit3", StringComparison.InvariantCultureIgnoreCase))
                         state.ReportKnownNote("notes.unsafe_autoit3", context);
@@ -1830,18 +1835,20 @@ namespace AutoItInterpreter
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
 
-
-        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount)[] BUILT_IN_FUNCTIONS = new[]
+        private static readonly OS[] ALL_OS = new[] { OS.Windows, OS.MacOS, OS.Linux };
+        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount, OS[] Systems, bool IsUnsafe)[] BUILT_IN_FUNCTIONS = new[]
         {
-            ("eval", 1, 0),
-            ("assign", 2, 1),
-            ("isdeclared", 1, 0)
+            ("eval", 1, 0, ALL_OS, false),
+            ("assign", 2, 1, ALL_OS, false),
+            ("isdeclared", 1, 0, ALL_OS, false)
         }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
-                 let attr = m.GetCustomAttributes(typeof(BuiltinFunctionAttribute), true)
-                 where attr.Length > 0
+                 let battr = m.GetCustomAttributes(typeof(BuiltinFunctionAttribute), true)
+                 where battr.Length > 0
+                 let us = m.GetCustomAttributes(typeof(RequiresUnsafeAttribute), true).Length > 0
+                 let os = (m.GetCustomAttributes(typeof(CompatibleOSAttribute), true).FirstOrDefault() as CompatibleOSAttribute)?.Systems ?? ALL_OS
                  let pars = m.GetParameters()
                  let opars = pars.Where(p => p.IsOptional).ToArray()
-                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length)).ToArray();
+                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length, os, us)).ToArray();
 
 
         public static bool IsReservedCall(string name)
@@ -2109,30 +2116,6 @@ namespace AutoItInterpreter
         RequireAdministrator
     }
 
-    public enum Compatibility
-    {
-        winxp,
-        vista,
-        win7,
-        win8,
-        win81,
-        win10,
-        win,
-        linux,
-        centos,
-        debian,
-        fedora,
-        gentoo,
-        opensuse,
-        ol,
-        rhel,
-        tizen,
-        ubuntu,
-        linuxmint,
-        osx,
-        android,
-    }
-
     public enum ControlBlock
     {
         __NONE__,
@@ -2155,6 +2138,30 @@ namespace AutoItInterpreter
         Fatal = 0,
         Warning = 1,
         Note = 2
+    }
+
+    public enum Compatibility
+    {
+        winxp,
+        vista,
+        win7,
+        win8,
+        win81,
+        win10,
+        win,
+        linux,
+        centos,
+        debian,
+        fedora,
+        gentoo,
+        opensuse,
+        ol,
+        rhel,
+        tizen,
+        ubuntu,
+        linuxmint,
+        osx,
+        android,
     }
 
     [Flags]

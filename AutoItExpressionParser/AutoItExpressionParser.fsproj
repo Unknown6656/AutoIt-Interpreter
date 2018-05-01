@@ -19,6 +19,7 @@
     <Compile Include="Serializer.fs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AutoItCoreLibrary\AutoItCoreLibrary.csproj" />
     <ProjectReference Include="..\PigletParser\PigletParser.csproj" />
   </ItemGroup>
 </Project>

@@ -76,6 +76,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_operator_comp_lt          = x.t @"<"
         let t_operator_comp_eq          = x.t @"=="
         let t_symbol_equal              = x.t @"="
+        let t_symbol_numbersign         = x.t @"#"
+        let t_symbol_at                 = x.t @"@"
         let t_symbol_questionmark       = x.t @"\?" // TODO
         let t_symbol_colon              = x.t @":" // TODO
         let t_symbol_dot                = x.t @"\."
@@ -225,8 +227,10 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         reduce3 !@5 !@5 t_symbol_slash !@6 (fun a _ b -> BinaryExpression(Divide, a, b))
         reduce3 !@5 !@5 t_symbol_percent !@6 (fun a _ b -> BinaryExpression(Modulus, a, b))
         reduce0 !@6 !@7
+        reduce3 !@6 !@6 t_symbol_at !@7 (fun a _ b -> BinaryExpression(StringIndex, a, b))
         reduce3 !@6 !@6 t_symbol_hat !@7 (fun a _ b -> BinaryExpression(Power, a, b))
         reduce0 !@7 !@8
+        reduce2 !@7 !@7 t_symbol_numbersign (fun _ e -> UnaryExpression(Length, e))
         reduce2 !@7 t_symbol_plus !@7 (fun _ e -> e)
         reduce2 !@7 t_symbol_minus !@7 (fun _ e -> UnaryExpression(Negate, e))
         reduce2 !@7 t_keyword_not !@7 (fun _ e -> UnaryExpression(Not, e))

@@ -1,6 +1,8 @@
 ﻿module AutoItExpressionParser.Analyzer
 
 open AutoItExpressionParser.ExpressionAST
+open AutoItCoreLibrary
+
 open System.Globalization
 open System
 
@@ -45,18 +47,14 @@ let rec ProcessConstants e =
             | Null
             | Default -> Some 0m
             | True -> Some 1m
-            //| String s ->
-            //    match s with
-            //    | Long d -> Some(decimal d)
-            //    | Decimal d -> Some d
-            //    | _ -> None
-            | _ -> None
+            | String s -> Some (AutoItVariantType s)
         | UnaryExpression (o, Constant x) ->
             match o with
             | Identity -> Some x
             | Negate -> Some -x
             | Not -> Some (if x = 0m then 1m else 0m)
             | BitwiseNot -> bit (~~~) x
+            | Length -> Some (decimal (AutoItVariantType x).Length)
         | BinaryExpression (o, Constant x, Constant y) ->
             let (!%) r = Some (if r x y then 1m else 0m)
             let (!@) r = Some (if r (x <> 0m) (y <> 0m) then 1m else 0m)

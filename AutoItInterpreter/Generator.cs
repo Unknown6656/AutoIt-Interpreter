@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
@@ -28,7 +27,7 @@ namespace AutoItInterpreter
         private const string TYPE_MAC_RPOVIDER = nameof(AutoItMacroDictionary);
         private const string TYPE = nameof(AutoItVariantType);
         private const string FUNC_MODULE = nameof(AutoItFunctions);
-        private const string FUNC_PREFIX = "__userfunc_";
+        private const string FUNC_PREFIX = AutoItFunctions.FUNC_PREFIX;
         private const string PARAM_PREFIX = "__param_";
         private const string DISCARD = "__discard";
         private const string MACROS = "__macros";
