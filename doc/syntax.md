@@ -32,28 +32,28 @@ EndIf
 
 The truth table for the logical operators is defined as follows:
 
-| `A`   | `B`   | `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` |
-|-------|-------|-------|--------|-------|-------|-------|--------|
-|`false`|`false`|`false`| `true` |`false`| `true`|`false`| `true` |
-|`false`| `true`|`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` |
+| `A`   | `B`   || `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` |
+|:-----:|:-----:||:-----:|:------:|:-----:|:-----:|:-----:|:------:|
+|`false`|`false`||`false`| `true` |`false`| `true`|`false`| `true` |
+|`false`| `true`||`false`| `true` | `true`|`false`| `true`| `false`|
+| `true`|`false`||`false`| `true` | `true`|`false`| `true`| `false`|
+| `true`| `true`|| `true`| `false`| `true`|`false`|`false`| `true` |
 
 ## Bitwise arithmetical operators
 
 A whole set of bitwise arithmetical binary infix operators have been introduced with AutoIt++:
 
- - `&&`: **Bitwise AND**
- - `~&&`: **Bitwise NAND**
- - `||`: **Bitwise OR**
- - `~||`: **Bitwise NOR**
- - `^^`: **Bitwise XOR**
- - `~^^`: **Bitwise NXOR**
- - `~`: **Bitwise NOT**
- - `<<`: **Bitwise SHIFT LEFT**
- - `>>`: **Bitwise SHIFT RIGHT**
- - `<<<`: **Bitwise ROTATE LEFT**
- - `>>>`: **Bitwise ROTATE RIGHT**
+ - `&&`: **Bitwise And**
+ - `~&&`: **Bitwise Nand**
+ - `||`: **Bitwise Or**
+ - `~||`: **Bitwise Nor**
+ - `^^`: **Bitwise Xor**
+ - `~^^`: **Bitwise Nxor**
+ - `~`: **Bitwise Not**
+ - `<<`: **Bitwise left-shift**
+ - `>>`: **Bitwise right-shift**
+ - `<<<`: **Bitwise rotate left**
+ - `>>>`: **Bitwise rotate right**
 
 They all conform with the usual standards known from other programming languages and their individual functions can be checked inside [this Wikipedia article](https://en.wikipedia.org/wiki/Bitwise_operation).
 

@@ -9,17 +9,17 @@ So we call it an **Interpiler** for now...
 # The AutoIt++ ~Interpreter~ Interpiler
 _or 'Autoit--' - depends on how you see it_
 
-![Works on my machine](doc/images/works-on-my-machine.jpg)
+<img alt="Works on my machine" src="doc/images/works-on-my-machine.jpg" height="120"/>
 
 _just kidding_
 
 -----------------
 
-This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing todo with C++).
+This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing to do with C++).
 
 The most important aspect of this project is the fact, that the interpiler is not only platform-independent, but can also cross-platform and cross-architecture target applications.
 
-The ~Interpreter~ Interpiler can currently target the following systems (can be specified via the flag `-t`):
+The interpiler can currently target the following systems (can be specified via the flag `-t`):
  - `win7`, `win8`, `win81`, `win10`
  - `centos`, `fedora`, `gentoo`, `opensuse`
  - `debian`, `ubuntu`, `linuxmint`
