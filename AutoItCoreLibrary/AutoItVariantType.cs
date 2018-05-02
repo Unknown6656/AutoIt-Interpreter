@@ -10,6 +10,7 @@ namespace AutoItCoreLibrary
         : IEquatable<AutoItVariantType>
         , IComparable<AutoItVariantType>
         , IEnumerable<AutoItVariantType>
+        , ICloneable
     {
         #region PRIVATE FIELDS
 
@@ -20,7 +21,7 @@ namespace AutoItCoreLibrary
 
         public byte[] BinaryData { get; }
 
-        public AutoItVariantType this[int index]
+        public AutoItVariantType this[long index]
         {
             set
             {
@@ -32,7 +33,7 @@ namespace AutoItCoreLibrary
             get => IsArray && (index >= 0) && (index < Length) ? _data.VariantData[index] : throw new InvalidArrayAccessExcpetion();
         }
 
-        public AutoItVariantType this[params int[] indices]
+        public AutoItVariantType this[params long[] indices]
         {
             set
             {
@@ -50,13 +51,27 @@ namespace AutoItCoreLibrary
             get => indices.Length == 0 ? this : this[indices[0]][indices.Skip(1).ToArray()];
         }
 
+        public AutoItVariantType this[AutoItVariantType index]
+        {
+            set => this[(long)index] = value;
+            get => this[(long)index];
+        }
+
+        public AutoItVariantType this[params AutoItVariantType[] indices]
+        {
+            set => this[indices.Select(x => x.ToLong()).ToArray()] = value;
+            get => this[indices.Select(x => x.ToLong()).ToArray()];
+        }
+
         public bool IsArray => !IsString;
 
         public bool IsString => _data.IsString;
 
-        public int BinaryLength => BinaryData.Length;
+        public long BinaryLength => BinaryData.LongLength;
 
-        public int Length => IsString ? ToString().Length : _data.Sizes[0];
+        public long Length => IsString ? ToString().Length : _data.Sizes[0];
+
+        public long Dimensions => _data.Dimensions;
 
         #endregion
         #region STATIC PROPERTIES
@@ -126,6 +141,8 @@ namespace AutoItCoreLibrary
             }
         }
 
+        object ICloneable.Clone() => Clone();
+
         public override string ToString() => IsString ? _data.StringData : "";
 
         public override int GetHashCode()
@@ -134,7 +151,7 @@ namespace AutoItCoreLibrary
                 return ToString().GetHashCode();
             else
             {
-                int code = 0x3d10f062 << (Length % 27);
+                int code = 0x3d10f062 << (int)(Length % 27);
 
                 foreach (AutoItVariantType v in this)
                     code ^= v.GetHashCode();
@@ -194,7 +211,23 @@ namespace AutoItCoreLibrary
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
 
-        public static AutoItVariantType NewMatrix(params int[] sizes) => new AutoItVariantType(new AutoItVariantData(sizes));
+        public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
+        {
+            vars = vars ?? new AutoItVariantType[0];
+
+            if (vars.Select(v => v.Dimensions).Distinct().Count() != 1)
+                throw new InvalidArrayAccessExcpetion();
+            else
+            {
+                AutoItVariantType mat = NewMatrix(vars.Length);
+
+                for (long i = 0; i < vars.Length; ++i)
+                    mat[i] = vars[i];
+
+                return mat;
+            }
+        }
+        public static AutoItVariantType NewMatrix(params long[] sizes) => new AutoItVariantType(new AutoItVariantData(sizes));
         public static AutoItVariantType FromDouble(double v) => (decimal)v;
         public static AutoItVariantType FromString(string v) => v;
         public static AutoItVariantType FromBool(bool v) => v;
@@ -267,8 +300,8 @@ namespace AutoItCoreLibrary
         {
             public bool IsString { get; }
             public string StringData { get; }
-            public int[] Sizes { get; }
-            public int Dimensions => Sizes.Length;
+            public long[] Sizes { get; }
+            public long Dimensions => Sizes.LongLength;
             public AutoItVariantType[] VariantData { get; }
 
 
@@ -276,28 +309,28 @@ namespace AutoItCoreLibrary
             {
                 IsString = true;
                 StringData = s ?? "";
-                Sizes = new int[0];
+                Sizes = new long[0];
                 VariantData = new AutoItVariantType[0];
             }
 
-            public AutoItVariantData(int[] sizes)
+            public AutoItVariantData(long[] sizes)
             {
                 StringData = "";
 
                 if (sizes is null || sizes.Length == 0)
                 {
                     IsString = true;
-                    Sizes = new int[0];
+                    Sizes = new long[0];
                 }
                 else
                 {
-                    int tsz = sizes[0];
+                    long tsz = sizes[0];
 
                     Sizes = sizes;
                     IsString = false;
                     VariantData = new AutoItVariantType[tsz];
 
-                    for (int i = 0; i < tsz; ++i)
+                    for (long i = 0; i < tsz; ++i)
                         VariantData[i] = AutoItVariantType.NewMatrix(sizes.Skip(1).ToArray());
                 }
             }

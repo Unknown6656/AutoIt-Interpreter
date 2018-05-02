@@ -106,7 +106,7 @@ type Serializer (settings : SerializerSettings) =
                             | Negate -> !/"-"
                             | Not -> !/"!"
                             | BitwiseNot -> !/"~"
-                            | Length -> printexpr e + ".Length"
+                            | Length -> "(" + printexpr e + ").Length"
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
@@ -119,7 +119,7 @@ type Serializer (settings : SerializerSettings) =
                                             | f -> f
                                    sprintf "%s(%s)" fs (String.Join (", ", (List.map printexpr es)))
                       | AssignmentExpression (Assignment (o, v, e)) -> printass (printvar v) o e
-                      | ArrayIndex (v, e) -> "  « array access not yet implemented »  " // TODO
+                      | ArrayIndex (v, e) -> sprintf "%s[%s]" (printvar v) (printexpr e)
                       | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> "  « array access not yet implemented »  " // TODO
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"
