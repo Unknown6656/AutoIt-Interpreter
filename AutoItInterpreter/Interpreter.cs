@@ -107,6 +107,7 @@ namespace AutoItInterpreter
     using MULTI_EXPRESSIONS = FSharpList<ExpressionAST.MULTI_EXPRESSION>;
     using static InterpreterConstants;
     using static ExpressionAST;
+    using static PInvoke;
     using static ControlBlock;
 
 
@@ -741,10 +742,12 @@ namespace AutoItInterpreter
 
                     ival = 1;
 
-                    if (st.Functions.ContainsKey(lname))
-                        err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
-                    else if (IsReservedName(lname))
+                    if (IsReservedName(lname))
                         err("errors.general.reserved_name", m.Get("name"));
+                    else if (st.Functions.ContainsKey(lname))
+                        err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
+                    else if (st.PInvokeFunctions.ContainsKey(lname))
+                        err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
                     else
                     {
                         ival = 0;
@@ -759,13 +762,31 @@ namespace AutoItInterpreter
 
                     err("errors.preproc.function_nesting");
                 }
-            else if (Line.Match("^endfunc$", out m))
+            else if (Line.Match("^endfunc$", out _))
                 if (ival != 0)
                     ival = 0;
                 else if (st.CurrentFunction is null)
                     err("errors.preproc.unexpected_endfunc");
                 else
                     st.CurrentFunction = null;
+            else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
+            {
+                string name = m.Get("name");
+                string sig = m.Get("sig").Trim();
+                string lib = m.Get("lib").Trim();
+                string lname = name.ToLower();
+
+                if (string.IsNullOrWhiteSpace(lib))
+                    err("errors.preproc.pinvoke_no_lib", name);
+                else if (string.IsNullOrWhiteSpace(sig))
+                    err("errors.preproc.pinvoke_no_sig", name);
+                else if (st.Functions.ContainsKey(lname))
+                    err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
+                else if (st.PInvokeFunctions.ContainsKey(lname))
+                    err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
+                else
+                    st.PInvokeFunctions[name] = (sig, lib, defcntx);
+            }
             else
                 return (ivalfunc = ival) == 0;
 
@@ -913,6 +934,48 @@ namespace AutoItInterpreter
             return inclpath;
         }
 
+        private static void ParsePinvokeFunctions(InterpreterState state)
+        {
+            PInvokeParser parser = new PInvokeParser();
+
+            parser.Initialize();
+
+            foreach (string name in state.PInvokeFunctions.Keys)
+            {
+                (string s, string lib, DefinitionContext ctx) = state.PInvokeFunctions[name];
+                PINVOKE_SIGNATURE sig = null;
+
+                try
+                {
+                    sig = parser.Parse(s);
+                }
+                catch
+                {
+                }
+
+                if (sig is null)
+                {
+
+                }
+
+
+
+
+
+
+                //state.ASTFunctions[name] = new AST_FUNCTION
+                //{
+                //    Context = ctx,
+                //    Name = name,
+                //    Parameters = ,
+                //    Statements = new AST_STATEMENT[]
+                //    {
+
+                //    }
+                //};
+            }
+        }
+
         private static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
         {
             List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
@@ -929,6 +992,8 @@ namespace AutoItInterpreter
                                                                                                                             where kvp.Key != GLOBAL_FUNC_NAME
                                                                                                                             select (kvp.Key, kvp.Value)))
                 state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
+
+
 
             ValidateFunctionCalls(state, options, funccalls.ToArray());
 
@@ -1894,6 +1959,7 @@ namespace AutoItInterpreter
     {
         private protected List<InterpreterError> _errors;
 
+        public Dictionary<string, (string Signature, string Library, DefinitionContext Context)> PInvokeFunctions { get; }
         public bool Fatal => Errors.Any(err => err.Type == ErrorType.Fatal);
         public InterpreterError[] Errors => _errors.ToArray();
         public CompileInfo CompileInfo { private protected set; get; }
@@ -1906,6 +1972,7 @@ namespace AutoItInterpreter
 
         public AbstractParserState()
         {
+            PInvokeFunctions = new Dictionary<string, (string, string, DefinitionContext)>();
             _errors = new List<InterpreterError>();
             CompileInfo = new CompileInfo();
             UseTrayIcon = true;
@@ -1935,8 +2002,8 @@ namespace AutoItInterpreter
     public sealed class InterpreterState
         : AbstractParserState
     {
-        public Dictionary<string, FUNCTION> Functions { get; }
         public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
+        public Dictionary<string, FUNCTION> Functions { get; }
         public List<string> StartFunctions { get; }
 
 
@@ -1960,6 +2027,9 @@ namespace AutoItInterpreter
             s.StartFunctions.AddRange(ps.StartFunctions);
             s._errors.AddRange(ps.Errors);
 
+            foreach (var kvp in ps.PInvokeFunctions)
+                s.PInvokeFunctions[kvp.Key] = kvp.Value;
+
             return s;
         }
 
@@ -1969,8 +2039,8 @@ namespace AutoItInterpreter
     public sealed class PreInterpreterState
         : AbstractParserState
     {
-        public InterpreterContext CurrentContext { set; get; }
         public Dictionary<string, FunctionScope> Functions { get; }
+        public InterpreterContext CurrentContext { set; get; }
         public FunctionScope CurrentFunction { set; get; }
         public List<string> IncludeOncePaths { get; }
         public List<string> StartFunctions { get; }

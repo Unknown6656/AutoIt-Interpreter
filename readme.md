@@ -9,6 +9,11 @@ So we call it an **Interpiler** for now...
 # The AutoIt++ ~Interpreter~ Interpiler
 _or 'Autoit--' - depends on how you see it_
 
+![Works on my machine](doc/images/works-on-my-machine.jpg)
+
+_just kidding_
+
+-----------------
 
 This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing todo with C++).
 
@@ -47,4 +52,4 @@ All credits go to him for the wonderful LR-Parser-Library!!
 -----------------
 
 _An historic image:_<br/>
-![Exception Screenshot](doc/wtf.png)
+![Exception Screenshot](doc/images/wtf.png)

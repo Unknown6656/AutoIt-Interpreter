@@ -88,7 +88,7 @@ type OPERATOR_BINARY =
     | BitwiseRotateRight
     | BitwiseShiftLeft
     | BitwiseShiftRight
-    | StringIndex
+    | Index
 type OPERATOR_UNARY =
     | Identity
     | Negate
@@ -172,7 +172,7 @@ and private AssToAString =
 and private BinToAString o a b =
     sprintf (match o with
             | StringConcat -> "(%s & %s)"
-            | StringIndex -> "(%s @ %s)"
+            | Index -> "(%s @ %s)"
             | EqualCaseSensitive -> "(%s == %s)"
             | EqualCaseInsensitive -> "(%s = %s)"
             | Unequal -> "(%s != %s)"

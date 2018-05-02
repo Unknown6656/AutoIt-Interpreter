@@ -34,7 +34,9 @@
             "misplaced_continueloop": "The 'ContinueLoop'-statement must be placed inside a loop (e.g. 'For', 'Do' or 'While').",
             "invalid_global": "A global variable cannot be declared in the local scope. Consider either replacing 'Global' with 'Local' or 'Dim', or removing the scope modifier completely.",
             "no_closing_csharp": "The currently open C# block has not been closed properly using an '#cse'-directive.",
-            "csharp_requires_unsafe": "A inline-C# code block can only be used when compiled with the compiler-flag '--unsafe' or '-u'."
+            "csharp_requires_unsafe": "A inline-C# code block can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
+            "pinvoke_no_lib": "No library has been specified for the P/Invoke function '{0}'.",
+            "pinvoke_no_sig": "No function signature has been specified for the P/Invoke function '{0}'."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",

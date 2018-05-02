@@ -1,27 +1,13 @@
 ﻿module AutoItExpressionParser.Analyzer
 
 open AutoItExpressionParser.ExpressionAST
-open AutoItCoreLibrary
 
 open System.Globalization
 open System
 
 
-let (|Long|_|) str =
-    match Int64.TryParse str with
-    | true, i -> Some i
-    | _ ->
-        let str = str.ToLower()
-        if str.StartsWith "0x" then
-            match Int64.TryParse (str, NumberStyles.HexNumber, null) with
-            | true, i -> Some i
-            | _ -> None
-        else
-            None
-let (|Decimal|_|) str =
-    match Decimal.TryParse str with
-    | true, i -> Some i
-    | _ -> None
+type variant = AutoItCoreLibrary.AutoItVariantType
+
     
 let rec IsStatic =
     function
@@ -38,111 +24,109 @@ let rec IsStatic =
 
 let rec ProcessConstants e =
     let rec procconst e =
-        let bit (f : int64 -> int64) = int64 >> f >> decimal
         match e with
         | Literal l ->
             match l with
-            | Number d -> d
+            | Number d -> variant.FromDecimal d
             | False
             | Null
-            | Default -> 0m
-            | True -> 1m
-            | String s -> (AutoItVariantType s).ToDecimal()
+            | Default -> variant.FromDecimal 0m
+            | True -> variant.FromDecimal 1m
+            | String s -> variant s
             |> Some
         | UnaryExpression (o, Constant x) ->
             match o with
             | Identity -> x
             | Negate -> -x
-            | Not -> if x = 0m then 1m else 0m
-            | BitwiseNot -> bit (~~~) x
-            | Length -> decimal (AutoItVariantType.FromDecimal x).Length
+            | Not -> variant.Not x
+            | BitwiseNot -> variant.BitwiseNot x
+            | Length -> variant.FromDecimal (decimal x.Length)
             |> Some
         | BinaryExpression (o, Constant x, Constant y) ->
-            let (!%) r = Some (if r x y then 1m else 0m)
-            let (!@) r = Some (if r (x <> 0m) (y <> 0m) then 1m else 0m)
-            let (!*) r = Some (r x y)
-            let (!&) (r : int64 -> int64 -> int64) = Some (decimal (r (int64 x) (int64 y)))
-            let shl x y = x <<< int(y % 64L)
-            let shr x y = x >>> int(y % 64L)
-            let rol x y = shl x y ||| x >>> (64 - int(y % 64L))
-            let ror x y = shr x y ||| x <<< (64 - int(y % 64L))
+            let (!%) = variant.FromBool >> Some
+            let (!/) f = f (x.ToDecimal()) (y.ToDecimal())
+                         |> (!%)
+            let (!@) f = (f >> Some) (x, y)
+            let (!*) f = Some (f x y)
             match o with
-            | EqualCaseSensitive
-            | EqualCaseInsensitive -> !% (=)
-            | Unequal -> !% (<>)
-            | Greater -> !% (>)
-            | GreaterEqual -> !% (>=)
-            | Lower -> !% (<)
-            | LowerEqual -> !% (<=)
-            | And -> !@ (&&)
-            | Xor -> !@ (<>)
-            | Nxor -> !@ (=)
-            | Nor -> !@ (fun x y -> not x && not y)
-            | Nand -> !@ (fun x y -> not(x && y))
-            | Or -> !@ (||)
+            | EqualCaseSensitive -> !% variant.Equals(x, y, false)
+            | EqualCaseInsensitive -> !% variant.Equals(x, y, true)
+            | Unequal -> !% (not <| variant.Equals(x, y, true))
+            | Greater -> !/ (>)
+            | GreaterEqual -> !/ (>=)
+            | Lower -> !/ (<)
+            | LowerEqual -> !/ (<=)
+            | Xor -> !/ (<>)
+            | Nxor -> !/ (=)
+            | And -> !@ variant.And
+            | Nor -> !@ variant.Nor
+            | Nand -> !@ variant.Nand
+            | Or -> !@ variant.Or
             | Add -> !* (+)
             | Subtract -> !* (-)
             | Multiply -> !* (*)
             | Divide -> !* (/)
             | Modulus -> !* (%)
-            | Power -> !* (fun x y -> decimal((float x) ** (float y)))
-            | BitwiseNand -> !& (fun x y -> ~~~(x &&& y))
-            | BitwiseAnd -> !& (&&&)
-            | BitwiseNxor -> !& (fun x y -> ~~~(x ^^^ y))
-            | BitwiseXor -> !& (^^^)
-            | BitwiseNor -> !& (fun x y -> ~~~(x ||| y))
-            | BitwiseOr -> !& (|||)
-            | BitwiseRotateLeft -> !&rol
-            | BitwiseRotateRight -> !&ror
-            | BitwiseShiftLeft -> !&shl
-            | BitwiseShiftRight -> !&shr
-            | _ -> None
-        | TernaryExpression (Constant x, Constant y, Constant z) -> Some (if x = 0m then z else y)
+            | Power -> !@ variant.Power
+            | BitwiseNand -> !@ variant.BitwiseNand
+            | BitwiseAnd -> !@ variant.BitwiseAnd
+            | BitwiseNxor -> !@ variant.BitwiseNxor
+            | BitwiseXor -> !@ variant.BitwiseXor
+            | BitwiseNor -> !@ variant.BitwiseNor
+            | BitwiseOr -> !@ variant.BitwiseOr
+            | BitwiseRotateLeft -> !@ variant.BitwiseRol
+            | BitwiseRotateRight -> !@ variant.BitwiseRor
+            | BitwiseShiftLeft -> !@ variant.BitwiseShl
+            | BitwiseShiftRight -> !@ variant.BitwiseShr
+            | StringConcat -> !@ variant.Concat
+            | Index -> !* (fun x y -> x.[int (y.ToLong())])
+        | TernaryExpression (Constant x, Constant y, Constant z) -> Some (if x.ToBool() then z else y)
         | _ -> None
     and (|Constant|_|) = procconst
     let num = Number >> Literal
     match e with
-    | Constant x -> num x
+    | Constant x -> num (x.ToDecimal())
     | _ ->
+        let d = variant.FromDecimal
         match e with
         | BinaryExpression (o, x, y) ->
             match o, x, y with
-            | And, Constant c, _ when c = 0m -> num 0m
-            | And, _, Constant c when c = 0m -> num 0m
-            | BitwiseAnd, Constant c, _ when c = 0m -> num 0m
-            | BitwiseAnd, _, Constant c when c = 0m -> num 0m
-            | Nand, Constant c, _ when c = 0m -> num 1m
-            | Nand, _, Constant c when c = 0m -> num 1m
-            | Nor, Constant c, _ when c = 1m -> num 0m
-            | Nor, _, Constant c when c = 1m -> num 0m
-            | BitwiseOr, Constant c, e when c = 0m -> ProcessConstants e
-            | BitwiseOr, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseXor, Constant c, e when c = 0m -> ProcessConstants e
-            | BitwiseXor, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseRotateLeft, Constant c, _ when c = 0m -> num 0m
-            | BitwiseRotateLeft, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseRotateRight, Constant c, _ when c = 0m -> num 0m
-            | BitwiseRotateRight, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseShiftLeft, Constant c, _ when c = 0m -> num 0m
-            | BitwiseShiftLeft, e, Constant c when c = 0m -> ProcessConstants e
-            | BitwiseShiftRight, Constant c, _ when c = 0m -> num 0m
-            | BitwiseShiftRight, e, Constant c when c = 0m -> ProcessConstants e
-            | Add, Constant c, e when c = 0m -> ProcessConstants e
-            | Add, e, Constant c when c = 0m -> ProcessConstants e
-            | Subtract, e, Constant c when c = 0m -> ProcessConstants e
-            | Subtract, Constant c, e when c = 0m -> UnaryExpression(Negate, ProcessConstants e)
-            | Multiply, Constant c, _ when c = 0m -> num 0m
-            | Multiply, _, Constant c when c = 0m -> num 0m
-            | Multiply, Constant c, e when c = 1m -> ProcessConstants e
-            | Multiply, e, Constant c when c = 1m -> ProcessConstants e
-            | Multiply, Constant c, e when c = 2m -> let pc = ProcessConstants e
-                                                     BinaryExpression(Add, pc, pc)
-            | Multiply, e, Constant c when c = 2m -> let pc = ProcessConstants e
-                                                     BinaryExpression(Add, pc, pc)
-            | Divide, e, Constant c when c = 1m -> ProcessConstants e
-            | Power, Constant c, _ when c = 0m -> num 0m
-            | Power, _, Constant c when c = 0m -> num 1m
-            | Power, e, Constant c when c = 1m -> ProcessConstants e
+            | And, Constant c, _ when c = d 0m -> num 0m
+            | And, _, Constant c when c = d 0m -> num 0m
+            | BitwiseAnd, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseAnd, _, Constant c when c = d 0m -> num 0m
+            | Nand, Constant c, _ when c = d 0m -> num 1m
+            | Nand, _, Constant c when c = d 0m -> num 1m
+            | Nor, Constant c, _ when c = d 1m -> num 0m
+            | Nor, _, Constant c when c = d 1m -> num 0m
+            | BitwiseOr, Constant c, e when c = d 0m -> ProcessConstants e
+            | BitwiseOr, e, Constant c when c = d 0m -> ProcessConstants e
+            | BitwiseXor, Constant c, e when c = d 0m -> ProcessConstants e
+            | BitwiseXor, e, Constant c when c = d 0m -> ProcessConstants e
+            | BitwiseRotateLeft, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseRotateLeft, e, Constant c when c = d 0m -> ProcessConstants e
+            | BitwiseRotateRight, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseRotateRight, e, Constant c when c = d 0m -> ProcessConstants e
+            | BitwiseShiftLeft, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseShiftLeft, e, Constant c when c = d 0m -> ProcessConstants e
+            | BitwiseShiftRight, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseShiftRight, e, Constant c when c = d 0m -> ProcessConstants e
+            | Add, Constant c, e when c = d 0m -> ProcessConstants e
+            | Add, e, Constant c when c = d 0m -> ProcessConstants e
+            | Subtract, e, Constant c when c = d 0m -> ProcessConstants e
+            | Subtract, Constant c, e when c = d 0m -> UnaryExpression(Negate, ProcessConstants e)
+            | Multiply, Constant c, _ when c = d 0m -> num 0m
+            | Multiply, _, Constant c when c = d 0m -> num 0m
+            | Multiply, Constant c, e when c = d 1m -> ProcessConstants e
+            | Multiply, e, Constant c when c = d 1m -> ProcessConstants e
+            | Multiply, Constant c, e when c = d 2m -> let pc = ProcessConstants e
+                                                       BinaryExpression(Add, pc, pc)
+            | Multiply, e, Constant c when c = d 2m -> let pc = ProcessConstants e
+                                                       BinaryExpression(Add, pc, pc)
+            | Divide, e, Constant c when c = d 1m -> ProcessConstants e
+            | Power, Constant c, _ when c = d 0m -> num 0m
+            | Power, _, Constant c when c = d 0m -> num 1m
+            | Power, e, Constant c when c = d 1m -> ProcessConstants e
             | _ ->
                 let stat = IsStatic e
                 let proc() =

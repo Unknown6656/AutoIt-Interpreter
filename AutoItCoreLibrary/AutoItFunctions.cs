@@ -318,6 +318,25 @@ namespace AutoItCoreLibrary
         public static var ATan2(var v1, var v2) => (var)Math.Atan2((double)v1, (double)v2);
         [BuiltinFunction]
         public static var ConsoleWriteLine(var v) => __(() => Console.WriteLine(v.ToString()));
+        [BuiltinFunction]
+        public static var StringExtract(var s, var s1, var s2, var? offs = null)
+        {
+            string inp = (s.ToString()).Substring((int)(offs ?? 0L));
+            int i1 = inp.IndexOf(s1) + s1.Length;
+            int i2 = inp.Substring(i1).IndexOf(s2);
+
+            if (i2 >= 0)
+            {
+                SetError(0, i1);
+
+                return inp.Substring(i1, i2);
+            }
+            else
+                SetError(1, 0);
+
+            return "";
+        }
+        
 
         // a very evil function
         [BuiltinFunction]

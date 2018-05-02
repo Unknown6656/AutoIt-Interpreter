@@ -44,7 +44,7 @@ type Serializer (settings : SerializerSettings) =
             let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
             let f = match o with
                     | StringConcat -> !!"&"
-                    | StringIndex -> "%s[%s]"
+                    | Index -> "%s[%s]"
                     | EqualCaseSensitive -> !!"=="
                     | EqualCaseInsensitive
                     | Unequal -> !!"!="
