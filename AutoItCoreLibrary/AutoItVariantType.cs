@@ -206,12 +206,35 @@ namespace AutoItCoreLibrary
 
         public double ToDouble() => (double)this;
 
+        public GCHandle ToGCHandle() => this;
+
+        public void UseGCHandledData(Action<object> func)
+        {
+            if (func != null)
+            {
+                GCHandle gch = this;
+
+                func(gch.Target);
+            }
+        }
+
+        public void UseDisposeGCHandledData(Action<object> func)
+        {
+            UseGCHandledData(func);
+            ToGCHandle().Free();
+        }
+
+        public void UseGCHandledData<T>(Action<T> func) where T : class => UseGCHandledData(o => func(o as T));
+
+        public void UseDisposeGCHandledData<T>(Action<T> func) where T : class => UseDisposeGCHandledData(o => func(o as T));
+
         #endregion
         #region STATIC FUNCTIONS
 
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
 
+        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? (AutoItVariantType)(void*)null : (AutoItVariantType)GCHandle.Alloc(gc);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {
             vars = vars ?? new AutoItVariantType[0];

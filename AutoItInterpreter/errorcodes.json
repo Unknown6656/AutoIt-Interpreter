@@ -85,6 +85,7 @@
         "empty_block": 3002,
         "uncalled_function": 3003,
         "unsafe_autoit3": 3004,
-        "empty_function": 3005
+        "empty_function": 3005,
+        "unnecessary_function_comp": 3006
     }
 }

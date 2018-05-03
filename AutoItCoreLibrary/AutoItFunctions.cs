@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Reflection;
 using System.Linq;
 using System.Text;
-using System;
-using System.Reflection;
-using System.Globalization;
-using System.Net.Sockets;
 using System.Net;
-using System.Web;
 using System.IO;
-using System.Runtime.InteropServices;
+using System;
 
 namespace AutoItCoreLibrary
 {
@@ -24,6 +22,9 @@ namespace AutoItCoreLibrary
 
         private static var __error;
         private static var __extended;
+
+        public static var @Error => __error;
+        public static var @Extended => __extended;
 
         #region helper fuctions
 
@@ -93,9 +94,9 @@ namespace AutoItCoreLibrary
         public static var Abs(var v) => v < 0 ? -v : v;
         [BuiltinFunction]
         public static var ACos(var v) => (var)Math.Acos((double)v);
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.not_impl")]
         public static var AdlibRegister(var v) => throw new NotImplementedException(); // TODO
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.not_impl")]
         public static var AdlibUnRegister(var v) => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var Asc(var v) => v.Length > 0 ? v[0] > 'ÿ' ? '?' : v[0] : 0L;
@@ -105,7 +106,7 @@ namespace AutoItCoreLibrary
         public static var ASin(var v) => (var)Math.Asin((double)v);
         [BuiltinFunction]
         public static var Atan(var v) => (var)Math.Atan((double)v);
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.not_impl")]
         public static var AutoItSetOption(var o, var? p = null) => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var AutoItWinGetTitle() => throw new NotImplementedException(); // TODO
@@ -174,7 +175,7 @@ namespace AutoItCoreLibrary
 
             return res;
         }
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.not_impl")]
         public static var BitRotate(var v, var? shift = null, var? size = null)
         {
             var offs = shift ?? 1;
@@ -257,7 +258,7 @@ namespace AutoItCoreLibrary
         public static var Chr(var v) => ((char)(byte)(long)v).ToString();
         [BuiltinFunction]
         public static var ChrW(var v) => ((char)(long)v).ToString();
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.not_impl")]
         public static var ClipGet() => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var ClipPut(var v) => __(() =>
@@ -308,7 +309,28 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var DirCreate(var d) => Try(() => Directory.CreateDirectory(d));
         [BuiltinFunction]
-        public static var DirGetSize(var d, var? f = null) => throw new NotImplementedException(); // TODO
+        public static var DirGetSize(var d, var? f = null)
+        {
+            try
+            {
+                long mode = f?.ToLong() ?? 0L;
+                long fcnt = 0L;
+                long size = (from file in new DirectoryInfo(d).EnumerateFiles("*", mode == 2 ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories)
+                             let _ = fcnt++
+                             select file.Length).Sum();
+
+                if (mode == 1)
+                    return var.NewArray(size, fcnt, new DirectoryInfo(d).GetDirectories("*", SearchOption.AllDirectories).LongLength);
+                else
+                    return size;
+            }
+            catch
+            {
+                SetError(1);
+
+                return -1;
+            }
+        }
         [BuiltinFunction]
         public static var DirMove(var src, var dst, var? f = null) => Try(()=>
         {
@@ -340,15 +362,58 @@ namespace AutoItCoreLibrary
 
 
         [BuiltinFunction]
-        public static var TCPStartup() => 1;
+        public static var TCPAccept(var socket)
+        {
+            try
+            {
+                TcpClient client = null;
+
+                socket.UseGCHandledData<TcpListener>(listener => client = listener.AcceptTcpClient());
+
+                return var.NewGCHandledData(client);
+            }
+            catch (Exception ex)
+            {
+                SetError(ex.HResult);
+
+                return -1;
+            }
+        }
+        [BuiltinFunction]
+        public static var TCPCloseSocket(var socket)
+        {
+            try
+            {
+                socket.UseDisposeGCHandledData(o =>
+                {
+                    switch (o)
+                    {
+                        case TcpClient client:
+                            client.Close();
+                            client.Dispose();
+
+                            break;
+                        case TcpListener listener:
+                            listener.Stop();
+
+                            break;
+                    }
+                });
+            }
+            catch
+            {
+            }
+
+            SetError(-1);
+
+            return 0;
+        }
         [BuiltinFunction]
         public static var TCPConnect(var addr, var port)
         {
             try
             {
-                TcpClient client = new TcpClient(addr, port.ToInt());
-
-                return GCHandle.Alloc(client);
+                return var.NewGCHandledData(new TcpClient(addr, port.ToInt()));
             }
             catch (Exception e)
             {
@@ -364,39 +429,104 @@ namespace AutoItCoreLibrary
                 return 0;
             }
         }
-        [BuiltinFunction]
-        public static var TCPCloseSocket(var s)
+        [BuiltinFunction] // TODO : use last parameter
+        public static var TCPListen(var addr, var port, var? max = null)
         {
             try
             {
-                if ((void*)s != null)
-                {
-                    GCHandle ptr = s;
-                    TcpClient client = ptr.Target as TcpClient;
-
-                    ptr.Free();
-                    client.Close();
-                    client.Dispose();
-
-                    return 1;
-                }
+                return var.NewGCHandledData(new TcpListener(IPAddress.Parse(addr), port.ToInt()));
             }
-            catch
+            catch (Exception ex)
             {
+                SetError(ex is ArgumentOutOfRangeException ? 2 : 1);
+
+                return 0;
+            }
+        }
+        [BuiltinFunction]
+        public static var TCPNameToIP(var name) => DnsGetIP(name);
+        [BuiltinFunction]
+        public static var TCPRecv(var socket, var? maxlen = null, var? flag = null)
+        {
+            List<byte> resp = new List<byte>();
+
+            try
+            {
+                int max = maxlen?.ToInt() ?? int.MaxValue;
+                bool bin = flag?.ToBool() ?? false;
+                byte[] bytes;
+
+                socket.UseDisposeGCHandledData<TcpClient>(client =>
+                {
+                    int cnt = 0;
+
+                    using (NetworkStream ns = client.GetStream())
+                        do
+                        {
+                            bytes = new byte[client.ReceiveBufferSize];
+                            cnt = ns.Read(bytes, 0, client.ReceiveBufferSize);
+
+                            resp.AddRange(bytes.Take(cnt));
+                        }
+                        while ((cnt >= bytes.Length) && (resp.Count <= max));
+                });
+
+                bytes = resp.Take(max).ToArray();
+
+                return bin ? BinaryToString($"0x{string.Concat(bytes.Select(x => x.ToString("x2")))}") : (var)Encoding.Default.GetString(bytes);
+            }
+            catch (Exception ex)
+            {
+                SetError(ex.HResult, resp.Count == 0);
             }
 
-            SetError(-1);
-
-            return 0;
+            return "";
         }
-        public static var TCPNameToIP(var name) => DnsGetIP(name);
-
-
-
-
-
         [BuiltinFunction]
+        public static var TCPSend(var socket, var data)
+        {
+            int cnt = 0;
+
+            try
+            {
+                socket.UseGCHandledData<TcpClient>(client =>
+                {
+                    using (NetworkStream ns = client.GetStream())
+                    {
+                        byte[] bytes = data.BinaryData;
+
+                        if (bytes.Length == 0)
+                            bytes = Encoding.Default.GetBytes(data);
+
+                        ns.Write(bytes, 0, cnt = bytes.Length);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                SetError(ex.HResult);
+            }
+
+            return cnt;
+        }
+        [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(TCPStartup))]
+        public static var TCPStartup() => 1;
+        [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(TCPShutdown))]
+        public static var TCPShutdown() => 1;
+
+
+
+
+
+
+
+        [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(UDPStartup))]
         public static var UDPStartup() => 1;
+        [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(UDPShutdown))]
+        public static var UDPShutdown() => 1;
+
+
+        
 
         #endregion
         #region Additional functions
@@ -405,6 +535,8 @@ namespace AutoItCoreLibrary
         public static var ATan2(var v1, var v2) => (var)Math.Atan2((double)v1, (double)v2);
         [BuiltinFunction]
         public static var ConsoleWriteLine(var v) => __(() => Console.WriteLine(v.ToString()));
+        [BuiltinFunction]
+        public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
@@ -489,5 +621,38 @@ namespace AutoItCoreLibrary
     public sealed class RequiresUnsafeAttribute
         : Attribute
     {
+    }
+
+#pragma warning disable RCS1203
+    public abstract class CompilerIntrinsicMessage
+        : Attribute
+    {
+        public string MessageName { get; }
+        public object[] Arguments { get; }
+
+
+        internal CompilerIntrinsicMessage(string name, params object[] args) =>
+            (MessageName, Arguments) = (name, args);
+    }
+#pragma warning restore RCS1203
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public sealed class WarningAttribute
+        : CompilerIntrinsicMessage
+    {
+        public WarningAttribute(string name, params object[] args)
+            : base(name, args)
+        {
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public sealed class NoteAttribute
+        : CompilerIntrinsicMessage
+    {
+        public NoteAttribute(string name, params object[] args)
+            : base(name, args)
+        {
+        }
     }
 }

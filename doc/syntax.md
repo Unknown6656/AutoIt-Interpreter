@@ -32,12 +32,12 @@ EndIf
 
 The truth table for the logical operators is defined as follows:
 
-| `A`   | `B`   || `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` |
-|:-----:|:-----:||:-----:|:------:|:-----:|:-----:|:-----:|:------:|
-|`false`|`false`||`false`| `true` |`false`| `true`|`false`| `true` |
-|`false`| `true`||`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`|`false`||`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`| `true`|| `true`| `false`| `true`|`false`|`false`| `true` |
+| `A`   | `B`   | `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` |
+|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|:-----:|:------:|
+|`false`|`false`|`false`| `true` |`false`| `true`|`false`| `true` |
+|`false`| `true`|`false`| `true` | `true`|`false`| `true`| `false`|
+| `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`|
+| `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` |
 
 ## Bitwise arithmetical operators
 

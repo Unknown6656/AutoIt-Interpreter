@@ -153,7 +153,7 @@ namespace AutoItInterpreter
 
         public InterpreterState Compile()
         {
-            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit3-compiler");
+            DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit++-compiler");
             InterpreterState state;
             bool success = false;
 
@@ -1759,7 +1759,7 @@ namespace AutoItInterpreter
 
                 if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
                 {
-                    (string f, int mac, int oac, OS[] os, bool us) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+                    (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
 
                     if (!os.Contains(target))
                         err("errors.astproc.invalid_system", target, string.Join(",", os.Select(x => x.ToString())));
@@ -1771,6 +1771,12 @@ namespace AutoItInterpreter
                         err("errors.astproc.not_enough_args", f, mac, args.Length);
                     else if (args.Length > mac + oac)
                         err("errors.astproc.too_many_args", f, mac + oac);
+
+                    foreach (CompilerIntrinsicMessage msg in msgs)
+                        if (msg is WarningAttribute w)
+                            state.ReportKnownWarning(w.MessageName, context, w.Arguments);
+                        else if (msg is NoteAttribute n)
+                            state.ReportKnownNote(n.MessageName, context, n.Arguments);
                 }
                 else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
                     err("errors.astproc.func_not_declared", func);
@@ -1796,8 +1802,8 @@ namespace AutoItInterpreter
                     if (index < mpcnt)
                         err("errors.astproc.not_enough_args", f, mpcnt, index);
 
-                    if (func.Equals("autoit3", StringComparison.InvariantCultureIgnoreCase))
-                        state.ReportKnownNote("notes.unsafe_autoit3", context);
+                    if (func.Equals("execute", StringComparison.InvariantCultureIgnoreCase))
+                        state.ReportKnownNote("notes.unsafe_execute", context);
                 }
             }
 
@@ -1959,19 +1965,21 @@ namespace AutoItInterpreter
         public const string GLOBAL_FUNC_NAME = "__global<>";
 
         private static readonly OS[] ALL_OS = new[] { OS.Windows, OS.MacOS, OS.Linux };
-        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount, OS[] Systems, bool IsUnsafe)[] BUILT_IN_FUNCTIONS = new[]
+        private static readonly CompilerIntrinsicMessage[] NO_MSG = new CompilerIntrinsicMessage[0];
+        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount, OS[] Systems, bool IsUnsafe, CompilerIntrinsicMessage[] msgattrs)[] BUILT_IN_FUNCTIONS = new[]
         {
-            ("eval", 1, 0, ALL_OS, false),
-            ("assign", 2, 1, ALL_OS, false),
-            ("isdeclared", 1, 0, ALL_OS, false)
+            ("eval", 1, 0, ALL_OS, false, NO_MSG),
+            ("assign", 2, 1, ALL_OS, false, NO_MSG),
+            ("isdeclared", 1, 0, ALL_OS, false, NO_MSG)
         }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
-                 let battr = m.GetCustomAttributes(typeof(BuiltinFunctionAttribute), true)
-                 where battr.Length > 0
-                 let us = m.GetCustomAttributes(typeof(RequiresUnsafeAttribute), true).Length > 0
-                 let os = (m.GetCustomAttributes(typeof(CompatibleOSAttribute), true).FirstOrDefault() as CompatibleOSAttribute)?.Systems ?? ALL_OS
+                 let attrs = m.GetCustomAttributes(true)
+                 where attrs.Any(attr => attr is BuiltinFunctionAttribute)
+                 let us = attrs.Any(attr => attr is RequiresUnsafeAttribute)
+                 let os = attrs.Filter<object, CompatibleOSAttribute>().FirstOrDefault()?.Systems ?? ALL_OS
+                 let msgs = attrs.Filter<object, CompilerIntrinsicMessage>().ToArray()
                  let pars = m.GetParameters()
                  let opars = pars.Where(p => p.IsOptional).ToArray()
-                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length, os, us)).ToArray();
+                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length, os, us, msgs)).ToArray();
 
 
         public static bool IsReservedCall(string name)

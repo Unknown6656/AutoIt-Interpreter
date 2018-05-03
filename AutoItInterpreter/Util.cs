@@ -58,6 +58,8 @@ namespace AutoItInterpreter
                 n();
         }
 
+        public static IEnumerable<U> Filter<T, U>(this IEnumerable<T> e) where U : T => e.Where(x => x is U).Select(x => (U)x);
+
         public static bool IsValidJson(this string str)
         {
             if (str is string s)

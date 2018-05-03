@@ -81,7 +81,7 @@
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
-            "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call."
+            "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call."
         },
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given."
@@ -92,7 +92,8 @@
         "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
         "empty_block": "This block is either empty or has been optimized away. Consider removing it from the source code.",
         "uncalled_function": "The function '{0}' will never be called.",
-        "unsafe_autoit3": "Calling the function 'AutoIt3' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
-        "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics."
+        "unsafe_execute": "Calling the function 'Execute' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
+        "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics.",
+        "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations."
     }
 }
