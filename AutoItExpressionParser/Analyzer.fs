@@ -79,7 +79,7 @@ let rec ProcessConstants e =
             | BitwiseShiftLeft -> !@ variant.BitwiseShl
             | BitwiseShiftRight -> !@ variant.BitwiseShr
             | StringConcat -> !@ variant.Concat
-            | Index -> !* (fun x y -> x.[int (y.ToLong())])
+            | Index -> !* (fun x y -> x.[y.ToLong()])
         | TernaryExpression (Constant x, Constant y, Constant z) -> Some (if x.ToBool() then z else y)
         | _ -> None
     and (|Constant|_|) = procconst

@@ -17,7 +17,7 @@
             "directive_invalid": "The directive '{0}' is either invalid or currently unsupported.",
             "directive_invalid_value": "The value '{0}' is invalid for the directive '{1}'.",
             "pragma_unsupported": "The pragma option '{0}' is currently not supported.",
-            "function_nesting": "A function cannot be declared inside an other function (yet).",
+            "function_nesting": "A function cannot be declared inside an other function.",
             "unexpected_endfunc": "A function has to be declared with 'Func ...' before it can be closed wih 'EndFunc'.",
             "function_exists": "A function named '{0}' has already been declared (see {1}).",
             "block_reqr": "The current statement reuires to be directly in one of the following scopes: '{0}'.",
@@ -56,7 +56,10 @@
             "variable_exists": "The variable '{0}' has already been declared prior to this statement.",
             "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
             "unsafe_func": "The function '{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
-            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}."
+            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}.",
+            "pinvoke_sig_invalid": "The signature '{0}' is not valid for the P/Invoke function '{1}'.",
+            "dllcall_odd_argc": "The function 'DllCall' requires an odd amount of arguments.",
+            "dllcall_const_args": "The function 'DllCall' currently requires constant string arguments for the entry point and type names. This will be fixed in the near future."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
@@ -76,7 +79,8 @@
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. Consider assigning the expression to a local or global variable.",
-            "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call."
+            "global_return": "The return value of the global code will be ignored except when being called from inside an 'AutoIt3'-call.",
+            "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code."
         },
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given."

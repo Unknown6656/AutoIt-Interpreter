@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Collections;
 using System.Linq;
 using System;
+using System.Runtime.InteropServices;
 
 namespace AutoItCoreLibrary
 {
@@ -273,6 +274,8 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(void* l) => (long)l;
         public static implicit operator IntPtr(AutoItVariantType v) => (IntPtr)(void*)v;
         public static implicit operator AutoItVariantType(IntPtr p) => (void*)p;
+        public static implicit operator GCHandle(AutoItVariantType v) => GCHandle.FromIntPtr(v);
+        public static implicit operator AutoItVariantType(GCHandle h) => (IntPtr)h;
         public static bool operator true(AutoItVariantType v) => v == true;
         public static bool operator false(AutoItVariantType v) => v == false;
         public static AutoItVariantType operator !(AutoItVariantType v) => Not(v);

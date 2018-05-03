@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{577AA580-8D49-423E-9841-534919E3FA90}"
 	ProjectSection(SolutionItems) = preProject
 		readme.md = readme.md
+		todo.txt = todo.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PigletParser", "PigletParser\PigletParser.csproj", "{C08309F8-B0A3-4F02-BB0E-3BD30A9E50F2}"

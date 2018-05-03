@@ -1,0 +1,28 @@
+[ ] lambdas
+        $kek = f2
+        $kek = Func ($a, $b)
+            return 420
+        endfunc
+
+        sort($array, $kek)
+    
+        $kek($a, $b) => call($kek, $a, $b)
+[ ] substrings
+        "asdkfjh"@$2 = "s"
+        $k@$a..$a+$i
+
+        String indices are 1-based
+        StringMid("Hallo", 1, 4) = "Hall"
+[ ] arrays
+    [ ] declaration
+    [ ] redim
+    [ ] element assignment
+[ ] enum constants
+[ ] pinvoke
+        func my_func as "long f2(int, int)" from ".dll" <<-------
+[ ] documentation
+[ ] start functions
+[ ] const variables : assignment
+[ ] -Wall compiler flag
+[ ] implement all funcitions
+[ ] implement all macros

@@ -5,7 +5,11 @@ using System.Text;
 using System;
 using System.Reflection;
 using System.Globalization;
+using System.Net.Sockets;
+using System.Net;
+using System.Web;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace AutoItCoreLibrary
 {
@@ -16,6 +20,7 @@ namespace AutoItCoreLibrary
     public static unsafe class AutoItFunctions
     {
         public const string FUNC_PREFIX = "__userfunc_";
+        public const string PINVOKE_PREFIX = "__pinvoke_";
 
         private static var __error;
         private static var __extended;
@@ -69,6 +74,16 @@ namespace AutoItCoreLibrary
             {
                 return false;
             }
+        }
+
+        public static string GeneratePInvokeWrapperName(string dll, string func)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            foreach (char c in $"{PINVOKE_PREFIX}_{dll}_{func}")
+                sb.Append(char.IsLetterOrDigit(c) ? c : '_');
+
+            return sb.ToString();
         }
 
         #endregion
@@ -306,10 +321,82 @@ namespace AutoItCoreLibrary
         public static var DirRemove(var d, var? f = null) => Try(() => Directory.Delete(d, f ?? false));
 
         // TODO : Dll* functions
-        
+
+        [BuiltinFunction]
+        public static var DllCall(var dll, var _, var func, params var[] args)
+        {
+            string funcname = GeneratePInvokeWrapperName(dll, func);
+            Type type = new StackFrame(1).GetMethod().DeclaringType;
+            MethodInfo meth = type.GetMethod(funcname, BindingFlags.Static | BindingFlags.IgnoreCase | BindingFlags.Public);
+
+            return (var)meth.Invoke(null, args.Where((__, i) => (i % 2) == 1).Select(x => x as object).ToArray());
+        }
+
+        // TODO : Dll* functions
+
         public static var Min(var v1, var v2) => v1 <= v2 ? v1 : v2;
         [BuiltinFunction]
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
+
+
+        [BuiltinFunction]
+        public static var TCPStartup() => 1;
+        [BuiltinFunction]
+        public static var TCPConnect(var addr, var port)
+        {
+            try
+            {
+                TcpClient client = new TcpClient(addr, port.ToInt());
+
+                return GCHandle.Alloc(client);
+            }
+            catch (Exception e)
+            {
+                int err = -2;
+
+                if (e is ArgumentOutOfRangeException)
+                    err = 2;
+                else if (e is SocketException se)
+                    err = (int)se.SocketErrorCode;
+
+                SetError(err, 0);
+
+                return 0;
+            }
+        }
+        [BuiltinFunction]
+        public static var TCPCloseSocket(var s)
+        {
+            try
+            {
+                if ((void*)s != null)
+                {
+                    GCHandle ptr = s;
+                    TcpClient client = ptr.Target as TcpClient;
+
+                    ptr.Free();
+                    client.Close();
+                    client.Dispose();
+
+                    return 1;
+                }
+            }
+            catch
+            {
+            }
+
+            SetError(-1);
+
+            return 0;
+        }
+        public static var TCPNameToIP(var name) => DnsGetIP(name);
+
+
+
+
+
+        [BuiltinFunction]
+        public static var UDPStartup() => 1;
 
         #endregion
         #region Additional functions
@@ -322,25 +409,27 @@ namespace AutoItCoreLibrary
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
             string inp = (s.ToString()).Substring((int)(offs ?? 0L));
-            int i1 = inp.IndexOf(s1) + s1.Length;
-            int i2 = inp.Substring(i1).IndexOf(s2);
+            long i1 = inp.IndexOf(s1) + s1.Length;
+            int i2 = inp.Substring((int)i1).IndexOf(s2);
 
             if (i2 >= 0)
             {
                 SetError(0, i1);
 
-                return inp.Substring(i1, i2);
+                return inp.Substring((int)i1, i2);
             }
             else
                 SetError(1, 0);
 
             return "";
         }
-        
 
-        // a very evil function
+
+
         [BuiltinFunction]
-        public static var autoit3(var code, var? path = null) => throw new NotImplementedException(); // TODO
+        public static var DnsGetIP(var v) => Dns.GetHostEntry(v).AddressList[0].ToString();
+        [BuiltinFunction]
+        public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
 
         #endregion
 

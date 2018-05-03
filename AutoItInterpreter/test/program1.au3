@@ -11,20 +11,6 @@ func my_func as "long f2(int, bool)" from "user32.dll"
 func my_func2 as "void f2(void***, int*)" from "kek.so"
 
 
-$kek = f2
-
-$kek = Func ($a, $b)
-
-viech
-return 420
-
-endfunc
-
-sort($array, $kek)
-
-$kek($a, $b) => call($kek, $a, $b)
-
-
 #css
     System.Console.WriteLine($"top kek at {System.DateTime.Now:yyyy-MM-dd HH-mm-ss-ffffff}!");
 #cse #ce
@@ -44,36 +30,4 @@ for $cnt = 0 to 7
 
     $old = $cnt
 next
-
-
-
-#cs
-
-lambdas
-    $kek = f2
-
-    $kek = Func ($a, $b)
-
-    viech
-    return 420
-
-    endfunc
-
-    sort($array, $kek)
-    
-    $kek($a, $b) => call($kek, $a, $b)
-substrings
-    "asdkfjh"@$2 = "s"
-    $k@$a..$a+$i
-
-    String indices are 1-based
-    StringMid("Hallo", 1, 4) = "Hall"
-arrays
-enums
-pinvoke
-    func my_func as "long f2(int, int)" from ".dll" <<-------
-documentation
-start functions
-
-#ce
 

@@ -1,5 +1,9 @@
 ﻿namespace AutoItExpressionParser
 
+open System.Runtime.CompilerServices
+
+
+[<ExtensionAttribute>]
 module PInvoke =
     type PINVOKE_TYPE =
         | UInt8
@@ -23,9 +27,14 @@ module PInvoke =
             ReturnType : PINVOKE_RETURN_TYPE
             Paramters : PINVOKE_TYPE[]
         }
+        
+    [<ExtensionAttribute>]
+    let Print (s : PINVOKE_SIGNATURE) =
+        ""
 
 
 open PInvoke
+
 
 type PInvokeParser() =
     inherit AbstractParser<PINVOKE_SIGNATURE>()

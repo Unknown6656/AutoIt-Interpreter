@@ -28,7 +28,9 @@
             "misplaced_continueloop": 1119,
             "invalid_global": 1121,
             "no_closing_csharp": 1122,
-            "csharp_requires_unsafe": 1123
+            "csharp_requires_unsafe": 1123,
+            "pinvoke_no_lib": 1124,
+            "pinvoke_no_sig": 1125
         },
         "astproc": {
             "unknown_entity": 1201,
@@ -47,7 +49,10 @@
             "init_invalid_operator": 1214,
             "init_invalid_expression": 1215,
             "unsafe_func": 1216,
-            "invalid_system": 1217
+            "invalid_system": 1217,
+            "pinvoke_sig_invalid": 1218,
+            "dllcall_odd_argc": 1219,
+            "dllcall_const_args": 1220
         },
         "generator": {
             "cannot_create": 1301,
@@ -67,12 +72,13 @@
         },
         "astproc": {
             "expression_result_discarded": 2101,
-            "global_return": 2102
+            "global_return": 2102,
+            "pinvoke_already_declared": 2103
         },
         "generator": {
             "failed_clean_output": 2201
         },
-        "not_impl": 9999
+        "not_impl": 2999
     },
     "notes": {
         "optimized_away": 3001,

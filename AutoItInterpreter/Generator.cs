@@ -169,6 +169,8 @@ namespace {NAMESPACE}
                 }
             }
 
+            // TODO : add P/Invoke signature
+
             sb.AppendLine($@"
         private static {TYPE} __critical(string s) => throw new InvalidProgramException(s ?? """");
     }}

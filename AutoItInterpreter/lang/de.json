@@ -17,7 +17,7 @@
             "directive_invalid": "Die Direktive '{0}' ist entweder ungültig oder wird derzeitig nicht unterstützt.",
             "directive_invalid_value": "Der Wert '{0}' ist für die Direktive '{1}' ungültig.",
             "pragma_unsupported": "Die pragma-Option '{0}' wird derzeitig nicht unterstützt.",
-            "function_nesting": "Eine Funktion kann (noch) nicht innerhalb einer anderen Funktion platziert werden.",
+            "function_nesting": "Eine Funktion kann nicht innerhalb einer anderen Funktion platziert werden.",
             "unexpected_endfunc": "Eine Funktion muss zuerst mit 'Func ...' deklariert werden, bevor diese mit 'EndFunc' geschlossen werden kann.",
             "function_exists": "Eine Funktion namens '{0}' existiert bereits (siehe {1}).",
             "block_reqr": "Die Anweisung muss direkt in eine der folgenden Blöcke platziert werden: '{0}'.",
@@ -57,7 +57,10 @@
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead.",
             "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
             "unsafe_func": "The function '{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
-            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}."
+            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}.",
+            "pinvoke_sig_invalid": "The signature '{0}' is not valid for the P/Invoke function '{1}'.",
+            "dllcall_odd_argc": "The function 'DllCall' requires an odd amount of arguments.",
+            "dllcall_const_args": "The function 'DllCall' currently requires constant string arguments for the entry point and type names. This will be fixed in the near future."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
@@ -73,7 +76,8 @@
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
             "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
             "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "invalid_local": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'."
+            "invalid_local": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'.",
+            "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code."
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",

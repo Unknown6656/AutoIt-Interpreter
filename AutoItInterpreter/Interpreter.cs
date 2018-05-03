@@ -784,6 +784,8 @@ namespace AutoItInterpreter
                     err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
                 else if (st.PInvokeFunctions.ContainsKey(lname))
                     err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
+                else if(st.CurrentFunction != null)
+                    err("errors.preproc.function_nesting");
                 else
                     st.PInvokeFunctions[name] = (sig, lib, defcntx);
             }
@@ -934,8 +936,20 @@ namespace AutoItInterpreter
             return inclpath;
         }
 
-        private static void ParsePinvokeFunctions(InterpreterState state)
+        private static (string, PINVOKE_SIGNATURE)[] ParsePinvokeFunctions(InterpreterState state, (DefinitionContext, string, EXPRESSION[])[] dllcalls)
         {
+            bool getstr(EXPRESSION e, out string s)
+            {
+                s = null;
+
+                if (e is EXPRESSION.Literal lit && lit.Item is LITERAL.String str)
+                    s = str.Item;
+                else
+                    return false;
+
+                return true;
+            }
+            List<(string, PINVOKE_SIGNATURE)> used_sigs = new List<(string, PINVOKE_SIGNATURE)>();
             PInvokeParser parser = new PInvokeParser();
 
             parser.Initialize();
@@ -954,26 +968,70 @@ namespace AutoItInterpreter
                 }
 
                 if (sig is null)
+                    state.ReportKnownError("errors.astproc.pinvoke_sig_invalid", ctx, s, name);
+                else if (used_sigs.Contains((lib, sig)))
+                    state.ReportKnownError("warnings.astproc.pinvoke_already_declared", ctx, s, lib);
+                else
                 {
+                    used_sigs.Add((lib, sig));
 
+                    int cnt = 0;
+                    IEnumerable<VARIABLE> pars = sig.Paramters.Select(_ => new VARIABLE("_p" + cnt++));
+
+                    state.ASTFunctions[name] = new AST_FUNCTION
+                    {
+                        Context = ctx,
+                        Name = name,
+                        Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v, false, false)).ToArray(),
+                        Statements = new AST_STATEMENT[]
+                        {
+                            new AST_RETURN_STATEMENT
+                            {
+                                Expression = EXPRESSION.NewFunctionCall(
+                                    new Tuple<string, FSharpList<EXPRESSION>>(
+                                        AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
+                                        ListModule.OfSeq(pars.Select(v => EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(v))))
+                                    )
+                                )
+                            }
+                        }
+                    };
                 }
-
-
-
-
-
-
-                //state.ASTFunctions[name] = new AST_FUNCTION
-                //{
-                //    Context = ctx,
-                //    Name = name,
-                //    Parameters = ,
-                //    Statements = new AST_STATEMENT[]
-                //    {
-
-                //    }
-                //};
             }
+
+            foreach ((DefinitionContext ctx, _, EXPRESSION[] args) in dllcalls)
+                if (args.Length < 3)
+                    state.ReportKnownError("errors.astproc.not_enough_args", ctx, "DllCall", 3, args.Length);
+                else if ((args.Length % 2) == 0)
+                    state.ReportKnownError("errors.astproc.dllcall_odd_argc", ctx);
+                else if (getstr(args[0], out string lib) && getstr(args[1], out string ret) && getstr(args[2], out string name))
+                {
+                    int index = 0;
+                    string pstr = null;
+                    PINVOKE_SIGNATURE sig = null;
+                    IEnumerable<string> ptypes = from arg in args.Skip(3)
+                                                 let i = index++
+                                                 where (i % 2) == 0
+                                                 where getstr(arg, out pstr)
+                                                 select pstr;
+
+                    try
+                    {
+                        sig = parser.Parse($"{ret} {name}({string.Join(", ", ptypes)})");
+                    }
+                    catch
+                    {
+                    }
+
+                    if (sig is null)
+                        ; // TODO : report error
+                    else if (!used_sigs.Contains((lib, sig)))
+                        used_sigs.Add((lib, sig));
+                }
+                else
+                    state.ReportKnownError("errors.astproc.dllcall_const_args", ctx);
+
+            return used_sigs.ToArray();
         }
 
         private static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
@@ -993,7 +1051,7 @@ namespace AutoItInterpreter
                                                                                                                             select (kvp.Key, kvp.Value)))
                 state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
 
-
+            state.PInvokeSignatures  = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
 
             ValidateFunctionCalls(state, options, funccalls.ToArray());
 
@@ -2002,6 +2060,7 @@ namespace AutoItInterpreter
     public sealed class InterpreterState
         : AbstractParserState
     {
+        public (string, PINVOKE_SIGNATURE)[] PInvokeSignatures { get; set; }
         public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
         public Dictionary<string, FUNCTION> Functions { get; }
         public List<string> StartFunctions { get; }
