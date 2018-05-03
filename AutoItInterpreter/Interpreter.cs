@@ -220,6 +220,8 @@ namespace AutoItInterpreter
                     }
                 }
 
+                state.ElevateWarningsToErrors();
+
                 if (Options.UseVerboseOutput)
                     DebugPrintUtil.DisplayCodeAndErrors(state);
 
@@ -2063,6 +2065,12 @@ namespace AutoItInterpreter
             if (_errors.Count > 0)
                 _errors.RemoveAt(_errors.Count - 1);
         }
+
+        internal void ElevateWarningsToErrors()
+        {
+            foreach (InterpreterError err in Errors)
+                err.ElevateSeriousness();
+        }
     }
 
     public sealed class InterpreterState
@@ -2196,10 +2204,10 @@ namespace AutoItInterpreter
 
     public sealed class InterpreterError
     {
+        public ErrorType Type { private set; get; }
         public DefinitionContext ErrorContext { get; }
         public string ErrorMessage { get; }
         public int ErrorNumber { get; }
-        public ErrorType Type { get; }
 
 
         internal InterpreterError(string msg, DefinitionContext line, int number, ErrorType type)
@@ -2213,6 +2221,14 @@ namespace AutoItInterpreter
         public void @throw() => throw (InvalidProgramException)this;
 
         public override string ToString() => $"(AU{ErrorNumber:D4})  {ErrorContext}: {ErrorMessage}";
+
+        internal void ElevateSeriousness()
+        {
+            if (Type == ErrorType.Warning)
+                Type = ErrorType.Fatal;
+            else if (Type == ErrorType.Note)
+                Type = ErrorType.Warning;
+        }
 
 
         public static implicit operator InvalidProgramException(InterpreterError err) => new InvalidProgramException(err.ToString())

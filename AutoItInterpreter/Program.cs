@@ -47,7 +47,8 @@ namespace AutoItInterpreter
                     ("k", "keep-temp"),
                     ("g", "generate-always"),
                     ("t", "target-system"),
-                    ("a", "architecture")
+                    ("a", "architecture"),
+                    ("wall", "warnings-as-erros")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -119,7 +120,8 @@ namespace AutoItInterpreter
                     AllowUnsafeCode = Cont("unsafe"),
                     RawCommandLine = Environment.CommandLine,
                     TargetDirectory = GetF("output", null),
-                    CleanTargetFolder = Cont("clean-output")
+                    CleanTargetFolder = Cont("clean-output"),
+                    TreatWarningsAsErrors = Cont("warnings-as-erros")
                 };
 
                 if (Cont("target-system"))
@@ -258,6 +260,7 @@ namespace AutoItInterpreter
 |                   |                       | the same directory as the input source file and named accordingly.|
 | -c                | --clean-output        | Cleans-up the output folder before compiling.       [recommended] |
 | -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.                 |
+| -wall             | --warnings-as-erros   | Treats all warnings as errors (and all notes as warnings).        |
 | -s=...            | --settings=...        | The path to the .json settings file.                              |
 | -rs               | --reset-settings      | Resets the .json settings file to its defaults.                   |
 | -l=....           | --lang=...            | Sets the language for the current session using the given language|
@@ -414,6 +417,7 @@ namespace AutoItInterpreter
         public Compatibility Compatibility { set; get; } = Win32.System == OS.Windows ? Compatibility.win
                                                          : Win32.System == OS.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
+        public bool TreatWarningsAsErrors { get; set; }
         public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }
         public string TargetDirectory { set; get; }
@@ -423,7 +427,6 @@ namespace AutoItInterpreter
         public bool GenerateCodeEvenWithErrors { set; get; }
         public bool UseVerboseOutput { set; get; }
         public Language Language { set; get; }
-
 
         public InterpreterOptions(InterpreterSettings settings) => Settings = settings;
     }

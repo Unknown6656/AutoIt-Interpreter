@@ -153,6 +153,7 @@ The following basic rules apply:
 | `-o=...`       | `--output=...`          | The output directory, to which the application will be written. If no output directory is given, the directory will be created in the same directory as the input source file and named accordingly.|
 | `-c`           | `--clean-output`        | Cleans-up the output folder before compiling. _[recommended]_ |
 | `-u`           | `--unsafe`              | Allows unsafe code blocks, such as inline-C# etc. |
+| `-wall`        | `--warnings-as-erros`   | Treats all warnings as errors (and all notes as warnings). |
 | `-s=...`       | `--settings=...`        | The path to the .json settings file. |
 | `-rs`          | `--reset-settings`      | Resets the .json settings file to its defaults. |
 | `-l=....`      | `--lang=...`            | Sets the language for the current session using the given language code. |
