@@ -13,20 +13,21 @@
 
             String indices are 1-based
             StringMid("Hallo", 1, 4) = "Hall"
-[ ] arrays
+[-] arrays
     [ ] declaration
     [ ] redim
     [x] element assignment
 [ ] enum constants
-[ ] pinvoke
+[-] pinvoke
             func my_func as "long f2(int, int)" from ".dll" <<-------
-[ ] documentation
-    [ ] usage
+[-] documentation
+    [-] usage
     [ ] language reference (functions etc.)
-    [ ] syntax reference
+    [-] syntax reference (differences betw. AU++ and AU3)
+    [ ] official syntax tree of AU++
     [ ] examples
 [ ] start functions
 [ ] const variables : assignment
 [x] -Wall compiler flag
-[ ] implement all funcitions
+[-] implement all funcitions
 [ ] implement all macros

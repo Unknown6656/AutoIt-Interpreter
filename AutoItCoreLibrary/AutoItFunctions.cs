@@ -356,6 +356,56 @@ namespace AutoItCoreLibrary
 
         // TODO : Dll* functions
 
+        [BuiltinFunction]
+        public static var DriveGetDrive(var t)
+        {
+            DriveInfo[] drives = DriveInfo.GetDrives();
+            DriveType? type;
+
+            switch (t.ToString())
+            {
+                case "CDROM":
+                    type = DriveType.CDRom;
+
+                    break;
+                case "REMOVABLE":
+                    type = DriveType.Removable;
+
+                    break;
+                case "FIXED":
+                    type = DriveType.Fixed;
+
+                    break;
+                case "NETWORK":
+                    type = DriveType.Network;
+
+                    break;
+                case "RAMDISK":
+                    type = DriveType.Ram;
+
+                    break;
+                case "UNKNOWN":
+                    type = DriveType.Unknown;
+
+                    break;
+                default:
+                    type = null;
+
+                    break;
+            }
+
+            if (type is DriveType dt)
+                drives = drives.Where(d => d.DriveType == dt).ToArray();
+
+            return var.NewArray(new var[] { drives.LongLength }.Concat(drives.Select(d => (var)d.Name.TrimEnd('/', '\\'))).ToArray());
+        }
+
+
+
+
+
+
+        [BuiltinFunction]
         public static var Min(var v1, var v2) => v1 <= v2 ? v1 : v2;
         [BuiltinFunction]
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
