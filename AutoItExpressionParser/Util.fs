@@ -173,9 +173,10 @@ type AbstractParser<'a>() =
             x.Initialize()
         parser.Parse(s.Replace('\t', ' ')) :?> 'a
 
-
+        
+type int = System.Int32
+type char = System.Char
 type long = System.Int64
-
 type decimal = System.Decimal
             
 [<AutoOpen>]

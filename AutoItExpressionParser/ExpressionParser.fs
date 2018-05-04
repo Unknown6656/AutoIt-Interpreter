@@ -126,20 +126,24 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                             let r = Regex(@"(?<!\\)(?:\\{2})*((?<type>\$|@)(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
                                                                                                             let l = cslist<EXPRESSION>()
                                                                                                             let proc (s : string) =
-                                                                                                                s.Replace(@"\\", "\ufffe")
-                                                                                                                 .Replace(@"\""", "\"")
-                                                                                                                 .Replace(@"\r", "\r")
-                                                                                                                 .Replace(@"\n", "\n")
-                                                                                                                 .Replace(@"\t", "\t")
-                                                                                                                 .Replace(@"\v", "\v")
-                                                                                                                 .Replace(@"\b", "\b")
-                                                                                                                 .Replace(@"\a", "\a")
-                                                                                                                 .Replace(@"\f", "\f")
-                                                                                                                 .Replace(@"\d", "\x7f")
-                                                                                                                 .Replace(@"\0", "\0")
-                                                                                                                 .Replace(@"\$", "$")
-                                                                                                                 .Replace(@"\@", "@")
-                                                                                                                 .Replace(@"\ufffe", "\\")
+                                                                                                                let s = s.Replace(@"\\", "\ufffe")
+                                                                                                                         .Replace(@"\""", "\"")
+                                                                                                                         .Replace(@"\r", "\r")
+                                                                                                                         .Replace(@"\n", "\n")
+                                                                                                                         .Replace(@"\t", "\t")
+                                                                                                                         .Replace(@"\v", "\v")
+                                                                                                                         .Replace(@"\b", "\b")
+                                                                                                                         .Replace(@"\a", "\a")
+                                                                                                                         .Replace(@"\f", "\f")
+                                                                                                                         .Replace(@"\d", "\x7f")
+                                                                                                                         .Replace(@"\0", "\0")
+                                                                                                                         .Replace(@"\$", "$")
+                                                                                                                         .Replace(@"\@", "@")
+                                                                                                                         .Replace(@"\ufffe", "\\")
+                                                                                                                let r p s = Regex.Replace(s, p, fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString())
+                                                                                                                s
+                                                                                                                |> r @"\u(?<code>[0-9a-fA-F]{4})"
+                                                                                                                |> r @"\x(?<code>[0-9a-fA-F]{2})"
                                                                                                                 |> String
                                                                                                                 |> Literal
                                                                                                             while r.IsMatch s do

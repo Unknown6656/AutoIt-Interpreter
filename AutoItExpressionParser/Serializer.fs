@@ -2,6 +2,7 @@
 
 open AutoItExpressionParser.ExpressionAST
 open System
+open System.Text.RegularExpressions
 
 
 type SerializerSettings =
@@ -88,17 +89,14 @@ type Serializer (settings : SerializerSettings) =
                                      | True -> !/"True"
                                      | False -> !/"False"
                                      | Number d -> d.ToString()
-                                     | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\")
-                                                                      .Replace("\"", "\\\"")
-                                                                      .Replace("\r", "\\r")
-                                                                      .Replace("\n", "\\n")
-                                                                      .Replace("\b", "\\b")
-                                                                      .Replace("\a", "\\a")
-                                                                      .Replace("\f", "\\f")
-                                                                      .Replace("\v", "\\v")
-                                                                      .Replace("\t", "\\t")
-                                                                      .Replace("\x7f", "\\x7f")
-                                                                      .Replace("\0", "\\0"))
+                                     | String s -> "\"" + (s
+                                                           |> Seq.map (fun c -> if c > 'ÿ' then
+                                                                                    sprintf @"\u%04x" <| uint16 c
+                                                                                elif (c < ' ') || ((c > '~') && (c < '¡')) then
+                                                                                    sprintf @"\x%02x" <| uint8 c
+                                                                                else
+                                                                                    c.ToString())
+                                                           |> String.Concat) + "\""
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->

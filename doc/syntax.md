@@ -106,8 +106,8 @@ TODO
 
 AutoIt++ allows the usage of so-called _interpolated strings_, which are known from other languages such as PHP, C#, JavaScript, Bash, Python and many others more.
 <br/>
-Interpolated strings have a leading dollar symbol (`$`) and can interpolate variables in their regular notation (`$`-prefixed).
-To escape the dollar-character inside an interpolated string, it must be prefixed with a backslash (`\`). To escape a backslash in an interpolated string, one must type to backslashes (`\\`).
+Interpolated strings have a leading dollar symbol (`$`) and can interpolate variables in their regular notation (`$`-prefixed) or macros (`@`-prefixed).
+To escape any dollar- or at-characters inside an interpolated string, it must be prefixed with a backslash (`\`). To escape a backslash in an interpolated string, one must type to backslashes (`\\`).
 A backslash can also be used as control-sequence prefix for the following entities:
 
 | Expression | Translation |
@@ -125,8 +125,19 @@ A backslash can also be used as control-sequence prefix for the following entiti
 | `\\` | The ASCII character `\` (`0x5C`) |
 | `\$` | The ASCII character `$` (`0x24`) |
 | `\@` | The ASCII character `@` (`0x40`) |
+| `\x--` | The ASCII character represented by the two hexadecimal digits `--` |
+| `\u----` | The UNICODE character represented by the four hexadecimal digits `----` |
 
-TODO
+Usage example:
+```autoit
+$foo = 42
+$bar = "World"
+
+$result = $"Hello, $bar!\nI have a variable named \"\$foo\", which has the value \"$foo\" <> @year."
+; $result now has the value:
+;   Hello, Bar!
+;   I have a variable named "$foo", which has the value "42" <> 2018
+```
 
 More general information about interpolated strings can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/String_interpolation).
 <br/>
