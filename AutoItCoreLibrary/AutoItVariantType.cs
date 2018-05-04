@@ -83,7 +83,7 @@ namespace AutoItCoreLibrary
 
         public static AutoItVariantType Default { get; } = "";
 
-        public static AutoItVariantType Null { get; } = "";
+        public static AutoItVariantType Null { get; } = (void*)null;
 
         #endregion
         #region CONSTRUCTORS

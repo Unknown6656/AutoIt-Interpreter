@@ -114,7 +114,7 @@ namespace {NAMESPACE}
                 return Assembly.Load(rm.GetObject(dll) as byte[]);
             }};
 
-            {MACROS} = new {TYPE_MAC_RPOVIDER}( null /* TODO */ );
+            {MACROS} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, null /* TODO */ );
             {VARS} = new {TYPE_VAR_RPOVIDER}();
             {DISCARD} = {TYPE}.Null;
             {TYPE} result = ___globalentrypoint();

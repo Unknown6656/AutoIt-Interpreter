@@ -39,11 +39,18 @@ namespace AutoItCoreLibrary
 
     public sealed class AutoItMacroDictionary
     {
-        private readonly Func<string, AutoItVariantType> _func;
+        private readonly Func<string, AutoItVariantType?> _func;
+        private readonly AutoItMacroDictionary _parent;
 
 
-        public AutoItVariantType this[string name] => _func(name);
+        public AutoItVariantType this[string name] => _func(name) ?? _parent?[name] ?? AutoItVariantType.Default;
 
-        public AutoItMacroDictionary(Func<string, AutoItVariantType> prov) => _func = prov ?? new Func<string, AutoItVariantType>(_ => AutoItVariantType.Default);
+        public AutoItMacroDictionary(Func<string, AutoItVariantType?> prov)
+            : this(null, prov)
+        {
+        }
+
+        public AutoItMacroDictionary(AutoItMacroDictionary parent, Func<string, AutoItVariantType?> prov) =>
+            (_parent, _func) = (parent, prov ?? new Func<string, AutoItVariantType?>(_ => null));
     }
 }

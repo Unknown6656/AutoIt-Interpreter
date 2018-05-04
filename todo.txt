@@ -30,4 +30,4 @@
 [ ] const variables : assignment
 [x] -Wall compiler flag
 [-] implement all funcitions
-[ ] implement all macros
+[-] implement all macros

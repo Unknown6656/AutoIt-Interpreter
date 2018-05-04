@@ -11,7 +11,10 @@ using System;
 
 namespace AutoItCoreLibrary
 {
+    using static Win32;
+
     using var = AutoItVariantType;
+
 
 #pragma warning disable RCS1057
 #pragma warning disable IDE1006
@@ -23,8 +26,198 @@ namespace AutoItCoreLibrary
         private static var __error;
         private static var __extended;
 
-        public static var @Error => __error;
-        public static var @Extended => __extended;
+        public static AutoItMacroDictionary StaticMacros { get; } = new AutoItMacroDictionary(s =>
+        {
+            switch (s.ToLower().Trim())
+            {
+                case "appdatacommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                case "appdatadir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                case "autoitexe":
+                    return Process.GetCurrentProcess().MainModule.FileName;
+                case "autoitpid":
+                    return Process.GetCurrentProcess().Id;
+                case "autoitversion":
+                    return "3.42.++";
+                case "autoitx64":
+                    return Is64Bit ? 1 : 0;
+                case "com_eventobj": // object the com event is being fired on. only valid in a com event function.
+                    break;
+                case "commonfilesdir":
+                    return Environment.GetFolderPath(Is64Bit ? Environment.SpecialFolder.CommonProgramFiles : Environment.SpecialFolder.CommonProgramFilesX86);
+                case "compiled":
+                    return 1;
+                case "computername":
+                    return Environment.MachineName;
+                case "comspec":
+                    if (System == OS.Windows)
+                        return Environment.ExpandEnvironmentVariables("%COMSPEC%");
+                    else
+                        return;
+                case "cpuarch":
+                    return Is64Bit ? "x64" : "x86";
+                case "cr":
+                    return "\r";
+                case "crlf":
+                    return "\r\n";
+                case "desktopcommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
+                case "desktopdepth":
+                    break;
+                case "desktopdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                case "desktopheight":
+                case "desktoprefresh":
+                case "desktopwidth":
+                    break;
+                case "documentscommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+                case "error":
+                    return __error;
+                case "exitcode":
+                    return Environment.ExitCode;
+                case "exitmethod":
+                    break;
+                case "extended":
+                    return __extended;
+                case "favoritescommondir":
+                case "favoritesdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.Favorites);
+                case "gui_ctrlhandle":
+                case "gui_ctrlid":
+                case "gui_dragfile":
+                case "gui_dragid":
+                case "gui_dropid":
+                case "gui_winhandle":
+                    break;
+                case "homedrive":
+                    if (System == OS.Windows)
+                        return Environment.ExpandEnvironmentVariables("%HOMEDRIVE%");
+                    else
+                        return "";
+                case "homepath":
+                    if (System == OS.Windows)
+                        return Environment.ExpandEnvironmentVariables("%HOMEPATH%");
+                    else
+                        return Environment.ExpandEnvironmentVariables("$HOME");
+                case "homeshare":
+                    return $@"\\{Environment.MachineName}\{Environment.ExpandEnvironmentVariables("%HOMEDRIVE%").Replace(':', '$')}{Environment.ExpandEnvironmentVariables("%HOMEPATH%")}";
+                case "hotkeypressed":
+                    return null;
+                case "hour":
+                    return DateTime.Now.Hour.ToString("D2");
+                case "ipaddress1": // ip address of first network adapter. tends to return 127.0.0.1 on some computers.
+                case "ipaddress2": // ip address of second network adapter. returns 0.0.0.0 if not applicable.
+                case "ipaddress3": // ip address of third network adapter. returns 0.0.0.0 if not applicable.
+                case "ipaddress4": // ip address of fourth network adapter. returns 0.0.0.0 if not applicable.
+                case "kblayout": // returns code denoting keyboard layout. see appendix for possible values.
+                    break;
+                case "lf":
+                    return "\n";
+                case "localappdatadir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                case "":
+                    /*
+                    logondnsdomain // logon dns domain.
+                    logondomain // logon domain.
+                    logonserver // logon server.
+                    mday // current day of month. range is 01 to 31
+                    min // minutes value of clock. range is 00 to 59
+                    mon // current month. range is 01 to 12
+                    msec // milliseconds value of clock. range is 000 to 999. the update frequency of this value depends on the timer resolution of the hardware and may not update every millisecond.
+                    muilang // returns code denoting multi language if available (vista is ok by default). see appendix for possible values.
+                    mydocumentsdir // path to my documents target
+                    numparams // number of parameters used in calling the user function.
+                    osarch // returns one of the following: "x86", "ia64", "x64" - this is the architecture type of the currently running operating system.
+                    osbuild // returns the os build number. for example, windows 2003 server returns 3790
+                    oslang // returns code denoting os language. see appendix for possible values.
+                    osservicepack // service pack info in the form of "service pack 3".
+                    ostype // returns "win32_nt" for xp/2003/vista/2008/win7/2008r2/win8/2012/win8.1/2012r2.
+                    osversion // returns one of the following: "win_10", "win_81", "win_8", "win_7", "win_vista", "win_xp", "win_xpe",  for windows servers: "win_2016", "win_2012r2", "win_2012", "win_2008r2", "win_2008", "win_2003"".
+                    programfilesdir // path to program files folder
+                    programscommondir // path to start menu's programs folder
+                    programsdir // path to current user's programs (folder on start menu)
+                    scriptdir // directory containing the running script. only includes a trailing backslash when the script is located in the root of a drive.
+                    scriptfullpath // equivalent to @scriptdir & "\" & @scriptname
+                    scriptlinenumber // line number being executed - useful for debug statements (e.g. location of function call). only significant in uncompiled scripts - note that #include files return their internal line numbering
+                    scriptname // filename of the running script.
+                    sec // seconds value of clock. range is 00 to 59
+                    startmenucommondir // path to start menu folder
+                    startmenudir // path to current user's start menu
+                    startupcommondir // path to startup folder
+                    startupdir // current user's startup folder
+                    sw_disable // disables the window.
+                    sw_enable // enables the window.
+                    sw_hide // hides the window and activates another window.
+                    sw_lock // lock the window to avoid repainting.
+                    sw_maximize // activates the window and displays it as a maximized window.
+                    sw_minimize // minimizes the specified window and activates the next top-level window in the z order.
+                    sw_restore // activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
+                    sw_show // activates the window and displays it in its current size and position.
+                    sw_showdefault // sets the show state based on the sw_ value specified by the program that started the application.
+                    sw_showmaximized // activates the window and displays it as a maximized window.
+                    sw_showminimized // activates the window and displays it as a minimized window.
+                    sw_showminnoactive // displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
+                    sw_showna // displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
+                    sw_shownoactivate // displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
+                    sw_shownormal // activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
+                    sw_unlock // unlock window to allow painting.
+                    systemdir // path to the windows' system (or system32) folder.
+                    tab // tab character, chr(9)
+                    tempdir // path to the temporary files folder.
+                    tray_id // last clicked item identifier during a traysetonevent() or trayitemsetonevent() action.
+                    trayiconflashing // returns 1 if tray icon is flashing; otherwise, returns 0.
+                    trayiconvisible // returns 1 if tray icon is visible; otherwise, returns 0.
+                    username // id of the currently logged on user.
+                    userprofiledir // path to current user's profile folder.
+                    wday // numeric day of week. range is 1 to 7 which corresponds to sunday through saturday.
+                    windowsdir // path to windows folder
+                    workingdir // current/active working directory. only includes a trailing backslash when the script is located in the root of a drive.
+                    yday // current day of year. range is 001 to 366 (or 001 to 365 if not a leap year)
+                    year // current four-digit year
+                    */
+            }
+
+            return null;
+        });
 
         #region helper fuctions
 

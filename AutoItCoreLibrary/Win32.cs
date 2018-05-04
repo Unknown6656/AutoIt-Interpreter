@@ -5,6 +5,7 @@ namespace AutoItCoreLibrary
     public static unsafe class Win32
     {
         public static OS System { get; }
+        public static bool Is64Bit => IntPtr.Size == 8;
 
 
         static Win32()
