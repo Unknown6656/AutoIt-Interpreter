@@ -1,4 +1,4 @@
-# A rough AutoIt3 custom-flavored syntax reference
+﻿# A rough AutoIt3 custom-flavored syntax reference
 [go back](../readme.md)
 
 The AutoIt3-syntax is fully compatible with the AutoIt++ dialect, meaning that the [official syntax reference](https://www.autoitscript.com/autoit3/docs/) applies to AutoIt++.
@@ -6,8 +6,10 @@ The AutoIt3-syntax is fully compatible with the AutoIt++ dialect, meaning that t
 This article highlights the most important differences between AutoIt3's and AutoIt++'s syntaxes. It is therefore divided in the following sections:
 
 1) [AutoIt++ operators](#autoit++-operators)
-2) TODO
-3) TODO
+2) [AutoIt++ string interpolation](#autoit++-string-interpolation)
+3) [P/Invoke functions](#p-invoke-functions)
+4) [λ-Expressions](#λ-expressions)
+5) TODO
 
 ------
 
@@ -67,10 +69,18 @@ The binary infix operators `@` and `@|` return the character at the _following_ 
 <br/>
 The expression `a @ b` represents the `b`-th character in the string `a`. The difference between `@` and `@|` is that `@` uses 0-based indices and `@|` uses one-based ones.
 
-The substring expression
+The expression `a @ b .. c` represents the substring of `a` starting at the `b`-th character and having a length of `c`. The index `b` is zero-based.
+Similarly to the one-based indexing operator `@|`, the substring operator `@| ..` also uses one-based indices.
 
 
-TODO
+An example of the indexing and substring operators:
+```autoit
+$text = "Hello, World!"
+
+$str1 = $text@0         ; "H"
+$str2 = $text@|1..4     ; "Hell"
+$str3 = $text @ 2+5..5  ; "World"
+```
 
 ### String and array length using `#`
 
@@ -85,6 +95,20 @@ $l_str = #$str ; has the value 9
 
 ## Assignment operators
 
+TODO
 
+## Operator Precedence
+
+TODO
+
+# AutoIt++ string interpolation
+
+TODO
+
+# P/Invoke functions
+
+TODO
+
+# λ-Expressions
 
 TODO
