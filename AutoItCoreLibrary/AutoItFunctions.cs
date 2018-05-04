@@ -26,6 +26,7 @@ namespace AutoItCoreLibrary
         private static var __error;
         private static var __extended;
 
+        public static Assembly ScriptAssembly { get; }
         public static AutoItMacroDictionary StaticMacros { get; } = new AutoItMacroDictionary(s =>
         {
             switch (s.ToLower().Trim())
@@ -35,7 +36,7 @@ namespace AutoItCoreLibrary
                 case "appdatadir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 case "autoitexe":
-                    return Process.GetCurrentProcess().MainModule.FileName;
+                    return ScriptAssembly.Location;
                 case "autoitpid":
                     return Process.GetCurrentProcess().Id;
                 case "autoitversion":
@@ -51,10 +52,10 @@ namespace AutoItCoreLibrary
                 case "computername":
                     return Environment.MachineName;
                 case "comspec":
-                    if (System == OS.Windows)
-                        return Environment.ExpandEnvironmentVariables("%COMSPEC%");
-                    else
-                        return;
+                    return GetPlatformSpecific(
+                        () => Environment.ExpandEnvironmentVariables("%COMSPEC%"),
+                        () =>
+                    );
                 case "cpuarch":
                     return Is64Bit ? "x64" : "x86";
                 case "cr":
@@ -92,15 +93,15 @@ namespace AutoItCoreLibrary
                 case "gui_winhandle":
                     break;
                 case "homedrive":
-                    if (System == OS.Windows)
-                        return Environment.ExpandEnvironmentVariables("%HOMEDRIVE%");
-                    else
-                        return "";
+                    return GetPlatformSpecific(
+                        () => Environment.ExpandEnvironmentVariables("%HOMEDRIVE%"),
+                        () => ""
+                    );
                 case "homepath":
-                    if (System == OS.Windows)
-                        return Environment.ExpandEnvironmentVariables("%HOMEPATH%");
-                    else
-                        return Environment.ExpandEnvironmentVariables("$HOME");
+                    return GetPlatformSpecific(
+                        () => Environment.ExpandEnvironmentVariables("%HOMEPATH%"),
+                        () => Environment.ExpandEnvironmentVariables("$HOME")
+                    );
                 case "homeshare":
                     return $@"\\{Environment.MachineName}\{Environment.ExpandEnvironmentVariables("%HOMEDRIVE%").Replace(':', '$')}{Environment.ExpandEnvironmentVariables("%HOMEPATH%")}";
                 case "hotkeypressed":
@@ -117,107 +118,124 @@ namespace AutoItCoreLibrary
                     return "\n";
                 case "localappdatadir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                case "":
-                    /*
-                    logondnsdomain // logon dns domain.
-                    logondomain // logon domain.
-                    logonserver // logon server.
-                    mday // current day of month. range is 01 to 31
-                    min // minutes value of clock. range is 00 to 59
-                    mon // current month. range is 01 to 12
-                    msec // milliseconds value of clock. range is 000 to 999. the update frequency of this value depends on the timer resolution of the hardware and may not update every millisecond.
-                    muilang // returns code denoting multi language if available (vista is ok by default). see appendix for possible values.
-                    mydocumentsdir // path to my documents target
-                    numparams // number of parameters used in calling the user function.
-                    osarch // returns one of the following: "x86", "ia64", "x64" - this is the architecture type of the currently running operating system.
-                    osbuild // returns the os build number. for example, windows 2003 server returns 3790
-                    oslang // returns code denoting os language. see appendix for possible values.
-                    osservicepack // service pack info in the form of "service pack 3".
-                    ostype // returns "win32_nt" for xp/2003/vista/2008/win7/2008r2/win8/2012/win8.1/2012r2.
-                    osversion // returns one of the following: "win_10", "win_81", "win_8", "win_7", "win_vista", "win_xp", "win_xpe",  for windows servers: "win_2016", "win_2012r2", "win_2012", "win_2008r2", "win_2008", "win_2003"".
-                    programfilesdir // path to program files folder
-                    programscommondir // path to start menu's programs folder
-                    programsdir // path to current user's programs (folder on start menu)
-                    scriptdir // directory containing the running script. only includes a trailing backslash when the script is located in the root of a drive.
-                    scriptfullpath // equivalent to @scriptdir & "\" & @scriptname
-                    scriptlinenumber // line number being executed - useful for debug statements (e.g. location of function call). only significant in uncompiled scripts - note that #include files return their internal line numbering
-                    scriptname // filename of the running script.
-                    sec // seconds value of clock. range is 00 to 59
-                    startmenucommondir // path to start menu folder
-                    startmenudir // path to current user's start menu
-                    startupcommondir // path to startup folder
-                    startupdir // current user's startup folder
-                    sw_disable // disables the window.
-                    sw_enable // enables the window.
-                    sw_hide // hides the window and activates another window.
-                    sw_lock // lock the window to avoid repainting.
-                    sw_maximize // activates the window and displays it as a maximized window.
-                    sw_minimize // minimizes the specified window and activates the next top-level window in the z order.
-                    sw_restore // activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
-                    sw_show // activates the window and displays it in its current size and position.
-                    sw_showdefault // sets the show state based on the sw_ value specified by the program that started the application.
-                    sw_showmaximized // activates the window and displays it as a maximized window.
-                    sw_showminimized // activates the window and displays it as a minimized window.
-                    sw_showminnoactive // displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
-                    sw_showna // displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
-                    sw_shownoactivate // displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
-                    sw_shownormal // activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
-                    sw_unlock // unlock window to allow painting.
-                    systemdir // path to the windows' system (or system32) folder.
-                    tab // tab character, chr(9)
-                    tempdir // path to the temporary files folder.
-                    tray_id // last clicked item identifier during a traysetonevent() or trayitemsetonevent() action.
-                    trayiconflashing // returns 1 if tray icon is flashing; otherwise, returns 0.
-                    trayiconvisible // returns 1 if tray icon is visible; otherwise, returns 0.
-                    username // id of the currently logged on user.
-                    userprofiledir // path to current user's profile folder.
-                    wday // numeric day of week. range is 1 to 7 which corresponds to sunday through saturday.
-                    windowsdir // path to windows folder
-                    workingdir // current/active working directory. only includes a trailing backslash when the script is located in the root of a drive.
-                    yday // current day of year. range is 001 to 366 (or 001 to 365 if not a leap year)
-                    year // current four-digit year
-                    */
+                case "logondnsdomain": // logon dns domain.
+                    break;
+                case "logondomain":
+                    return Environment.UserDomainName;
+                case "logonserver": // logon server.
+                    break;
+                case "mday":
+                    return DateTime.Now.Day.ToString("D2");
+                case "min":
+                    return DateTime.Now.Minute.ToString("D2");
+                case "mon":
+                    return DateTime.Now.Month.ToString("D2");
+                case "msec":
+                    return DateTime.Now.Millisecond.ToString("D3");
+                case "muilang": // returns code denoting multi language if available (vista is ok by default). see appendix for possible values.
+                    break;
+                case "mydocumentsdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                case "null":
+                    return "\0";
+                case "numparams": // number of parameters used in calling the user function.
+                case "osarch": // returns one of the following: "x86", "ia64", "x64" - this is the architecture type of the currently running operating system.
+                case "osbuild": // returns the os build number. for example, windows 2003 server returns 3790
+                case "oslang": // returns code denoting os language. see appendix for possible values.
+                case "osservicepack": // service pack info in the form of "service pack 3".
+                case "ostype": // returns "win32_nt" for xp/2003/vista/2008/win7/2008r2/win8/2012/win8.1/2012r2.
+                case "osversion": // returns one of the following: "win_10", "win_81", "win_8", "win_7", "win_vista", "win_xp", "win_xpe",  for windows servers: "win_2016", "win_2012r2", "win_2012", "win_2008r2", "win_2008", "win_2003"".
+                    break;
+                case "programfilesdir":
+                    return Environment.GetFolderPath(Is64Bit ? Environment.SpecialFolder.ProgramFiles : Environment.SpecialFolder.ProgramFilesX86);
+                case "programscommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms);
+                case "programsdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+                case "scriptdir":
+                    return new FileInfo(ScriptAssembly.Location).Directory.FullName;
+                case "scriptfullpath":
+                    return new FileInfo(ScriptAssembly.Location).FullName;
+                case "scriptlinenumber": // line number being executed - useful for debug statements (e.g. location of function call). only significant in uncompiled scripts - note that #include files return their internal line numbering
+                    break;
+                case "scriptname":
+                    return new FileInfo(ScriptAssembly.Location).Name;
+                case "sec":
+                    return DateTime.Now.Second.ToString("D2");
+                case "startmenucommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu);
+                case "startmenudir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
+                case "startupcommondir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
+                case "startupdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                case "sw_disable": // disables the window.
+                case "sw_enable": // enables the window.
+                case "sw_hide": // hides the window and activates another window.
+                case "sw_lock": // lock the window to avoid repainting.
+                case "sw_maximize": // activates the window and displays it as a maximized window.
+                case "sw_minimize": // minimizes the specified window and activates the next top-level window in the z order.
+                case "sw_restore": // activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
+                case "sw_show": // activates the window and displays it in its current size and position.
+                case "sw_showdefault": // sets the show state based on the sw_ value specified by the program that started the application.
+                case "sw_showmaximized": // activates the window and displays it as a maximized window.
+                case "sw_showminimized": // activates the window and displays it as a minimized window.
+                case "sw_showminnoactive": // displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
+                case "sw_showna": // displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
+                case "sw_shownoactivate": // displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
+                case "sw_shownormal": // activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
+                case "sw_unlock": // unlock window to allow painting.
+                    break;
+                case "systemdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.System);
+                case "systemdirx86":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.SystemX86);
+                case "tab":
+                    return "\t";
+                case "tempdir":
+                    return GetPlatformSpecific(
+                        () => Environment.ExpandEnvironmentVariables("%TEMP%"),
+                        () => "/var/tmp",
+                        () => Environment.ExpandEnvironmentVariables("$HOME")
+                    );
+                case "tray_id": // last clicked item identifier during a traysetonevent() or trayitemsetonevent() action.
+                case "trayiconflashing": // returns 1 if tray icon is flashing; otherwise, returns 0.
+                case "trayiconvisible": // returns 1 if tray icon is visible; otherwise, returns 0.
+                    break;
+                case "username":
+                    return Environment.UserName;
+                case "userprofiledir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                case "vtab":
+                    return "\v";
+                case "wday":
+                    return ((int)DateTime.Now.DayOfWeek + 1).ToString();
+                case "windowsdir":
+                    return Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                case "workingdir":
+                    return Directory.GetCurrentDirectory();
+                case "yday":
+                    return DateTime.Now.DayOfYear.ToString("D3");
+                case "year":
+                    return DateTime.Now.Year.ToString("D4");
             }
 
             return null;
         });
+
+        static AutoItFunctions()
+        {
+            Assembly casm = typeof(AutoItFunctions).Assembly;
+
+            ScriptAssembly = (from frame in new StackTrace(1).GetFrames()
+                              let fasm = frame.GetMethod().DeclaringType.Assembly
+                              where fasm != casm
+                              select fasm).FirstOrDefault();
+
+            if (ScriptAssembly is null)
+                ScriptAssembly = Assembly.LoadFrom(Process.GetCurrentProcess().MainModule.FileName);
+        }
 
         #region helper fuctions
 
@@ -254,7 +272,12 @@ namespace AutoItCoreLibrary
         private static void ExecutePlatformSpecific(Action win32, Action posix) => ExecutePlatformSpecific(win32, posix, posix);
 
         private static void ExecutePlatformSpecific(Action windows, Action linux, Action macosx) =>
-            (Win32.System == OS.Windows ? windows : Win32.System == OS.Linux ? linux : macosx)?.Invoke();
+            (System == OS.Windows ? windows : System == OS.Linux ? linux : macosx)?.Invoke();
+
+        private static T GetPlatformSpecific<T>(Func<T> win32, Func<T> posix) => GetPlatformSpecific(win32, posix, posix);
+
+        private static T GetPlatformSpecific<T>(Func<T> windows, Func<T> linux, Func<T> macosx) =>
+            ((System == OS.Windows ? windows : System == OS.Linux ? linux : macosx) ?? new Func<T>(() => default)).Invoke();
 
         private static var Try(Action f)
         {
