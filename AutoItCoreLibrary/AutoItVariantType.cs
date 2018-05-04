@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Collections;
 using System.Linq;
 using System;
-using System.Runtime.InteropServices;
 
 namespace AutoItCoreLibrary
 {
@@ -192,6 +192,8 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantType ToUpper() => ToString().ToUpper();
 
+        public AutoItVariantType OneBasedSubstring(AutoItVariantType start, AutoItVariantType count) => ToString().Substring(start.ToInt() - 1, count.ToInt());
+
         public bool ToBool() => this;
 
         public decimal ToDecimal() => this;
@@ -233,6 +235,11 @@ namespace AutoItCoreLibrary
 
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
+        public static bool Unequals(AutoItVariantType v1, AutoItVariantType v2) => v1 != v2;
+        public static bool Lower(AutoItVariantType v1, AutoItVariantType v2) => v1 < v2;
+        public static bool LowerEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 <= v2;
+        public static bool Greater(AutoItVariantType v1, AutoItVariantType v2) => v1 > v2;
+        public static bool GreaterEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 >= v2;
 
         public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? (AutoItVariantType)(void*)null : (AutoItVariantType)GCHandle.Alloc(gc);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)

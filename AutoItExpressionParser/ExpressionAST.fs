@@ -88,14 +88,14 @@ type OPERATOR_BINARY =
     | BitwiseRotateRight
     | BitwiseShiftLeft
     | BitwiseShiftRight
-    | Index
 type OPERATOR_UNARY =
+    | String1Index of EXPRESSION * EXPRESSION // START(1), LENGTH
+    | StringLength
     | Identity
     | Negate
     | Not
     | BitwiseNot
-    | Length
-type MEMBER =
+and MEMBER =
     | Field of string
     | Method of FUNCCALL
 and VARIABLE_EXPRESSION =
@@ -172,7 +172,6 @@ and private AssToAString =
 and private BinToAString o a b =
     sprintf (match o with
             | StringConcat -> "(%s & %s)"
-            | Index -> "(%s @ %s)"
             | EqualCaseSensitive -> "(%s == %s)"
             | EqualCaseInsensitive -> "(%s = %s)"
             | Unequal -> "(%s != %s)"
@@ -218,12 +217,13 @@ and private ToAString =
     | Macro m -> sprintf "@%s" m.Name
     | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToAString v) (ToAString e)
     | UnaryExpression (o, e) ->
-        sprintf (match o with
-                 | Identity -> "%s"
-                 | Negate -> "-%s"
-                 | Not -> "!%s"
-                 | BitwiseNot -> "~%s"
-                 | Length -> "%s#") (ToAString e)
+        match o with
+        | Identity -> sprintf "%s" (ToAString e)
+        | Negate -> sprintf "-%s" (ToAString e)
+        | Not -> sprintf "!%s" (ToAString e)
+        | BitwiseNot -> sprintf "~%s" (ToAString e)
+        | StringLength -> sprintf "%s#" (ToAString e)
+        | String1Index (s, l) -> sprintf "(%s @ (%s .. %s))" (ToAString e) (ToAString s) (ToAString l)
     | BinaryExpression (o, x, y) -> BinToAString o (ToAString x) (ToAString y)
     | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)

@@ -61,7 +61,14 @@ They all conform with the usual standards known from other programming languages
 
 The following string operators have been introduced with AutoIt++:
 
-### String index and substring using `@` or `@..`
+### String index and substring using `@`, `@|`, `@..` and `@|..`
+
+The binary infix operators `@` and `@|` return the character at the _following_ position in the _leading_ string, in other words:
+<br/>
+The expression `a @ b` represents the `b`-th character in the string `a`. The difference between `@` and `@|` is that `@` uses 0-based indices and `@|` uses one-based ones.
+
+The substring expression
+
 
 TODO
 

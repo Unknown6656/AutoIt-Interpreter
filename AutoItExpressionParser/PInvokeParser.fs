@@ -53,12 +53,12 @@ type PInvokeParser() =
         let t_keyword_uint16    = x.t @"(u?short|word)"
         let t_keyword_uint32    = x.t @"(u?int|u?long|bool|dword)"
         let t_keyword_uint64    = x.t @"(u?int64|hresult)"
-        let t_keyword_ptr       = x.t @"(ptr|hwnd|handle|u?int_ptr|u?long_ptr|[lw]param|dword_ptr|lresult)"
+        let t_keyword_ptr       = x.t @"(ptr|hwnd|handle|u?int_ptr|u?long_ptr|[lw]param|dword_ptr|lresult|void\*)"
         let t_keyword_float32   = x.t @"(float|single|float32)"
         let t_keyword_float64   = x.t @"(double|float64)"
         let t_keyword_float128  = x.t @"(decimal|float128)"
-        let t_keyword_astr      = x.t @"a?str"
-        let t_keyword_wstr      = x.t @"wstr"
+        let t_keyword_astr      = x.t @"a?str(ing)?"
+        let t_keyword_wstr      = x.t @"w_?str(ing)?"
         let t_keyword_dynamic   = x.t @"(dynamic|var|struct)"
         let t_name              = x.tf @"[a-zA-Z_][a-zA-Z0-9_]*" id
         

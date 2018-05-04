@@ -31,6 +31,8 @@ namespace AutoItCoreLibrary
         {
             switch (s.ToLower().Trim())
             {
+                #region AutoIt3 Specification
+
                 case "appdatacommondir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
                 case "appdatadir":
@@ -43,7 +45,7 @@ namespace AutoItCoreLibrary
                     return "3.42.++";
                 case "autoitx64":
                     return Is64Bit ? 1 : 0;
-                case "com_eventobj": // object the com event is being fired on. only valid in a com event function.
+                case "com_eventobj": // TODO: object the com event is being fired on. only valid in a com event function.
                     break;
                 case "commonfilesdir":
                     return Environment.GetFolderPath(Is64Bit ? Environment.SpecialFolder.CommonProgramFiles : Environment.SpecialFolder.CommonProgramFilesX86);
@@ -54,7 +56,7 @@ namespace AutoItCoreLibrary
                 case "comspec":
                     return GetPlatformSpecific(
                         () => Environment.ExpandEnvironmentVariables("%COMSPEC%"),
-                        () =>
+                        () => Environment.ExpandEnvironmentVariables("$SHELL")
                     );
                 case "cpuarch":
                     return Is64Bit ? "x64" : "x86";
@@ -64,13 +66,13 @@ namespace AutoItCoreLibrary
                     return "\r\n";
                 case "desktopcommondir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
-                case "desktopdepth":
+                case "desktopdepth": // TODO :
                     break;
                 case "desktopdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                case "desktopheight":
-                case "desktoprefresh":
-                case "desktopwidth":
+                case "desktopheight": // TODO :
+                case "desktoprefresh": // TODO :
+                case "desktopwidth": // TODO :
                     break;
                 case "documentscommondir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
@@ -78,24 +80,24 @@ namespace AutoItCoreLibrary
                     return __error;
                 case "exitcode":
                     return Environment.ExitCode;
-                case "exitmethod":
+                case "exitmethod": // TODO :
                     break;
                 case "extended":
                     return __extended;
                 case "favoritescommondir":
                 case "favoritesdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.Favorites);
-                case "gui_ctrlhandle":
-                case "gui_ctrlid":
-                case "gui_dragfile":
-                case "gui_dragid":
-                case "gui_dropid":
-                case "gui_winhandle":
+                case "gui_ctrlhandle": // TODO :
+                case "gui_ctrlid": // TODO :
+                case "gui_dragfile": // TODO :
+                case "gui_dragid": // TODO :
+                case "gui_dropid": // TODO :
+                case "gui_winhandle": // TODO :
                     break;
                 case "homedrive":
                     return GetPlatformSpecific(
                         () => Environment.ExpandEnvironmentVariables("%HOMEDRIVE%"),
-                        () => ""
+                        () => "/"
                     );
                 case "homepath":
                     return GetPlatformSpecific(
@@ -108,21 +110,21 @@ namespace AutoItCoreLibrary
                     return null;
                 case "hour":
                     return DateTime.Now.Hour.ToString("D2");
-                case "ipaddress1": // ip address of first network adapter. tends to return 127.0.0.1 on some computers.
-                case "ipaddress2": // ip address of second network adapter. returns 0.0.0.0 if not applicable.
-                case "ipaddress3": // ip address of third network adapter. returns 0.0.0.0 if not applicable.
-                case "ipaddress4": // ip address of fourth network adapter. returns 0.0.0.0 if not applicable.
-                case "kblayout": // returns code denoting keyboard layout. see appendix for possible values.
+                case "ipaddress1": // TODO: ip address of first network adapter. tends to return 127.0.0.1 on some computers.
+                case "ipaddress2": // TODO: ip address of second network adapter. returns 0.0.0.0 if not applicable.
+                case "ipaddress3": // TODO: ip address of third network adapter. returns 0.0.0.0 if not applicable.
+                case "ipaddress4": // TODO: ip address of fourth network adapter. returns 0.0.0.0 if not applicable.
+                case "kblayout": // TODO: returns code denoting keyboard layout. see appendix for possible values.
                     break;
                 case "lf":
                     return "\n";
                 case "localappdatadir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                case "logondnsdomain": // logon dns domain.
+                case "logondnsdomain": // TODO: logon dns domain.
                     break;
                 case "logondomain":
                     return Environment.UserDomainName;
-                case "logonserver": // logon server.
+                case "logonserver": // TODO: logon server.
                     break;
                 case "mday":
                     return DateTime.Now.Day.ToString("D2");
@@ -132,19 +134,22 @@ namespace AutoItCoreLibrary
                     return DateTime.Now.Month.ToString("D2");
                 case "msec":
                     return DateTime.Now.Millisecond.ToString("D3");
-                case "muilang": // returns code denoting multi language if available (vista is ok by default). see appendix for possible values.
+                case "muilang": // TODO: returns code denoting multi language if available (vista is ok by default). see appendix for possible values.
                     break;
                 case "mydocumentsdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                case "null":
-                    return "\0";
-                case "numparams": // number of parameters used in calling the user function.
-                case "osarch": // returns one of the following: "x86", "ia64", "x64" - this is the architecture type of the currently running operating system.
-                case "osbuild": // returns the os build number. for example, windows 2003 server returns 3790
-                case "oslang": // returns code denoting os language. see appendix for possible values.
-                case "osservicepack": // service pack info in the form of "service pack 3".
-                case "ostype": // returns "win32_nt" for xp/2003/vista/2008/win7/2008r2/win8/2012/win8.1/2012r2.
-                case "osversion": // returns one of the following: "win_10", "win_81", "win_8", "win_7", "win_vista", "win_xp", "win_xpe",  for windows servers: "win_2016", "win_2012r2", "win_2012", "win_2008r2", "win_2008", "win_2003"".
+                case "numparams": // TODO: number of parameters used in calling the user function.
+                    break;
+                case "osarch":
+                    return Environment.Is64BitOperatingSystem ? "x64" : "x86";
+                case "osbuild": // TODO: returns the os build number. for example, windows 2003 server returns 3790
+                case "oslang": // TODO: returns code denoting os language. see appendix for possible values.
+                    break;
+                case "osservicepack":
+                    return Environment.OSVersion.ServicePack;
+                case "ostype":
+                    return Environment.OSVersion.Platform.ToString();
+                case "osversion": // TODO: returns one of the following: "win_10", "win_81", "win_8", "win_7", "win_vista", "win_xp", "win_xpe",  for windows servers: "win_2016", "win_2012r2", "win_2012", "win_2008r2", "win_2008", "win_2003"".
                     break;
                 case "programfilesdir":
                     return Environment.GetFolderPath(Is64Bit ? Environment.SpecialFolder.ProgramFiles : Environment.SpecialFolder.ProgramFilesX86);
@@ -156,7 +161,7 @@ namespace AutoItCoreLibrary
                     return new FileInfo(ScriptAssembly.Location).Directory.FullName;
                 case "scriptfullpath":
                     return new FileInfo(ScriptAssembly.Location).FullName;
-                case "scriptlinenumber": // line number being executed - useful for debug statements (e.g. location of function call). only significant in uncompiled scripts - note that #include files return their internal line numbering
+                case "scriptlinenumber": // TODO: line number being executed - useful for debug statements (e.g. location of function call). only significant in uncompiled scripts - note that #include files return their internal line numbering
                     break;
                 case "scriptname":
                     return new FileInfo(ScriptAssembly.Location).Name;
@@ -170,22 +175,22 @@ namespace AutoItCoreLibrary
                     return Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
                 case "startupdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                case "sw_disable": // disables the window.
-                case "sw_enable": // enables the window.
-                case "sw_hide": // hides the window and activates another window.
-                case "sw_lock": // lock the window to avoid repainting.
-                case "sw_maximize": // activates the window and displays it as a maximized window.
-                case "sw_minimize": // minimizes the specified window and activates the next top-level window in the z order.
-                case "sw_restore": // activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
-                case "sw_show": // activates the window and displays it in its current size and position.
-                case "sw_showdefault": // sets the show state based on the sw_ value specified by the program that started the application.
-                case "sw_showmaximized": // activates the window and displays it as a maximized window.
-                case "sw_showminimized": // activates the window and displays it as a minimized window.
-                case "sw_showminnoactive": // displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
-                case "sw_showna": // displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
-                case "sw_shownoactivate": // displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
-                case "sw_shownormal": // activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
-                case "sw_unlock": // unlock window to allow painting.
+                case "sw_disable": // TODO: disables the window.
+                case "sw_enable": // TODO: enables the window.
+                case "sw_hide": // TODO: hides the window and activates another window.
+                case "sw_lock": // TODO: lock the window to avoid repainting.
+                case "sw_maximize": // TODO: activates the window and displays it as a maximized window.
+                case "sw_minimize": // TODO: minimizes the specified window and activates the next top-level window in the z order.
+                case "sw_restore": // TODO: activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
+                case "sw_show": // TODO: activates the window and displays it in its current size and position.
+                case "sw_showdefault": // TODO: sets the show state based on the sw_ value specified by the program that started the application.
+                case "sw_showmaximized": // TODO: activates the window and displays it as a maximized window.
+                case "sw_showminimized": // TODO: activates the window and displays it as a minimized window.
+                case "sw_showminnoactive": // TODO: displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
+                case "sw_showna": // TODO: displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
+                case "sw_shownoactivate": // TODO: displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
+                case "sw_shownormal": // TODO: activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
+                case "sw_unlock": // TODO: unlock window to allow painting.
                     break;
                 case "systemdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.System);
@@ -199,16 +204,14 @@ namespace AutoItCoreLibrary
                         () => "/var/tmp",
                         () => Environment.ExpandEnvironmentVariables("$HOME")
                     );
-                case "tray_id": // last clicked item identifier during a traysetonevent() or trayitemsetonevent() action.
-                case "trayiconflashing": // returns 1 if tray icon is flashing; otherwise, returns 0.
-                case "trayiconvisible": // returns 1 if tray icon is visible; otherwise, returns 0.
+                case "tray_id": // TODO: last clicked item identifier during a traysetonevent() or trayitemsetonevent() action.
+                case "trayiconflashing": // TODO: returns 1 if tray icon is flashing; otherwise, returns 0.
+                case "trayiconvisible": // TODO: returns 1 if tray icon is visible; otherwise, returns 0.
                     break;
                 case "username":
                     return Environment.UserName;
                 case "userprofiledir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                case "vtab":
-                    return "\v";
                 case "wday":
                     return ((int)DateTime.Now.DayOfWeek + 1).ToString();
                 case "windowsdir":
@@ -219,6 +222,18 @@ namespace AutoItCoreLibrary
                     return DateTime.Now.DayOfYear.ToString("D3");
                 case "year":
                     return DateTime.Now.Year.ToString("D4");
+
+                    #endregion
+                #region Additional
+
+                case "null":
+                    return "\0";
+                case "vtab":
+                    return "\v";
+                case "nl":
+                    return Environment.NewLine;
+
+                    #endregion
             }
 
             return null;
@@ -828,6 +843,8 @@ namespace AutoItCoreLibrary
         public static var DnsGetIP(var v) => Dns.GetHostEntry(v).AddressList[0].ToString();
         [BuiltinFunction]
         public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
+        [BuiltinFunction]
+        public static var Identity(var v) => v;
 
         #endregion
 

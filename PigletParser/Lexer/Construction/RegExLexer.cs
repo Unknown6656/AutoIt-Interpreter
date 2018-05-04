@@ -172,7 +172,7 @@ namespace Piglet.Lexer.Construction
                 '\ufe35','\ufe4c','\ufe50','\ufe6f','\ufe75','\ufe75','\ufefd','\uff0f','\uff1a','\uff20','\uff3b','\uff3e',
                 '\uff40','\uff40','\uff5b','\uff65','\uffbf','\uffc1','\uffc8','\uffc9','\uffd0','\uffd1','\uffd8','\uffd9'
 			};
-        private readonly TextReader input;
+        internal readonly TextReader input;
         private State state;
 
 

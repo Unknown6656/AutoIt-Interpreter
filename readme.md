@@ -46,8 +46,12 @@ This AutoIt++-interpiler is written in C# and F# targeting the .NET-Core Framewo
 
 A big shoutout to the [Roslyn Dev Team](https://github.com/dotnet/roslyn) and the [.NET Core Dev Team](https://github.com/dotnet/coreclr) for making such an awesome framework possible!
 
-It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [Dervall](https://github.com/Dervall) in order to improve expression parsing.
+It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [@Dervall](https://github.com/Dervall) in order to improve expression parsing.
 All credits go to him for the wonderful LR-Parser-Library!!
+
+## Maintainer(s)
+
+ - [@Unknown6656](https://github.com/Unknown6656)
 
 -----------------
 

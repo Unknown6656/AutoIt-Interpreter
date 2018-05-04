@@ -5,7 +5,7 @@ namespace Piglet.Lexer.Construction
 {
     internal class ShuntingYard
     {
-        private readonly RegExLexer lexer;
+        internal readonly RegExLexer lexer;
 
 
         public ShuntingYard(RegExLexer lexer) => this.lexer = lexer;

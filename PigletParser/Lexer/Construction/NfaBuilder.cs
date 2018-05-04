@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace Piglet.Lexer.Construction
 {
@@ -10,50 +13,57 @@ namespace Piglet.Lexer.Construction
             Stack<NFA> stack = new Stack<NFA>();
 
             foreach (RegExToken token in yard.ShuntedTokens(ignorecase))
-            {
-                switch (token.Type)
+                try
                 {
-                    case RegExToken.TokenType.OperatorMul:
-                        stack.Push(RepeatZeroOrMore(stack.Pop()));
+                    switch (token.Type)
+                    {
+                        case RegExToken.TokenType.OperatorMul:
+                            stack.Push(RepeatZeroOrMore(stack.Pop()));
 
-                        break;
-                    case RegExToken.TokenType.OperatorQuestion:
-                        stack.Push(RepeatZeroOrOnce(stack.Pop()));
+                            break;
+                        case RegExToken.TokenType.OperatorQuestion:
+                            stack.Push(RepeatZeroOrOnce(stack.Pop()));
 
-                        break;
-                    case RegExToken.TokenType.OperatorOr:
-                        stack.Push(Or(stack.Pop(), stack.Pop()));
+                            break;
+                        case RegExToken.TokenType.OperatorOr:
+                            stack.Push(Or(stack.Pop(), stack.Pop()));
 
-                        break;
-                    case RegExToken.TokenType.OperatorPlus:
-                        stack.Push(RepeatOnceOrMore(stack.Pop()));
+                            break;
+                        case RegExToken.TokenType.OperatorPlus:
+                            stack.Push(RepeatOnceOrMore(stack.Pop()));
 
-                        break;
-                    case RegExToken.TokenType.Accept:
-                        stack.Push(Accept(token.Characters));
+                            break;
+                        case RegExToken.TokenType.Accept:
+                            stack.Push(Accept(token.Characters));
 
-                        break;
-                    case RegExToken.TokenType.OperatorConcat:
-                        // & is not commutative, and the stack is reversed.
-                        NFA second = stack.Pop();
-                        NFA first = stack.Pop();
+                            break;
+                        case RegExToken.TokenType.OperatorConcat:
+                            // & is not commutative, and the stack is reversed.
+                            NFA second = stack.Pop();
+                            NFA first = stack.Pop();
 
-                        stack.Push(And(first, second));
+                            stack.Push(And(first, second));
 
-                        break;
-                    case RegExToken.TokenType.NumberedRepeat:
-                        stack.Push(NumberedRepeat(stack.Pop(), token.MinRepetitions, token.MaxRepetitions));
+                            break;
+                        case RegExToken.TokenType.NumberedRepeat:
+                            stack.Push(NumberedRepeat(stack.Pop(), token.MinRepetitions, token.MaxRepetitions));
 
-                        break;
-                    default:
-                        throw new LexerConstructionException("Unknown operator!");
+                            break;
+                        default:
+                            throw new LexerConstructionException("Unknown operator!");
+                    }
                 }
-            }
+                catch (InvalidOperationException) when (stack.Count == 0) // stack popping failed
+                {
+                    FieldInfo field = typeof(StringReader).GetField("_s", BindingFlags.Instance | BindingFlags.NonPublic);
+                    TextReader reader = yard.lexer.input;
 
-            // We should end up with only ONE NFA on the stack or the expression
-            // is malformed.
+                    throw new LexerConstructionException($"Malformed regexp expression: '{field.GetValue(reader)}'");
+                }
+
+            // We should end up with only ONE NFA on the stack or the expression is malformed.
             if (stack.Count != 1)
-                throw new LexerConstructionException("Malformed regexp expression");
+                throw new LexerConstructionException("Malformed regexp expression!");
 
             // Pop it from the stack, and assign each state a number, primarily for debugging purposes,
             // they dont _really_ need it. The state numbers actually used are the one used in the DFA.

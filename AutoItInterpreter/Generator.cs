@@ -102,6 +102,7 @@ namespace {NAMESPACE}
                     sb.AppendLine($@"
         public static void Main(string[] argv)
         {{
+            Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
             AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
             {{
                 string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");

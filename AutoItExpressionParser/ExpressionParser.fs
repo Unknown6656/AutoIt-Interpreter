@@ -75,9 +75,11 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_operator_comp_lte         = x.t @"<="
         let t_operator_comp_lt          = x.t @"<"
         let t_operator_comp_eq          = x.t @"=="
+        let t_operator_at1              = x.t @"@\|"
+        let t_operator_at0              = x.t @"@"
+        let t_operator_dotrange         = x.t @"\.?\.\."
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
-        let t_symbol_at                 = x.t @"@"
         let t_symbol_questionmark       = x.t @"\?" // TODO
         let t_symbol_colon              = x.t @":" // TODO
         let t_symbol_dot                = x.t @"\."
@@ -188,14 +190,11 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
 
         reduce1 nt_expression !@0 (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
-
-        // TODO  : change precedence inside each precedence group (?)
         
-        let reduce_m x =
-            reduce0 !@x !@(x + 1)
-            List.iter (fun e -> reduce3 !@x !@x (fst e) !@(x + 1) (snd e))
+        let reduce_m x = reduce0 !@x !@(x + 1)
+                         List.iter (fun e -> reduce3 !@x !@x (fst e) !@(x + 1) (snd e))
         let reduce_mm = List.iter (fun e -> reduce_m (fst e) (snd e))
-
+        
         [
             0, [
                 t_keyword_nor, (fun a _ b -> BinaryExpression(Nor, a, b))
@@ -255,13 +254,16 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             13, [
                 t_symbol_hat, (fun a _ b -> BinaryExpression(Power, a, b))
             ]
-            14, [
-                t_symbol_at, (fun a _ b -> BinaryExpression(Index, a, b))
-            ]
         ] |> reduce_mm
+
+        reduce0 !@14 !@15
+        reduce5 !@14 !@14 t_operator_at1 !@15 t_operator_dotrange !@15 (fun e _ s _ l -> UnaryExpression(String1Index(s, l), e))
+        reduce5 !@14 !@14 t_operator_at0 !@15 t_operator_dotrange !@15 (fun e _ s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        reduce3 !@14 !@14 t_operator_at1 !@15 (fun e _ s -> UnaryExpression(String1Index(s, Literal (Number 1m)), e))
+        reduce3 !@14 !@14 t_operator_at0 !@15 (fun e _ s -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), Literal (Number 1m)), e))
         
         reduce0 !@15 !@16
-        reduce2 !@15 t_symbol_numbersign !@15 (fun _ e -> UnaryExpression(Length, e))
+        reduce2 !@15 t_symbol_numbersign !@15 (fun _ e -> UnaryExpression(StringLength, e))
         reduce2 !@15 t_symbol_plus !@15 (fun _ e -> e)
         reduce2 !@15 t_symbol_minus !@15 (fun _ e -> UnaryExpression(Negate, e))
         reduce2 !@15 t_keyword_not !@15 (fun _ e -> UnaryExpression(Not, e))

@@ -266,6 +266,9 @@ namespace AutoItInterpreter
 
                         ConsoleColor fgclr(ErrorType l) => l == ErrorType.Fatal ? ConsoleColor.DarkRed : l == ErrorType.Warning ? ConsoleColor.DarkYellow : ConsoleColor.DarkCyan;
                     }
+
+                if (lastlnr < lines.Length - 1)
+                    Console.WriteLine("       :");
             }
 
             Console.ForegroundColor = ConsoleColor.Gray;

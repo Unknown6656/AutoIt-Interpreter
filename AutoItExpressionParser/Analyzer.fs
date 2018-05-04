@@ -2,7 +2,6 @@
 
 open AutoItExpressionParser.ExpressionAST
 
-open System.Globalization
 open System
 
 
@@ -24,24 +23,29 @@ let rec IsStatic =
 
 let rec ProcessConstants e =
     let rec procconst e =
+        let num = variant.FromDecimal >> Some
         match e with
         | Literal l ->
             match l with
-            | Number d -> variant.FromDecimal d
+            | Number d -> num d
             | False
             | Null
-            | Default -> variant.FromDecimal 0m
-            | True -> variant.FromDecimal 1m
-            | String s -> variant s
-            |> Some
+            | Default -> num 0m
+            | True -> num 1m
+            | _ -> None
         | UnaryExpression (o, Constant x) ->
             match o with
-            | Identity -> x
-            | Negate -> -x
-            | Not -> variant.Not x
-            | BitwiseNot -> variant.BitwiseNot x
-            | Length -> variant.FromDecimal (decimal x.Length)
-            |> Some
+            | Identity -> Some x
+            | Negate -> Some <| -x
+            | Not -> Some <| variant.Not x
+            | BitwiseNot -> Some <| variant.BitwiseNot x
+            | StringLength -> num (decimal x.Length)
+            | String1Index (_, Constant l) when variant.LowerEquals(l, variant.FromDecimal 0m) -> Some <| variant ""
+            | String1Index (Constant s, Constant l) ->
+                if variant.LowerEquals(l, variant.FromDecimal 0m) then variant ""
+                else x.OneBasedSubstring(s, l)
+                |> Some
+            | _ -> None
         | BinaryExpression (o, Constant x, Constant y) ->
             let (!%) = variant.FromBool >> Some
             let (!/) f = f (x.ToDecimal()) (y.ToDecimal())
@@ -79,7 +83,6 @@ let rec ProcessConstants e =
             | BitwiseShiftLeft -> !@ variant.BitwiseShl
             | BitwiseShiftRight -> !@ variant.BitwiseShr
             | StringConcat -> !@ variant.Concat
-            | Index -> !* (fun x y -> x.[y.ToLong()])
         | TernaryExpression (Constant x, Constant y, Constant z) -> Some (if x.ToBool() then z else y)
         | _ -> None
     and (|Constant|_|) = procconst
@@ -163,8 +166,10 @@ let rec ProcessConstants e =
                 else
                     proc()
         | TernaryExpression (x, y, z) ->
-            if y = z then
+            if (y = z) || (EvaluatesToTrue x) then
                 ProcessConstants y
+            elif EvaluatesToFalse x then
+                ProcessConstants z
             else
                 let px = ProcessConstants x
                 let py = ProcessConstants y
@@ -173,13 +178,17 @@ let rec ProcessConstants e =
                     ProcessConstants <| TernaryExpression(px, py, pz)
                 else
                     e
+        | FunctionCall (f, [p]) when match p with
+                                     | Literal _ -> f.Equals("execute", StringComparison.InvariantCultureIgnoreCase)
+                                     | _ -> false
+                                     -> FunctionCall("Identity", [p])
         | FunctionCall (f, ps) -> FunctionCall(f, List.map ProcessConstants ps)
         | ArrayIndex (v, e) -> ArrayIndex(v, ProcessConstants e)
         | AssignmentExpression (Assignment (o, v, e)) -> AssignmentExpression(Assignment(o, v, ProcessConstants e))
         | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> AssignmentExpression(ArrayAssignment(o, v, ProcessConstants i, ProcessConstants e))
         | _ -> e
 
-let rec ProcessExpression e =
+and ProcessExpression e =
     let assign_dic =
         [
             AssignAdd, Add
@@ -220,11 +229,11 @@ let rec ProcessExpression e =
     // TODO
     | _ -> p
 
-let EvaluatesTo(from, ``to``) = ProcessExpression from = ProcessExpression ``to``
+and EvaluatesTo(from, ``to``) = ProcessExpression from = ProcessExpression ``to``
 
-let EvaluatesToFalse e = EvaluatesTo (e, Literal False)
+and EvaluatesToFalse e = EvaluatesTo (e, Literal False)
 
-let EvaluatesToTrue e = EvaluatesTo (e, Literal True)
+and EvaluatesToTrue e = EvaluatesTo (e, Literal True)
 
     
 let private getvarfunccalls =

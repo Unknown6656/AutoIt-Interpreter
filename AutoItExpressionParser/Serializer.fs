@@ -44,7 +44,6 @@ type Serializer (settings : SerializerSettings) =
             let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
             let f = match o with
                     | StringConcat -> !!"&"
-                    | Index -> "%s[%s]"
                     | EqualCaseSensitive -> !!"=="
                     | EqualCaseInsensitive
                     | Unequal -> !!"!="
@@ -106,7 +105,8 @@ type Serializer (settings : SerializerSettings) =
                             | Negate -> !/"-"
                             | Not -> !/"!"
                             | BitwiseNot -> !/"~"
-                            | Length -> "(" + printexpr e + ").Length"
+                            | String1Index (s, l) -> sprintf "(%s).OneBasedSubstring(%s, %s)" (printexpr e) (printexpr s) (printexpr l)
+                            | StringLength -> "(" + printexpr e + ").Length"
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
