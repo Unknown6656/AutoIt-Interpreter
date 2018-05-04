@@ -18,9 +18,25 @@ module PInvoke =
         | VoidPtr
         | DynamicStruct
         | Pointer of PINVOKE_TYPE
+        override x.ToString() = match x with
+                                | UInt8 -> "byte"
+                                | UInt16 -> "short"
+                                | UInt32 -> "int"
+                                | UInt64 -> "long"
+                                | Float32 -> "float"
+                                | Float64 -> "double"
+                                | Float128 -> "decimal"
+                                | AString -> "[MarshalAs(UnmanagedType.BStr)] StringBuilder"
+                                | WString -> "[MarshalAs(UnmanagedType.LPWStr)] StringBuilder"
+                                | VoidPtr -> "void*"
+                                | DynamicStruct -> "dynamic"
+                                | Pointer p -> p.ToString() + "*"
     type PINVOKE_RETURN_TYPE =
         | Something of PINVOKE_TYPE
         | Void
+        override x.ToString() = match x with
+                                | Something p -> p.ToString()
+                                | Void -> "void"
     type PINVOKE_SIGNATURE =
         {
             Name : string
@@ -30,7 +46,7 @@ module PInvoke =
         
     [<ExtensionAttribute>]
     let Print (s : PINVOKE_SIGNATURE) =
-        ""
+        sprintf "%s %s(%s)" (s.ReturnType.ToString()) (s.Name) (System.String.Join(", ", Array.map (fun x -> x.ToString()) s.Paramters))
 
 
 open PInvoke

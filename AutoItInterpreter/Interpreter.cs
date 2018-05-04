@@ -1769,10 +1769,11 @@ namespace AutoItInterpreter
                     if (us && !options.AllowUnsafeCode)
                         err("errors.astproc.unsafe_func", f);
 
-                    if (args.Length < mac)
-                        err("errors.astproc.not_enough_args", f, mac, args.Length);
-                    else if (args.Length > mac + oac)
-                        err("errors.astproc.too_many_args", f, mac + oac);
+                    if (f != "dllcall")
+                        if (args.Length < mac)
+                            err("errors.astproc.not_enough_args", f, mac, args.Length);
+                        else if (args.Length > mac + oac)
+                            err("errors.astproc.too_many_args", f, mac + oac);
 
                     foreach (CompilerIntrinsicMessage msg in msgs)
                         if (msg is WarningAttribute w)

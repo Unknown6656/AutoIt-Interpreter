@@ -73,10 +73,13 @@ namespace AutoItInterpreter
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
 
             sb.AppendLine($@"
-using {nameof(AutoItCoreLibrary)};
+using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Resources;
+using System.Text;
 using System;
+
+using {nameof(AutoItCoreLibrary)};
 
 namespace {NAMESPACE}
 {{
@@ -170,7 +173,15 @@ namespace {NAMESPACE}
                 }
             }
 
-            // TODO : add P/Invoke signature
+            foreach ((string lib, PInvoke.PINVOKE_SIGNATURE sig) in state.PInvokeSignatures)
+            {
+                string wname = AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name);
+
+                sb.AppendLine($@"
+        [DllImport(""{lib}"", EntryPoint = ""{sig.Name}"")]
+        private static extern {sig.ReturnType} {wname}({string.Join(", ", sig.Paramters.Select((p, i) => $"{p} _param{i}"))});
+".TrimEnd());
+            }
 
             sb.AppendLine($@"
         private static {TYPE} __critical(string s) => throw new InvalidProgramException(s ?? """");

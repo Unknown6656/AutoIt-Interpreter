@@ -142,8 +142,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                                          .Replace(@"\ufffe", "\\")
                                                                                                                 let r p s = Regex.Replace(s, p, fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString())
                                                                                                                 s
-                                                                                                                |> r @"\u(?<code>[0-9a-fA-F]{4})"
-                                                                                                                |> r @"\x(?<code>[0-9a-fA-F]{2})"
+                                                                                                             // |> r @"\u(?<code>[0-9a-fA-F]{4})"
+                                                                                                             // |> r @"\x(?<code>[0-9a-fA-F]{2})"
                                                                                                                 |> String
                                                                                                                 |> Literal
                                                                                                             while r.IsMatch s do
@@ -235,46 +235,51 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             5, [
                 t_symbol_ampersand, (fun a _ b -> BinaryExpression(StringConcat, a, b))
             ]
-            6, [
+        ]
+        |> reduce_mm
+        
+        reduce0 !@6 !@7
+        reduce5 !@6 !@6 t_operator_at1 !@7 t_operator_dotrange !@7 (fun e _ s _ l -> UnaryExpression(String1Index(s, l), e))
+        reduce5 !@6 !@6 t_operator_at0 !@7 t_operator_dotrange !@7 (fun e _ s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        reduce3 !@6 !@6 t_operator_at1 !@7 (fun e _ s -> UnaryExpression(String1Index(s, Literal (Number 1m)), e))
+        reduce3 !@6 !@6 t_operator_at0 !@7 (fun e _ s -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), Literal (Number 1m)), e))
+
+        [
+            7, [
                 t_operator_bit_nor, (fun a _ b -> BinaryExpression(BitwiseNor, a, b))
                 t_operator_bit_or, (fun a _ b -> BinaryExpression(BitwiseOr, a, b))
             ]
-            7, [
+            8, [
                 t_operator_bit_nxor, (fun a _ b -> BinaryExpression(BitwiseNxor, a, b))
                 t_operator_bit_xor, (fun a _ b -> BinaryExpression(BitwiseXor, a, b))
             ]
-            8, [
+            9, [
                 t_operator_bit_nand, (fun a _ b -> BinaryExpression(BitwiseNand, a, b))
                 t_operator_bit_and, (fun a _ b -> BinaryExpression(BitwiseAnd, a, b))
             ]
-            9, [
+            10, [
                 t_operator_bit_rol, (fun a _ b -> BinaryExpression(BitwiseRotateLeft, a, b))
                 t_operator_bit_ror, (fun a _ b -> BinaryExpression(BitwiseRotateRight, a, b))
             ]
-            10, [
+            11, [
                 t_operator_bit_shl, (fun a _ b -> BinaryExpression(BitwiseShiftLeft, a, b))
                 t_operator_bit_shr, (fun a _ b -> BinaryExpression(BitwiseShiftRight, a, b))
             ]
-            11, [
+            12, [
                 t_symbol_plus, (fun a _ b -> BinaryExpression(Add, a, b))
                 t_symbol_minus, (fun a _ b -> BinaryExpression(Subtract, a, b))
             ]
-            12, [
+            13, [
                 t_symbol_asterisk, (fun a _ b -> BinaryExpression(Multiply, a, b))
                 t_symbol_slash, (fun a _ b -> BinaryExpression(Divide, a, b))
                 t_symbol_percent, (fun a _ b -> BinaryExpression(Modulus, a, b))
             ]
-            13, [
+            14, [
                 t_symbol_hat, (fun a _ b -> BinaryExpression(Power, a, b))
             ]
-        ] |> reduce_mm
+        ]
+        |> reduce_mm
 
-        reduce0 !@14 !@15
-        reduce5 !@14 !@14 t_operator_at1 !@15 t_operator_dotrange !@15 (fun e _ s _ l -> UnaryExpression(String1Index(s, l), e))
-        reduce5 !@14 !@14 t_operator_at0 !@15 t_operator_dotrange !@15 (fun e _ s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
-        reduce3 !@14 !@14 t_operator_at1 !@15 (fun e _ s -> UnaryExpression(String1Index(s, Literal (Number 1m)), e))
-        reduce3 !@14 !@14 t_operator_at0 !@15 (fun e _ s -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), Literal (Number 1m)), e))
-        
         reduce0 !@15 !@16
         reduce2 !@15 t_symbol_numbersign !@15 (fun _ e -> UnaryExpression(StringLength, e))
         reduce2 !@15 t_symbol_plus !@15 (fun _ e -> e)

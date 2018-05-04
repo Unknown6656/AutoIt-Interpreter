@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Collections;
 using System.Linq;
+using System.Text;
 using System;
 
 namespace AutoItCoreLibrary
@@ -198,6 +199,10 @@ namespace AutoItCoreLibrary
 
         public decimal ToDecimal() => this;
 
+        public byte ToByte() => (byte)ToLong();
+
+        public short ToShort() => (short)ToLong();
+
         public int ToInt() => (int)ToLong();
 
         public long ToLong() => (long)this;
@@ -209,6 +214,8 @@ namespace AutoItCoreLibrary
         public double ToDouble() => (double)this;
 
         public GCHandle ToGCHandle() => this;
+
+        public StringBuilder ToStringBuilder() => new StringBuilder(this);
 
         public void UseGCHandledData(Action<object> func)
         {
