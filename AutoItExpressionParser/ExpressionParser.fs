@@ -123,7 +123,7 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                             let mutable s = s.Remove(s.Length - 1)
                                                                                                                              .Remove(0, 2)
                                                                                                                              .Trim()
-                                                                                                            let r = Regex(@"(?<!\\)(?:\\{2})*(\$(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+                                                                                                            let r = Regex(@"(?<!\\)(?:\\{2})*((?<type>\$|@)(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
                                                                                                             let l = cslist<EXPRESSION>()
                                                                                                             let proc (s : string) =
                                                                                                                 s.Replace(@"\\", "\ufffe")
@@ -133,18 +133,27 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                                  .Replace(@"\t", "\t")
                                                                                                                  .Replace(@"\v", "\v")
                                                                                                                  .Replace(@"\b", "\b")
+                                                                                                                 .Replace(@"\a", "\a")
+                                                                                                                 .Replace(@"\f", "\f")
+                                                                                                                 .Replace(@"\d", "\x7f")
                                                                                                                  .Replace(@"\0", "\0")
                                                                                                                  .Replace(@"\$", "$")
+                                                                                                                 .Replace(@"\@", "@")
                                                                                                                  .Replace(@"\ufffe", "\\")
                                                                                                                 |> String
                                                                                                                 |> Literal
                                                                                                             while r.IsMatch s do
-                                                                                                                let m = (r.Match s).Groups.["var"]
+                                                                                                                let mt = (r.Match s).Groups
+                                                                                                                let t = mt.["type"].ToString() = "$"
+                                                                                                                let m = mt.["var"]
                                                                                                                 l.Add(proc (s.Remove (m.Index - 1)))
-                                                                                                                l.Add(m.ToString()
-                                                                                                                      |> VARIABLE
-                                                                                                                      |> Variable
-                                                                                                                      |> VariableExpression)
+                                                                                                                l.Add(if t then m.ToString()
+                                                                                                                                |> VARIABLE
+                                                                                                                                |> Variable
+                                                                                                                                |> VariableExpression
+                                                                                                                      else m.ToString()
+                                                                                                                           |> MACRO
+                                                                                                                           |> Macro)
                                                                                                                 s <- s.Substring (m.Index + m.Length)
                                                                                                             l
                                                                                                             |> Seq.toList

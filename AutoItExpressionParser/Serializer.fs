@@ -92,10 +92,13 @@ type Serializer (settings : SerializerSettings) =
                                                                       .Replace("\"", "\\\"")
                                                                       .Replace("\r", "\\r")
                                                                       .Replace("\n", "\\n")
-                                                                      .Replace("\t", "\\t")
                                                                       .Replace("\b", "\\b")
-                                                                      .Replace("\0", "\\0")
-                                                                      .Replace("\v", "\\v"))
+                                                                      .Replace("\a", "\\a")
+                                                                      .Replace("\f", "\\f")
+                                                                      .Replace("\v", "\\v")
+                                                                      .Replace("\t", "\\t")
+                                                                      .Replace("\x7f", "\\x7f")
+                                                                      .Replace("\0", "\\0"))
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->
