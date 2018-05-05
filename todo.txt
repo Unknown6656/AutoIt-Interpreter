@@ -18,7 +18,7 @@
     [ ] redim
     [x] element assignment
 [ ] enum constants
-[-] pinvoke
+[x] pinvoke
             func my_func as "long f2(int, int)" from ".dll" <<-------
 [-] documentation
     [-] usage

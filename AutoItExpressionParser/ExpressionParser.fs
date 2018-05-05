@@ -140,10 +140,15 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
                                                                                                                          .Replace(@"\$", "$")
                                                                                                                          .Replace(@"\@", "@")
                                                                                                                          .Replace(@"\ufffe", "\\")
-                                                                                                                let r p s = Regex.Replace(s, p, fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString())
+                                                                                                                let r p s = Regex.Replace(
+                                                                                                                                s,
+                                                                                                                                p,
+                                                                                                                                (fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString()),
+                                                                                                                                RegexOptions.Compiled ||| RegexOptions.IgnoreCase
+                                                                                                                            )
                                                                                                                 s
-                                                                                                             // |> r @"\u(?<code>[0-9a-fA-F]{4})"
-                                                                                                             // |> r @"\x(?<code>[0-9a-fA-F]{2})"
+                                                                                                                |> r @"\\u(?<code>[0-9a-f]{4})"
+                                                                                                                |> r @"\\x(?<code>[0-9a-f]{2})"
                                                                                                                 |> String
                                                                                                                 |> Literal
                                                                                                             while r.IsMatch s do

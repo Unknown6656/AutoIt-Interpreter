@@ -978,13 +978,13 @@ namespace AutoItInterpreter
                     used_sigs.Add((lib, sig));
 
                     int cnt = 0;
-                    IEnumerable<VARIABLE> pars = sig.Paramters.Select(_ => new VARIABLE("_p" + cnt++));
+                    (VARIABLE, PINVOKE_TYPE)[] pars = sig.Paramters.Select(t => (new VARIABLE("_p" + cnt++), t)).ToArray();
 
                     state.ASTFunctions[name] = new AST_FUNCTION
                     {
                         Context = ctx,
                         Name = name,
-                        Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v, false, false)).ToArray(),
+                        Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v.Item1, false, false)).ToArray(),
                         Statements = new AST_STATEMENT[]
                         {
                             new AST_RETURN_STATEMENT
@@ -992,7 +992,20 @@ namespace AutoItInterpreter
                                 Expression = EXPRESSION.NewFunctionCall(
                                     new Tuple<string, FSharpList<EXPRESSION>>(
                                         AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
-                                        ListModule.OfSeq(pars.Select(v => EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(v))))
+                                        ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
+                                            new Tuple<string, FSharpList<EXPRESSION>>(
+                                                nameof(AutoItFunctions.TryConvert),
+                                                ListModule.OfSeq(
+                                                    new EXPRESSION[]
+                                                    {
+                                                        EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
+                                                        EXPRESSION.NewLiteral(
+                                                            LITERAL.NewString(x.Item2.ToString())
+                                                        )
+                                                    }
+                                                )
+                                            )
+                                        )))
                                     )
                                 )
                             }

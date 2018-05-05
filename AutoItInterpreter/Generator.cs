@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace AutoItInterpreter
 {
     using static InterpreterConstants;
     using static ExpressionAST;
+
 
     public static class ApplicationGenerator
     {
@@ -56,18 +58,24 @@ namespace AutoItInterpreter
             }
 
             string[] glob = { GLOBAL_FUNC_NAME };
+            IEnumerable<string> pins = state.PInvokeSignatures.Select(x => AutoItFunctions.GeneratePInvokeWrapperName(x.Item1, x.Item2.Name));
             Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, FUNC_PREFIX, func =>
             {
                 func = func.ToLower();
 
-                try
-                {
-                    return state.ASTFunctions.ContainsKey(func) ? null : FUNC_MODULE + '.' + typeof(AutoItFunctions).GetMethod(func, BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase).Name;
-                }
-                catch
-                {
-                    return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
-                }
+                if (state.ASTFunctions.ContainsKey(func))
+                    return null;
+                else if (pins.Contains(func))
+                    return func;
+                else
+                    try
+                    {
+                        return FUNC_MODULE + '.' + typeof(AutoItFunctions).GetMethod(func, BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase).Name;
+                    }
+                    catch
+                    {
+                        return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
+                    }
             }));
             string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
@@ -83,7 +91,7 @@ using {nameof(AutoItCoreLibrary)};
 
 namespace {NAMESPACE}
 {{
-    public static class {APPLICATION_MODULE}
+    public static unsafe class {APPLICATION_MODULE}
     {{
         private static {TYPE_MAC_RPOVIDER} {MACROS};
         private static {TYPE_VAR_RPOVIDER} {VARS};
@@ -120,7 +128,7 @@ namespace {NAMESPACE}
 
             {MACROS} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, null /* TODO */ );
             {VARS} = new {TYPE_VAR_RPOVIDER}();
-            {DISCARD} = {TYPE}.Null;
+            {DISCARD} = {TYPE}.Default;
             {TYPE} result = ___globalentrypoint();
 
             // TODO : do something with the main result ?

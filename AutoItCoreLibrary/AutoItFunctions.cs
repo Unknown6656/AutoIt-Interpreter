@@ -312,7 +312,7 @@ namespace AutoItCoreLibrary
         {
             StringBuilder sb = new StringBuilder();
 
-            foreach (char c in $"{PINVOKE_PREFIX}_{dll}_{func}")
+            foreach (char c in $"{PINVOKE_PREFIX}_{dll}__{func}")
                 sb.Append(char.IsLetterOrDigit(c) ? c : '_');
 
             return sb.ToString();
@@ -845,6 +845,38 @@ namespace AutoItCoreLibrary
         public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
         [BuiltinFunction]
         public static var Identity(var v) => v;
+        [BuiltinFunction]
+        public static dynamic TryConvert(var v, var type)
+        {
+            string tstr = type.ToLower();
+
+            switch (tstr)
+            {
+                case "byte":
+                    return v.ToByte();
+                case "short":
+                    return v.ToShort();
+                case "int":
+                    return v.ToInt();
+                case "long":
+                    return v.ToLong();
+                case "float":
+                    return (float)v.ToDouble();
+                case "double":
+                    return v.ToDouble();
+                case "decimal":
+                    return v.ToDecimal();
+                case "dynamic":
+                    return v.ToIntPtr();
+            }
+
+            if (tstr.StartsWith("void*"))
+                return v.ToIntPtr();
+            else if (tstr.Contains("stringbuilder"))
+                return v.ToStringBuilder();
+            else
+                throw new NotImplementedException($"Cannot convert a variant to the type '{tstr}' (yet).");
+        }
 
         #endregion
 

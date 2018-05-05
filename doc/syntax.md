@@ -145,8 +145,40 @@ More general information about the ASCII control characters can be found in [thi
 
 # P/Invoke functions
 
-TODO
+P/Invoke (also known as _"Platform Invocation Services"_) is a feature for .NET languages to call unmanaged code from managed languages, e.g. call C++ from C#.
+<br/>
+AutoIt++ also has the possiblity to perfom P/Invoke-calls using the [AutoIt3-conform function `DllCall`](https://www.autoitscript.com/autoit3/docs/functions/DllCall.htm), however, its usage can be sometimes a bit irksome.
+To counter that, AutoIt++ introduces the ability to declare P/Invoke function signatures as follows:
+```autoit
+Func <name> As "<signature>" From "<library>"
+```
+
+**Example:**
+<br/>
+To call the function [`[kernel32.dll] BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration)`](https://msdn.microsoft.com/en-us/library/windows/desktop/ms679277(v=vs.85).aspx), one can declare its signature in AutoIt++ as follows:
+```autoit
+Func MyBeep As "int Beep(int, int)" From "kernel32.dll"
+```
+It can be used just like any function:
+```autoit
+Beep(440, 2000)     ; The built-in 'Beep'-function
+MyBeep(262, 1000)   ; The P/Invoke 'Beep'-function
+; The two calls play the following beeps:
+;   440Hz (A4) for 2 seconds
+;   262Hz (C4) for 1 second
+```
+The call of `MyBeep` would be equivalent to the following code:
+```autoit
+DllCall("kernel32.dll", "BOOL", "Beep", "DWORD", 262, "DWORD", 1000)
+```
+
+A transalation of C++ to AutoIt3- or AutoIt++-types can be found in [this AutoIt3 documentation article](https://www.autoitscript.com/autoit3/docs/functions/DllCall.htm).
+More general information about Platform Invocation Services can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Platform_Invocation_Services).
 
 # λ-Expressions
+
+TODO
+
+# Inline C#-Code
 
 TODO
