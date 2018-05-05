@@ -158,7 +158,7 @@ namespace AutoItInterpreter
                     return -1;
                 }
 
-                InterpreterState result = intp.Compile();
+                InterpreterState result = intp.Interpret();
 
                 #endregion
 

@@ -151,7 +151,7 @@ namespace AutoItInterpreter
             ProjectName = projectname.Replace(' ', '_');
         }
 
-        public InterpreterState Compile()
+        public InterpreterState Interpret()
         {
             DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit++-compiler");
             InterpreterState state;
@@ -161,10 +161,10 @@ namespace AutoItInterpreter
             {
                 subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
 
-                state = InterpretScript(RootContext, Options);
+                state = LinePreprocessor.PreprocessLines(RootContext, Options);
                 state.RootDocument = RootContext.SourcePath;
 
-                ParseExpressionAST(state, Options);
+                ASTProcessor.ParseExpressionAST(state, Options);
 
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName);
@@ -251,284 +251,287 @@ namespace AutoItInterpreter
             return state;
         }
 
-        private static InterpreterState InterpretScript(InterpreterContext context, InterpreterOptions options)
+
+        private static class LinePreprocessor
         {
-            List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
-            PreInterpreterState pstate = new PreInterpreterState
+            internal static InterpreterState PreprocessLines(InterpreterContext context, InterpreterOptions options)
             {
-                Language = options.Language,
-                CurrentContext = context,
-                GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1), "")
-            };
-            int ivalfunc = 0;
-            int locindx = 0;
-
-            pstate.CompileInfo.Compatibility = options.Compatibility;
-            pstate.CompileInfo.TargetArchitecture = options.TargetArchitecture;
-
-            lines.AddRange(FetchLines(pstate, context, options));
-
-            while (locindx < lines.Count)
-            {
-                string Line = lines[locindx].Line;
-                DefinitionContext defcntx = new DefinitionContext(
-                    lines[locindx].File,
-                    lines[locindx].OriginalLineNumbers[0],
-                    lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
-                );
-                void err(string name, params object[] args) => pstate.ReportKnownError(name, defcntx, args);
-
-                if (Line.StartsWith('#'))
+                List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
+                PreInterpreterState pstate = new PreInterpreterState
                 {
-                    string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err);
+                    Language = options.Language,
+                    CurrentContext = context,
+                    GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1), "")
+                };
+                FunctionDeclarationState fdstate = FunctionDeclarationState.RegularFunction;
+                int locindx = 0;
 
-                    try
+                pstate.CompileInfo.Compatibility = options.Compatibility;
+                pstate.CompileInfo.TargetArchitecture = options.TargetArchitecture;
+
+                lines.AddRange(FetchLines(pstate, context, options));
+
+                while (locindx < lines.Count)
+                {
+                    string Line = lines[locindx].Line;
+                    DefinitionContext defcntx = new DefinitionContext(
+                        lines[locindx].File,
+                        lines[locindx].OriginalLineNumbers[0],
+                        lines[locindx].OriginalLineNumbers.Length > 1 ? (int?)lines[locindx].OriginalLineNumbers.Last() : null
+                    );
+                    void err(string name, params object[] args) => pstate.ReportKnownError(name, defcntx, args);
+
+                    if (Line.StartsWith('#'))
                     {
-                        FileInfo inclpath = path.Length > 0 ? new FileInfo(path) : default;
+                        string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err);
 
-                        if (inclpath?.Exists ?? false)
-                            using (StreamReader rd = inclpath.OpenText())
-                            {
-                                lines.RemoveAt(locindx);
-                                lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
+                        try
+                        {
+                            FileInfo inclpath = path.Length > 0 ? new FileInfo(path) : default;
 
-                                --locindx;
-                            }
+                            if (inclpath?.Exists ?? false)
+                                using (StreamReader rd = inclpath.OpenText())
+                                {
+                                    lines.RemoveAt(locindx);
+                                    lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
+
+                                    --locindx;
+                                }
+                        }
+                        catch
+                        {
+                            err("errors.preproc.include_nfound", path);
+                        }
                     }
-                    catch
-                    {
-                        err("errors.preproc.include_nfound", path);
-                    }
+                    else if (ProcessFunctionDeclaration(Line, ref fdstate, defcntx, pstate, err))
+                        (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
+
+                    ++locindx;
                 }
-                else if (ProcessFunctionDeclaration(Line, ref ivalfunc, defcntx, pstate, err))
-                    (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
-                ++locindx;
+                if (options.UseVerboseOutput)
+                    DebugPrintUtil.DisplayPreState(pstate);
+
+                Dictionary<string, FUNCTION> ppfuncdir = PreprocessFunctions(pstate, options);
+                InterpreterState state = InterpreterState.Convert(pstate);
+
+                foreach (string func in ppfuncdir.Keys)
+                    state.Functions[func] = ppfuncdir[func];
+
+                return state;
             }
 
-            if (options.UseVerboseOutput)
-                DebugPrintUtil.DisplayPreState(pstate);
-
-            Dictionary<string, FUNCTION> ppfuncdir = PreProcessFunctions(pstate, options);
-            InterpreterState state = InterpreterState.Convert(pstate);
-
-            foreach (string func in ppfuncdir.Keys)
-                state.Functions[func] = ppfuncdir[func];
-
-            return state;
-        }
-
-        private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context, InterpreterOptions options)
-        {
-            string raw = context.Content;
-
-            List<(string, int[])> lines = new List<(string, int[])>();
-            List<int> lnmbrs = new List<int>();
-            LineState ls = LineState.Regular;
-            (string code, int start) csharp = ("", 0);
-            string prev = "";
-            int lcnt = 0;
-
-            foreach (string line in raw.SplitIntoLines())
+            private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context, InterpreterOptions options)
             {
-                string tline = line.Trim();
+                string raw = context.Content;
 
-                if (tline.Match(@"^\#(csharp\-start|css)(\b|\s+|$)", out _))
+                List<(string, int[])> lines = new List<(string, int[])>();
+                List<int> lnmbrs = new List<int>();
+                LineState ls = LineState.Regular;
+                (string code, int start) csharp = ("", 0);
+                string prev = "";
+                int lcnt = 0;
+
+                foreach (string line in raw.SplitIntoLines())
                 {
-                    if (!options.AllowUnsafeCode)
-                        state.ReportKnownError("errors.preproc.csharp_requires_unsafe", new DefinitionContext(context.SourcePath, lcnt));
+                    string tline = line.Trim();
 
-                    ls |= LineState.CSharp;
-                    csharp.start = lcnt;
-                }
-                else if (tline.Match(@"^\#(csharp\-end|cse)(\b|\s+|$)", out _))
-                {
-                    ls &= ~LineState.CSharp;
-
-                    string b64 = Convert.ToBase64String(Encoding.Default.GetBytes(csharp.code));
-
-                    lines.Add(($"{CSHARP_INLINE} {b64}", new int[] { csharp.start, lcnt }));
-
-                    csharp = ("", 0);
-                }
-                else if (tline.Match(@"^\#(comments\-start|cs)(\b|\s+|$)", out _))
-                    ls |= LineState.Comment;
-                else if (tline.Match(@"^\#(comments\-end|ce)(\b|\s+|$)", out _))
-                    ls &= ~LineState.Comment;
-                else if (ls == LineState.Regular)
-                {
-                    if (tline.Match(@"\;[^\""]*$", out Match m))
-                        tline = tline.Remove(m.Index).Trim();
-                    else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
-                        tline = tline.Remove(m.Groups["cmt"].Index).Trim();
-
-                    if (tline.Match(@"\s+_\s*$", out m))
+                    if (tline.Match(@"^\#(csharp\-start|css)(\b|\s+|$)", out _))
                     {
-                        prev = $"{prev} {tline.Remove(m.Index).Trim()}";
-                        lnmbrs.Add(lcnt);
+                        if (!options.AllowUnsafeCode)
+                            state.ReportKnownError("errors.preproc.csharp_requires_unsafe", new DefinitionContext(context.SourcePath, lcnt));
+
+                        ls |= LineState.CSharp;
+                        csharp.start = lcnt;
                     }
-                    else
+                    else if (tline.Match(@"^\#(csharp\-end|cse)(\b|\s+|$)", out _))
                     {
-                        lnmbrs.Add(lcnt);
-                        lines.Add(($"{prev} {tline}".Trim(), lnmbrs.ToArray()));
-                        lnmbrs.Clear();
+                        ls &= ~LineState.CSharp;
 
-                        prev = "";
+                        string b64 = Convert.ToBase64String(Encoding.Default.GetBytes(csharp.code));
+
+                        lines.Add(($"{CSHARP_INLINE} {b64}", new int[] { csharp.start, lcnt }));
+
+                        csharp = ("", 0);
                     }
-                }
-                else if (ls == LineState.CSharp)
-                    csharp.code += '\n' + line;
-
-                ++lcnt;
-            }
-
-            if (ls.HasFlag(LineState.Comment))
-                state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt - 1));
-            else if (ls.HasFlag(LineState.CSharp))
-                state.ReportKnownWarning("errors.preproc.no_closing_csharp", new DefinitionContext(context.SourcePath, lcnt - 1));
-
-            lcnt = 0;
-
-            while (lcnt < lines.Count)
-            {
-                int[] lnr = lines[lcnt].Item2;
-
-                if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<iaction>.+)\s+else\s+(?<eaction>)$", out Match m))
-                {
-                    lines.RemoveAt(lcnt);
-                    lines.AddRange(new(string, int[])[]
+                    else if (tline.Match(@"^\#(comments\-start|cs)(\b|\s+|$)", out _))
+                        ls |= LineState.Comment;
+                    else if (tline.Match(@"^\#(comments\-end|ce)(\b|\s+|$)", out _))
+                        ls &= ~LineState.Comment;
+                    else if (ls == LineState.Regular)
                     {
+                        if (tline.Match(@"\;[^\""]*$", out Match m))
+                            tline = tline.Remove(m.Index).Trim();
+                        else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
+                            tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+
+                        if (tline.Match(@"\s+_\s*$", out m))
+                        {
+                            prev = $"{prev} {tline.Remove(m.Index).Trim()}";
+                            lnmbrs.Add(lcnt);
+                        }
+                        else
+                        {
+                            lnmbrs.Add(lcnt);
+                            lines.Add(($"{prev} {tline}".Trim(), lnmbrs.ToArray()));
+                            lnmbrs.Clear();
+
+                            prev = "";
+                        }
+                    }
+                    else if (ls == LineState.CSharp)
+                        csharp.code += '\n' + line;
+
+                    ++lcnt;
+                }
+
+                if (ls.HasFlag(LineState.Comment))
+                    state.ReportKnownWarning("warnings.preproc.no_closing_comment", new DefinitionContext(context.SourcePath, lcnt - 1));
+                else if (ls.HasFlag(LineState.CSharp))
+                    state.ReportKnownWarning("errors.preproc.no_closing_csharp", new DefinitionContext(context.SourcePath, lcnt - 1));
+
+                lcnt = 0;
+
+                while (lcnt < lines.Count)
+                {
+                    int[] lnr = lines[lcnt].Item2;
+
+                    if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<iaction>.+)\s+else\s+(?<eaction>)$", out Match m))
+                    {
+                        lines.RemoveAt(lcnt);
+                        lines.AddRange(new(string, int[])[]
+                        {
                         ($"If ({m.Get("cond")}) Then", lnr),
                         (m.Get("iaction"), lnr),
                         ("Else", lnr),
                         (m.Get("eaction"), lnr),
                         ("EndIf", lnr)
-                    });
-                }
-                else if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
-                {
-                    lines.RemoveAt(lcnt);
-                    lines.AddRange(new(string, int[])[]
+                        });
+                    }
+                    else if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
                     {
+                        lines.RemoveAt(lcnt);
+                        lines.AddRange(new(string, int[])[]
+                        {
                         ($"If ({m.Get("cond")}) Then", lnr),
                         (m.Get("then"), lnr),
                         ("EndIf", lnr)
-                    });
+                        });
+                    }
+
+                    ++lcnt;
                 }
 
-                ++lcnt;
+                return (from ln in lines
+                        where ln.Item1.Length > 0
+                        select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
             }
 
-            return (from ln in lines
-                    where ln.Item1.Length > 0
-                    select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
-        }
-
-        private static Dictionary<string, FUNCTION> PreProcessFunctions(PreInterpreterState state, InterpreterOptions options)
-        {
-            Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
+            private static Dictionary<string, FUNCTION> PreprocessFunctions(PreInterpreterState state, InterpreterOptions options)
             {
-                [GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, GLOBAL_FUNC_NAME, true)
-            };
-
-            foreach (string name in state.Functions.Keys)
-                if (name != GLOBAL_FUNC_NAME)
-                    funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
-
-            return funcdir;
-
-            FUNCTION PreProcessFunction(FunctionScope func, string name, bool global)
-            {
-                Stack<(Entity Entity, ControlBlock CB)> eblocks = new Stack<(Entity, ControlBlock)>();
-                var lines = func.Lines.ToArray();
-                int locndx = 0;
-
-                Entity curr = new FUNCTION(name, global, func) { DefinitionContext = func.Context };
-
-                eblocks.Push((curr, __NONE__));
-
-                while (locndx < lines.Length)
+                Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
                 {
-                    DefinitionContext defctx = lines[locndx].Context;
-                    void err(string msg, bool fatal, params object[] args)
-                    {
-                        int errnum = Language.GetErrorNumber(msg);
+                    [GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, GLOBAL_FUNC_NAME, true)
+                };
 
-                        msg = state.Language[msg, args];
+                foreach (string name in state.Functions.Keys)
+                    if (name != GLOBAL_FUNC_NAME)
+                        funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
 
-                        if (fatal)
-                            state.ReportError(msg, defctx, errnum);
-                        else
-                            state.ReportWarning(msg, defctx, errnum);
-                    }
-                    void Conflicts(Action f, params ControlBlock[] cbs)
-                    {
-                        if (cbs.Contains(eblocks.Peek().CB))
-                            err("errors.preproc.block_confl", true, string.Join("', '", cbs));
-                        else
-                            f();
-                    }
-                    void TryCloseBlock(ControlBlock ivb)
-                    {
-                        (Entity et, ControlBlock CB) = eblocks.Pop();
+                return funcdir;
 
-                        if (CB == __NONE__)
+                FUNCTION PreProcessFunction(FunctionScope func, string name, bool global)
+                {
+                    Stack<(Entity Entity, ControlBlock CB)> eblocks = new Stack<(Entity, ControlBlock)>();
+                    var lines = func.Lines.ToArray();
+                    int locndx = 0;
+
+                    Entity curr = new FUNCTION(name, global, func) { DefinitionContext = func.Context };
+
+                    eblocks.Push((curr, __NONE__));
+
+                    while (locndx < lines.Length)
+                    {
+                        DefinitionContext defctx = lines[locndx].Context;
+                        void err(string msg, bool fatal, params object[] args)
                         {
-                            eblocks.Push((et, CB));
+                            int errnum = Language.GetErrorNumber(msg);
 
-                            return;
+                            msg = state.Language[msg, args];
+
+                            if (fatal)
+                                state.ReportError(msg, defctx, errnum);
+                            else
+                                state.ReportWarning(msg, defctx, errnum);
                         }
-                        else if ((ivb == IfElifElseBlock)
-                              || (CB == ivb)
-                              || ((CB == Case) && (ivb == Select || ivb == Switch)
-                              || (ClosingInstruction.ContainsKey(CB) && ClosingInstruction.ContainsKey(ivb) && ClosingInstruction[CB] == ClosingInstruction[ivb])))
+                        void Conflicts(Action f, params ControlBlock[] cbs)
                         {
+                            if (cbs.Contains(eblocks.Peek().CB))
+                                err("errors.preproc.block_confl", true, string.Join("', '", cbs));
+                            else
+                                f();
+                        }
+                        void TryCloseBlock(ControlBlock ivb)
+                        {
+                            (Entity et, ControlBlock CB) = eblocks.Pop();
+
+                            if (CB == __NONE__)
+                            {
+                                eblocks.Push((et, CB));
+
+                                return;
+                            }
+                            else if ((ivb == IfElifElseBlock)
+                                  || (CB == ivb)
+                                  || ((CB == Case) && (ivb == Select || ivb == Switch)
+                                  || (ClosingInstruction.ContainsKey(CB) && ClosingInstruction.ContainsKey(ivb) && ClosingInstruction[CB] == ClosingInstruction[ivb])))
+                            {
+                                curr = eblocks.Peek().Entity;
+
+                                return;
+                            }
+                            else
+                                eblocks.Push((et, CB));
+
+                            if (CB == __NONE__)
+                                err("errors.preproc.block_invalid_close", true, ivb);
+                            else
+                                err("errors.preproc.block_conflicting_close", true, CB, ClosingInstruction[ivb]);
+                        }
+                        void ForceCloseBlock()
+                        {
+                            eblocks.Pop();
+
                             curr = eblocks.Peek().Entity;
-
-                            return;
                         }
-                        else
-                            eblocks.Push((et, CB));
-
-                        if (CB == __NONE__)
-                            err("errors.preproc.block_invalid_close", true, ivb);
-                        else
-                            err("errors.preproc.block_conflicting_close", true, CB, ClosingInstruction[ivb]);
-                    }
-                    void ForceCloseBlock()
-                    {
-                        eblocks.Pop();
-
-                        curr = eblocks.Peek().Entity;
-                    }
-                    int AnyParentCount(params ControlBlock[] cb) => eblocks.Count(x => cb.Contains(x.CB));
-                    void Append(params Entity[] es)
-                    {
-                        foreach (Entity e in es)
+                        int AnyParentCount(params ControlBlock[] cb) => eblocks.Count(x => cb.Contains(x.CB));
+                        void Append(params Entity[] es)
                         {
-                            e.DefinitionContext = defctx;
+                            foreach (Entity e in es)
+                            {
+                                e.DefinitionContext = defctx;
+                                e.Parent = curr;
+
+                                curr.Append(e);
+                            }
+                        }
+                        T OpenBlock<T>(ControlBlock cb, T e) where T : Entity
+                        {
                             e.Parent = curr;
+                            e.DefinitionContext = defctx;
 
                             curr.Append(e);
+                            curr = e;
+
+                            eblocks.Push((e, cb));
+
+                            return e;
                         }
-                    }
-                    T OpenBlock<T>(ControlBlock cb, T e) where T : Entity
-                    {
-                        e.Parent = curr;
-                        e.DefinitionContext = defctx;
 
-                        curr.Append(e);
-                        curr = e;
+                        string line = lines[locndx].Line;
 
-                        eblocks.Push((e, cb));
-
-                        return e;
-                    }
-
-                    string line = lines[locndx].Line;
-
-                    line.Match(new(string, ControlBlock[], Action<Match>)[]
-                    {
+                        line.Match(new(string, ControlBlock[], Action<Match>)[]
+                        {
                         ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m =>
                         {
                             if (options.AllowUnsafeCode)
@@ -707,542 +710,445 @@ namespace AutoItInterpreter
                         }),
                         (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
                         (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
+                        (@"^(?<var>\$[a-z_]\w*)\s*=\s*(?<func>[a-z_]\w*)$",  new[] { Switch, Select }, m =>
+                        {
+                            string var = m.Get("var");
+                            string f = m.Get("func");
+
+
+                            // TODO : function assigned to a variable
+
+                        }),
                         (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
-                    }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
+                        }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
-                    ++locndx;
+                        ++locndx;
+                    }
+
+                    List<string> ci = new List<string>();
+                    ControlBlock pb;
+
+                    while ((pb = eblocks.Pop().CB) != __NONE__)
+                        ci.Add(ClosingInstruction[pb == IfElifElseBlock ? If : pb]);
+
+                    if (ci.Count > 0)
+                    {
+                        const string errpath = "errors.preproc.blocks_unclosed";
+
+                        state.ReportError((global ? $"[{ name}]  " : "") + state.Language[errpath, string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx), Language.GetErrorNumber(errpath));
+
+                        while (curr.Parent is Entity e)
+                            curr = e;
+                    }
+
+                    return (FUNCTION)curr;
                 }
-
-                List<string> ci = new List<string>();
-                ControlBlock pb;
-
-                while ((pb = eblocks.Pop().CB) != __NONE__)
-                    ci.Add(ClosingInstruction[pb == IfElifElseBlock ? If : pb]);
-
-                if (ci.Count > 0)
-                {
-                    const string errpath = "errors.preproc.blocks_unclosed";
-
-                    state.ReportError((global ? $"[{ name}]  " : "") + state.Language[errpath, string.Join("', '", ci)], new DefinitionContext(func.Context.FilePath, locndx), Language.GetErrorNumber(errpath));
-
-                    while (curr.Parent is Entity e)
-                        curr = e;
-                }
-
-                return (FUNCTION)curr;
             }
-        }
 
-        private static unsafe bool ProcessFunctionDeclaration(string Line, ref int ivalfunc, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
-        {
-            int ival = ivalfunc;
+            private static unsafe bool ProcessFunctionDeclaration(string Line, ref FunctionDeclarationState state, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
+            {
+                FunctionDeclarationState ival = state;
 
-            if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out Match m))
-                if (st.CurrentFunction is null)
+                if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out Match m))
+                    if (st.CurrentFunction is null)
+                    {
+                        string lname = m.Get("name").ToLower();
+
+                        ival = FunctionDeclarationState.InvalidOpening;
+
+                        if (IsReservedName(lname))
+                            err("errors.general.reserved_name", m.Get("name"));
+                        else if (st.Functions.ContainsKey(lname))
+                            err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
+                        else if (st.PInvokeFunctions.ContainsKey(lname))
+                            err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
+                        else
+                        {
+                            ival = FunctionDeclarationState.RegularFunction;
+
+                            st.CurrentFunction = new FunctionScope(defcntx, m.Get("params"));
+                            st.Functions[lname] = st.CurrentFunction;
+                        }
+                    }
+                    else
+                    {
+                        ival = FunctionDeclarationState.InvalidNesting;
+
+                        err("errors.preproc.function_nesting");
+                    }
+                else if (Line.Match("^endfunc$", out _))
+                    if (ival != FunctionDeclarationState.RegularFunction)
+                        ival = FunctionDeclarationState.RegularFunction;
+                    else if (st.CurrentFunction is null)
+                        err("errors.preproc.unexpected_endfunc");
+                    else
+                        st.CurrentFunction = null;
+                else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
                 {
-                    string lname = m.Get("name").ToLower();
+                    string name = m.Get("name");
+                    string sig = m.Get("sig").Trim();
+                    string lib = m.Get("lib").Trim();
+                    string lname = name.ToLower();
 
-                    ival = 1;
-
-                    if (IsReservedName(lname))
-                        err("errors.general.reserved_name", m.Get("name"));
+                    if (string.IsNullOrWhiteSpace(lib))
+                        err("errors.preproc.pinvoke_no_lib", name);
+                    else if (string.IsNullOrWhiteSpace(sig))
+                        err("errors.preproc.pinvoke_no_sig", name);
                     else if (st.Functions.ContainsKey(lname))
                         err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
                     else if (st.PInvokeFunctions.ContainsKey(lname))
                         err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
+                    else if (st.CurrentFunction != null)
+                        err("errors.preproc.function_nesting");
                     else
-                    {
-                        ival = 0;
-
-                        st.CurrentFunction = new FunctionScope(defcntx, m.Get("params"));
-                        st.Functions[lname] = st.CurrentFunction;
-                    }
+                        st.PInvokeFunctions[name] = (sig, lib, defcntx);
                 }
                 else
-                {
-                    ival = 2;
+                    return (state = ival) == FunctionDeclarationState.RegularFunction;
 
-                    err("errors.preproc.function_nesting");
-                }
-            else if (Line.Match("^endfunc$", out _))
-                if (ival != 0)
-                    ival = 0;
-                else if (st.CurrentFunction is null)
-                    err("errors.preproc.unexpected_endfunc");
-                else
-                    st.CurrentFunction = null;
-            else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
-            {
-                string name = m.Get("name");
-                string sig = m.Get("sig").Trim();
-                string lib = m.Get("lib").Trim();
-                string lname = name.ToLower();
+                state = ival;
 
-                if (string.IsNullOrWhiteSpace(lib))
-                    err("errors.preproc.pinvoke_no_lib", name);
-                else if (string.IsNullOrWhiteSpace(sig))
-                    err("errors.preproc.pinvoke_no_sig", name);
-                else if (st.Functions.ContainsKey(lname))
-                    err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
-                else if (st.PInvokeFunctions.ContainsKey(lname))
-                    err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
-                else if(st.CurrentFunction != null)
-                    err("errors.preproc.function_nesting");
-                else
-                    st.PInvokeFunctions[name] = (sig, lib, defcntx);
+                return false;
             }
-            else
-                return (ivalfunc = ival) == 0;
 
-            ivalfunc = ival;
-
-            return false;
-        }
-
-        private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
-        {
-            value = value.Trim('\'', '"', ' ', '\t', '\r', '\n', '\v');
-
-            name.ToLower().Switch(new Dictionary<string, Action>
+            private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
             {
-                ["out"] = () => ci.FileName = value,
-                ["icon"] = () => ci.IconPath = value,
-                ["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
-                ["upx"] = () => ci.UPX = bool.Parse(value),
-                ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
-                ["console"] = () => ci.ConsoleMode = bool.Parse(value),
-                ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
-                ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value.ToLower(), true),
-                ["architecture"] = () => ci.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), value.ToLower(), true),
-                ["x64"] = () => {
-                    bool x64 = bool.Parse(value);
+                value = value.Trim('\'', '"', ' ', '\t', '\r', '\n', '\v');
 
-                    switch (ci.TargetArchitecture)
-                    {
-                        case Architecture.X86:
-                        case Architecture.X64:
-                            ci.TargetArchitecture = x64 ? Architecture.X64 : Architecture.X86;
+                name.ToLower().Switch(new Dictionary<string, Action>
+                {
+                    ["out"] = () => ci.FileName = value,
+                    ["icon"] = () => ci.IconPath = value,
+                    ["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
+                    ["upx"] = () => ci.UPX = bool.Parse(value),
+                    ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
+                    ["console"] = () => ci.ConsoleMode = bool.Parse(value),
+                    ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
+                    ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value.ToLower(), true),
+                    ["architecture"] = () => ci.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), value.ToLower(), true),
+                    ["x64"] = () => {
+                        bool x64 = bool.Parse(value);
 
-                            return;
-                        case Architecture.Arm:
-                        case Architecture.Arm64:
-                            ci.TargetArchitecture = x64 ? Architecture.Arm64 : Architecture.Arm;
-
-                            return;
-                    }
-                },
-                ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
-                ["comments"] = () => ci.AssemblyComment = value,
-                ["companyname"] = () => ci.AssemblyCompanyName = value,
-                ["filedescription"] = () => ci.AssemblyFileDescription = value,
-                ["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
-                ["internalname"] = () => ci.AssemblyInternalName = value,
-                ["legalcopyright"] = () => ci.AssemblyCopyright = value,
-                ["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
-                ["originalfilename"] = () => { /* do nothing */ },
-                ["productname"] = () => ci.AssemblyProductName = value,
-                ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
-            },
-            () => err("errors.preproc.directive_invalid", name));
-        }
-
-        private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
-        {
-            string inclpath = "";
-
-            line.Match(
-                ("^notrayicon$", _ => st.UseTrayIcon = false),
-                ("^requireadmin$", _ => st.RequireAdmin = true),
-                ("^include-once$", _ => st.IsIncludeOnce = true),
-                (@"^include(\s|\b)\s*(\<(?<rel>.*)\>|\""(?<abs1>.*)\""|\'(?<abs2>.*)\')$", m => {
-                    string path = m.Get("abs1");
-
-                    if (path.Length == 0)
-                        path = m.Get("abs2");
-
-                    path = path.Replace('\\', '/');
-
-                    FileInfo nfo = new FileInfo($"{st.CurrentContext.SourcePath.FullName}/../{path}");
-
-                    if (path.Length > 0)
-                        if (!nfo.Exists)
-                            nfo = new FileInfo(path);
-                        else
-                            try
-                            {
-                                include();
+                        switch (ci.TargetArchitecture)
+                        {
+                            case Architecture.X86:
+                            case Architecture.X64:
+                                ci.TargetArchitecture = x64 ? Architecture.X64 : Architecture.X86;
 
                                 return;
+                            case Architecture.Arm:
+                            case Architecture.Arm64:
+                                ci.TargetArchitecture = x64 ? Architecture.Arm64 : Architecture.Arm;
+
+                                return;
+                        }
+                    },
+                    ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
+                    ["comments"] = () => ci.AssemblyComment = value,
+                    ["companyname"] = () => ci.AssemblyCompanyName = value,
+                    ["filedescription"] = () => ci.AssemblyFileDescription = value,
+                    ["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                    ["internalname"] = () => ci.AssemblyInternalName = value,
+                    ["legalcopyright"] = () => ci.AssemblyCopyright = value,
+                    ["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
+                    ["originalfilename"] = () => { /* do nothing */ },
+                    ["productname"] = () => ci.AssemblyProductName = value,
+                    ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                },
+                () => err("errors.preproc.directive_invalid", name));
+            }
+
+            private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
+            {
+                string inclpath = "";
+
+                line.Match(
+                    ("^notrayicon$", _ => st.UseTrayIcon = false),
+                    ("^requireadmin$", _ => st.RequireAdmin = true),
+                    ("^include-once$", _ => st.IsIncludeOnce = true),
+                    (@"^include(\s|\b)\s*(\<(?<rel>.*)\>|\""(?<abs1>.*)\""|\'(?<abs2>.*)\')$", m => {
+                        string path = m.Get("abs1");
+
+                        if (path.Length == 0)
+                            path = m.Get("abs2");
+
+                        path = path.Replace('\\', '/');
+
+                        FileInfo nfo = new FileInfo($"{st.CurrentContext.SourcePath.FullName}/../{path}");
+
+                        if (path.Length > 0)
+                            if (!nfo.Exists)
+                                nfo = new FileInfo(path);
+                            else
+                                try
+                                {
+                                    include();
+
+                                    return;
+                                }
+                                catch
+                                {
+                                }
+                        else
+                            path = m.Get("rel").Replace('\\', '/');
+
+                        foreach (string dir in settings.IncludeDirectories)
+                            try
+                            {
+                                string ipath = $"{dir}/{path}";
+
+                                if ((nfo = new FileInfo(ipath)).Exists && !Directory.Exists(ipath))
+                                {
+                                    include();
+
+                                    return;
+                                }
                             }
                             catch
                             {
                             }
-                    else
-                        path = m.Get("rel").Replace('\\', '/');
 
-                    foreach (string dir in settings.IncludeDirectories)
+                        err("errors.preproc.include_nfound", path);
+
+                        void include()
+                        {
+                            if (!st.IncludeOncePaths.Contains(nfo.FullName))
+                                inclpath = nfo.FullName;
+
+                            if (inclpath.Match(@"^#include\-once$", out _, RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.IgnoreCase))
+                                st.IncludeOncePaths.Add(nfo.FullName);
+                        }
+                    }
+                ),
+                    (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add(m.Groups["func"].ToString().Trim())),
+                    (@"^pragma\b\s*(?<opt>[a-z]\w*)\s*\((?<name>[a-z]\w*)\s*\,\s*(?<value>.+)\s*\)$", m =>
+                    {
+                        string opt = m.Get("opt");
+                        string name = m.Get("name");
+                        string value = m.Get("value");
+
                         try
                         {
-                            string ipath = $"{dir}/{path}";
-
-                            if ((nfo = new FileInfo(ipath)).Exists && !Directory.Exists(ipath))
+                            switch (opt.ToLower())
                             {
-                                include();
+                                case "compile":
+                                    ProcessPrgamaCompileOption(name, value, st.CompileInfo, err);
 
-                                return;
+                                    break;
+                                default:
+                                    err("errors.preproc.pragma_unsupported", opt);
+
+                                    break;
                             }
                         }
                         catch
                         {
-                        }
-
-                    err("errors.preproc.include_nfound", path);
-
-                    void include()
-                    {
-                        if (!st.IncludeOncePaths.Contains(nfo.FullName))
-                            inclpath = nfo.FullName;
-
-                        if (inclpath.Match(@"^#include\-once$", out _, RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.IgnoreCase))
-                            st.IncludeOncePaths.Add(nfo.FullName);
-                    }
-                }),
-                (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add(m.Groups["func"].ToString().Trim())),
-                (@"^pragma\b\s*(?<opt>[a-z]\w*)\s*\((?<name>[a-z]\w*)\s*\,\s*(?<value>.+)\s*\)$", m =>
-                {
-                    string opt = m.Get("opt");
-                    string name = m.Get("name");
-                    string value = m.Get("value");
-
-                    try
-                    {
-                        switch (opt.ToLower())
-                        {
-                            case "compile":
-                                ProcessPrgamaCompileOption(name, value, st.CompileInfo, err);
-
-                                break;
-                            default:
-                                err("errors.preproc.pragma_unsupported", opt);
-
-                                break;
+                            err("errors.preproc.directive_invalid_value", value, name);
                         }
                     }
-                    catch
-                    {
-                        err("errors.preproc.directive_invalid_value", value, name);
-                    }
-                })
-            );
+                )
+                );
 
-            return inclpath;
+                return inclpath;
+            }
         }
 
-        private static (string, PINVOKE_SIGNATURE)[] ParsePinvokeFunctions(InterpreterState state, (DefinitionContext, string, EXPRESSION[])[] dllcalls)
+        private static class ASTProcessor
         {
-            bool getstr(EXPRESSION e, out string s)
+            internal static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
             {
-                s = null;
+                List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
+                FunctionparameterParser fpparser = new FunctionparameterParser(options.Settings.UseOptimization);
+                ExpressionParser aexparser = new ExpressionParser(options.Settings.UseOptimization, true, false);
+                ExpressionParser exparser = new ExpressionParser(options.Settings.UseOptimization, false, false);
+                ExpressionParser dexparser = new ExpressionParser(options.Settings.UseOptimization, true, true);
+                AST_FUNCTION _currfunc = null;
 
-                if (e is EXPRESSION.Literal lit && lit.Item is LITERAL.String str)
-                    s = str.Item;
-                else
-                    return false;
+                foreach (dynamic parser in new dynamic[] { fpparser, aexparser, exparser, dexparser })
+                    parser.Initialize();
 
-                return true;
-            }
-            List<(string, PINVOKE_SIGNATURE)> used_sigs = new List<(string, PINVOKE_SIGNATURE)>();
-            PInvokeParser parser = new PInvokeParser();
+                foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
+                                                                                                                                where kvp.Key != GLOBAL_FUNC_NAME
+                                                                                                                                select (kvp.Key, kvp.Value)))
+                    state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
 
-            parser.Initialize();
+                state.PInvokeSignatures = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
 
-            foreach (string name in state.PInvokeFunctions.Keys)
-            {
-                (string s, string lib, DefinitionContext ctx) = state.PInvokeFunctions[name];
-                PINVOKE_SIGNATURE sig = null;
+                ValidateFunctionCalls(state, options, funccalls.ToArray());
 
-                try
+                dynamic process(Entity e)
                 {
-                    sig = parser.Parse(s);
-                }
-                catch
-                {
-                }
-
-                if (sig is null)
-                    state.ReportKnownError("errors.astproc.pinvoke_sig_invalid", ctx, s, name);
-                else if (used_sigs.Contains((lib, sig)))
-                    state.ReportKnownError("warnings.astproc.pinvoke_already_declared", ctx, s, lib);
-                else
-                {
-                    used_sigs.Add((lib, sig));
-
-                    int cnt = 0;
-                    (VARIABLE, PINVOKE_TYPE)[] pars = sig.Paramters.Select(t => (new VARIABLE("_p" + cnt++), t)).ToArray();
-
-                    state.ASTFunctions[name] = new AST_FUNCTION
+                    void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
+                    void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
+                    void note(string path, params object[] args) => state.ReportKnownNote(path, e.DefinitionContext, args);
+                    AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
+                    EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
+                    AST_CONDITIONAL_BLOCK proccond()
                     {
-                        Context = ctx,
-                        Name = name,
-                        Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v.Item1, false, false)).ToArray(),
-                        Statements = new AST_STATEMENT[]
+                        EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition, false);
+
+                        return new AST_CONDITIONAL_BLOCK
                         {
-                            new AST_RETURN_STATEMENT
+                            Condition = expr,
+                            Statements = proclines(),
+                            Context = e.DefinitionContext
+                        };
+                    }
+                    EXPRESSION parsefexpr(string exprstr, bool assign)
+                    {
+                        EXPRESSION expr;
+
+                        if ((expr = parseexpr(exprstr, assign)) is null)
+                        {
+                            expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true, true);
+
+                            if (expr != null)
                             {
-                                Expression = EXPRESSION.NewFunctionCall(
-                                    new Tuple<string, FSharpList<EXPRESSION>>(
-                                        AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
-                                        ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
-                                            new Tuple<string, FSharpList<EXPRESSION>>(
-                                                nameof(AutoItFunctions.TryConvert),
-                                                ListModule.OfSeq(
-                                                    new EXPRESSION[]
-                                                    {
-                                                        EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
-                                                        EXPRESSION.NewLiteral(
-                                                            LITERAL.NewString(x.Item2.ToString())
-                                                        )
-                                                    }
-                                                )
-                                            )
-                                        )))
-                                    )
-                                )
+                                state.RemoveLastErrorOrWarning();
+
+                                expr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.Assignment)?.Item3 ?? expr;
                             }
                         }
-                    };
-                }
-            }
 
-            foreach ((DefinitionContext ctx, _, EXPRESSION[] args) in dllcalls)
-                if (args.Length < 3)
-                    state.ReportKnownError("errors.astproc.not_enough_args", ctx, "DllCall", 3, args.Length);
-                else if ((args.Length % 2) == 0)
-                    state.ReportKnownError("errors.astproc.dllcall_odd_argc", ctx);
-                else if (getstr(args[0], out string lib) && getstr(args[1], out string ret) && getstr(args[2], out string name))
-                {
-                    int index = 0;
-                    string pstr = null;
-                    PINVOKE_SIGNATURE sig = null;
-                    IEnumerable<string> ptypes = from arg in args.Skip(3)
-                                                 let i = index++
-                                                 where (i % 2) == 0
-                                                 where getstr(arg, out pstr)
-                                                 select pstr;
-
-                    try
-                    {
-                        sig = parser.Parse($"{ret} {name}({string.Join(", ", ptypes)})");
+                        return expr;
                     }
-                    catch
+                    EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
                     {
-                    }
-
-                    if (sig is null)
-                        ; // TODO : report error
-                    else if (!used_sigs.Contains((lib, sig)))
-                        used_sigs.Add((lib, sig));
-                }
-                else
-                    state.ReportKnownError("errors.astproc.dllcall_const_args", ctx);
-
-            return used_sigs.ToArray();
-        }
-
-        private static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
-        {
-            List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
-            FunctionparameterParser fpparser = new FunctionparameterParser(options.Settings.UseOptimization);
-            ExpressionParser aexparser = new ExpressionParser(options.Settings.UseOptimization, true, false);
-            ExpressionParser exparser = new ExpressionParser(options.Settings.UseOptimization, false, false);
-            ExpressionParser dexparser = new ExpressionParser(options.Settings.UseOptimization, true, true);
-            AST_FUNCTION _currfunc = null;
-
-            foreach (dynamic parser in new dynamic[] { fpparser, aexparser, exparser, dexparser })
-                parser.Initialize();
-
-            foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
-                                                                                                                            where kvp.Key != GLOBAL_FUNC_NAME
-                                                                                                                            select (kvp.Key, kvp.Value)))
-                state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
-
-            state.PInvokeSignatures  = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
-
-            ValidateFunctionCalls(state, options, funccalls.ToArray());
-
-            dynamic process(Entity e)
-            {
-                void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
-                void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
-                void note(string path, params object[] args) => state.ReportKnownNote(path, e.DefinitionContext, args);
-                AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
-                EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
-                AST_CONDITIONAL_BLOCK proccond()
-                {
-                    EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition, false);
-
-                    return new AST_CONDITIONAL_BLOCK
-                    {
-                        Condition = expr,
-                        Statements = proclines(),
-                        Context = e.DefinitionContext
-                    };
-                }
-                EXPRESSION parsefexpr(string exprstr, bool assign)
-                {
-                    EXPRESSION expr;
-
-                    if ((expr = parseexpr(exprstr, assign)) is null)
-                    {
-                        expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true, true);
-
-                        if (expr != null)
-                        {
-                            state.RemoveLastErrorOrWarning();
-
-                            expr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.Assignment)?.Item3 ?? expr;
-                        }
-                    }
-
-                    return expr;
-                }
-                EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
-                {
-                    if (parsemexpr(expr, (assign ? aexparser : exparser), suppress) is MULTI_EXPRESSIONS m)
-                        if (m.Length > 1)
-                        {
-                            if (!suppress)
-                                err("errors.astproc.no_comma_allowed", expr);
-                        }
-                        else if (m[0].IsValueRange)
-                        {
-                            if (!suppress)
-                                err("errors.astproc.no_range_allowed", expr);
-                        }
-                        else
-                            return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
-
-                    return null;
-                }
-                MULTI_EXPRESSIONS parsemexpr(string expr, ExpressionParser p, bool suppress = false)
-                {
-                    expr = expr.Trim();
-
-                    try
-                    {
-                        MULTI_EXPRESSIONS mes = p.Parse(expr);
-                        IEnumerable<EXPRESSION> exprs = mes.SelectMany(me =>
-                        {
-                            switch (me)
+                        if (parsemexpr(expr, (assign ? aexparser : exparser), suppress) is MULTI_EXPRESSIONS m)
+                            if (m.Length > 1)
                             {
-                                case MULTI_EXPRESSION.SingleValue sv:
-                                    return new[] { sv.Item };
-                                case MULTI_EXPRESSION.ValueRange vr:
-                                    return new[] { vr.Item1, vr.Item2 };
+                                if (!suppress)
+                                    err("errors.astproc.no_comma_allowed", expr);
                             }
-
-                            return new EXPRESSION[0];
-                        });
-
-                        funccalls.AddRange(exprs.SelectMany(Analyzer.GetFunctionCallExpressions).Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray())));
-
-                        return mes;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!suppress)
-                            err("errors.astproc.parser_error", expr, ex.Message);
+                            else if (m[0].IsValueRange)
+                            {
+                                if (!suppress)
+                                    err("errors.astproc.no_range_allowed", expr);
+                            }
+                            else
+                                return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
 
                         return null;
                     }
-                }
-                dynamic __inner()
-                {
-                    switch (e)
+                    MULTI_EXPRESSIONS parsemexpr(string expr, ExpressionParser p, bool suppress = false)
                     {
-                        case FUNCTION i:
+                        expr = expr.Trim();
+
+                        try
+                        {
+                            MULTI_EXPRESSIONS mes = p.Parse(expr);
+                            IEnumerable<EXPRESSION> exprs = mes.SelectMany(me =>
                             {
-                                FUNCTION_PARAMETER[] @params = new FUNCTION_PARAMETER[0];
-
-                                try
+                                switch (me)
                                 {
-                                    @params = fpparser.Parse(i.RawParameters);
-                                }
-                                catch (Exception ex)
-                                {
-                                    if (!string.IsNullOrWhiteSpace(i.RawParameters))
-                                        err("errors.astproc.parser_error_funcdecl", i.RawParameters, ex.Message);
+                                    case MULTI_EXPRESSION.SingleValue sv:
+                                        return new[] { sv.Item };
+                                    case MULTI_EXPRESSION.ValueRange vr:
+                                        return new[] { vr.Item1, vr.Item2 };
                                 }
 
-                                _currfunc = new AST_FUNCTION
+                                return new EXPRESSION[0];
+                            });
+
+                            funccalls.AddRange(exprs.SelectMany(Analyzer.GetFunctionCallExpressions).Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray())));
+
+                            return mes;
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!suppress)
+                                err("errors.astproc.parser_error", expr, ex.Message);
+
+                            return null;
+                        }
+                    }
+                    dynamic __inner()
+                    {
+                        switch (e)
+                        {
+                            case FUNCTION i:
                                 {
-                                    Context = i.DefinitionContext,
-                                    Name = i.Name,
-                                    Parameters = @params.Select(p =>
+                                    FUNCTION_PARAMETER[] @params = new FUNCTION_PARAMETER[0];
+
+                                    try
                                     {
-                                        switch (p.Type)
+                                        @params = fpparser.Parse(i.RawParameters);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(i.RawParameters))
+                                            err("errors.astproc.parser_error_funcdecl", i.RawParameters, ex.Message);
+                                    }
+
+                                    _currfunc = new AST_FUNCTION
+                                    {
+                                        Context = i.DefinitionContext,
+                                        Name = i.Name,
+                                        Parameters = @params.Select(p =>
                                         {
-                                            case FUNCTION_PARAMETER_TYPE.Mandatory m:
-                                                FUNCTION_PARAMETER_MODIFIER mod = m.Item;
+                                            switch (p.Type)
+                                            {
+                                                case FUNCTION_PARAMETER_TYPE.Mandatory m:
+                                                    FUNCTION_PARAMETER_MODIFIER mod = m.Item;
 
-                                                return new AST_FUNCTION_PARAMETER(p.Variable, mod.IsByRef, mod.IsConst);
-                                            case FUNCTION_PARAMETER_TYPE.Optional o:
-                                                EXPRESSION expr = null;
+                                                    return new AST_FUNCTION_PARAMETER(p.Variable, mod.IsByRef, mod.IsConst);
+                                                case FUNCTION_PARAMETER_TYPE.Optional o:
+                                                    EXPRESSION expr = null;
 
-                                                switch (o.Item)
-                                                {
-                                                    case FUNCTION_PARAMETER_DEFVAL.Lit l:
-                                                        expr = EXPRESSION.NewLiteral(l.Item);
+                                                    switch (o.Item)
+                                                    {
+                                                        case FUNCTION_PARAMETER_DEFVAL.Lit l:
+                                                            expr = EXPRESSION.NewLiteral(l.Item);
 
-                                                        break;
-                                                    case FUNCTION_PARAMETER_DEFVAL.Mac l:
-                                                        expr = EXPRESSION.NewMacro(l.Item);
+                                                            break;
+                                                        case FUNCTION_PARAMETER_DEFVAL.Mac l:
+                                                            expr = EXPRESSION.NewMacro(l.Item);
 
-                                                        break;
-                                                }
+                                                            break;
+                                                    }
 
-                                                return new AST_FUNCTION_PARAMETER_OPT(p.Variable, expr);
-                                        }
+                                                    return new AST_FUNCTION_PARAMETER_OPT(p.Variable, expr);
+                                            }
 
-                                        return null;
-                                    }).ToArray(),
+                                            return null;
+                                        }).ToArray(),
+                                    };
+
+                                    if (i.Name == GLOBAL_FUNC_NAME)
+                                        state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
+
+                                    if ((_currfunc.Statements = proclines()).Length == 0)
+                                        note("notes.empty_function", i.Name);
+
+                                    if (i.Name != GLOBAL_FUNC_NAME)
+                                        _currfunc.Statements = _currfunc.Statements.Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
+
+                                    return _currfunc;
+                                }
+                            case IF i:
+                                return new AST_IF_STATEMENT
+                                {
+                                    If = process(i.If),
+                                    ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
+                                    OptionalElse = i.Else is ELSE_BLOCK eb && process(eb) is AST_STATEMENT[] el && el.Length > 0 ? el : null,
+                                    Context = e.DefinitionContext,
                                 };
-
-                                if (i.Name == GLOBAL_FUNC_NAME)
-                                    state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
-
-                                if ((_currfunc.Statements = proclines()).Length == 0)
-                                    note("notes.empty_function", i.Name);
-
-                                if (i.Name != GLOBAL_FUNC_NAME)
-                                    _currfunc.Statements = _currfunc.Statements.Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
-
-                                return _currfunc;
-                            }
-                        case IF i:
-                            return new AST_IF_STATEMENT
-                            {
-                                If = process(i.If),
-                                ElseIf = i.ElseIfs.Select(x => process(x) as AST_CONDITIONAL_BLOCK).ToArray(),
-                                OptionalElse = i.Else is ELSE_BLOCK eb && process(eb) is AST_STATEMENT[] el && el.Length > 0 ? el : null,
-                                Context = e.DefinitionContext,
-                            };
-                        case IF_BLOCK _:
-                        case ELSEIF_BLOCK _:
-                            return proccond();
-                        case ELSE_BLOCK i:
-                            return proclines();
-                        case WHILE i:
-                            return (AST_WHILE_STATEMENT)proccond();
-                        case DO_UNTIL i:
-                            {
-                                return new AST_WHILE_STATEMENT
+                            case IF_BLOCK _:
+                            case ELSEIF_BLOCK _:
+                                return proccond();
+                            case ELSE_BLOCK i:
+                                return proclines();
+                            case WHILE i:
+                                return (AST_WHILE_STATEMENT)proccond();
+                            case DO_UNTIL i:
                                 {
-                                    WhileBlock = new AST_CONDITIONAL_BLOCK
+                                    return new AST_WHILE_STATEMENT
                                     {
-                                        Condition = EXPRESSION.NewLiteral(LITERAL.True),
-                                        Statements = new AST_STATEMENT[]
+                                        WhileBlock = new AST_CONDITIONAL_BLOCK
                                         {
+                                            Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                            Statements = new AST_STATEMENT[]
+                                            {
                                             new AST_IF_STATEMENT
                                             {
                                                 If = proccond(),
@@ -1251,224 +1157,224 @@ namespace AutoItInterpreter
                                                     new AST_BREAK_STATEMENT { Level = 1 }
                                                 }
                                             }
+                                            }
                                         }
-                                    }
-                                };
-                            }
-                        case SELECT i:
-                            {
-                                IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x)[0] as AST_SELECT_CASE)?.CaseBlock);
-
-                                if (cases.Any())
-                                    return new AST_IF_STATEMENT
-                                    {
-                                        If = cases.First(),
-                                        ElseIf = cases.Skip(1).ToArray()
                                     };
-                                else
-                                    break;
-                            }
-                        case SWITCH i:
-                            {
-                                AST_LOCAL_VARIABLE exprvar = new AST_LOCAL_VARIABLE
+                                }
+                            case SELECT i:
                                 {
-                                    Variable = VARIABLE.NewTemporary,
-                                    InitExpression = parseexpr(i.Expression, false)
-                                };
-                                EXPRESSION exprvare = EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(exprvar.Variable));
-                                dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
-                                IEnumerable<AST_CONDITIONAL_BLOCK> condcases = cases.Select(x =>
-                                {
-                                    AST_CONDITIONAL_BLOCK cblock = new AST_CONDITIONAL_BLOCK
-                                    {
-                                        Context = x.Context,
-                                        Statements = x.Statements,
-                                    };
+                                    IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x)[0] as AST_SELECT_CASE)?.CaseBlock);
 
-                                    switch (x)
+                                    if (cases.Any())
+                                        return new AST_IF_STATEMENT
+                                        {
+                                            If = cases.First(),
+                                            ElseIf = cases.Skip(1).ToArray()
+                                        };
+                                    else
+                                        break;
+                                }
+                            case SWITCH i:
+                                {
+                                    AST_LOCAL_VARIABLE exprvar = new AST_LOCAL_VARIABLE
                                     {
-                                        case AST_SWITCH_CASE_EXPRESSION ce:
-                                            IEnumerable<EXPRESSION> expr = ce.Expressions.Select(ex =>
-                                            {
-                                                if (ex is MULTI_EXPRESSION.SingleValue sv)
-                                                    return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, opt(sv.Item));
-                                                else if (ex is MULTI_EXPRESSION.ValueRange vr)
-                                                    return EXPRESSION.NewBinaryExpression(
-                                                        OPERATOR_BINARY.And,
-                                                        EXPRESSION.NewBinaryExpression(
-                                                        OPERATOR_BINARY.GreaterEqual,
-                                                            exprvare,
-                                                            opt(vr.Item1)
-                                                        ),
-                                                        EXPRESSION.NewBinaryExpression(
-                                                            OPERATOR_BINARY.LowerEqual,
-                                                            exprvare,
-                                                            opt(vr.Item2)
-                                                        )
-                                                    );
+                                        Variable = VARIABLE.NewTemporary,
+                                        InitExpression = parseexpr(i.Expression, false)
+                                    };
+                                    EXPRESSION exprvare = EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(exprvar.Variable));
+                                    dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
+                                    IEnumerable<AST_CONDITIONAL_BLOCK> condcases = cases.Select(x =>
+                                    {
+                                        AST_CONDITIONAL_BLOCK cblock = new AST_CONDITIONAL_BLOCK
+                                        {
+                                            Context = x.Context,
+                                            Statements = x.Statements,
+                                        };
+
+                                        switch (x)
+                                        {
+                                            case AST_SWITCH_CASE_EXPRESSION ce:
+                                                IEnumerable<EXPRESSION> expr = ce.Expressions.Select(ex =>
+                                                {
+                                                    if (ex is MULTI_EXPRESSION.SingleValue sv)
+                                                        return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, opt(sv.Item));
+                                                    else if (ex is MULTI_EXPRESSION.ValueRange vr)
+                                                        return EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.And,
+                                                            EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.GreaterEqual,
+                                                                exprvare,
+                                                                opt(vr.Item1)
+                                                            ),
+                                                            EXPRESSION.NewBinaryExpression(
+                                                                OPERATOR_BINARY.LowerEqual,
+                                                                exprvare,
+                                                                opt(vr.Item2)
+                                                            )
+                                                        );
+                                                    else
+                                                        return null;
+                                                });
+
+                                                if (expr.Any())
+                                                    cblock.Condition = expr.Aggregate((a, b) => EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Or, a, b));
                                                 else
-                                                    return null;
-                                            });
+                                                    cblock.Condition = EXPRESSION.NewLiteral(LITERAL.False);
 
-                                            if (expr.Any())
-                                                cblock.Condition = expr.Aggregate((a, b) => EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Or, a, b));
-                                            else
-                                                cblock.Condition = EXPRESSION.NewLiteral(LITERAL.False);
+                                                break;
+                                            case AST_SWITCH_CASE_ELSE _:
+                                                cblock.Condition = EXPRESSION.NewLiteral(LITERAL.True);
 
-                                            break;
-                                        case AST_SWITCH_CASE_ELSE _:
-                                            cblock.Condition = EXPRESSION.NewLiteral(LITERAL.True);
+                                                break;
+                                        }
 
-                                            break;
-                                    }
+                                        cblock.ExplicitLocalVariables.AddRange(x.ExplicitLocalsVariables);
 
-                                    cblock.ExplicitLocalVariables.AddRange(x.ExplicitLocalsVariables);
+                                        return cblock;
+                                    });
+                                    AST_SCOPE scope = new AST_SCOPE();
 
-                                    return cblock;
-                                });
-                                AST_SCOPE scope = new AST_SCOPE();
-
-                                if (condcases.Any())
-                                    scope.Statements = new AST_STATEMENT[]
-                                    {
+                                    if (condcases.Any())
+                                        scope.Statements = new AST_STATEMENT[]
+                                        {
                                         new AST_IF_STATEMENT
                                         {
                                             Context = i.DefinitionContext,
                                             If = condcases.First(),
                                             ElseIf = condcases.Skip(1).ToArray()
                                         }
-                                    };
+                                        };
 
-                                if (cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
-                                    err("errors.astproc.multiple_switch_case_else");
+                                    if (cases.Count(x => x is AST_SWITCH_CASE_ELSE) > 1)
+                                        err("errors.astproc.multiple_switch_case_else");
 
-                                scope.ExplicitLocalVariables.Add(exprvar);
+                                    scope.ExplicitLocalVariables.Add(exprvar);
 
-                                return scope;
-                            }
-                        case SELECT_CASE i:
-                            return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
-                            {
-                                Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition, false),
-                                Statements = proclines(),
-                                Context = i.DefinitionContext
-                            };
-                        case SWITCH_CASE i:
-                            {
-                                string expr = i.RawCondition;
-
-                                if (expr.ToLower() == "else")
-                                    return new AST_SWITCH_CASE_ELSE();
-                                else
-                                    return new AST_SWITCH_CASE_EXPRESSION
-                                    {
-                                        Statements = proclines(),
-                                        Expressions = parsemexpr(expr, exparser)?.ToArray() ?? new MULTI_EXPRESSION[0]
-                                    };
-                            }
-                        case RETURN i:
-                            {
-                                if (_currfunc.Name == GLOBAL_FUNC_NAME)
-                                    warn("warnings.astproc.global_return");
-
-                                return new AST_RETURN_STATEMENT
+                                    return scope;
+                                }
+                            case SELECT_CASE i:
+                                return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
                                 {
-                                    Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parseexpr(i.Expression, false)
+                                    Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition, false),
+                                    Statements = proclines(),
+                                    Context = i.DefinitionContext
                                 };
-                            }
-                        case CONTINUECASE _:
-                            warn("warnings.not_impl"); // TODO
-
-                            return new AST_CONTINUECASE_STATEMENT();
-                        case CONTINUE i:
-                            return new AST_CONTINUE_STATEMENT
-                            {
-                                Level = (uint)i.Level
-                            };
-                        case BREAK i:
-                            return new AST_BREAK_STATEMENT
-                            {
-                                Level = (uint)i.Level
-                            };
-                        case WITH i:
-                            {
-                                if (parseexpr(i.Expression, true) is EXPRESSION expr)
+                            case SWITCH_CASE i:
                                 {
-                                    if (!expr.IsVariableExpression)
-                                        err("errors.astproc.obj_expression_required", i.Expression);
+                                    string expr = i.RawCondition;
 
-                                    warn("warnings.not_impl");
+                                    if (expr.ToLower() == "else")
+                                        return new AST_SWITCH_CASE_ELSE();
+                                    else
+                                        return new AST_SWITCH_CASE_EXPRESSION
+                                        {
+                                            Statements = proclines(),
+                                            Expressions = parsemexpr(expr, exparser)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                        };
+                                }
+                            case RETURN i:
+                                {
+                                    if (_currfunc.Name == GLOBAL_FUNC_NAME)
+                                        warn("warnings.astproc.global_return");
 
-                                    return new AST_WITH_STATEMENT
+                                    return new AST_RETURN_STATEMENT
                                     {
-                                        WithExpression = expr,
-                                        WithLines = null // TODO
+                                        Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parseexpr(i.Expression, false)
                                     };
                                 }
-                                else
-                                    break;
-                            }
-                        case FOR i:
-                            {
-                                DefinitionContext defctx = i.DefinitionContext;
-                                EXPRESSION start = parseexpr(i.StartExpression, false);
-                                EXPRESSION stop = parseexpr(i.StopExpression, false);
-                                EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr, false) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
-                                AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+                            case CONTINUECASE _:
+                                warn("warnings.not_impl"); // TODO
+
+                                return new AST_CONTINUECASE_STATEMENT();
+                            case CONTINUE i:
+                                return new AST_CONTINUE_STATEMENT
                                 {
-                                    Variable = new VARIABLE(i.VariableExpression),
-                                    InitExpression = start,
+                                    Level = (uint)i.Level
                                 };
-                                AST_LOCAL_VARIABLE upvar = new AST_LOCAL_VARIABLE
+                            case BREAK i:
+                                return new AST_BREAK_STATEMENT
                                 {
-                                    Variable = VARIABLE.NewTemporary,
-                                    InitExpression = opt(EXPRESSION.NewBinaryExpression(
+                                    Level = (uint)i.Level
+                                };
+                            case WITH i:
+                                {
+                                    if (parseexpr(i.Expression, true) is EXPRESSION expr)
+                                    {
+                                        if (!expr.IsVariableExpression)
+                                            err("errors.astproc.obj_expression_required", i.Expression);
+
+                                        warn("warnings.not_impl");
+
+                                        return new AST_WITH_STATEMENT
+                                        {
+                                            WithExpression = expr,
+                                            WithLines = null // TODO
+                                        };
+                                    }
+                                    else
+                                        break;
+                                }
+                            case FOR i:
+                                {
+                                    DefinitionContext defctx = i.DefinitionContext;
+                                    EXPRESSION start = parseexpr(i.StartExpression, false);
+                                    EXPRESSION stop = parseexpr(i.StopExpression, false);
+                                    EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr, false) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
+                                    AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+                                    {
+                                        Variable = new VARIABLE(i.VariableExpression),
+                                        InitExpression = start,
+                                    };
+                                    AST_LOCAL_VARIABLE upvar = new AST_LOCAL_VARIABLE
+                                    {
+                                        Variable = VARIABLE.NewTemporary,
+                                        InitExpression = opt(EXPRESSION.NewBinaryExpression(
+                                            OPERATOR_BINARY.LowerEqual,
+                                            start,
+                                            stop
+                                        ))
+                                    };
+                                    EXPRESSION upcond = EXPRESSION.NewBinaryExpression(
                                         OPERATOR_BINARY.LowerEqual,
-                                        start,
+                                        EXPRESSION.NewVariableExpression(
+                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                        ),
                                         stop
-                                    ))
-                                };
-                                EXPRESSION upcond = EXPRESSION.NewBinaryExpression(
-                                    OPERATOR_BINARY.LowerEqual,
-                                    EXPRESSION.NewVariableExpression(
-                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                    ),
-                                    stop
-                                );
-                                EXPRESSION downcond = EXPRESSION.NewBinaryExpression(
-                                    OPERATOR_BINARY.GreaterEqual,
-                                    EXPRESSION.NewVariableExpression(
-                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                    ),
-                                    stop
-                                );
-                                EXPRESSION cond = Analyzer.EvaluatesToFalse(upvar.InitExpression) ? downcond
-                                                : Analyzer.EvaluatesToTrue(upvar.InitExpression) ? upcond
-                                                : EXPRESSION.NewBinaryExpression(
-                                                    OPERATOR_BINARY.Or,
-                                                    EXPRESSION.NewBinaryExpression(
-                                                        OPERATOR_BINARY.And,
-                                                        EXPRESSION.NewVariableExpression(
-                                                            VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
-                                                        ),
-                                                        upcond
-                                                    ),
-                                                    EXPRESSION.NewBinaryExpression(
-                                                        OPERATOR_BINARY.And,
-                                                        EXPRESSION.NewUnaryExpression(
-                                                            OPERATOR_UNARY.Not,
+                                    );
+                                    EXPRESSION downcond = EXPRESSION.NewBinaryExpression(
+                                        OPERATOR_BINARY.GreaterEqual,
+                                        EXPRESSION.NewVariableExpression(
+                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                        ),
+                                        stop
+                                    );
+                                    EXPRESSION cond = Analyzer.EvaluatesToFalse(upvar.InitExpression) ? downcond
+                                                    : Analyzer.EvaluatesToTrue(upvar.InitExpression) ? upcond
+                                                    : EXPRESSION.NewBinaryExpression(
+                                                        OPERATOR_BINARY.Or,
+                                                        EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.And,
                                                             EXPRESSION.NewVariableExpression(
                                                                 VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
-                                                            )
+                                                            ),
+                                                            upcond
                                                         ),
-                                                        downcond
-                                                    )
-                                                );
-                                AST_SCOPE scope = new AST_SCOPE
-                                {
-                                    Context = defctx,
-                                    Statements = new AST_STATEMENT[]
+                                                        EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.And,
+                                                            EXPRESSION.NewUnaryExpression(
+                                                                OPERATOR_UNARY.Not,
+                                                                EXPRESSION.NewVariableExpression(
+                                                                    VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                                )
+                                                            ),
+                                                            downcond
+                                                        )
+                                                    );
+                                    AST_SCOPE scope = new AST_SCOPE
                                     {
+                                        Context = defctx,
+                                        Statements = new AST_STATEMENT[]
+                                        {
                                         new AST_WHILE_STATEMENT
                                         {
                                             Context = defctx,
@@ -1506,40 +1412,40 @@ namespace AutoItInterpreter
                                                 }
                                             }
                                         }
-                                    }
-                                };
-
-                                scope.ExplicitLocalVariables.Add(cntvar);
-                                scope.ExplicitLocalVariables.Add(upvar);
-
-                                return scope;
-                            }
-                        case FOREACH i:
-                            {
-                                DefinitionContext defctx = i.DefinitionContext;
-                                AST_LOCAL_VARIABLE elemvar = new AST_LOCAL_VARIABLE
-                                {
-                                    Variable = new VARIABLE(i.VariableExpression),
-                                    InitExpression = EXPRESSION.NewLiteral(LITERAL.Null)
-                                };
-
-                                if (parseexpr(i.RangeExpression, false) is EXPRESSION collexpr)
-                                {
-                                    AST_LOCAL_VARIABLE collvar = new AST_LOCAL_VARIABLE
-                                    {
-                                        Variable = VARIABLE.NewTemporary,
-                                        InitExpression = collexpr
+                                        }
                                     };
-                                    AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+
+                                    scope.ExplicitLocalVariables.Add(cntvar);
+                                    scope.ExplicitLocalVariables.Add(upvar);
+
+                                    return scope;
+                                }
+                            case FOREACH i:
+                                {
+                                    DefinitionContext defctx = i.DefinitionContext;
+                                    AST_LOCAL_VARIABLE elemvar = new AST_LOCAL_VARIABLE
                                     {
-                                        Variable = VARIABLE.NewTemporary,
-                                        InitExpression = EXPRESSION.NewLiteral(LITERAL.NewNumber(0))
+                                        Variable = new VARIABLE(i.VariableExpression),
+                                        InitExpression = EXPRESSION.NewLiteral(LITERAL.Null)
                                     };
-                                    AST_SCOPE scope = new AST_SCOPE
+
+                                    if (parseexpr(i.RangeExpression, false) is EXPRESSION collexpr)
                                     {
-                                        Context = defctx,
-                                        Statements = new AST_STATEMENT[]
+                                        AST_LOCAL_VARIABLE collvar = new AST_LOCAL_VARIABLE
                                         {
+                                            Variable = VARIABLE.NewTemporary,
+                                            InitExpression = collexpr
+                                        };
+                                        AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
+                                        {
+                                            Variable = VARIABLE.NewTemporary,
+                                            InitExpression = EXPRESSION.NewLiteral(LITERAL.NewNumber(0))
+                                        };
+                                        AST_SCOPE scope = new AST_SCOPE
+                                        {
+                                            Context = defctx,
+                                            Statements = new AST_STATEMENT[]
+                                            {
                                             new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                             {
                                                 Context = defctx,
@@ -1554,10 +1460,10 @@ namespace AutoItInterpreter
                                                     )
                                                 )
                                             },
-                                        }
-                                        .Concat(proclines())
-                                        .Concat(new AST_STATEMENT[]
-                                        {
+                                            }
+                                            .Concat(proclines())
+                                            .Concat(new AST_STATEMENT[]
+                                            {
                                             new AST_IF_STATEMENT
                                             {
                                                 Context = defctx,
@@ -1601,374 +1507,487 @@ namespace AutoItInterpreter
                                                     }
                                                 }
                                             }
-                                        })
-                                        .ToArray()
-                                    };
+                                            })
+                                            .ToArray()
+                                        };
 
-                                    scope.ExplicitLocalVariables.Add(collvar);
+                                        scope.ExplicitLocalVariables.Add(collvar);
 
-                                    return scope;
+                                        return scope;
+                                    }
+
+                                    break;
                                 }
-
-                                break;
-                            }
-                        case CS_INLINE i:
-                            return new AST_INLINE_CSHARP { Code = i.SourceCode };
-                        case RAWLINE i:
-                            {
-                                if (i.RawContent is string exprstr)
+                            case CS_INLINE i:
+                                return new AST_INLINE_CSHARP { Code = i.SourceCode };
+                            case RAWLINE i:
                                 {
-                                    EXPRESSION expr = parsefexpr(exprstr, true);
+                                    if (i.RawContent is string exprstr)
+                                    {
+                                        EXPRESSION expr = parsefexpr(exprstr, true);
 
-                                    // TODO : with-statement rawline ?
+                                        // TODO : with-statement rawline ?
 
-                                    if (expr is EXPRESSION ex)
-                                        if (ex.IsAssignmentExpression)
-                                            return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                            {
-                                                Expression = (ex as EXPRESSION.AssignmentExpression)?.Item,
-                                            };
-                                        else
-                                        {
-                                            if (!ex.IsFunctionCall)
-                                                if (Analyzer.IsStatic(ex))
+                                        if (expr is EXPRESSION ex)
+                                            if (ex.IsAssignmentExpression)
+                                                return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                 {
-                                                    note("notes.optimized_away");
+                                                    Expression = (ex as EXPRESSION.AssignmentExpression)?.Item,
+                                                };
+                                            else
+                                            {
+                                                if (!ex.IsFunctionCall)
+                                                    if (Analyzer.IsStatic(ex))
+                                                    {
+                                                        note("notes.optimized_away");
 
-                                                    break;
+                                                        break;
+                                                    }
+                                                    else
+                                                        warn("warnings.astproc.expression_result_discarded");
+
+                                                return new AST_EXPRESSION_STATEMENT
+                                                {
+                                                    Expression = ex,
+                                                };
+                                            }
+                                    }
+
+                                    break;
+                                }
+                            case DECLARATION i:
+                                {
+                                    AST_FUNCTION targetfunc = i.Modifiers.Contains("global") ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
+                                    MULTI_EXPRESSIONS expressions = parsemexpr(i.Expression, dexparser);
+                                    List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
+                                    bool @const = i.Modifiers.Contains("const");
+
+                                    if (expressions is null)
+                                    {
+                                        state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, 0);
+
+                                        break; // TODO
+                                    }
+
+                                    VARIABLE[] vars = expressions.Select(mexpr =>
+                                    {
+                                        if (mexpr is MULTI_EXPRESSION.SingleValue sv)
+                                            return sv.Item;
+                                        else
+                                            err("errors.astproc.no_range_as_init");
+
+                                        return null;
+                                    })
+                                    .Where(expr => expr != null)
+                                    .Select(expr =>
+                                    {
+                                        if (expr is EXPRESSION.AssignmentExpression aexpr && aexpr?.Item is ASSIGNMENT_EXPRESSION.Assignment assg && assg?.Item3 is EXPRESSION ex)
+                                            if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
+                                            {
+                                                VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
+                                                AST_LOCAL_VARIABLE prev = targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var));
+
+                                                if (prev is null)
+                                                {
+                                                    targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                                    {
+                                                        Constant = @const,
+                                                        Variable = var
+                                                    });
+                                                    statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                    {
+                                                        Context = i.DefinitionContext,
+                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                            OPERATOR_ASSIGNMENT.Assign,
+                                                            VARIABLE_EXPRESSION.NewVariable(var),
+                                                            ex
+                                                        )
+                                                    });
+
+                                                    return var;
                                                 }
                                                 else
-                                                    warn("warnings.astproc.expression_result_discarded");
+                                                    err("errors.astproc.variable_exists", var);
+                                            }
+                                            else
+                                                err("errors.astproc.init_invalid_operator", assg.Item1);
+                                        else if (@const)
+                                            err("errors.astproc.missing_value");
+                                        else if (expr is EXPRESSION.VariableExpression vexpr && vexpr.Item is VARIABLE_EXPRESSION.Variable variable)
+                                        {
+                                            VARIABLE var = variable.Item;
 
-                                            return new AST_EXPRESSION_STATEMENT
-                                            {
-                                                Expression = ex,
-                                            };
+
+
+
+                                            // TODO
+
                                         }
+                                        else
+                                            err("errors.astproc.init_invalid_expression");
+
+                                        return null;
+                                    })
+                                    .Where(expr => expr != null)
+                                    .ToArray();
+
+                                    return new AST_SCOPE
+                                    {
+                                        Statements = statements.ToArray(),
+                                    };
                                 }
+                            case REDIM i:
+                                return new AST_REDIM_STATEMENT
+                                {
+                                    DimensionExpressions = i.Dimensions.Select(x =>
+                                    {
+                                        EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
+                                        ASSIGNMENT_EXPRESSION aexpr = (expr as EXPRESSION.AssignmentExpression)?.Item;
+                                        EXPRESSION vexpr = (aexpr as ASSIGNMENT_EXPRESSION.Assignment)?.Item3;
+
+                                        if (vexpr is null)
+                                            ; // TODO : report error
+
+                                        return vexpr;
+                                    }).ToArray(),
+                                    Variable = new VARIABLE(i.VariableName)
+                                };
+                            default:
+                                err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
+
+                                return null;
+                        }
+
+                        return null;
+                    }
+
+                    dynamic res = __inner();
+
+                    if (res is AST_STATEMENT s)
+                        s.Context = e.DefinitionContext;
+
+                    return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
+                }
+            }
+
+            private static (string, PINVOKE_SIGNATURE)[] ParsePinvokeFunctions(InterpreterState state, (DefinitionContext, string, EXPRESSION[])[] dllcalls)
+            {
+                bool getstr(EXPRESSION e, out string s)
+                {
+                    s = null;
+
+                    if (e is EXPRESSION.Literal lit && lit.Item is LITERAL.String str)
+                        s = str.Item;
+                    else
+                        return false;
+
+                    return true;
+                }
+                List<(string, PINVOKE_SIGNATURE)> used_sigs = new List<(string, PINVOKE_SIGNATURE)>();
+                PInvokeParser parser = new PInvokeParser();
+
+                parser.Initialize();
+
+                foreach (string name in state.PInvokeFunctions.Keys)
+                {
+                    (string s, string lib, DefinitionContext ctx) = state.PInvokeFunctions[name];
+                    PINVOKE_SIGNATURE sig = null;
+
+                    try
+                    {
+                        sig = parser.Parse(s);
+                    }
+                    catch
+                    {
+                    }
+
+                    if (sig is null)
+                        state.ReportKnownError("errors.astproc.pinvoke_sig_invalid", ctx, s, name);
+                    else if (used_sigs.Contains((lib, sig)))
+                        state.ReportKnownError("warnings.astproc.pinvoke_already_declared", ctx, s, lib);
+                    else
+                    {
+                        used_sigs.Add((lib, sig));
+
+                        int cnt = 0;
+                        (VARIABLE, PINVOKE_TYPE)[] pars = sig.Paramters.Select(t => (new VARIABLE("_p" + cnt++), t)).ToArray();
+
+                        state.ASTFunctions[name] = new AST_FUNCTION
+                        {
+                            Context = ctx,
+                            Name = name,
+                            Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v.Item1, false, false)).ToArray(),
+                            Statements = new AST_STATEMENT[]
+                            {
+                            new AST_RETURN_STATEMENT
+                            {
+                                Expression = EXPRESSION.NewFunctionCall(
+                                    new Tuple<string, FSharpList<EXPRESSION>>(
+                                        AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
+                                        ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
+                                            new Tuple<string, FSharpList<EXPRESSION>>(
+                                                nameof(AutoItFunctions.TryConvert),
+                                                ListModule.OfSeq(
+                                                    new EXPRESSION[]
+                                                    {
+                                                        EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
+                                                        EXPRESSION.NewLiteral(
+                                                            LITERAL.NewString(x.Item2.ToString())
+                                                        )
+                                                    }
+                                                )
+                                            )
+                                        )))
+                                    )
+                                )
+                            }
+                            }
+                        };
+                    }
+                }
+
+                foreach ((DefinitionContext ctx, _, EXPRESSION[] args) in dllcalls)
+                    if (args.Length < 3)
+                        state.ReportKnownError("errors.astproc.not_enough_args", ctx, "DllCall", 3, args.Length);
+                    else if ((args.Length % 2) == 0)
+                        state.ReportKnownError("errors.astproc.dllcall_odd_argc", ctx);
+                    else if (getstr(args[0], out string lib) && getstr(args[1], out string ret) && getstr(args[2], out string name))
+                    {
+                        int index = 0;
+                        string pstr = null;
+                        PINVOKE_SIGNATURE sig = null;
+                        IEnumerable<string> ptypes = from arg in args.Skip(3)
+                                                     let i = index++
+                                                     where (i % 2) == 0
+                                                     where getstr(arg, out pstr)
+                                                     select pstr;
+                        string sigstr = $"{ret} {name}({string.Join(", ", ptypes)})";
+
+                        try
+                        {
+                            sig = parser.Parse(sigstr);
+                        }
+                        catch
+                        {
+                        }
+
+                        if (sig is null)
+                            state.ReportKnownError("errors.astproc.pinvoke_sig_invalid", ctx, sigstr, name);
+                        else if (!used_sigs.Contains((lib, sig)))
+                            used_sigs.Add((lib, sig));
+                    }
+                    else
+                        state.ReportKnownError("errors.astproc.dllcall_const_args", ctx);
+
+                return used_sigs.ToArray();
+            }
+
+            private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, params (DefinitionContext, string, EXPRESSION[])[] calls)
+            {
+                OS target = options.Compatibility.GetOperatingSystem();
+
+                foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
+                {
+                    void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
+
+                    if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
+                    {
+                        (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+
+                        if (!os.Contains(target))
+                            err("errors.astproc.invalid_system", target, string.Join(",", os.Select(x => x.ToString())));
+
+                        if (us && !options.AllowUnsafeCode)
+                            err("errors.astproc.unsafe_func", f);
+
+                        if (f != "dllcall")
+                            if (args.Length < mac)
+                                err("errors.astproc.not_enough_args", f, mac, args.Length);
+                            else if (args.Length > mac + oac)
+                                err("errors.astproc.too_many_args", f, mac + oac);
+
+                        foreach (CompilerIntrinsicMessage msg in msgs)
+                            if (msg is WarningAttribute w)
+                                state.ReportKnownWarning(w.MessageName, context, w.Arguments);
+                            else if (msg is NoteAttribute n)
+                                state.ReportKnownNote(n.MessageName, context, n.Arguments);
+                    }
+                    else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
+                        err("errors.astproc.func_not_declared", func);
+                    else if (IsReservedCall(func.ToLower()))
+                        err("errors.astproc.reserved_call", func);
+                    else
+                    {
+                        AST_FUNCTION f = state.ASTFunctions[func.ToLower()];
+                        int index = 0;
+
+                        foreach (EXPRESSION arg in args)
+                            if (index >= f.Parameters.Length)
+                            {
+                                err("errors.astproc.too_many_args", func, f.Parameters.Length);
 
                                 break;
                             }
-                        case DECLARATION i:
-                            {
-                                AST_FUNCTION targetfunc = i.Modifiers.Contains("global") ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
-                                MULTI_EXPRESSIONS expressions = parsemexpr(i.Expression, dexparser);
-                                List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
-                                bool @const = i.Modifiers.Contains("const");
+                            else
+                                ++index;
 
-                                if (expressions is null)
-                                {
-                                    state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, 0);
+                        int mpcnt = f.Parameters.Count(p => !(p is AST_FUNCTION_PARAMETER_OPT));
 
-                                    break; // TODO
-                                }
+                        if (index < mpcnt)
+                            err("errors.astproc.not_enough_args", f, mpcnt, index);
 
-                                VARIABLE[] vars = expressions.Select(mexpr =>
-                                {
-                                    if (mexpr is MULTI_EXPRESSION.SingleValue sv)
-                                        return sv.Item;
-                                    else
-                                        err("errors.astproc.no_range_as_init");
-
-                                    return null;
-                                })
-                                .Where(expr => expr != null)
-                                .Select(expr =>
-                                {
-                                    if (expr is EXPRESSION.AssignmentExpression aexpr && aexpr?.Item is ASSIGNMENT_EXPRESSION.Assignment assg && assg?.Item3 is EXPRESSION ex)
-                                        if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
-                                        {
-                                            VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
-                                            AST_LOCAL_VARIABLE prev = targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var));
-
-                                            if (prev is null)
-                                            {
-                                                targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
-                                                {
-                                                    Constant = @const,
-                                                    Variable = var
-                                                });
-                                                statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                                {
-                                                    Context = i.DefinitionContext,
-                                                    Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                        OPERATOR_ASSIGNMENT.Assign,
-                                                        VARIABLE_EXPRESSION.NewVariable(var),
-                                                        ex
-                                                    )
-                                                });
-
-                                                return var;
-                                            }
-                                            else
-                                                err("errors.astproc.variable_exists", var);
-                                        }
-                                        else
-                                            err("errors.astproc.init_invalid_operator", assg.Item1);
-                                    else if (@const)
-                                        err("errors.astproc.missing_value");
-                                    else if (expr is EXPRESSION.VariableExpression vexpr && vexpr.Item is VARIABLE_EXPRESSION.Variable variable)
-                                    {
-                                        VARIABLE var = variable.Item;
-
-
-
-
-                                        // TODO
-
-                                    }
-                                    else
-                                        err("errors.astproc.init_invalid_expression");
-
-                                    return null;
-                                })
-                                .Where(expr => expr != null)
-                                .ToArray();
-
-                                return new AST_SCOPE
-                                {
-                                    Statements = statements.ToArray(),
-                                };
-                            }
-                        case REDIM i:
-                            return new AST_REDIM_STATEMENT
-                            {
-                                DimensionExpressions = i.Dimensions.Select(x =>
-                                {
-                                    EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
-                                    ASSIGNMENT_EXPRESSION aexpr = (expr as EXPRESSION.AssignmentExpression)?.Item;
-                                    EXPRESSION vexpr = (aexpr as ASSIGNMENT_EXPRESSION.Assignment)?.Item3;
-
-                                    if (vexpr is null)
-                                        ; // TODO : report error
-
-                                    return vexpr;
-                                }).ToArray(),
-                                Variable = new VARIABLE(i.VariableName)
-                            };
-                        default:
-                            err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
-
-                            return null;
+                        if (func.Equals("execute", StringComparison.InvariantCultureIgnoreCase))
+                            state.ReportKnownNote("notes.unsafe_execute", context);
                     }
-
-                    return null;
                 }
 
-                dynamic res = __inner();
-
-                if (res is AST_STATEMENT s)
-                    s.Context = e.DefinitionContext;
-
-                return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
-            }
-        }
-
-        private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, params (DefinitionContext, string, EXPRESSION[])[] calls)
-        {
-            OS target = options.Compatibility.GetOperatingSystem();
-
-            foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
-            {
-                void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
-
-                if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
-                {
-                    (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
-
-                    if (!os.Contains(target))
-                        err("errors.astproc.invalid_system", target, string.Join(",", os.Select(x => x.ToString())));
-
-                    if (us && !options.AllowUnsafeCode)
-                        err("errors.astproc.unsafe_func", f);
-
-                    if (f != "dllcall")
-                        if (args.Length < mac)
-                            err("errors.astproc.not_enough_args", f, mac, args.Length);
-                        else if (args.Length > mac + oac)
-                            err("errors.astproc.too_many_args", f, mac + oac);
-
-                    foreach (CompilerIntrinsicMessage msg in msgs)
-                        if (msg is WarningAttribute w)
-                            state.ReportKnownWarning(w.MessageName, context, w.Arguments);
-                        else if (msg is NoteAttribute n)
-                            state.ReportKnownNote(n.MessageName, context, n.Arguments);
-                }
-                else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
-                    err("errors.astproc.func_not_declared", func);
-                else if (IsReservedCall(func.ToLower()))
-                    err("errors.astproc.reserved_call", func);
-                else
-                {
-                    AST_FUNCTION f = state.ASTFunctions[func.ToLower()];
-                    int index = 0;
-
-                    foreach (EXPRESSION arg in args)
-                        if (index >= f.Parameters.Length)
-                        {
-                            err("errors.astproc.too_many_args", func, f.Parameters.Length);
-
-                            break;
-                        }
-                        else
-                            ++index;
-
-                    int mpcnt = f.Parameters.Count(p => !(p is AST_FUNCTION_PARAMETER_OPT));
-
-                    if (index < mpcnt)
-                        err("errors.astproc.not_enough_args", f, mpcnt, index);
-
-                    if (func.Equals("execute", StringComparison.InvariantCultureIgnoreCase))
-                        state.ReportKnownNote("notes.unsafe_execute", context);
-                }
+                foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
+                    if (uncalled != GLOBAL_FUNC_NAME)
+                        state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
             }
 
-            foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
-                if (uncalled != GLOBAL_FUNC_NAME)
-                    state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
-        }
-
-        private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
-        {
-            ReversedLabelStack ls_cont = new ReversedLabelStack();
-            ReversedLabelStack ls_exit = new ReversedLabelStack();
-
-            return process(func) as AST_FUNCTION;
-
-            AST_STATEMENT process(AST_STATEMENT e)
+            private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
             {
-                if (e is null)
-                    return null;
+                ReversedLabelStack ls_cont = new ReversedLabelStack();
+                ReversedLabelStack ls_exit = new ReversedLabelStack();
 
-                T[] procas<T>(T[] instr) where T : AST_STATEMENT => instr?.Select(x => process(x) as T)?.ToArray();
+                return process(func) as AST_FUNCTION;
 
-                AST_STATEMENT __inner()
+                AST_STATEMENT process(AST_STATEMENT e)
                 {
-                    switch (e)
+                    if (e is null)
+                        return null;
+
+                    T[] procas<T>(T[] instr) where T : AST_STATEMENT => instr?.Select(x => process(x) as T)?.ToArray();
+
+                    AST_STATEMENT __inner()
                     {
-                        case AST_CONTINUE_STATEMENT s:
-                            return new AST_GOTO_STATEMENT { Label = ls_cont[s.Level] };
-                        case AST_BREAK_STATEMENT s:
-                            return new AST_GOTO_STATEMENT { Label = ls_exit[s.Level] };
-                        case AST_WHILE_STATEMENT s:
-                            {
-                                if (s.WhileBlock?.Condition is null)
-                                    return s;
-
-                                if (Analyzer.EvaluatesToFalse(s.WhileBlock.Condition))
+                        switch (e)
+                        {
+                            case AST_CONTINUE_STATEMENT s:
+                                return new AST_GOTO_STATEMENT { Label = ls_cont[s.Level] };
+                            case AST_BREAK_STATEMENT s:
+                                return new AST_GOTO_STATEMENT { Label = ls_exit[s.Level] };
+                            case AST_WHILE_STATEMENT s:
                                 {
-                                    state.ReportKnownNote("notes.optimized_away", s.Context);
+                                    if (s.WhileBlock?.Condition is null)
+                                        return s;
 
-                                    return new AST_SCOPE { Statements = new AST_STATEMENT[0] };
-                                }
-
-                                ls_cont.Push(AST_LABEL.NewLabel);
-                                ls_exit.Push(AST_LABEL.NewLabel);
-
-                                AST_WHILE_STATEMENT w = new AST_WHILE_STATEMENT
-                                {
-                                    WhileBlock = s.WhileBlock,
-                                    ContinueLabel = ls_cont[1],
-                                    ExitLabel = ls_exit[1],
-                                    Context = e.Context,
-                                };
-                                AST_SCOPE sc = new AST_SCOPE
-                                {
-                                    Statements = new AST_STATEMENT[]
+                                    if (Analyzer.EvaluatesToFalse(s.WhileBlock.Condition))
                                     {
+                                        state.ReportKnownNote("notes.optimized_away", s.Context);
+
+                                        return new AST_SCOPE { Statements = new AST_STATEMENT[0] };
+                                    }
+
+                                    ls_cont.Push(AST_LABEL.NewLabel);
+                                    ls_exit.Push(AST_LABEL.NewLabel);
+
+                                    AST_WHILE_STATEMENT w = new AST_WHILE_STATEMENT
+                                    {
+                                        WhileBlock = s.WhileBlock,
+                                        ContinueLabel = ls_cont[1],
+                                        ExitLabel = ls_exit[1],
+                                        Context = e.Context,
+                                    };
+                                    AST_SCOPE sc = new AST_SCOPE
+                                    {
+                                        Statements = new AST_STATEMENT[]
+                                        {
                                         w,
                                         ls_exit[1]
-                                    }
-                                };
+                                        }
+                                    };
 
-                                w.WhileBlock.Statements = new AST_STATEMENT[] { ls_cont[1] }.Concat(procas(w.WhileBlock.Statements)).ToArray();
+                                    w.WhileBlock.Statements = new AST_STATEMENT[] { ls_cont[1] }.Concat(procas(w.WhileBlock.Statements)).ToArray();
 
-                                ls_cont.Pop();
-                                ls_exit.Pop();
+                                    ls_cont.Pop();
+                                    ls_exit.Pop();
 
-                                return sc;
-                            }
-                        case AST_SCOPE s:
-                            s.Statements = procas(s.Statements);
+                                    return sc;
+                                }
+                            case AST_SCOPE s:
+                                s.Statements = procas(s.Statements);
 
-                            return s;
-                        case AST_IF_STATEMENT s:
-                            {
-                                s.If = process(s.If) as AST_CONDITIONAL_BLOCK;
-                                s.ElseIf = procas(s.ElseIf);
-                                s.OptionalElse = procas(s.OptionalElse);
+                                return s;
+                            case AST_IF_STATEMENT s:
+                                {
+                                    s.If = process(s.If) as AST_CONDITIONAL_BLOCK;
+                                    s.ElseIf = procas(s.ElseIf);
+                                    s.OptionalElse = procas(s.OptionalElse);
 
-                                AST_CONDITIONAL_BLOCK[] conditions =
-                                    new[] { s.If }
-                                    .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
-                                    .Concat(new[] {
+                                    AST_CONDITIONAL_BLOCK[] conditions =
+                                        new[] { s.If }
+                                        .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
+                                        .Concat(new[] {
                                         new AST_CONDITIONAL_BLOCK
                                         {
                                             Context = s.OptionalElse?.FirstOrDefault()?.Context ?? default,
                                             Condition = EXPRESSION.NewLiteral(LITERAL.True),
                                             Statements = s.OptionalElse ?? new AST_STATEMENT[0]
                                         }
-                                    })
-                                    .Where(b =>
-                                    {
-                                        if (b.Context.FilePath is null)
-                                            return true;
-                                        else
+                                        })
+                                        .Where(b =>
                                         {
-                                            bool skippable = Analyzer.EvaluatesToFalse(b.Condition);
+                                            if (b.Context.FilePath is null)
+                                                return true;
+                                            else
+                                            {
+                                                bool skippable = Analyzer.EvaluatesToFalse(b.Condition);
 
-                                            if (b.IsEmpty)
-                                                state.ReportKnownNote("notes.empty_block", b.Context);
+                                                if (b.IsEmpty)
+                                                    state.ReportKnownNote("notes.empty_block", b.Context);
 
-                                            if (skippable)
-                                                state.ReportKnownNote("notes.optimized_away", b.Context);
+                                                if (skippable)
+                                                    state.ReportKnownNote("notes.optimized_away", b.Context);
 
-                                            return !skippable;
-                                        }
-                                    })
-                                    .ToArray();
+                                                return !skippable;
+                                            }
+                                        })
+                                        .ToArray();
 
-                                int lastok = conditions.Length;
+                                    int lastok = conditions.Length;
 
-                                for (int i = 0; i < conditions.Length; ++i)
-                                    if (Analyzer.EvaluatesToTrue(conditions[i].Condition))
-                                        lastok = i;
-                                    else if (i > lastok)
-                                        state.ReportKnownNote("notes.optimized_away", conditions[i].Context);
+                                    for (int i = 0; i < conditions.Length; ++i)
+                                        if (Analyzer.EvaluatesToTrue(conditions[i].Condition))
+                                            lastok = i;
+                                        else if (i > lastok)
+                                            state.ReportKnownNote("notes.optimized_away", conditions[i].Context);
 
-                                conditions = conditions.Take(lastok + 1).ToArray();
+                                    conditions = conditions.Take(lastok + 1).ToArray();
 
-                                if (conditions.Length > 0)
-                                {
-                                    s.If = conditions[0];
-                                    s.ElseIf = conditions.Skip(1).ToArray();
-                                    s.OptionalElse = new AST_STATEMENT[0];
-
-                                    return s;
-                                }
-                                else
-                                    return new AST_SCOPE
+                                    if (conditions.Length > 0)
                                     {
-                                        Statements = s.OptionalElse
-                                    };
-                            }
-                        case AST_WITH_STATEMENT s:
-                            s.WithLines = procas(s.WithLines);
+                                        s.If = conditions[0];
+                                        s.ElseIf = conditions.Skip(1).ToArray();
+                                        s.OptionalElse = new AST_STATEMENT[0];
 
-                            return s;
-                        case AST_SWITCH_STATEMENT s:
-                            s.Cases = procas(s.Cases);
+                                        return s;
+                                    }
+                                    else
+                                        return new AST_SCOPE
+                                        {
+                                            Statements = s.OptionalElse
+                                        };
+                                }
+                            case AST_WITH_STATEMENT s:
+                                s.WithLines = procas(s.WithLines);
 
-                            return s;
-                        default:
-                            return e;
+                                return s;
+                            case AST_SWITCH_STATEMENT s:
+                                s.Cases = procas(s.Cases);
+
+                                return s;
+                            default:
+                                return e;
+                        }
                     }
+                    AST_STATEMENT res = __inner();
+
+                    res.Context = e.Context;
+
+                    return res;
                 }
-                AST_STATEMENT res = __inner();
-
-                res.Context = e.Context;
-
-                return res;
             }
         }
     }
@@ -2329,6 +2348,15 @@ namespace AutoItInterpreter
         linuxmint,
         osx,
         android,
+    }
+
+    public enum FunctionDeclarationState
+        : byte
+    {
+        RegularFunction = 0x00,
+        InvalidNesting = 0x02,
+        InvalidOpening = 0x01,
+        InsideLambda = 0x03,
     }
 
     [Flags]
