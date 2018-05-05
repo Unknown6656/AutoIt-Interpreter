@@ -266,6 +266,33 @@ namespace AutoItCoreLibrary
             }
         }
         public static AutoItVariantType NewMatrix(params long[] sizes) => new AutoItVariantType(new AutoItVariantData(sizes));
+        public static AutoItVariantType RedimMatrix(AutoItVariantType input, params long[] sizes)
+        {
+            if (input.IsString)
+                throw new InvalidArrayAccessExcpetion();
+            else
+            {
+                void CopyTo(AutoItVariantType from, ref AutoItVariantType to)
+                {
+                    if (from.IsString)
+                        to = from.ToString();
+                    else
+                        for (long i = 0, l = Math.Min(from.Length, to.Length); i < l; ++i)
+                        {
+                            AutoItVariantType tf = to[i];
+
+                            CopyTo(from[i], ref tf);
+
+                            to[i] = tf;
+                        }
+                }
+                AutoItVariantType @new = NewMatrix(sizes);
+
+                CopyTo(input, ref @new);
+
+                return @new;
+            }
+        }
         public static AutoItVariantType FromDouble(double v) => (decimal)v;
         public static AutoItVariantType FromString(string v) => v;
         public static AutoItVariantType FromBool(bool v) => v;

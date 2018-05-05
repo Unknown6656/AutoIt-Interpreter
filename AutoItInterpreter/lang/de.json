@@ -35,7 +35,9 @@
             "invalid_global": "Eine globale Variable kann nicht auf lokaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Local' oder 'Dim'.",
             "no_closing_csharp": "Der noch offene C#-Block wurde nicht ordnungsgemäß mit einer '#cse'-Direktive geschlossen.",
             "pinvoke_no_lib": "Es wurde keine Bibliothek für die P/Invoke-Funktion '{0}' spezifiziert.",
-            "pinvoke_no_sig": "Es wurde keine Signatur für die P/Invoke-Funktion '{0}' spezifiziert."
+            "pinvoke_no_sig": "Es wurde keine Signatur für die P/Invoke-Funktion '{0}' spezifiziert.",
+            "missing_endfunc": "Es fehlen noch mindestens {0} 'EndFunc'-Anweisungen, um die noch offenen Funktionen zu schließen.",
+            "fatal_internal_funcparsing_error": "Ein gravierender interner Fehler ist während der Funktionsanalyse aufgetreten."
         },
         "astproc": {
             "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",

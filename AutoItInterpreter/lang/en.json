@@ -36,7 +36,9 @@
             "no_closing_csharp": "The currently open C# block has not been closed properly using an '#cse'-directive.",
             "csharp_requires_unsafe": "A inline-C# code block can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
             "pinvoke_no_lib": "No library has been specified for the P/Invoke function '{0}'.",
-            "pinvoke_no_sig": "No function signature has been specified for the P/Invoke function '{0}'."
+            "pinvoke_no_sig": "No function signature has been specified for the P/Invoke function '{0}'.",
+            "missing_endfunc": "There are at least {0} missing 'EndFunc'-statement(s) to close the open function(s).",
+            "fatal_internal_funcparsing_error": "A mayor fatal function parsing error occured. It is not your fault."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",

@@ -1,9 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Piglet.Common;
+using System;
+
 using Piglet.Parser.Configuration;
-using Piglet.Parser.Construction.Debug;
+using Piglet.Common;
 
 namespace Piglet.Parser.Construction
 {
@@ -45,20 +45,22 @@ namespace Piglet.Parser.Construction
             // The closure is all states which are accessible by the dot at the left hand side of the
             // item.
             List<Lr1ItemSet<T>> itemSets = new List<Lr1ItemSet<T>>
-                               {
-                                   Closure(new List<Lr1Item<T>>
-                                               {
-                                                   new Lr1Item<T>(start, 0, new HashSet<Terminal<T>> {grammar.EndOfInputTerminal})
-                                               }, first, nullable)
-                               };
+            {
+                Closure(new List<Lr1Item<T>>
+                {
+                    new Lr1Item<T>(start, 0, new HashSet<Terminal<T>> {grammar.EndOfInputTerminal})
+                }, first, nullable)
+            };
             List<GotoSetTransition> gotoSetTransitions = new List<GotoSetTransition>();
 
             // Repeat until nothing gets added any more
             // This is neccessary since we are merging sets as we go, which changes things around.
             bool added;
+
             do
             {
                 added = false;
+
                 for (int i = 0; i < itemSets.Count; ++i)
                 {
                     Lr1ItemSet<T> itemSet = itemSets[i];
@@ -75,7 +77,7 @@ namespace Piglet.Parser.Construction
                             // if that is not the case add it to the item set
                             gotoSet = Closure(gotoSet, first, nullable);
 
-                            Lr1ItemSet<T> oldGotoSet = itemSets.FirstOrDefault(f => f.CoreEquals(gotoSet));
+                            Lr1ItemSet<T> oldGotoSet = itemSets.Find(f => f.CoreEquals(gotoSet));
 
                             if (oldGotoSet == null)
                             {
@@ -84,11 +86,11 @@ namespace Piglet.Parser.Construction
 
                                 // Add a transition
                                 gotoSetTransitions.Add(new GotoSetTransition
-                                                           {
-                                                               From = itemSet,
-                                                               OnSymbol = symbol,
-                                                               To = gotoSet
-                                                           });
+                                {
+                                    From = itemSet,
+                                    OnSymbol = symbol,
+                                    To = gotoSet
+                                });
                                 added = true;
                             }
                             else
@@ -99,16 +101,14 @@ namespace Piglet.Parser.Construction
 
                                 // Add a transition if it already isn't there
                                 GotoSetTransition nt = new GotoSetTransition
-                                             {
-                                                 From = itemSet,
-                                                 OnSymbol = symbol,
-                                                 To = oldGotoSet
-                                             };
-                                if (!gotoSetTransitions.Any(
-                                        a => a.From == nt.From && a.OnSymbol == nt.OnSymbol && a.To == nt.To))
                                 {
+                                    From = itemSet,
+                                    OnSymbol = symbol,
+                                    To = oldGotoSet
+                                };
+
+                                if (!gotoSetTransitions.Any(a => (a.From == nt.From) && (a.OnSymbol == nt.OnSymbol) && (a.To == nt.To)))
                                     gotoSetTransitions.Add(nt);
-                                }
                             }
                         }
                     }
@@ -119,10 +119,12 @@ namespace Piglet.Parser.Construction
 
             // Create a new parser using that parse table and some additional information that needs
             // to be available for the runtime parsing to work.
-            return new LRParser<T>(parseTable,
-                ((Terminal<T>)grammar.ErrorToken).TokenNumber,
+            return new LRParser<T>(
+                parseTable,
+                (grammar.ErrorToken as Terminal<T>).TokenNumber,
                 grammar.EndOfInputTerminal.TokenNumber,
-                grammar.AllSymbols.OfType<Terminal<T>>().Select(f => f.DebugName).ToArray());
+                grammar.AllSymbols.OfType<Terminal<T>>().Select(f => f.DebugName).ToArray()
+            );
         }
 
         private ISet<NonTerminal<T>> CalculateNullable()
@@ -132,12 +134,12 @@ namespace Piglet.Parser.Construction
 
             // A nullable symbol is a symbol that may consist of only epsilon transitions
             HashSet<NonTerminal<T>> nullable = new HashSet<NonTerminal<T>>();
-
             bool nullableSetChanged;
 
             do
             {
                 nullableSetChanged = false;
+
                 foreach (NonTerminal<T> nonTerminal in grammar.AllSymbols.OfType<NonTerminal<T>>())
                 {
                     // No need to reevaluate things we know to be nullable.
@@ -151,15 +153,12 @@ namespace Piglet.Parser.Construction
                         // Iterate over symbols. If we find a terminal it is never nullable
                         // if we find a nonterminal continue iterating only if this terminal itself is not nullable.
                         // By this rule, empty production rules will always return nullable true
-                        bool symbolIsNullable = production.Symbols.All(symbol => !(symbol is Terminal<T>) && nullable.Contains((NonTerminal<T>)symbol));
-
-                        if (symbolIsNullable)
-                        {
+                        if (production.Symbols.All(symbol => !(symbol is Terminal<T>) && nullable.Contains((NonTerminal<T>)symbol)))
                             nullableSetChanged |= nullable.Add(nonTerminal);
-                        }
                     }
                 }
-            } while (nullableSetChanged);
+            }
+            while (nullableSetChanged);
 
             return nullable;
         }
@@ -183,6 +182,7 @@ namespace Piglet.Parser.Construction
             for (int i = 0; i < itemSets.Count; ++i)
             {
                 Lr1ItemSet<T> itemSet = itemSets[i];
+
                 foreach (Lr1Item<T> lr1Item in itemSet)
                 {
                     // Fill the action table first
@@ -211,17 +211,12 @@ namespace Piglet.Parser.Construction
                         {
                             int numReductionRules = reductionRules.Count;
                             int reductionRule = 0;
+
                             for (; reductionRule < numReductionRules; ++reductionRule)
-                            {
                                 if (reductionRules[reductionRule].Item1 == lr1Item.ProductionRule)
-                                {
-                                    // Found it, it's already created
-                                    break;
-                                }
-                            }
+                                    break; // Found it, it's already created
 
                             if (numReductionRules == reductionRule)
-                            {
                                 // Need to create a new reduction rule
                                 reductionRules.Add(new Tuple<IProductionRule<T>, ReductionRule<T>>(lr1Item.ProductionRule,
                                     new ReductionRule<T>
@@ -230,10 +225,8 @@ namespace Piglet.Parser.Construction
                                         OnReduce = lr1Item.ProductionRule.ReduceAction,
                                         TokenToPush = ((Symbol<T>)lr1Item.ProductionRule.ResultSymbol).TokenNumber - firstNonTerminalTokenNumber
                                     }));
-                            }
 
                             foreach (Terminal<T> lookahead in lr1Item.Lookaheads)
-                            {
                                 try
                                 {
                                     SetActionTable(uncompressedActionTable, i, lookahead.TokenNumber, LRParseTable<T>.Reduce(reductionRule));
@@ -245,30 +238,22 @@ namespace Piglet.Parser.Construction
                                     e.NewReduceSymbol = reductionRules[reductionRule].Item1.ResultSymbol;
                                     throw;
                                 }
-                            }
                         }
                         else
-                        {
-                            // This production rule has the start symbol with the dot at the rightmost end in it, add ACCEPT to action
-                            // for end of input character.
+                            // This production rule has the start symbol with the dot at the rightmost end in it, add ACCEPT to action for end of input character.
                             SetActionTable(uncompressedActionTable, i, grammar.EndOfInputTerminal.TokenNumber, LRParseTable<T>.Accept());
-                        }
                     }
                 }
 
                 // Fill the goto table with the state IDs of all states that have been originally
                 // produced by the GOTO operation from this state
                 foreach (GotoSetTransition gotoTransition in gotoSetTransitions.Where(f => f.From == itemSet && f.OnSymbol is NonTerminal<T>))
-                {
                     gotos.Add(new GotoTable.GotoTableValue
-                                  {
-                                      NewState = itemSets.IndexOf(gotoTransition.To),
-                                      State = i,
-                                      Token =
-                                          ((Symbol<T>) gotoTransition.OnSymbol).TokenNumber -
-                                          firstNonTerminalTokenNumber
-                                  });
-                }
+                    {
+                        NewState = itemSets.IndexOf(gotoTransition.To),
+                        State = i,
+                        Token = (gotoTransition.OnSymbol as Symbol<T>).TokenNumber - firstNonTerminalTokenNumber
+                    });
             }
 
             // Move the reduction rules to the table. No need for the impromptu dictionary
@@ -293,10 +278,8 @@ namespace Piglet.Parser.Construction
                 try
                 {
                     if (oldValue < 0 && value < 0)
-                    {
                         // Both values are reduce. Throw a reduce reduce conflict. This is not solveable
                         throw new ReduceReduceConflictException<T>("Grammar contains a reduce reduce conflict");
-                    }
 
                     int shiftTokenNumber = tokenNumber;
                     int reduceRuleNumber;
@@ -308,7 +291,6 @@ namespace Piglet.Parser.Construction
                         // The old value was a reduce, the new must be a shift
                         shiftValue = value;
                         reduceValue = oldValue;
-
                         reduceRuleNumber = -(oldValue + 1);
                     }
                     else
@@ -320,68 +302,48 @@ namespace Piglet.Parser.Construction
                         // the new value must be a reduce
                         shiftValue = oldValue;
                         reduceValue = value;
-
                         reduceRuleNumber = -(value + 1);
                     }
 
                     // Check if these tokens have declared precedences and associativity
                     // If they do, we might be able to act on this.
-                    Terminal<T> shiftingTerminal =
-                        grammar.AllSymbols.OfType<Terminal<T>>().First(
-                            f => f.TokenNumber == shiftTokenNumber);
+                    Terminal<T> shiftingTerminal = grammar.AllSymbols.OfType<Terminal<T>>().First(f => f.TokenNumber == shiftTokenNumber);
                     IPrecedenceGroup shiftPrecedence = grammar.GetPrecedence(shiftingTerminal);
-
                     IProductionRule<T> productionRule = reductionRules[reduceRuleNumber].Item1;
 
                     // If the rule has a context dependent precedence, use that. Otherwise use
                     // the reduce precedence of the last terminal symbol in the production rules precedence                        
-                    IPrecedenceGroup reducePrecedence = productionRule.ContextPrecedence??
+                    IPrecedenceGroup reducePrecedence = productionRule.ContextPrecedence ??
                         grammar.GetPrecedence(productionRule.Symbols.Reverse().OfType<ITerminal<T>>().FirstOrDefault());
 
                     // If either rule has no precedence this is not a legal course of action.
                     // TODO: In bison this is apparently cool, it prefers to shift in this case. I don't know why, but this
                     // TODO: seems like a dangerous course of action to me.
                     if (shiftPrecedence == null || reducePrecedence == null)
-                    {
                         throw new ShiftReduceConflictException<T>("Grammar contains a shift reduce conflict")
                         {
                             ShiftSymbol = shiftingTerminal,
                             ReduceSymbol = productionRule.ResultSymbol,
                         };
-                    }
 
                     if (shiftPrecedence.Precedence < reducePrecedence.Precedence)
-                    {
-                        // Precedence of reduce is higher, choose to reduce
-                        table[state, tokenNumber] = reduceValue;
-                    }
+                        table[state, tokenNumber] = reduceValue; // Precedence of reduce is higher, choose to reduce
                     else if (shiftPrecedence.Precedence > reducePrecedence.Precedence)
-                    {
-                        // Shift precedence is higher. Shift
-                        table[state, tokenNumber] = shiftValue;
-                    }
+                        table[state, tokenNumber] = shiftValue; // Shift precedence is higher. Shift
+
                     // Both tokens are in the same precedence group! It's now up to the associativity
                     // The two tokens CANNOT have different associativity, due to how the configuration works
                     // which throws up if you try to multiple-define the precedence
                     else if (shiftPrecedence.Associativity == AssociativityDirection.Left)
-                    {
-                        // Prefer reducing
-                        table[state, tokenNumber] = reduceValue;
-                    }
+                        table[state, tokenNumber] = reduceValue; // Prefer reducing
                     else if (shiftPrecedence.Associativity == AssociativityDirection.Right)
-                    {
-                        // Prefer shifting
-                        table[state, tokenNumber] = shiftValue;
-                    }
+                        table[state, tokenNumber] = shiftValue; // Prefer shifting
                     else // if (shiftPrecedence.Associativity  == AssociativityDirection.NonAssociative) <- this is implied
-                    {
-                        // Unresolveable
                         throw new ShiftReduceConflictException<T>("Grammar contains a shift reduce conflict (Nonassociative)")
-                              {
-                                  ShiftSymbol = shiftingTerminal,
-                                  ReduceSymbol = productionRule.ResultSymbol,
-                              };
-                    }
+                        {
+                            ShiftSymbol = shiftingTerminal,
+                            ReduceSymbol = productionRule.ResultSymbol,
+                        }; // Unresolveable
                 }
                 catch (AmbiguousGrammarException ex)
                 {
@@ -390,31 +352,28 @@ namespace Piglet.Parser.Construction
                     ex.TokenNumber = tokenNumber;
                     ex.PreviousValue = oldValue;
                     ex.NewValue = value;
+
                     throw;
                 }
             }
             else
-            {
                 table[state, tokenNumber] = value;
-            }
         }
 
         private TerminalSet<T> CalculateFirst(ISet<NonTerminal<T>> nullable)
         {
             TerminalSet<T> first = new TerminalSet<T>(grammar);
-
             // Algorithm is that if a nonterminal has a production that starts with a 
             // terminal, we add that to the first set. If it starts with a nonterminal, we add
             // that nonterminals firsts to the known firsts of our nonterminal.
             bool addedThings;
+
             do
             {
                 addedThings = false;
 
                 foreach (NonTerminal<T> symbol in grammar.AllSymbols.OfType<NonTerminal<T>>())
-                {
                     foreach (IProductionRule<T> productionRule in symbol.ProductionRules)
-                    {
                         foreach (ISymbol<T> productionSymbol in productionRule.Symbols)
                         {
                             // Terminals are trivial, just add them
@@ -429,30 +388,25 @@ namespace Piglet.Parser.Construction
                             if (productionSymbol is NonTerminal<T>)
                             {
                                 NonTerminal<T> nonTerminal = (NonTerminal<T>)productionSymbol;
+
                                 // Add everything in FIRST for the given terminal.
                                 foreach (Terminal<T> f in first[nonTerminal])
-                                {
                                     addedThings |= first.Add(symbol, f);
-                                }
 
                                 // Stop iterating if it wasn't nullable
                                 if (!nullable.Contains(nonTerminal))
-                                {
-                                    // Jump out since we've found a non nullable symbol
-                                    break;
-                                }
+                                    break; // Jump out since we've found a non nullable symbol
                             }
                         }
-                    }
-                }
-            } while (addedThings);
+            }
+            while (addedThings);
 
             return first;
         }
 
+        // Every place there is a symbol to the right of the dot that matches the symbol we are looking for
+        // add a new Lr1 item that has the dot moved one step to the right.
         private Lr1ItemSet<T> Goto(IEnumerable<Lr1Item<T>> closures, ISymbol<T> symbol) =>
-            // Every place there is a symbol to the right of the dot that matches the symbol we are looking for
-            // add a new Lr1 item that has the dot moved one step to the right.
             new Lr1ItemSet<T>(from lr1Item in closures
                               where lr1Item.SymbolRightOfDot != null && lr1Item.SymbolRightOfDot == symbol
                               select new Lr1Item<T>(lr1Item.ProductionRule, lr1Item.DotLocation + 1, lr1Item.Lookaheads));
@@ -461,24 +415,23 @@ namespace Piglet.Parser.Construction
         {
             // The items themselves are always in their own closure set
             Lr1ItemSet<T> closure = new Lr1ItemSet<T>();
+
             foreach (Lr1Item<T> lr1Item in items)
-            {
                 closure.Add(lr1Item);
-            }
 
             // This needs to be a normal for loop since we add to the underlying collection
             // as we go along. This avoids investigating the same rule twice
             for (int currentItem = 0; currentItem < closure.Count(); ++currentItem)
             {
                 Lr1Item<T> item = closure[currentItem];
-
                 ISymbol<T> symbolRightOfDot = item.SymbolRightOfDot;
+
                 if (symbolRightOfDot != null)
                 {
                     // Generate the lookahead items
                     HashSet<Terminal<T>> lookaheads = new HashSet<Terminal<T>>();
-
                     bool nonNullableFound = false;
+
                     for (int i = item.DotLocation + 1; i < item.ProductionRule.Symbols.Length; ++i)
                     {
                         ISymbol<T> symbol = item.ProductionRule.Symbols[i];
@@ -490,41 +443,32 @@ namespace Piglet.Parser.Construction
 
                             // Terminals are not nullable, break out of loop
                             nonNullableFound = true;
+
                             break;
                         }
 
                         foreach (Terminal<T> terminal in first[(NonTerminal<T>)symbol])
-                        {
                             lookaheads.Add(terminal);
-                        }
 
                         if (!nullable.Contains(symbol))
                         {
                             nonNullableFound = true;
+
                             break;
                         }
                     }
 
                     if (!nonNullableFound)
-                    {
-                        // Add each of the lookahead symbols of the generating rule
-                        // to the new lookahead set
+                        // Add each of the lookahead symbols of the generating rule to the new lookahead set
                         foreach (Terminal<T> lookahead in item.Lookaheads)
-                        {
                             lookaheads.Add(lookahead);
-                        }
-                    }
 
                     // Create new Lr1 items from all rules where the resulting symbol of the production rule
                     // matches the symbol that was to the right of the dot.
-                    IEnumerable<Lr1Item<T>> newLr1Items =
-                        grammar.ProductionRules.Where(f => f.ResultSymbol == symbolRightOfDot).Select(
-                            f => new Lr1Item<T>(f, 0, lookaheads));
-
-                    foreach (Lr1Item<T> lr1Item in newLr1Items)
-                    {
+                    foreach (Lr1Item<T> lr1Item in from f in grammar.ProductionRules
+                                                   where f.ResultSymbol == symbolRightOfDot
+                                                   select new Lr1Item<T>(f, 0, lookaheads))
                         closure.Add(lr1Item);
-                    }
                 }
             }
 

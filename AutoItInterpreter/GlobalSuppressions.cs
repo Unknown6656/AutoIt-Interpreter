@@ -1,4 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Usage", "RCS1155:Use StringComparison when comparing strings.")]
+[assembly: SuppressMessage("Usage", "RCS1001")]
+[assembly: SuppressMessage("Usage", "RCS1003")]
+[assembly: SuppressMessage("Usage", "RCS1036")]
+[assembly: SuppressMessage("Usage", "RCS1096")]
+[assembly: SuppressMessage("Usage", "RCS1155")]
 

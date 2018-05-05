@@ -167,7 +167,14 @@ namespace {NAMESPACE}
                         sb.AppendLine($@"            {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
 
                     foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
-                        sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")});");
+                    {
+                        sb.Append($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")})");
+
+                        if (!par.ByRef)
+                            sb.Append($".{nameof(AutoItVariantType.Clone)}()");
+
+                        sb.AppendLine(";");
+                    }
 
                     sb.AppendLine($"            {TYPE} result = inner();");
 

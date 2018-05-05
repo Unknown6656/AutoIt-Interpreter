@@ -102,7 +102,7 @@ namespace AutoItInterpreter
                     if (Options.UseVerboseOutput && (!state.Fatal || Options.GenerateCodeEvenWithErrors))
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
 
-                    DebugPrintUtil.PrintSeperator("ROSLYN COMPILE OUTPUT");
+                    DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
 
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 
@@ -168,24 +168,25 @@ namespace AutoItInterpreter
         {
             internal static InterpreterState PreprocessLines(InterpreterContext context, InterpreterOptions options)
             {
-                List<(string Line, int[] OriginalLineNumbers, FileInfo File)> lines = new List<(string, int[], FileInfo)>();
+                Stack<(FunctionDeclarationState, FunctionScope)> stack = new Stack<(FunctionDeclarationState, FunctionScope)>();
                 PreInterpreterState pstate = new PreInterpreterState
                 {
                     Language = options.Language,
                     CurrentContext = context,
                     GlobalFunction = new FunctionScope(new DefinitionContext(context.SourcePath, -1), "")
                 };
-                FunctionDeclarationState fdstate = FunctionDeclarationState.RegularFunction;
+                List<RawLine> lines = new List<RawLine>();
                 int locindx = 0;
 
                 pstate.CompileInfo.Compatibility = options.Compatibility;
                 pstate.CompileInfo.TargetArchitecture = options.TargetArchitecture;
 
+                stack.Push((FunctionDeclarationState.RegularFunction, null));
                 lines.AddRange(FetchLines(pstate, context, options));
 
                 while (locindx < lines.Count)
                 {
-                    string Line = lines[locindx].Line;
+                    string Line = lines[locindx].Content;
                     DefinitionContext defcntx = new DefinitionContext(
                         lines[locindx].File,
                         lines[locindx].OriginalLineNumbers[0],
@@ -215,11 +216,18 @@ namespace AutoItInterpreter
                             err("errors.preproc.include_nfound", path);
                         }
                     }
-                    else if (ProcessFunctionDeclaration(Line, ref fdstate, defcntx, pstate, err))
-                        (pstate.CurrentFunction is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
+                    else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err))
+                        (stack.Peek().Item2 is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
                     ++locindx;
                 }
+
+                DefinitionContext eofctx = new DefinitionContext(lines.Last().File, lines.Last().OriginalLineNumbers[0], null);
+
+                if (stack.Count > 1)
+                    pstate.ReportKnownError("errors.preproc.missing_endfunc", eofctx, stack.Count);
+                else if (stack.Count == 0)
+                    pstate.ReportKnownError("errors.preproc.fatal_internal_funcparsing_error", eofctx);
 
                 if (options.UseVerboseOutput)
                     DebugPrintUtil.DisplayPreState(pstate);
@@ -233,11 +241,10 @@ namespace AutoItInterpreter
                 return state;
             }
 
-            private static (string Content, int[] OriginalLineNumbers, FileInfo File)[] FetchLines(PreInterpreterState state, InterpreterContext context, InterpreterOptions options)
+            private static RawLine[] FetchLines(PreInterpreterState state, InterpreterContext context, InterpreterOptions options)
             {
                 string raw = context.Content;
-
-                List<(string, int[])> lines = new List<(string, int[])>();
+                List<(string c, int[] ln)> lines = new List<(string, int[])>();
                 List<int> lnmbrs = new List<int>();
                 LineState ls = LineState.Regular;
                 (string code, int start) csharp = ("", 0);
@@ -306,9 +313,9 @@ namespace AutoItInterpreter
 
                 while (lcnt < lines.Count)
                 {
-                    int[] lnr = lines[lcnt].Item2;
+                    int[] lnr = lines[lcnt].ln;
 
-                    if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<iaction>.+)\s+else\s+(?<eaction>)$", out Match m))
+                    if (lines[lcnt].c.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<iaction>.+)\s+else\s+(?<eaction>)$", out Match m))
                     {
                         lines.RemoveAt(lcnt);
                         lines.AddRange(new(string, int[])[]
@@ -320,7 +327,7 @@ namespace AutoItInterpreter
                         ("EndIf", lnr)
                         });
                     }
-                    else if (lines[lcnt].Item1.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
+                    else if (lines[lcnt].c.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
                     {
                         lines.RemoveAt(lcnt);
                         lines.AddRange(new(string, int[])[]
@@ -335,8 +342,8 @@ namespace AutoItInterpreter
                 }
 
                 return (from ln in lines
-                        where ln.Item1.Length > 0
-                        select (ln.Item1, ln.Item2, context.SourcePath)).ToArray();
+                        where ln.c.Length > 0
+                        select new RawLine(ln.c, ln.ln, context.SourcePath)).ToArray();
             }
 
             private static Dictionary<string, FUNCTION> PreprocessFunctions(PreInterpreterState state, InterpreterOptions options)
@@ -657,16 +664,19 @@ namespace AutoItInterpreter
                 }
             }
 
-            private static unsafe bool ProcessFunctionDeclaration(string Line, ref FunctionDeclarationState state, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
+            private static unsafe bool ProcessFunctionDeclaration(string Line, Stack<(FunctionDeclarationState fds, FunctionScope sc)> stack, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
             {
-                FunctionDeclarationState ival = state;
+                (FunctionDeclarationState fds, FunctionScope current) = stack.Peek();
 
                 if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out Match m))
-                    if (st.CurrentFunction is null)
+                {
+                    FunctionDeclarationState fds_n;
+
+                    if (current is null)
                     {
                         string lname = m.Get("name").ToLower();
 
-                        ival = FunctionDeclarationState.InvalidOpening;
+                        fds_n = FunctionDeclarationState.InvalidOpening;
 
                         if (IsReservedName(lname))
                             err("errors.general.reserved_name", m.Get("name"));
@@ -676,25 +686,28 @@ namespace AutoItInterpreter
                             err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
                         else
                         {
-                            ival = FunctionDeclarationState.RegularFunction;
+                            fds_n = FunctionDeclarationState.RegularFunction;
 
-                            st.CurrentFunction = new FunctionScope(defcntx, m.Get("params"));
-                            st.Functions[lname] = st.CurrentFunction;
+                            FunctionScope curr = new FunctionScope(defcntx, m.Get("params"));
+                            st.Functions[lname] = curr;
+
+                            stack.Push((fds_n, curr));
+
+                            return false;
                         }
                     }
                     else
                     {
-                        ival = FunctionDeclarationState.InvalidNesting;
+                        fds_n = FunctionDeclarationState.InvalidNesting;
 
                         err("errors.preproc.function_nesting");
                     }
-                else if (Line.Match("^endfunc$", out _))
-                    if (ival != FunctionDeclarationState.RegularFunction)
-                        ival = FunctionDeclarationState.RegularFunction;
-                    else if (st.CurrentFunction is null)
-                        err("errors.preproc.unexpected_endfunc");
-                    else
-                        st.CurrentFunction = null;
+
+                    stack.Pop();
+                    stack.Push((fds_n, current));
+
+                    return false;
+                }
                 else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
                 {
                     string name = m.Get("name");
@@ -710,64 +723,30 @@ namespace AutoItInterpreter
                         err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
                     else if (st.PInvokeFunctions.ContainsKey(lname))
                         err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
-                    else if (st.CurrentFunction != null)
+                    else if (current != null)
                         err("errors.preproc.function_nesting");
                     else
                         st.PInvokeFunctions[name] = (sig, lib, defcntx);
+
+                    return false;
+                }
+                else if (Line.Match("^endfunc$", out _))
+                {
+                    if (current is null)
+                        err("errors.preproc.unexpected_endfunc");
+                    else
+                    {
+                        stack.Pop();
+
+                        if (fds != FunctionDeclarationState.RegularFunction)
+                            stack.Push((FunctionDeclarationState.RegularFunction, current));
+                    }
+
+                    return false;
                 }
                 else
-                    return (state = ival) == FunctionDeclarationState.RegularFunction;
-
-                state = ival;
-
-                return false;
-            }
-
-            private static void ProcessPrgamaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
-            {
-                value = value.Trim('\'', '"', ' ', '\t', '\r', '\n', '\v');
-
-                name.ToLower().Switch(new Dictionary<string, Action>
-                {
-                    ["out"] = () => ci.FileName = value,
-                    ["icon"] = () => ci.IconPath = value,
-                    ["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
-                    ["upx"] = () => ci.UPX = bool.Parse(value),
-                    ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
-                    ["console"] = () => ci.ConsoleMode = bool.Parse(value),
-                    ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
-                    ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value.ToLower(), true),
-                    ["architecture"] = () => ci.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), value.ToLower(), true),
-                    ["x64"] = () => {
-                        bool x64 = bool.Parse(value);
-
-                        switch (ci.TargetArchitecture)
-                        {
-                            case Architecture.X86:
-                            case Architecture.X64:
-                                ci.TargetArchitecture = x64 ? Architecture.X64 : Architecture.X86;
-
-                                return;
-                            case Architecture.Arm:
-                            case Architecture.Arm64:
-                                ci.TargetArchitecture = x64 ? Architecture.Arm64 : Architecture.Arm;
-
-                                return;
-                        }
-                    },
-                    ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
-                    ["comments"] = () => ci.AssemblyComment = value,
-                    ["companyname"] = () => ci.AssemblyCompanyName = value,
-                    ["filedescription"] = () => ci.AssemblyFileDescription = value,
-                    ["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
-                    ["internalname"] = () => ci.AssemblyInternalName = value,
-                    ["legalcopyright"] = () => ci.AssemblyCopyright = value,
-                    ["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
-                    ["originalfilename"] = () => { /* do nothing */ },
-                    ["productname"] = () => ci.AssemblyProductName = value,
-                    ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
-                },
-                () => err("errors.preproc.directive_invalid", name));
+                    return fds == FunctionDeclarationState.RegularFunction
+                        || fds == FunctionDeclarationState.InsideLambda;
             }
 
             private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
@@ -830,8 +809,7 @@ namespace AutoItInterpreter
                             if (inclpath.Match(@"^#include\-once$", out _, RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.IgnoreCase))
                                 st.IncludeOncePaths.Add(nfo.FullName);
                         }
-                    }
-                ),
+                    }),
                     (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add(m.Groups["func"].ToString().Trim())),
                     (@"^pragma\b\s*(?<opt>[a-z]\w*)\s*\((?<name>[a-z]\w*)\s*\,\s*(?<value>.+)\s*\)$", m =>
                     {
@@ -844,7 +822,7 @@ namespace AutoItInterpreter
                             switch (opt.ToLower())
                             {
                                 case "compile":
-                                    ProcessPrgamaCompileOption(name, value, st.CompileInfo, err);
+                                    ProcessPragmaCompileOption(name, value, st.CompileInfo, err);
 
                                     break;
                                 default:
@@ -857,21 +835,77 @@ namespace AutoItInterpreter
                         {
                             err("errors.preproc.directive_invalid_value", value, name);
                         }
-                    }
-                )
+                    })
                 );
 
                 return inclpath;
             }
 
+            private static void ProcessPragmaCompileOption(string name, string value, CompileInfo ci, ErrorReporter err)
+            {
+                value = value.Trim('\'', '"', ' ', '\t', '\r', '\n', '\v');
 
+                name.ToLower().Switch(new Dictionary<string, Action>
+                {
+                    ["out"] = () => ci.FileName = value,
+                    ["icon"] = () => ci.IconPath = value,
+                    ["execlevel"] = () => ci.ExecLevel = (ExecutionLevel)Enum.Parse(typeof(ExecutionLevel), value, true),
+                    ["upx"] = () => ci.UPX = bool.Parse(value),
+                    ["autoitexecuteallowed"] = () => ci.AutoItExecuteAllowed = bool.Parse(value),
+                    ["console"] = () => ci.ConsoleMode = bool.Parse(value),
+                    ["compression"] = () => ci.Compression = byte.TryParse(value, out byte b) && (b % 2) == 1 && b < 10 ? b : throw null,
+                    ["compatibility"] = () => ci.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), value.ToLower(), true),
+                    ["architecture"] = () => ci.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), value.ToLower(), true),
+                    ["x64"] = () => {
+                        bool x64 = bool.Parse(value);
+
+                        switch (ci.TargetArchitecture)
+                        {
+                            case Architecture.X86:
+                            case Architecture.X64:
+                                ci.TargetArchitecture = x64 ? Architecture.X64 : Architecture.X86;
+
+                                return;
+                            case Architecture.Arm:
+                            case Architecture.Arm64:
+                                ci.TargetArchitecture = x64 ? Architecture.Arm64 : Architecture.Arm;
+
+                                return;
+                        }
+                    },
+                    ["inputboxres"] = () => ci.InputBoxRes = bool.Parse(value),
+                    ["comments"] = () => ci.AssemblyComment = value,
+                    ["companyname"] = () => ci.AssemblyCompanyName = value,
+                    ["filedescription"] = () => ci.AssemblyFileDescription = value,
+                    ["fileversion"] = () => ci.AssemblyFileVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                    ["internalname"] = () => ci.AssemblyInternalName = value,
+                    ["legalcopyright"] = () => ci.AssemblyCopyright = value,
+                    ["legaltrademarks"] = () => ci.AssemblyTrademarks = value,
+                    ["originalfilename"] = () => { /* do nothing */ },
+                    ["productname"] = () => ci.AssemblyProductName = value,
+                    ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
+                },
+                () => err("errors.preproc.directive_invalid", name));
+            }
+
+
+            private struct RawLine
+            {
+                public int[] OriginalLineNumbers { get; }
+                public string Content { get; }
+                public FileInfo File { get; }
+
+
+                public RawLine(string c, int[] l, FileInfo f) =>
+                    (Content, OriginalLineNumbers, File) = (c, l, f);
+            }
 
             private enum FunctionDeclarationState
                 : byte
             {
                 RegularFunction = 0x00,
-                InvalidNesting = 0x02,
                 InvalidOpening = 0x01,
+                InvalidNesting = 0x02,
                 InsideLambda = 0x03,
             }
 
@@ -1643,36 +1677,34 @@ namespace AutoItInterpreter
 
                         int cnt = 0;
                         (VARIABLE, PINVOKE_TYPE)[] pars = sig.Paramters.Select(t => (new VARIABLE("_p" + cnt++), t)).ToArray();
+                        EXPRESSION iexpr = EXPRESSION.NewFunctionCall(
+                            new Tuple<string, FSharpList<EXPRESSION>>(
+                                AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
+                                ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
+                                    new Tuple<string, FSharpList<EXPRESSION>>(
+                                        nameof(AutoItFunctions.TryConvert),
+                                        ListModule.OfSeq(
+                                            new EXPRESSION[2]
+                                            {
+                                                EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
+                                                EXPRESSION.NewLiteral(
+                                                    LITERAL.NewString(x.Item2.ToString())
+                                                )
+                                            }
+                                        )
+                                    )
+                                )))
+                            )
+                        );
 
                         state.ASTFunctions[name] = new AST_FUNCTION
                         {
                             Context = ctx,
                             Name = name,
                             Parameters = pars.Select(v => new AST_FUNCTION_PARAMETER(v.Item1, false, false)).ToArray(),
-                            Statements = new AST_STATEMENT[]
+                            Statements = new AST_STATEMENT[1]
                             {
-                            new AST_RETURN_STATEMENT
-                            {
-                                Expression = EXPRESSION.NewFunctionCall(
-                                    new Tuple<string, FSharpList<EXPRESSION>>(
-                                        AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
-                                        ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
-                                            new Tuple<string, FSharpList<EXPRESSION>>(
-                                                nameof(AutoItFunctions.TryConvert),
-                                                ListModule.OfSeq(
-                                                    new EXPRESSION[]
-                                                    {
-                                                        EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
-                                                        EXPRESSION.NewLiteral(
-                                                            LITERAL.NewString(x.Item2.ToString())
-                                                        )
-                                                    }
-                                                )
-                                            )
-                                        )))
-                                    )
-                                )
-                            }
+                                sig.ReturnType.IsVoid ? new AST_EXPRESSION_STATEMENT { Expression = iexpr } as AST_STATEMENT : new AST_RETURN_STATEMENT { Expression = iexpr }
                             }
                         };
                     }

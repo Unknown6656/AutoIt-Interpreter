@@ -9,4 +9,6 @@ Dim $arr[1] = [3], _
     $d = @time, _
     $e = "0x900"
 
+ReDim $brr[1][2]
+
 #include "header-2.au3"

@@ -173,7 +173,6 @@ namespace AutoItInterpreter
     {
         public Dictionary<string, FunctionScope> Functions { get; }
         public InterpreterContext CurrentContext { set; get; }
-        public FunctionScope CurrentFunction { set; get; }
         public List<string> IncludeOncePaths { get; }
         public List<string> StartFunctions { get; }
 
