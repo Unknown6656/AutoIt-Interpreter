@@ -92,16 +92,27 @@ let rec ProcessConstants e =
     | _ ->
         let d = variant.FromDecimal
         match e with
+        | UnaryExpression (Identity, x) -> ProcessConstants x
         | BinaryExpression (o, x, y) ->
             match o, x, y with
             | And, Constant c, _ when c = d 0m -> num 0m
             | And, _, Constant c when c = d 0m -> num 0m
-            | BitwiseAnd, Constant c, _ when c = d 0m -> num 0m
-            | BitwiseAnd, _, Constant c when c = d 0m -> num 0m
+            | And, Constant c, e when c = d 1m -> ProcessConstants e
+            | And, e, Constant c when c = d 1m -> ProcessConstants e
+            | And, e1, (UnaryExpression(Not, e2)) when e1 = e2 -> ProcessConstants e1
+            | And, (UnaryExpression(Not, e2)), e1 when e1 = e2 -> ProcessConstants e1
             | Nand, Constant c, _ when c = d 0m -> num 1m
             | Nand, _, Constant c when c = d 0m -> num 1m
+            | Or, Constant c, e when c = d 0m -> ProcessConstants e
+            | Or, e, Constant c when c = d 0m -> ProcessConstants e
+            | Or, Constant c, _ when c = d 1m -> num 1m
+            | Or, _, Constant c when c = d 1m -> num 1m
+            | Or, e1, (UnaryExpression(Not, e2)) when e1 = e2 -> ProcessConstants e1
+            | Or, (UnaryExpression(Not, e2)), e1 when e1 = e2 -> ProcessConstants e1
             | Nor, Constant c, _ when c = d 1m -> num 0m
             | Nor, _, Constant c when c = d 1m -> num 0m
+            | BitwiseAnd, Constant c, _ when c = d 0m -> num 0m
+            | BitwiseAnd, _, Constant c when c = d 0m -> num 0m
             | BitwiseOr, Constant c, e when c = d 0m -> ProcessConstants e
             | BitwiseOr, e, Constant c when c = d 0m -> ProcessConstants e
             | BitwiseXor, Constant c, e when c = d 0m -> ProcessConstants e
@@ -142,18 +153,21 @@ let rec ProcessConstants e =
                 if stat then
                     if x = y then
                         match o with
+                        | Nxor
                         | EqualCaseSensitive
                         | EqualCaseInsensitive
                         | GreaterEqual
                         | LowerEqual
                         | Divide -> num 1m
-                        | BitwiseXor
                         | Xor
+                        | BitwiseXor
                         | Subtract
                         | Unequal
                         | Lower
                         | Greater
                         | Modulus -> num 0m
+                        | Or
+                        | And
                         | BitwiseOr
                         | BitwiseAnd -> x
                         | _ -> proc()

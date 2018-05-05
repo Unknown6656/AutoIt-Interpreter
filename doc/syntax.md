@@ -19,9 +19,9 @@ This article highlights the most important differences between AutoIt3's and Aut
 As AutoIt3 has only a small amount of operators compared to languages like C#, C++ or F# (in which you can even define new operators!),
 the AutoIt++ variant adds the following operators in order to improve code compactness and increase the developer's productivity:
 
-## New logical operators: `Nor`, `Nand`, `Xor`, `Nxor` and `!`
+## New logical operators: `Nor`, `Nand`, `Xor`, `Nxor`, `Impl` and `!`
 
-To extend the set of the logical (boolean) operators `And` and `Or`, the operators `Nor`, `Nand`, `Xor`, `Nxor`, `!` have been added.
+To extend the set of the logical (boolean) operators `And` and `Or`, the operators `Nor`, `Nand`, `Xor`, `Nxor`, `Impl`, `!` have been added.
 <br/>
 The operator `!` is the short variant of the prfix (unary) operator `Not`. The other new operators are binary infix ones which can be used e.g. as follows:
 ```autoit
@@ -35,12 +35,12 @@ EndIf
 
 The truth table for the logical operators is defined as follows:
 
-| `A`   | `B`   | `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` |
-|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|:-----:|:------:|
-|`false`|`false`|`false`| `true` |`false`| `true`|`false`| `true` |
-|`false`| `true`|`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`|
-| `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` |
+| `A`   | `B`   | `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` | `Impl` |
+|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|:-----:|:------:|:------:|
+|`false`|`false`|`false`| `true` |`false`| `true`|`false`| `true` | `true` |
+|`false`| `true`|`false`| `true` | `true`|`false`| `true`| `false`| `true` |
+| `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`| `false`|
+| `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` | `true` |
 
 ## Bitwise arithmetical operators
 
