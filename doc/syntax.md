@@ -5,11 +5,12 @@ The AutoIt3-syntax is fully compatible with the AutoIt++ dialect, meaning that t
 <br/>
 This article highlights the most important differences between AutoIt3's and AutoIt++'s syntaxes. It is therefore divided in the following sections:
 
-1) [AutoIt++ operators](#autoit++-operators)
-2) [AutoIt++ string interpolation](#autoit++-string-interpolation)
+1) [AutoIt++ operators](#autoit-operators)
+2) [AutoIt++ string interpolation](#autoit-string-interpolation)
 3) [P/Invoke functions](#pinvoke-functions)
 4) [λ-Expressions](#λ-expressions)
-5) TODO
+5) [Inline C#-code](#inline-c-code)
+6) TODO
 
 ------
 
