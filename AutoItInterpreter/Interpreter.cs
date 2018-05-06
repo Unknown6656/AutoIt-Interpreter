@@ -632,15 +632,7 @@ namespace AutoItInterpreter
                             }),
                             (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
                             (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
-                            (@"^\$(?<var>[a-z_]\w*)\s*=\s*(?<func>[a-zλ_]\w*)$",  new[] { Switch, Select }, m =>
-                            {
-                                string var = m.Get("var");
-                                string f = m.Get("func");
-
-
-                                // TODO : function assigned to a variable
-
-                            }),
+                            (@"^\$(?<var>[a-z_]\w*.*)\s*=\s*(?<func>[a-zλ_]\w*)$",  new[] { Switch, Select }, m => Append(new λ_ASSIGNMENT(curr, m.Get("var"), m.Get("func")))),
                             (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
                         }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
@@ -727,19 +719,20 @@ namespace AutoItInterpreter
                     else if (current != null)
                         err("errors.preproc.function_nesting");
                     else
-                        st.PInvokeFunctions[name] = (sig, lib, defctx);
+                        st.PInvokeFunctions[lname] = (sig, lib, defctx);
                 }
-                else if (Line.Match(@"^\$(?<var>[_a-z]\w*)\s*\=\s*func\s*\(\s*(?<params>.*)\s*\)$", out m))
+                else if (Line.Match(@"^\$(?<var>[_a-z]\w*)(?<indexer>.*)\s*\=\s*func\s*\(\s*(?<params>.*)\s*\)$", out m))
                 {
                     string var = m.Get("var");
                     string par = m.Get("params");
+                    string idx = m.Get("indexer");
                     string name = $"λ__{_λcount++:x8}";
                     FunctionScope curr = new FunctionScope(defctx, name);
 
                     st.Functions[name] = curr;
                     stack.Push((FunctionDeclarationState.InsideLambda, curr));
 
-                    (current ?? st.GlobalFunction).Lines.Add(($"${var} = {name}", defctx));
+                    (current ?? st.GlobalFunction).Lines.Add(($"${var}{idx} = {name}", defctx));
                 }
                 else if (Line.Match("^endfunc$", out _))
                 {
@@ -1628,6 +1621,17 @@ namespace AutoItInterpreter
                                     }).ToArray(),
                                     Variable = new VARIABLE(i.VariableName)
                                 };
+                            case λ_ASSIGNMENT i:
+                                {
+                                    if (parsefexpr('$' + i.VariableName.Trim(), false) is EXPRESSION expr)
+                                        return new AST_λ_ASSIGNMENT_STATEMENT
+                                        {
+                                            VariableExpression = expr,
+                                            Function = i.FunctionName.ToLower(),
+                                        };
+                                    else
+                                        break;
+                                }
                             default:
                                 err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");
 

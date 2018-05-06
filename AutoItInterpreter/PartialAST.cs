@@ -117,12 +117,13 @@ namespace AutoItInterpreter.PartialAST
         public AST_WITH_LINE[] WithLines { set; get; }
     }
 
-    // TODO
     public sealed class AST_WITH_LINE
         : AST_STATEMENT
     {
         public override bool IsEmpty => false;
         public dynamic Expression { set; get; }
+
+        // TODO
     }
 
     public sealed class AST_LABEL
@@ -245,5 +246,13 @@ namespace AutoItInterpreter.PartialAST
     {
         public override bool IsEmpty => false;
         public string Code { set; get; }
+    }
+
+    public sealed class AST_λ_ASSIGNMENT_STATEMENT
+        : AST_STATEMENT
+    {
+        public EXPRESSION VariableExpression { get; set; }
+        public string Function { get; set; }
+        public override bool IsEmpty => false;
     }
 }

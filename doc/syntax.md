@@ -52,7 +52,7 @@ A whole set of bitwise arithmetical binary infix operators have been introduced 
  - `~||`: **Bitwise Nor**
  - `^^`: **Bitwise Xor**
  - `~^^`: **Bitwise Nxor**
- - `~`: **Bitwise Not**
+ - `~`: **Bitwise Not** (Unary)
  - `<<`: **Bitwise left-shift**
  - `>>`: **Bitwise right-shift**
  - `<<<`: **Bitwise rotate left**
@@ -99,9 +99,32 @@ $l_str = #$str ; has the value 9
 
 TODO
 
-## Operator Precedence
+## Unary Operators `#`, `+`, `!` and `~`
 
 TODO
+
+## Operator Precedence
+
+The following displays a list of operator precendences in AutoIt++. The top-most row represents operators with the highest precedence. Inside the row, the operators are parsed and matched from left to right.
+
+| Operator(s)                   | Associativity |
+|-------------------------------|---------------|
+| `#`, `+`, `-`, `!`, `~`       | Right (Unary) |
+| `^`                           | Left          |
+| `*`, `/`, `%`                 | Left          |
+| `+`, `-`                      | Left          |
+| `<<`, `>>`                    | Left          |
+| `<<<`, `>>>`                  | Left          |
+| `~&&`, `&&`                   | Left          |
+| `~^^`, `^^`                   | Left          |
+| `~||`, `||`                   | Left          |
+| `@| ..`, `@ ..`, `@|`, `@`    | _Dunno, right I think_ |
+| `&`                           | Left          |
+| `<>`, `==`, `=`               | Left          |
+| `Nand`, `And`                 | Left          |
+| `Nxor`, `Xor`                 | Left          |
+| `Nor`, `Or`                   | Left          |
+| `Impl`                        | Left          |
 
 # AutoIt++ string interpolation
 

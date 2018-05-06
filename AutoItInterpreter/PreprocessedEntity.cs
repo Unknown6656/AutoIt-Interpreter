@@ -338,4 +338,19 @@ namespace AutoItInterpreter.Preprocessed
         public CS_INLINE(Entity parent, string code)
             : base(parent) => SourceCode = (code ?? "").Trim();
     }
+
+    public sealed class λ_ASSIGNMENT
+        : Entity
+    {
+        public string VariableName { get; }
+        public string FunctionName { get; }
+
+
+        public λ_ASSIGNMENT(Entity parent, string var, string func)
+            : base(parent)
+        {
+            VariableName = var;
+            FunctionName = func;
+        }
+    }
 }

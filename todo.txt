@@ -25,3 +25,7 @@
 [x] -Wall compiler flag
 [-] implement all funcitions
 [-] implement all macros
+[ ] implement "continuecase"
+[ ] implement "with ..."-statements
+[ ] implement main return
+[ ] implement local macros

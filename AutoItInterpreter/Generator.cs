@@ -289,6 +289,10 @@ namespace {NAMESPACE}
                         println($"return {tstr(s.Expression)};");
 
                         return;
+                    case AST_λ_ASSIGNMENT_STATEMENT s:
+                        println($"{tstr(s.VariableExpression)} = {TYPE}.{nameof(AutoItVariantType.NewDelegate)}({FUNC_PREFIX}{s.Function.Trim()});");
+
+                        return;
                     default:
                         println($"// TODO: {e}"); // TODO
 

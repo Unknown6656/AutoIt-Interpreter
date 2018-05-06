@@ -248,7 +248,8 @@ namespace AutoItCoreLibrary
         public static bool Greater(AutoItVariantType v1, AutoItVariantType v2) => v1 > v2;
         public static bool GreaterEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 >= v2;
 
-        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? (AutoItVariantType)(void*)null : (AutoItVariantType)GCHandle.Alloc(gc);
+        public static AutoItVariantType NewDelegate(Delegate func) => func is null ? Null : NewGCHandledData(func.Method);
+        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {
             vars = vars ?? new AutoItVariantType[0];
