@@ -11,6 +11,9 @@ type variant = AutoItCoreLibrary.AutoItVariantType
 let rec IsStatic =
     function
     | FunctionCall _
+    | ΛFunctionCall _
+    | ToExpression _
+    | ArrayInitExpression _
     | AssignmentExpression _ -> false
     | UnaryExpression (_, e) -> IsStatic e
     | ToExpression (x, y)
@@ -18,15 +21,19 @@ let rec IsStatic =
     | TernaryExpression (x, y, z) -> [x; y; z]
                                      |> List.map IsStatic
                                      |> List.fold (&&) true
-    | VariableExpression (ArrayAccess (_, e)) -> e
-                                                 |> List.map IsStatic
-                                                 |> List.fold (&&) true
-    | VariableExpression (DotAccess (_, m)) -> m
-                                               |> List.map (function
-                                                            | Method _ -> false
-                                                            | Field _ -> true)
-                                               |> List.fold (&&) true
+    | ArrayAccess (e, i) -> (IsStatic i) && (IsStatic e)
+    | DotAccess (e, m) -> m
+                          |> List.map (function
+                                      | Method _ -> false
+                                      | Field _ -> true)
+                          |> List.fold (&&) (IsStatic e)
     | _ -> true
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////// TODO //////////////////////////////////////////////////////////////////////////////////////////////////////  
 
 let rec ProcessConstants e =
     let rec procconst e =

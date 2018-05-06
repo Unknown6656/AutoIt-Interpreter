@@ -36,11 +36,8 @@ type Serializer (settings : SerializerSettings) =
     member x.Settings with get() = settings
     member x.Serialize e =
         let (!/) = sprintf "%s.%s" x.Settings.VariableTypeName
-        let rec printvar = function
-                           | Variable v -> sprintf "%s[\"%s\"]" (x.Settings.VariableDictionary) v.Name
-                           | ArrayAccess (v, e) -> sprintf "%s[\"%s\"][%s]" (x.Settings.VariableDictionary) (v.Name) (String.Join(", ", List.map printexpr e))
-                           | DotAccess (v, m) -> "  « object access not yet implemented »  " // TODO
-        and printbin a o b =
+        let printvar (v : VARIABLE) = sprintf "%s[\"%s\"]" (x.Settings.VariableDictionary) v.Name
+        let printbin a o b =
             let (!!) = sprintf "(%%s %s %%s)"
             let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
             let f = match o with
@@ -76,11 +73,13 @@ type Serializer (settings : SerializerSettings) =
                     | BitwiseShiftRight -> !<"BitwiseShr"
                     |> Printf.StringFormat<string->string->string>
             sprintf f a b
-        and printass v o e =
+        let rec printass v i o e =
             let e = if o = Assign
                     then printexpr e
                     else printbin v (adict.[o]) (printexpr e)
-            sprintf "%s = (%s)%s" v (x.Settings.VariableTypeName) e
+            sprintf "%s%s = (%s)%s" v (match i with
+                                       | [] -> ""
+                                       | i -> "[" + (String.Join(", ", List.map printexpr i)) + "]") (x.Settings.VariableTypeName) e
         and printexpr e =
             let str = function
                       | Literal l -> match l with
@@ -119,9 +118,16 @@ type Serializer (settings : SerializerSettings) =
                                             | null -> x.Settings.FunctionPrefix + f
                                             | f -> f
                                    sprintf "%s(%s)" fs (String.Join(", ", (List.map printexpr es)))
-                      | ΛFunctionCall (v, es) ->
-                            sprintf "(%s).Call(%s)" (printvar v) (String.Join(", ", (List.map printexpr es)))
-                      | AssignmentExpression (o, v, e) -> printass (printvar v) o e
+                      | ΛFunctionCall (e, es) -> sprintf "(%s).Call(%s)" (printexpr e) (String.Join(", ", (List.map printexpr es)))
+                      | ArrayAccess (e, i) -> sprintf "%s[%s]" (printexpr e) (printexpr i)
+                      | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) (m
+                                                                          |> List.map (fun m -> "." + match m with
+                                                                                                      | Method f -> printexpr (FunctionCall f)
+                                                                                                      | Field f -> f)
+                                                                          |> String.Concat)
+                      | AssignmentExpression ae -> match ae with
+                                                   | ScalarAssignment (o, v, e) -> printass (printvar v) [] o e
+                                                   | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
