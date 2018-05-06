@@ -219,8 +219,8 @@ namespace AutoItInterpreter
                             err("errors.preproc.include_nfound", path);
                         }
                     }
-                    else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err) is string s)
-                        (stack.Peek().Item2 is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((s, defcntx));
+                    else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err))
+                        (stack.Peek().Item2 ?? pstate.GlobalFunction).Lines.Add((Line, defcntx));
 
                     ++locindx;
                 }
@@ -667,7 +667,7 @@ namespace AutoItInterpreter
                 }
             }
 
-            private static unsafe string ProcessFunctionDeclaration(string Line, Stack<(FunctionDeclarationState fds, FunctionScope sc)> stack, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
+            private static unsafe bool ProcessFunctionDeclaration(string Line, Stack<(FunctionDeclarationState fds, FunctionScope sc)> stack, DefinitionContext defctx, PreInterpreterState st, ErrorReporter err)
             {
                 (FunctionDeclarationState fds, FunctionScope current) = stack.Peek();
 
@@ -691,12 +691,12 @@ namespace AutoItInterpreter
                         {
                             fds_n = FunctionDeclarationState.RegularFunction;
 
-                            FunctionScope curr = new FunctionScope(defcntx, m.Get("params"));
+                            FunctionScope curr = new FunctionScope(defctx, m.Get("params"));
                             st.Functions[lname] = curr;
 
                             stack.Push((fds_n, curr));
 
-                            return null;
+                            return false;
                         }
                     }
                     else
@@ -708,8 +708,6 @@ namespace AutoItInterpreter
 
                     stack.Pop();
                     stack.Push((fds_n, current));
-
-                    return null;
                 }
                 else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
                 {
@@ -729,21 +727,19 @@ namespace AutoItInterpreter
                     else if (current != null)
                         err("errors.preproc.function_nesting");
                     else
-                        st.PInvokeFunctions[name] = (sig, lib, defcntx);
-
-                    return null;
+                        st.PInvokeFunctions[name] = (sig, lib, defctx);
                 }
                 else if (Line.Match(@"^\$(?<var>[_a-z]\w*)\s*\=\s*func\s*\(\s*(?<params>.*)\s*\)$", out m))
                 {
                     string var = m.Get("var");
                     string par = m.Get("params");
                     string name = $"λ__{_λcount++:x8}";
-                    FunctionScope curr = new FunctionScope(defcntx, name);
+                    FunctionScope curr = new FunctionScope(defctx, name);
 
                     st.Functions[name] = curr;
                     stack.Push((FunctionDeclarationState.InsideLambda, curr));
 
-                    return $"${var} = {name}";
+                    (current ?? st.GlobalFunction).Lines.Add(($"${var} = {name}", defctx));
                 }
                 else if (Line.Match("^endfunc$", out _))
                 {
@@ -756,11 +752,11 @@ namespace AutoItInterpreter
                         if ((fds != FunctionDeclarationState.RegularFunction) && (fds != FunctionDeclarationState.InsideLambda))
                             stack.Push((FunctionDeclarationState.RegularFunction, current));
                     }
-
-                    return null;
                 }
                 else
-                    return fds == FunctionDeclarationState.RegularFunction || fds == FunctionDeclarationState.InsideLambda ? Line : null;
+                    return fds == FunctionDeclarationState.RegularFunction || fds == FunctionDeclarationState.InsideLambda;
+
+                return false;
             }
 
             private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
