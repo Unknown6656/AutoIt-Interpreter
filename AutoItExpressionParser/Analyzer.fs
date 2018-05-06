@@ -29,12 +29,6 @@ let rec IsStatic =
                           |> List.fold (&&) (IsStatic e)
     | _ -> true
 
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////// TODO //////////////////////////////////////////////////////////////////////////////////////////////////////  
-
 let rec ProcessConstants e =
     let rec procconst e =
         let num = variant.FromDecimal >> Some
@@ -98,6 +92,8 @@ let rec ProcessConstants e =
             | BitwiseShiftRight -> !@ variant.BitwiseShr
             | StringConcat -> !@ variant.Concat
         | TernaryExpression (Constant x, Constant y, Constant z) -> Some (if x.ToBool() then z else y)
+        | ArrayAccess(Constant x, Constant y) -> try Some x.[y] with
+                                                 | _ -> None
         | _ -> None
     and (|Constant|_|) = procconst
     let num = Number >> Literal
@@ -211,9 +207,12 @@ let rec ProcessConstants e =
                                      | _ -> false
                                      -> FunctionCall("Identity", [p])
         | FunctionCall (f, ps) -> FunctionCall(f, List.map ProcessConstants ps)
-        | ΛFunctionCall (f, ps) -> ΛFunctionCall(f, List.map ProcessConstants ps)
-        | AssignmentExpression (o, v, e) -> AssignmentExpression(o, v, ProcessConstants e)
-        | VariableExpression (ArrayAccess (v, i)) -> VariableExpression(ArrayAccess(v, List.map ProcessConstants i))
+        | ΛFunctionCall (e, ps) -> ΛFunctionCall(ProcessConstants e, List.map ProcessConstants ps)
+        | ArrayAccess(e, i) -> ArrayAccess(ProcessConstants e, ProcessConstants i)
+        | AssignmentExpression ae -> match ae with
+                                     | ScalarAssignment (o, v, e) -> ScalarAssignment(o, v, ProcessConstants e)
+                                     | ArrayAssignment (o, v, i, e) -> ArrayAssignment(o, v, List.map ProcessConstants i, ProcessConstants e)
+                                     |> AssignmentExpression
         | _ -> e
 
 and ProcessExpression e =
@@ -240,15 +239,17 @@ and ProcessExpression e =
         |> dict
     let p = ProcessConstants e
     match p with
-    | AssignmentExpression (Assign, Variable v, VariableExpression (Variable w)) when v = w -> VariableExpression (Variable v)
-    | AssignmentExpression (o, Variable v, e) when o <> Assign ->
+    | AssignmentExpression (ScalarAssignment (Assign, v, VariableExpression w)) when v = w -> VariableExpression v
+    | AssignmentExpression (ScalarAssignment (o, v, e)) when o <> Assign ->
         AssignmentExpression (
-            Assign,
-            Variable v,
-            BinaryExpression (
-                assign_dic.[o],
-                VariableExpression (Variable v),
-                ProcessConstants e
+            ScalarAssignment(
+                Assign,
+                v,
+                BinaryExpression (
+                    assign_dic.[o],
+                    VariableExpression v,
+                    ProcessConstants e
+                )
             )
         )
     // TODO
@@ -260,46 +261,38 @@ and EvaluatesToFalse e = EvaluatesTo (e, Literal False)
 
 and EvaluatesToTrue e = EvaluatesTo (e, Literal True)
 
-    
-let rec private getvarfunccalls =
-    function
-    | Variable _ -> []
-    | DotAccess (_, m) -> List.choose (function
-                                       | Method f -> Some f
-                                       | _ -> None) m
-    | ArrayAccess (_, i) -> i
-                            |> List.map GetFunctionCallExpressions
-                            |> List.concat
-
-and GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
+let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     match e with
     | Literal _
-    | Macro _ -> []
+    | Macro _
+    | VariableExpression _ -> []
     | FunctionCall f -> [[f]]
     | ΛFunctionCall (_, e) -> [[null, e]]
-    | VariableExpression v -> [getvarfunccalls v]
-    | AssignmentExpression (_, v, i) -> [getvarfunccalls v; GetFunctionCallExpressions i]
-    | UnaryExpression (_, e) -> [GetFunctionCallExpressions e]
+    | ArrayAccess (_, e)
+    | UnaryExpression (_, e) 
+    | AssignmentExpression (ScalarAssignment (_, _, e)) -> [GetFunctionCallExpressions e]
+    | AssignmentExpression (ArrayAssignment (_, _, x, y)) -> GetFunctionCallExpressions y::List.map GetFunctionCallExpressions x
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y]
     | TernaryExpression (x, y, z) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y; GetFunctionCallExpressions z]
     | ArrayInitExpression xs -> List.map GetFunctionCallExpressions xs
+    | DotAccess (_, m) -> List.choose (function
+                                       | Method f -> Some [f]
+                                       | _ -> None) m
     |> List.concat
 
 let rec GetVariables (e : EXPRESSION) : VARIABLE list =
-    let rec procvar = function
-                      | Variable v
-                      | DotAccess (v, _) -> [v]
-                      | ArrayAccess (v, i) -> v::(List.map GetVariables i
-                                                  |> List.concat)
     match e with
     | Literal _
     | Macro _ -> []
     | FunctionCall (_, es) -> List.map GetVariables es
-    | ΛFunctionCall (v, es) -> (procvar v)::(List.map GetVariables es)
-    | VariableExpression v -> [procvar v]
-    | AssignmentExpression (_, v, i) -> [procvar v; GetVariables i]
+    | ΛFunctionCall (v, es) -> GetVariables v::List.map GetVariables es
+    | VariableExpression v -> [[v]]
+    | AssignmentExpression (ScalarAssignment (_, v, e)) -> [[v]; GetVariables e]
+    | AssignmentExpression (ArrayAssignment (_, v, i, e)) -> (v::GetVariables e)::List.map GetVariables i
+    | DotAccess (e, _)
     | UnaryExpression (_, e) -> [GetVariables e]
+    | ArrayAccess (x, y)
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetVariables x; GetVariables y]
     | TernaryExpression (x, y, z) -> [GetVariables x; GetVariables y; GetVariables z]
