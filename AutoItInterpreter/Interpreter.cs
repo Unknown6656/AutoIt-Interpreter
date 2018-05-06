@@ -1630,7 +1630,7 @@ namespace AutoItInterpreter
                             case λ_ASSIGNMENT i:
                                 {
                                     if (parseexpr('$' + i.VariableName.Trim(), false, false) is EXPRESSION expr)
-                                        return new AST_λ_ASSIGNMENT_STATEMENT
+                                        return new AST_Λ_ASSIGNMENT_STATEMENT
                                         {
                                             VariableExpression = expr,
                                             Function = i.FunctionName.ToLower(),

@@ -18,7 +18,7 @@ sleep(5000)
     System.Console.WriteLine("this is unsafe!!");
 #cse #ce
 
-$func1[4][9-8] = f2
+$func1[4] = f2
 $func2 = Func($a, $b)
              ConsoleWrite($"called with ($a, $b)!\n")
          EndFunc

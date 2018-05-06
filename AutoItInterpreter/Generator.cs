@@ -289,7 +289,7 @@ namespace {NAMESPACE}
                         println($"return {tstr(s.Expression)};");
 
                         return;
-                    case AST_λ_ASSIGNMENT_STATEMENT s:
+                    case AST_Λ_ASSIGNMENT_STATEMENT s:
                         string fname = s.Function.Trim();
                         string mod = FUNC_MODULE;
 

@@ -248,7 +248,7 @@ namespace AutoItInterpreter.PartialAST
         public string Code { set; get; }
     }
 
-    public sealed class AST_λ_ASSIGNMENT_STATEMENT
+    public sealed class AST_Λ_ASSIGNMENT_STATEMENT
         : AST_STATEMENT
     {
         public EXPRESSION VariableExpression { get; set; }
