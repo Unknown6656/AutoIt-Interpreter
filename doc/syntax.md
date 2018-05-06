@@ -107,24 +107,24 @@ TODO
 
 The following displays a list of operator precendences in AutoIt++. The top-most row represents operators with the highest precedence. Inside the row, the operators are parsed and matched from left to right.
 
-| Operator(s)                   | Associativity |
-|-------------------------------|---------------|
-| `#`, `+`, `-`, `!`, `~`       | Right (Unary) |
-| `^`                           | Left          |
-| `*`, `/`, `%`                 | Left          |
-| `+`, `-`                      | Left          |
-| `<<`, `>>`                    | Left          |
-| `<<<`, `>>>`                  | Left          |
-| `~&&`, `&&`                   | Left          |
-| `~^^`, `^^`                   | Left          |
-| `~||`, `||`                   | Left          |
-| `@| ..`, `@ ..`, `@|`, `@`    | _Dunno, right I think_ |
-| `&`                           | Left          |
-| `<>`, `==`, `=`               | Left          |
-| `Nand`, `And`                 | Left          |
-| `Nxor`, `Xor`                 | Left          |
-| `Nor`, `Or`                   | Left          |
-| `Impl`                        | Left          |
+| Operator(s)                                                   | Associativity |
+|---------------------------------------------------------------|---------------|
+| `#`, `+`, `-`, `!`, `~`                                       | Right (Unary) |
+| `^`                                                           | Left          |
+| `*`, `/`, `%`                                                 | Left          |
+| `+`, `-`                                                      | Left          |
+| `<<`, `>>`                                                    | Left          |
+| `<<<`, `>>>`                                                  | Left          |
+| `~&&`, `&&`                                                   | Left          |
+| `~^^`, `^^`                                                   | Left          |
+| <code>~&#124;&#124;</code>, <code>&#124;&#124;</code>         | Left          |
+| <code>@&#124; ..</code>, `@ ..`, <code>@&#124;</code>, `@`    | _Dunno, right I think_ |
+| `&`                                                           | Left          |
+| `<>`, `==`, `=`                                               | Left          |
+| `Nand`, `And`                                                 | Left          |
+| `Nxor`, `Xor`                                                 | Left          |
+| `Nor`, `Or`                                                   | Left          |
+| `Impl`                                                        | Left          |
 
 # AutoIt++ string interpolation
 
