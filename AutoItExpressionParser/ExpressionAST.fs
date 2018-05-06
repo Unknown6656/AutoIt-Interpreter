@@ -98,16 +98,12 @@ type OPERATOR_UNARY =
 and MEMBER =
     | Field of string
     | Method of FUNCCALL
-and VARIABLE_EXPRESSION =
-    | ArrayAccess of VARIABLE * EXPRESSION list
-    | DotAccess of VARIABLE * MEMBER list
-    | Variable of VARIABLE
 and FUNCCALL = string * EXPRESSION list
 and EXPRESSION =
     | Literal of LITERAL
     | FunctionCall of FUNCCALL
-    | ΛFunctionCall of VARIABLE_EXPRESSION * EXPRESSION list
-    | VariableExpression of VARIABLE_EXPRESSION
+    | ΛFunctionCall of EXPRESSION * EXPRESSION list
+    | VariableExpression of VARIABLE
     | Macro of MACRO
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
@@ -115,8 +111,11 @@ and EXPRESSION =
     | ToExpression of EXPRESSION * EXPRESSION
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | ArrayInitExpression of EXPRESSION list
-    // TODO : dot-access of member elements
-and ASSIGNMENT_EXPRESSION = OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
+    | ArrayAccess of EXPRESSION * EXPRESSION // index
+    | DotAccess of EXPRESSION * MEMBER list
+and ASSIGNMENT_EXPRESSION =
+    | ScalarAssignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION
+    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE  * EXPRESSION list * EXPRESSION // op, var, indices, expr
 type MULTI_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION
@@ -138,18 +137,8 @@ type FUNCTION_PARAMETER =
         Type : FUNCTION_PARAMETER_TYPE
     }
 
-
-let rec private VarToAString =
-    function
-    | ArrayAccess (v, e) -> sprintf "$%s[%s]" (v.Name) (String.Join(", ", List.map ToAString e))
-    | DotAccess (v, d) -> d
-                          |> List.map (fun d -> "." + match d with
-                                                      | Field f -> f
-                                                      | Method m -> ToAString(FunctionCall m)
-                                      )
-                          |> List.fold (+) v.Name
-    | Variable v -> sprintf "$%s" (v.Name)
-and private AssToAString =
+    
+let private AssToAString =
     function
     | Assign -> "="
     | AssignAdd -> "+="
@@ -169,7 +158,7 @@ and private AssToAString =
     | AssignRotateRight -> ">>>="
     | AssignShiftLeft -> "<<="
     | AssignShiftRight -> ">>="
-and private BinToAString o a b =
+let private BinToAString o a b =
     sprintf (match o with
             | StringConcat -> "(%s & %s)"
             | EqualCaseSensitive -> "(%s == %s)"
@@ -202,7 +191,7 @@ and private BinToAString o a b =
             | BitwiseShiftLeft -> "(%s << %s)"
             | BitwiseShiftRight -> "(%s >> %s)"
             ) a b
-and private ToAString =
+let rec private ToAString =
     function
     | Literal l ->
         match l with
@@ -212,10 +201,10 @@ and private ToAString =
         | False -> "false"
         | Number d -> d.ToString()
         | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
-    | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
-    | ΛFunctionCall (v, es) -> sprintf "%s(%s)" (VarToAString v) (String.Join (", ", (List.map ToAString es)))
-    | VariableExpression v -> VarToAString v
-    | Macro m -> sprintf "@%s" m.Name
+    | FunctionCall (f, p) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString p)))
+    | ΛFunctionCall (e, p) -> sprintf "%s(%s)" (ToAString e) (String.Join (", ", (List.map ToAString p)))
+    | VariableExpression v -> v.ToString()
+    | Macro m -> m.ToString()
     | UnaryExpression (o, e) ->
         match o with
         | Identity -> sprintf "%s" (ToAString e)
@@ -227,10 +216,18 @@ and private ToAString =
     | BinaryExpression (o, x, y) -> BinToAString o (ToAString x) (ToAString y)
     | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
-    | AssignmentExpression (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
+    | AssignmentExpression (ScalarAssignment (o, v, e)) -> sprintf "%s %s %s" (v.ToString()) (AssToAString o) (ToAString e)
+    | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> sprintf "%s[%s] %s %s" (v.ToString()) (String.Join (", ", (List.map ToAString i))) (AssToAString o) (ToAString e)
     | ArrayInitExpression e -> sprintf "[ %s ]" (e
                                                  |> List.map ToAString
                                                  |> String.concat ", ")
+    | ArrayAccess (v, e) -> sprintf "%s[%s]" (ToAString v) (ToAString e)
+    | DotAccess (v, d) -> d
+                          |> List.map (fun d -> "." + match d with
+                                                      | Field f -> f
+                                                      | Method m -> ToAString(FunctionCall m)
+                                      )
+                          |> List.fold (+) (ToAString v)
 
 [<ExtensionAttribute>]
 let Print e = ToAString e
