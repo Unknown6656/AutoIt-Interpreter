@@ -1545,7 +1545,7 @@ namespace AutoItInterpreter
 
                                     if (expressions is null)
                                     {
-                                        state.ReportError($"Your expression '{i.Expression}' is shit!", i.DefinitionContext, 0);
+                                        state.ReportError($"The expression '{i.Expression}' could not be parsed <--- serious error!!!", i.DefinitionContext, 0);
 
                                         break; // TODO
                                     }
