@@ -99,9 +99,15 @@ $l_str = #$str ; has the value 9
 
 TODO
 
-## Unary Operators `#`, `+`, `!` and `~`
+## Unary Operators `#`, `!` and `~`
 
-TODO
+As partly mentioned in previous paragraphs, AutoIt++ introduces the following right-associative unary prefix operators:
+
+ - `#`: **String/Array Length**
+ - `!`: **Logical (Boolean) Not**
+ - `~`: **Bitwise Not**
+
+The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do also exist and work as is being expected by the AutoIt3 specification and mathematical standards.
 
 ## Operator Precedence
 
@@ -137,15 +143,15 @@ A backslash can also be used as control-sequence prefix for the following entiti
 | Expression | Translation |
 |------------|------------|
 | `\"` | The ASCII character `"` (`0x22`) |
-| `\r` | The control-character `CR` (`0x0D`) |
-| `\n` | The control-character `LF` (`0x0A`) |
-| `\t` | The control-character `HT` (`0x09`) |
-| `\v` | The control-character `VT` (`0x0B`) |
-| `\b` | The control-character `BS` (`0x08`) |
-| `\a` | The control-character `BEL` (`0x07`) |
-| `\f` | The control-character `FF` (`0x0C`) |
-| `\d` | The control-character `DEL` (`0x7F`) |
-| `\0` | The control-character `NUL` (`0x00`) |
+| `\r` | The control-character `CR` (carrige return, `0x0D`) |
+| `\n` | The control-character `LF` (line feed, `0x0A`) |
+| `\t` | The control-character `HT` (horizontal tab, `0x09`) |
+| `\v` | The control-character `VT` (vertical tab, `0x0B`) |
+| `\b` | The control-character `BS` (backspace, `0x08`) |
+| `\a` | The control-character `BEL` (bell, `0x07`) |
+| `\f` | The control-character `FF` (form format, `0x0C`) |
+| `\d` | The control-character `DEL` (delete, `0x7F`) |
+| `\0` | The control-character `NUL` (null, `0x00`) |
 | `\\` | The ASCII character `\` (`0x5C`) |
 | `\$` | The ASCII character `$` (`0x24`) |
 | `\@` | The ASCII character `@` (`0x40`) |
@@ -197,6 +203,7 @@ DllCall("kernel32.dll", "BOOL", "Beep", "DWORD", 262, "DWORD", 1000)
 ```
 
 A transalation of C++ to AutoIt3- or AutoIt++-types can be found in [this AutoIt3 documentation article](https://www.autoitscript.com/autoit3/docs/functions/DllCall.htm).
+<br/>
 More general information about Platform Invocation Services can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Platform_Invocation_Services).
 
 # λ-Expressions

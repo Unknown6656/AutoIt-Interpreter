@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Collections;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System;
@@ -195,6 +196,17 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantType OneBasedSubstring(AutoItVariantType start, AutoItVariantType count) => ToString().Substring(start.ToInt() - 1, count.ToInt());
 
+        public object Call(object target, params object[] argv)
+        {
+            object res = null;
+
+            UseGCHandledData<MethodInfo>(m => res = m.Invoke(target, argv));
+
+            return res;
+        }
+
+        public object Call(params object[] argv) => Call(null, argv);
+
         public bool ToBool() => this;
 
         public decimal ToDecimal() => this;
@@ -248,7 +260,8 @@ namespace AutoItCoreLibrary
         public static bool Greater(AutoItVariantType v1, AutoItVariantType v2) => v1 > v2;
         public static bool GreaterEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 >= v2;
 
-        public static AutoItVariantType NewDelegate(Delegate func) => func is null ? Null : NewGCHandledData(func.Method);
+        public static AutoItVariantType NewDelegate(Delegate func) => NewDelegate(func?.Method);
+        public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : NewGCHandledData(func);
         public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {

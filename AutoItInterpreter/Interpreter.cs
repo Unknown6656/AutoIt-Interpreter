@@ -975,7 +975,7 @@ namespace AutoItInterpreter
                             {
                                 state.RemoveLastErrorOrWarning();
 
-                                expr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.Assignment)?.Item3 ?? expr;
+                                expr = (expr as EXPRESSION.AssignmentExpression)?.Item?.Item3 ?? expr;
                             }
                         }
 
@@ -1344,43 +1344,43 @@ namespace AutoItInterpreter
                                         Context = defctx,
                                         Statements = new AST_STATEMENT[]
                                         {
-                                        new AST_WHILE_STATEMENT
-                                        {
-                                            Context = defctx,
-                                            WhileBlock = new AST_CONDITIONAL_BLOCK
+                                            new AST_WHILE_STATEMENT
                                             {
                                                 Context = defctx,
-                                                Condition = EXPRESSION.NewLiteral(LITERAL.True),
-                                                Statements = new AST_STATEMENT[]
+                                                WhileBlock = new AST_CONDITIONAL_BLOCK
                                                 {
-                                                    new AST_IF_STATEMENT
+                                                    Context = defctx,
+                                                    Condition = EXPRESSION.NewLiteral(LITERAL.True),
+                                                    Statements = new AST_STATEMENT[]
                                                     {
-                                                        Context = defctx,
-                                                        If = new AST_CONDITIONAL_BLOCK
+                                                        new AST_IF_STATEMENT
                                                         {
                                                             Context = defctx,
-                                                            Condition = cond,
-                                                            Statements = proclines().Concat(new AST_STATEMENT[]
+                                                            If = new AST_CONDITIONAL_BLOCK
                                                             {
-                                                                new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                                Context = defctx,
+                                                                Condition = cond,
+                                                                Statements = proclines().Concat(new AST_STATEMENT[]
                                                                 {
-                                                                    Context = defctx,
-                                                                    Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                                        OPERATOR_ASSIGNMENT.AssignAdd,
-                                                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
-                                                                        EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
-                                                                    )
-                                                                }
-                                                            }).ToArray()
-                                                        },
-                                                        OptionalElse = new AST_STATEMENT[]
-                                                        {
-                                                            new AST_BREAK_STATEMENT { Level = 1 }
+                                                                    new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                                    {
+                                                                        Context = defctx,
+                                                                        Expression = new ASSIGNMENT_EXPRESSION(
+                                                                            OPERATOR_ASSIGNMENT.AssignAdd,
+                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                                            EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
+                                                                        )
+                                                                    }
+                                                                }).ToArray()
+                                                            },
+                                                            OptionalElse = new AST_STATEMENT[]
+                                                            {
+                                                                new AST_BREAK_STATEMENT { Level = 1 }
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
                                         }
                                     };
 
@@ -1415,67 +1415,72 @@ namespace AutoItInterpreter
                                             Context = defctx,
                                             Statements = new AST_STATEMENT[]
                                             {
-                                            new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                            {
-                                                Context = defctx,
-                                                Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                    OPERATOR_ASSIGNMENT.Assign,
-                                                    VARIABLE_EXPRESSION.NewVariable(elemvar.Variable),
-                                                    EXPRESSION.NewArrayIndex(
-                                                        VARIABLE_EXPRESSION.NewVariable(collvar.Variable),
-                                                        EXPRESSION.NewVariableExpression(
-                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                                        )
-                                                    )
-                                                )
-                                            },
-                                            }
-                                            .Concat(proclines())
-                                            .Concat(new AST_STATEMENT[]
-                                            {
-                                            new AST_IF_STATEMENT
-                                            {
-                                                Context = defctx,
-                                                If = new AST_CONDITIONAL_BLOCK
+                                                new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                 {
                                                     Context = defctx,
-                                                    Condition = EXPRESSION.NewBinaryExpression(
-                                                        OPERATOR_BINARY.GreaterEqual,
+                                                    Expression = new ASSIGNMENT_EXPRESSION(
+                                                        OPERATOR_ASSIGNMENT.Assign,
+                                                        VARIABLE_EXPRESSION.NewVariable(elemvar.Variable),
                                                         EXPRESSION.NewVariableExpression(
-                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                                        ),
-                                                        EXPRESSION.NewFunctionCall(
-                                                            new Tuple<string, FSharpList<EXPRESSION>>(
-                                                                "ubound",
+                                                            VARIABLE_EXPRESSION.NewArrayAccess(
+                                                                collvar.Variable,
                                                                 new FSharpList<EXPRESSION>(
                                                                     EXPRESSION.NewVariableExpression(
-                                                                        VARIABLE_EXPRESSION.NewVariable(collvar.Variable)
+                                                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
                                                                     ),
                                                                     FSharpList<EXPRESSION>.Empty
                                                                 )
                                                             )
                                                         )
-                                                    ),
-                                                    Statements = new AST_STATEMENT[]
-                                                    {
-                                                        new AST_BREAK_STATEMENT { Level = 1 }
-                                                    }
+                                                    )
                                                 },
-                                                OptionalElse = new AST_STATEMENT[]
+                                            }
+                                            .Concat(proclines())
+                                            .Concat(new AST_STATEMENT[]
+                                            {
+                                                new AST_IF_STATEMENT
                                                 {
-                                                    new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                    Context = defctx,
+                                                    If = new AST_CONDITIONAL_BLOCK
                                                     {
                                                         Context = defctx,
-                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
-                                                            OPERATOR_ASSIGNMENT.AssignAdd,
-                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
-                                                            EXPRESSION.NewLiteral(
-                                                                LITERAL.NewNumber(1)
+                                                        Condition = EXPRESSION.NewBinaryExpression(
+                                                            OPERATOR_BINARY.GreaterEqual,
+                                                            EXPRESSION.NewVariableExpression(
+                                                                VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                            ),
+                                                            EXPRESSION.NewFunctionCall(
+                                                                new Tuple<string, FSharpList<EXPRESSION>>(
+                                                                    "ubound",
+                                                                    new FSharpList<EXPRESSION>(
+                                                                        EXPRESSION.NewVariableExpression(
+                                                                            VARIABLE_EXPRESSION.NewVariable(collvar.Variable)
+                                                                        ),
+                                                                        FSharpList<EXPRESSION>.Empty
+                                                                    )
+                                                                )
                                                             )
-                                                        )
+                                                        ),
+                                                        Statements = new AST_STATEMENT[]
+                                                        {
+                                                            new AST_BREAK_STATEMENT { Level = 1 }
+                                                        }
+                                                    },
+                                                    OptionalElse = new AST_STATEMENT[]
+                                                    {
+                                                        new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                        {
+                                                            Context = defctx,
+                                                            Expression = new ASSIGNMENT_EXPRESSION(
+                                                                OPERATOR_ASSIGNMENT.AssignAdd,
+                                                                VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                                EXPRESSION.NewLiteral(
+                                                                    LITERAL.NewNumber(1)
+                                                                )
+                                                            )
+                                                        }
                                                     }
                                                 }
-                                            }
                                             })
                                             .ToArray()
                                         };
@@ -1501,7 +1506,7 @@ namespace AutoItInterpreter
                                             if (ex.IsAssignmentExpression)
                                                 return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                 {
-                                                    Expression = (ex as EXPRESSION.AssignmentExpression)?.Item,
+                                                    Expression = new ASSIGNMENT_EXPRESSION((ex as EXPRESSION.AssignmentExpression)?.Item)
                                                 };
                                             else
                                             {
@@ -1550,7 +1555,9 @@ namespace AutoItInterpreter
                                     .Where(expr => expr != null)
                                     .Select(expr =>
                                     {
-                                        if (expr is EXPRESSION.AssignmentExpression aexpr && aexpr?.Item is ASSIGNMENT_EXPRESSION.Assignment assg && assg?.Item3 is EXPRESSION ex)
+                                        Tuple<OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION> assg = (expr as EXPRESSION.AssignmentExpression)?.Item;
+
+                                        if (assg?.Item3 is EXPRESSION ex)
                                             if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
                                             {
                                                 VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
@@ -1566,7 +1573,7 @@ namespace AutoItInterpreter
                                                     statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                     {
                                                         Context = i.DefinitionContext,
-                                                        Expression = ASSIGNMENT_EXPRESSION.NewAssignment(
+                                                        Expression = new ASSIGNMENT_EXPRESSION(
                                                             OPERATOR_ASSIGNMENT.Assign,
                                                             VARIABLE_EXPRESSION.NewVariable(var),
                                                             ex
@@ -1611,8 +1618,7 @@ namespace AutoItInterpreter
                                     DimensionExpressions = i.Dimensions.Select(x =>
                                     {
                                         EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
-                                        ASSIGNMENT_EXPRESSION aexpr = (expr as EXPRESSION.AssignmentExpression)?.Item;
-                                        EXPRESSION vexpr = (aexpr as ASSIGNMENT_EXPRESSION.Assignment)?.Item3;
+                                        EXPRESSION vexpr = (expr as EXPRESSION.AssignmentExpression)?.Item?.Item3;
 
                                         if (vexpr is null)
                                             ; // TODO : report error
@@ -1623,14 +1629,14 @@ namespace AutoItInterpreter
                                 };
                             case λ_ASSIGNMENT i:
                                 {
-                                    if (parsefexpr('$' + i.VariableName.Trim(), false) is EXPRESSION expr)
+                                    if (parseexpr('$' + i.VariableName.Trim(), false, false) is EXPRESSION expr)
                                         return new AST_λ_ASSIGNMENT_STATEMENT
                                         {
                                             VariableExpression = expr,
                                             Function = i.FunctionName.ToLower(),
                                         };
                                     else
-                                        break;
+                                        break; // TODO : error
                                 }
                             default:
                                 err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");

@@ -28,6 +28,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
 
         let nt_array_init_expressions   = x.nt<EXPRESSION list>()
         let nt_array_init_expression    = x.nt<EXPRESSION list>()
+        let nt_array_indexer_expression = x.nt<EXPRESSION list>()
+        let nt_array_indexer_expressions= x.nt<EXPRESSION list>()
 
         let nt_expression_ext           = x.nt<EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
@@ -95,6 +97,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let t_symbol_cparen             = x.t @"\)"
         let t_symbol_obrack             = x.t @"\["
         let t_symbol_cbrack             = x.t @"\]"
+        let t_symbol_ocurly             = x.t @"\{"
+        let t_symbol_ccurly             = x.t @"\}"
         let t_keyword_to                = x.t @"to"
         let t_keyword_impl              = x.t @"impl"
         let t_keyword_nand              = x.t @"nand"
@@ -175,15 +179,19 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
 
         reduce1 nt_multi_expressions nt_multi_expression (fun m -> [m])
         reduce3 nt_multi_expressions nt_multi_expression t_symbol_comma nt_multi_expressions (fun m _ ms -> m::ms)
-
         reduce1 nt_multi_expression nt_expression_ext SingleValue
 
         if not x.DeclarationMode then
             reduce3 nt_multi_expression nt_expression_ext t_keyword_to nt_expression_ext (fun a _ b -> ValueRange(a, b))
+            
+        reduce3 nt_array_indexer_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun _ e _ -> [e])
+        reduce1 nt_array_indexer_expressions nt_array_indexer_expression id
+        reduce2 nt_array_indexer_expressions nt_array_indexer_expression nt_array_indexer_expression (@)
 
-        reduce1 nt_variable_expression t_variable Variable
+        //reduce2 nt_variable_expression nt_variable_expression nt_array_indexer_expressions (fun v i -> ArrayAccess(v, i))
         reduce3 nt_variable_expression t_variable t_symbol_dot nt_dot_members (fun v _ m -> DotAccess(v, m))
-        
+        reduce1 nt_variable_expression t_variable Variable
+
         reduce1 nt_dot_members nt_dot_member (fun i -> [i])
         reduce3 nt_dot_members nt_dot_member t_symbol_dot nt_dot_members (fun x _ xs -> x::xs)
 
@@ -197,8 +205,8 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             // TODO : array init exprssions 
         
 
-            reduce3 nt_array_init_expressions t_symbol_obrack nt_array_init_expression t_symbol_cbrack (fun _ es _ -> es)
-            reduce2 nt_array_init_expressions t_symbol_obrack t_symbol_cbrack (fun _ _ -> [])
+            reduce3 nt_array_init_expressions t_symbol_ocurly nt_array_init_expression t_symbol_ccurly (fun _ es _ -> es)
+            reduce2 nt_array_init_expressions t_symbol_ocurly t_symbol_ccurly (fun _ _ -> [])
 
             reduce3 nt_array_init_expression nt_expression t_symbol_comma nt_array_init_expression (fun e _ es -> e::es)
             reduce1 nt_array_init_expression nt_expression (fun e -> [e])
@@ -298,11 +306,10 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
 
         reduce1 !@17 nt_literal Literal
         reduce1 !@17 nt_funccall FunctionCall
-        reduce1 !@17 nt_variable_expression VariableExpression
-        reduce1 !@17 t_macro Macro
         reduce0 !@17 t_string_3
         reduce3 !@17 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-        reduce4 !@17 nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun v _ i _ -> ArrayIndex(v, i))
+        reduce1 !@17 nt_variable_expression VariableExpression
+        reduce1 !@17 t_macro Macro
      // reduce5 !@17 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
         reduce4 nt_funccall t_identifier t_symbol_oparen nt_funcparams t_symbol_cparen (fun f _ p _ -> (f, p))
@@ -342,7 +349,6 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
             reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
         
-            reduce6 nt_assignment_expression nt_variable_expression t_symbol_obrack nt_expression t_symbol_cbrack nt_operator_binary_ass nt_expression (fun v _ i _ o e -> ArrayAssignment(o, v, i, e))
-            reduce3 nt_assignment_expression nt_variable_expression nt_operator_binary_ass nt_expression (fun v o e -> Assignment(o, v, e))
+            reduce3 nt_assignment_expression nt_variable_expression nt_operator_binary_ass nt_expression (fun v o e -> o, v, e)
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]

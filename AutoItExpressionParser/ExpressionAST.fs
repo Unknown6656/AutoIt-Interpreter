@@ -99,6 +99,7 @@ and MEMBER =
     | Field of string
     | Method of FUNCCALL
 and VARIABLE_EXPRESSION =
+    | ArrayAccess of VARIABLE * EXPRESSION list
     | DotAccess of VARIABLE * MEMBER list
     | Variable of VARIABLE
 and FUNCCALL = string * EXPRESSION list
@@ -107,7 +108,6 @@ and EXPRESSION =
     | FunctionCall of FUNCCALL
     | VariableExpression of VARIABLE_EXPRESSION
     | Macro of MACRO
-    | ArrayIndex of VARIABLE_EXPRESSION * EXPRESSION
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
@@ -115,9 +115,7 @@ and EXPRESSION =
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | ArrayInitExpression of EXPRESSION list
     // TODO : dot-access of member elements
-and ASSIGNMENT_EXPRESSION =
-    | Assignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
-    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION * EXPRESSION // op, var, index, expr
+and ASSIGNMENT_EXPRESSION = OPERATOR_ASSIGNMENT * VARIABLE_EXPRESSION * EXPRESSION
 type MULTI_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION
@@ -142,6 +140,7 @@ type FUNCTION_PARAMETER =
 
 let rec private VarToAString =
     function
+    | ArrayAccess (v, e) -> sprintf "$%s[%s]" (v.Name) (String.Join(", ", List.map ToAString e))
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with
                                                       | Field f -> f
@@ -215,7 +214,6 @@ and private ToAString =
     | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
     | VariableExpression v -> VarToAString v
     | Macro m -> sprintf "@%s" m.Name
-    | ArrayIndex (v, e) ->  sprintf "%s[%s]" (VarToAString v) (ToAString e)
     | UnaryExpression (o, e) ->
         match o with
         | Identity -> sprintf "%s" (ToAString e)
@@ -227,10 +225,7 @@ and private ToAString =
     | BinaryExpression (o, x, y) -> BinToAString o (ToAString x) (ToAString y)
     | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
-    | AssignmentExpression a ->
-        match a with
-        | Assignment (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
-        | ArrayAssignment (o, v, i, e) -> sprintf "%s[%s] %s %s" (VarToAString v) (ToAString i) (AssToAString o) (ToAString e)
+    | AssignmentExpression (o, v, e) -> sprintf "%s %s %s" (VarToAString v) (AssToAString o) (ToAString e)
     | ArrayInitExpression e -> sprintf "[ %s ]" (e
                                                  |> List.map ToAString
                                                  |> String.concat ", ")

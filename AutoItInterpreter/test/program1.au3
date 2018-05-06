@@ -22,6 +22,7 @@ $func1[4][9-8] = f2
 $func2 = Func($a, $b)
              ConsoleWrite($"called with ($a, $b)!\n")
          EndFunc
+$func3 = beep
          
 $func1(3.1, -5)
 $func2(42, 88)

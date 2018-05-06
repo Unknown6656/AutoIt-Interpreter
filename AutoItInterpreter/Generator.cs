@@ -290,7 +290,16 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_λ_ASSIGNMENT_STATEMENT s:
-                        println($"{tstr(s.VariableExpression)} = {TYPE}.{nameof(AutoItVariantType.NewDelegate)}({FUNC_PREFIX}{s.Function.Trim()});");
+                        string fname = s.Function.Trim();
+                        string mod = FUNC_MODULE;
+
+                        if (state.ASTFunctions.ContainsKey(fname))
+                        {
+                            fname = FUNC_PREFIX + fname;
+                            mod = TYPE;
+                        }
+
+                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase));");
 
                         return;
                     default:

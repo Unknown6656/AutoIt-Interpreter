@@ -255,4 +255,27 @@ namespace AutoItInterpreter.PartialAST
         public string Function { get; set; }
         public override bool IsEmpty => false;
     }
+
+    public readonly struct ASSIGNMENT_EXPRESSION
+    {
+        private readonly (OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION) _data;
+
+
+        public ASSIGNMENT_EXPRESSION(OPERATOR_ASSIGNMENT o, VARIABLE_EXPRESSION v, EXPRESSION e)
+            : this((o, v, e))
+        {
+        }
+
+        public ASSIGNMENT_EXPRESSION(Tuple<OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION> t)
+            : this(t.Item1, t.Item2, t.Item3)
+        {
+        }
+
+        public ASSIGNMENT_EXPRESSION((OPERATOR_ASSIGNMENT o, VARIABLE_EXPRESSION v, EXPRESSION e) t) => _data = t;
+
+        public static implicit operator (OPERATOR_ASSIGNMENT o, VARIABLE_EXPRESSION v, EXPRESSION e)(ASSIGNMENT_EXPRESSION ae) => ae._data;
+
+        public static implicit operator Tuple<OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION>(ASSIGNMENT_EXPRESSION ae) =>
+            new Tuple<OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION>(ae._data.Item1, ae._data.Item2, ae._data.Item3);
+    }
 }
