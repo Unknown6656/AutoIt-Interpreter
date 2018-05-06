@@ -975,7 +975,17 @@ namespace AutoItInterpreter
                             {
                                 state.RemoveLastErrorOrWarning();
 
-                                expr = (expr as EXPRESSION.AssignmentExpression)?.Item?.Item3 ?? expr;
+                                switch ((expr as EXPRESSION.AssignmentExpression)?.Item)
+                                {
+                                    case ASSIGNMENT_EXPRESSION.ArrayAssignment a:
+                                        expr = a.Item4;
+
+                                        break;
+                                    case ASSIGNMENT_EXPRESSION.ScalarAssignment a:
+                                        expr = a.Item3;
+
+                                        break;
+                                }
                             }
                         }
 
@@ -1150,7 +1160,7 @@ namespace AutoItInterpreter
                                         Variable = VARIABLE.NewTemporary,
                                         InitExpression = parseexpr(i.Expression, false)
                                     };
-                                    EXPRESSION exprvare = EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(exprvar.Variable));
+                                    EXPRESSION exprvare = EXPRESSION.NewVariableExpression(exprvar.Variable);
                                     dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
                                     IEnumerable<AST_CONDITIONAL_BLOCK> condcases = cases.Select(x =>
                                     {
@@ -1306,14 +1316,14 @@ namespace AutoItInterpreter
                                     EXPRESSION upcond = EXPRESSION.NewBinaryExpression(
                                         OPERATOR_BINARY.LowerEqual,
                                         EXPRESSION.NewVariableExpression(
-                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                            cntvar.Variable
                                         ),
                                         stop
                                     );
                                     EXPRESSION downcond = EXPRESSION.NewBinaryExpression(
                                         OPERATOR_BINARY.GreaterEqual,
                                         EXPRESSION.NewVariableExpression(
-                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                            cntvar.Variable
                                         ),
                                         stop
                                     );
@@ -1324,7 +1334,7 @@ namespace AutoItInterpreter
                                                         EXPRESSION.NewBinaryExpression(
                                                             OPERATOR_BINARY.And,
                                                             EXPRESSION.NewVariableExpression(
-                                                                VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                                upvar.Variable
                                                             ),
                                                             upcond
                                                         ),
@@ -1333,7 +1343,7 @@ namespace AutoItInterpreter
                                                             EXPRESSION.NewUnaryExpression(
                                                                 OPERATOR_UNARY.Not,
                                                                 EXPRESSION.NewVariableExpression(
-                                                                    VARIABLE_EXPRESSION.NewVariable(upvar.Variable)
+                                                                    upvar.Variable
                                                                 )
                                                             ),
                                                             downcond
@@ -1365,9 +1375,9 @@ namespace AutoItInterpreter
                                                                     new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                                     {
                                                                         Context = defctx,
-                                                                        Expression = new ASSIGNMENT_EXPRESSION(
+                                                                        Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
                                                                             OPERATOR_ASSIGNMENT.AssignAdd,
-                                                                            VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                                            cntvar.Variable,
                                                                             EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
                                                                         )
                                                                     }
@@ -1418,18 +1428,15 @@ namespace AutoItInterpreter
                                                 new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                 {
                                                     Context = defctx,
-                                                    Expression = new ASSIGNMENT_EXPRESSION(
+                                                    Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
                                                         OPERATOR_ASSIGNMENT.Assign,
-                                                        VARIABLE_EXPRESSION.NewVariable(elemvar.Variable),
-                                                        EXPRESSION.NewVariableExpression(
-                                                            VARIABLE_EXPRESSION.NewArrayAccess(
-                                                                collvar.Variable,
-                                                                new FSharpList<EXPRESSION>(
-                                                                    EXPRESSION.NewVariableExpression(
-                                                                        VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
-                                                                    ),
-                                                                    FSharpList<EXPRESSION>.Empty
-                                                                )
+                                                        elemvar.Variable,
+                                                        EXPRESSION.NewArrayAccess(
+                                                            EXPRESSION.NewVariableExpression(
+                                                                collvar.Variable
+                                                            ),
+                                                            EXPRESSION.NewVariableExpression(
+                                                                cntvar.Variable
                                                             )
                                                         )
                                                     )
@@ -1447,14 +1454,14 @@ namespace AutoItInterpreter
                                                         Condition = EXPRESSION.NewBinaryExpression(
                                                             OPERATOR_BINARY.GreaterEqual,
                                                             EXPRESSION.NewVariableExpression(
-                                                                VARIABLE_EXPRESSION.NewVariable(cntvar.Variable)
+                                                                cntvar.Variable
                                                             ),
                                                             EXPRESSION.NewFunctionCall(
                                                                 new Tuple<string, FSharpList<EXPRESSION>>(
                                                                     "ubound",
                                                                     new FSharpList<EXPRESSION>(
                                                                         EXPRESSION.NewVariableExpression(
-                                                                            VARIABLE_EXPRESSION.NewVariable(collvar.Variable)
+                                                                            collvar.Variable
                                                                         ),
                                                                         FSharpList<EXPRESSION>.Empty
                                                                     )
@@ -1471,9 +1478,9 @@ namespace AutoItInterpreter
                                                         new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                         {
                                                             Context = defctx,
-                                                            Expression = new ASSIGNMENT_EXPRESSION(
+                                                            Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
                                                                 OPERATOR_ASSIGNMENT.AssignAdd,
-                                                                VARIABLE_EXPRESSION.NewVariable(cntvar.Variable),
+                                                                cntvar.Variable,
                                                                 EXPRESSION.NewLiteral(
                                                                     LITERAL.NewNumber(1)
                                                                 )
@@ -1506,7 +1513,7 @@ namespace AutoItInterpreter
                                             if (ex.IsAssignmentExpression)
                                                 return new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                 {
-                                                    Expression = new ASSIGNMENT_EXPRESSION((ex as EXPRESSION.AssignmentExpression)?.Item)
+                                                    Expression = (ex as EXPRESSION.AssignmentExpression)?.Item
                                                 };
                                             else
                                             {
@@ -1555,12 +1562,10 @@ namespace AutoItInterpreter
                                     .Where(expr => expr != null)
                                     .Select(expr =>
                                     {
-                                        Tuple<OPERATOR_ASSIGNMENT, VARIABLE_EXPRESSION, EXPRESSION> assg = (expr as EXPRESSION.AssignmentExpression)?.Item;
-
-                                        if (assg?.Item3 is EXPRESSION ex)
-                                            if (assg.Item1 == OPERATOR_ASSIGNMENT.Assign)
+                                        if ((expr as EXPRESSION.AssignmentExpression)?.Item is ASSIGNMENT_EXPRESSION.ScalarAssignment scaexpr && scaexpr.Item3 != null)
+                                            if (scaexpr.Item1 == OPERATOR_ASSIGNMENT.Assign)
                                             {
-                                                VARIABLE var = (assg.Item2 as VARIABLE_EXPRESSION.Variable)?.Item;
+                                                VARIABLE var = scaexpr.Item2;
                                                 AST_LOCAL_VARIABLE prev = targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var));
 
                                                 if (prev is null)
@@ -1573,10 +1578,10 @@ namespace AutoItInterpreter
                                                     statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                     {
                                                         Context = i.DefinitionContext,
-                                                        Expression = new ASSIGNMENT_EXPRESSION(
+                                                        Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
                                                             OPERATOR_ASSIGNMENT.Assign,
-                                                            VARIABLE_EXPRESSION.NewVariable(var),
-                                                            ex
+                                                            var,
+                                                            scaexpr.Item3
                                                         )
                                                     });
 
@@ -1586,12 +1591,12 @@ namespace AutoItInterpreter
                                                     err("errors.astproc.variable_exists", var);
                                             }
                                             else
-                                                err("errors.astproc.init_invalid_operator", assg.Item1);
+                                                err("errors.astproc.init_invalid_operator", scaexpr.Item1);
                                         else if (@const)
                                             err("errors.astproc.missing_value");
-                                        else if (expr is EXPRESSION.VariableExpression vexpr && vexpr.Item is VARIABLE_EXPRESSION.Variable variable)
+                                        else if (expr is EXPRESSION.VariableExpression vexpr)
                                         {
-                                            VARIABLE var = variable.Item;
+                                            VARIABLE var = vexpr.Item;
 
 
 
@@ -1618,7 +1623,7 @@ namespace AutoItInterpreter
                                     DimensionExpressions = i.Dimensions.Select(x =>
                                     {
                                         EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
-                                        EXPRESSION vexpr = (expr as EXPRESSION.AssignmentExpression)?.Item?.Item3;
+                                        EXPRESSION vexpr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.ScalarAssignment)?.Item3;
 
                                         if (vexpr is null)
                                             ; // TODO : report error
@@ -1706,7 +1711,7 @@ namespace AutoItInterpreter
                                         ListModule.OfSeq(
                                             new EXPRESSION[2]
                                             {
-                                                EXPRESSION.NewVariableExpression(VARIABLE_EXPRESSION.NewVariable(x.Item1)),
+                                                EXPRESSION.NewVariableExpression(x.Item1),
                                                 EXPRESSION.NewLiteral(
                                                     LITERAL.NewString(x.Item2.ToString())
                                                 )
