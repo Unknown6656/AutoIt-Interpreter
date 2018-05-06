@@ -1831,7 +1831,7 @@ namespace AutoItInterpreter
                 }
 
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
-                    if (uncalled != GLOBAL_FUNC_NAME)
+                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ'))
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
             }
 

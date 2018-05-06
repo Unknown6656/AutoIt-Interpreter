@@ -268,7 +268,7 @@ namespace {NAMESPACE}
                         return;
                     case AST_GOTO_STATEMENT s:
                         if (s.Label is null)
-                            println($"// called `goto´ on non-existent label ----> possible error?");
+                            println("// called `goto´ on non-existent label ----> possible error?");
                         else
                             println($"goto {s.Label.Name.Replace("<>", "")};");
 
@@ -295,11 +295,13 @@ namespace {NAMESPACE}
 
                         if (state.ASTFunctions.ContainsKey(fname))
                         {
-                            fname = FUNC_PREFIX + fname;
+                            fname = $"nameof({FUNC_PREFIX}{fname})";
                             mod = TYPE;
                         }
+                        else
+                            fname = $"\"{fname}\"";
 
-                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase));");
+                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod({fname}, BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase));");
 
                         return;
                     default:
