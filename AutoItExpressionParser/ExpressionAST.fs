@@ -106,6 +106,7 @@ and FUNCCALL = string * EXPRESSION list
 and EXPRESSION =
     | Literal of LITERAL
     | FunctionCall of FUNCCALL
+    | ΛFunctionCall of VARIABLE_EXPRESSION * EXPRESSION list
     | VariableExpression of VARIABLE_EXPRESSION
     | Macro of MACRO
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
@@ -212,6 +213,7 @@ and private ToAString =
         | Number d -> d.ToString()
         | String s -> sprintf "\"%s\"" (s.Replace("\\", "\\\\").Replace("\"", "\\\""))
     | FunctionCall (f, es) -> sprintf "%s(%s)" f (String.Join (", ", (List.map ToAString es)))
+    | ΛFunctionCall (v, es) -> sprintf "%s(%s)" (VarToAString v) (String.Join (", ", (List.map ToAString es)))
     | VariableExpression v -> VarToAString v
     | Macro m -> sprintf "@%s" m.Name
     | UnaryExpression (o, e) ->

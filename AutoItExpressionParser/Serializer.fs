@@ -2,7 +2,6 @@
 
 open AutoItExpressionParser.ExpressionAST
 open System
-open System.Text.RegularExpressions
 
 
 type SerializerSettings =
@@ -119,7 +118,9 @@ type Serializer (settings : SerializerSettings) =
                             | f -> let fs = match x.Settings.FunctionResolver.Invoke f with
                                             | null -> x.Settings.FunctionPrefix + f
                                             | f -> f
-                                   sprintf "%s(%s)" fs (String.Join (", ", (List.map printexpr es)))
+                                   sprintf "%s(%s)" fs (String.Join(", ", (List.map printexpr es)))
+                      | ΛFunctionCall (v, es) ->
+                            sprintf "(%s).Call(%s)" (printvar v) (String.Join(", ", (List.map printexpr es)))
                       | AssignmentExpression (o, v, e) -> printass (printvar v) o e
                       | ArrayInitExpression _
                       | ToExpression _ -> failwith "Invalid expression"

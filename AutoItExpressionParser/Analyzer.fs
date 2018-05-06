@@ -204,6 +204,7 @@ let rec ProcessConstants e =
                                      | _ -> false
                                      -> FunctionCall("Identity", [p])
         | FunctionCall (f, ps) -> FunctionCall(f, List.map ProcessConstants ps)
+        | ΛFunctionCall (f, ps) -> ΛFunctionCall(f, List.map ProcessConstants ps)
         | AssignmentExpression (o, v, e) -> AssignmentExpression(o, v, ProcessConstants e)
         | VariableExpression (ArrayAccess (v, i)) -> VariableExpression(ArrayAccess(v, List.map ProcessConstants i))
         | _ -> e
@@ -268,6 +269,7 @@ and GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     | Literal _
     | Macro _ -> []
     | FunctionCall f -> [[f]]
+    | ΛFunctionCall (_, e) -> [[null, e]]
     | VariableExpression v -> [getvarfunccalls v]
     | AssignmentExpression (_, v, i) -> [getvarfunccalls v; GetFunctionCallExpressions i]
     | UnaryExpression (_, e) -> [GetFunctionCallExpressions e]
@@ -286,7 +288,8 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
     match e with
     | Literal _
     | Macro _ -> []
-    | FunctionCall (_, es) -> []
+    | FunctionCall (_, es) -> List.map GetVariables es
+    | ΛFunctionCall (v, es) -> (procvar v)::(List.map GetVariables es)
     | VariableExpression v -> [procvar v]
     | AssignmentExpression (_, v, i) -> [procvar v; GetVariables i]
     | UnaryExpression (_, e) -> [GetVariables e]

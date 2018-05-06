@@ -30,3 +30,4 @@
 [ ] implement main return
 [ ] implement local macros
 [ ] fix ternary inline if
+[ ] COM-interop

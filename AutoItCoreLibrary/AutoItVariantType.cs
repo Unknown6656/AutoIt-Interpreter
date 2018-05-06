@@ -196,7 +196,7 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantType OneBasedSubstring(AutoItVariantType start, AutoItVariantType count) => ToString().Substring(start.ToInt() - 1, count.ToInt());
 
-        public object Call(object target, params object[] argv)
+        internal object Call(object target, params object[] argv)
         {
             object res = null;
 
@@ -205,7 +205,14 @@ namespace AutoItCoreLibrary
             return res;
         }
 
-        public object Call(params object[] argv) => Call(null, argv);
+        public AutoItVariantType Call(object target, params AutoItVariantType[] argv)
+        {
+            object res = Call(target, argv.Select(x => x as object).ToArray());
+
+            return res is AutoItVariantType v ? v : NewGCHandledData(res);
+        }
+
+        public AutoItVariantType Call(params AutoItVariantType[] argv) => Call(null, argv);
 
         public bool ToBool() => this;
 

@@ -303,12 +303,14 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         reduce2 !@16 t_symbol_minus !@16 (fun _ e -> UnaryExpression(Negate, e))
         reduce2 !@16 t_keyword_not !@16 (fun _ e -> UnaryExpression(Not, e))
         reduce2 !@16 t_operator_bit_not !@16 (fun _ e -> UnaryExpression(BitwiseNot, e))
-
-        reduce1 !@17 nt_literal Literal
-        reduce1 !@17 nt_funccall FunctionCall
-        reduce0 !@17 t_string_3
+        
         reduce3 !@17 t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
+        reduce4 !@17 nt_variable_expression t_symbol_oparen nt_funcparams t_symbol_cparen (fun v _ p _ -> ΛFunctionCall(v, p))
+        reduce3 !@17 nt_variable_expression t_symbol_oparen t_symbol_cparen (fun v _ _ -> ΛFunctionCall(v, []))
         reduce1 !@17 nt_variable_expression VariableExpression
+        reduce1 !@17 nt_funccall FunctionCall
+        reduce1 !@17 nt_literal Literal
+        reduce0 !@17 t_string_3
         reduce1 !@17 t_macro Macro
      // reduce5 !@17 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
 
