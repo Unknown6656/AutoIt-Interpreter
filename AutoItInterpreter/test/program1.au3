@@ -17,3 +17,11 @@ sleep(5000)
 #css
     System.Console.WriteLine("this is unsafe!!");
 #cse #ce
+
+$func1 = f2
+$func2 = Func($a, $b)
+            ConsoleWrite($"called with ($a, $b)!\n")
+         EndFunc
+         
+$func1(3.1, -5)
+$func2(42, 88)

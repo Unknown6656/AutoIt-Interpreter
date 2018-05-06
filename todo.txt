@@ -1,4 +1,4 @@
-[ ] lambdas
+[-] lambdas
             $kek = f2
             $kek = Func ($a, $b)
                 return 420
@@ -8,18 +8,12 @@
     
             $kek($a, $b) => call($kek, $a, $b)
 [x] substrings
-            "asdkfjh"@$2 = "s"
-            $k@$a..$a+$i
-
-            String indices are 1-based
-            StringMid("Hallo", 1, 4) = "Hall"
 [-] arrays
     [ ] declaration
-    [ ] redim
+    [-] redim
     [x] element assignment
 [ ] enum constants
 [x] pinvoke
-            func my_func as "long f2(int, int)" from ".dll" <<-------
 [-] documentation
     [-] usage
     [ ] language reference (functions etc.)

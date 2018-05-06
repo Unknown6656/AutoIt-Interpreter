@@ -166,6 +166,9 @@ namespace AutoItInterpreter
 
         private static class LinePreprocessor
         {
+            private static int _λcount;
+
+
             internal static InterpreterState PreprocessLines(InterpreterContext context, InterpreterOptions options)
             {
                 Stack<(FunctionDeclarationState, FunctionScope)> stack = new Stack<(FunctionDeclarationState, FunctionScope)>();
@@ -216,8 +219,8 @@ namespace AutoItInterpreter
                             err("errors.preproc.include_nfound", path);
                         }
                     }
-                    else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err))
-                        (stack.Peek().Item2 is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((Line, defcntx));
+                    else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err) is string s)
+                        (stack.Peek().Item2 is FunctionScope f ? f : pstate.GlobalFunction).Lines.Add((s, defcntx));
 
                     ++locindx;
                 }
@@ -451,16 +454,41 @@ namespace AutoItInterpreter
 
                         line.Match(new(string, ControlBlock[], Action<Match>)[]
                         {
-                        ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m =>
-                        {
-                            if (options.AllowUnsafeCode)
-                                Append(new CS_INLINE(curr, Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))));
-                        }),
-                        (@"^(?<optelse>else)?if\s+(?<cond>.+)\s+then$", new[] { Switch, Select }, m =>
-                        {
-                            string cond = m.Get("cond").Trim();
+                            ($@"^{CSHARP_INLINE}\s+(?<b64>[0-9a-z\+\/\=]+)$", new ControlBlock[0], m =>
+                            {
+                                if (options.AllowUnsafeCode)
+                                    Append(new CS_INLINE(curr, Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))));
+                            }),
+                            (@"^(?<optelse>else)?if\s+(?<cond>.+)\s+then$", new[] { Switch, Select }, m =>
+                            {
+                                string cond = m.Get("cond").Trim();
 
-                            if (m.Get("optelse").Length > 0)
+                                if (m.Get("optelse").Length > 0)
+                                {
+                                    ControlBlock cb = eblocks.Peek().CB;
+
+                                    if (cb == If || cb == ElseIf)
+                                    {
+                                        ForceCloseBlock();
+
+                                        IF par = (IF)curr;
+                                        ELSEIF_BLOCK b = OpenBlock(ElseIf, new ELSEIF_BLOCK(par, cond));
+
+                                        par.AddElseIf(b);
+                                    }
+                                    else
+                                        err("errors.preproc.misplaced_elseif", true);
+                                }
+                                else
+                                {
+                                    IF b = OpenBlock(IfElifElseBlock, new IF(curr));
+                                    IF_BLOCK ib = OpenBlock(If, new IF_BLOCK(b, cond));
+
+                                    b.SetIf(ib);
+                                }
+                            }),
+                            (@"^(else)?if\s+.+$", new[] { Switch, Select }, _ => err("errors.preproc.missing_then", true)),
+                            ("^else$", new[] { Switch, Select }, _ =>
                             {
                                 ControlBlock cb = eblocks.Peek().CB;
 
@@ -469,176 +497,151 @@ namespace AutoItInterpreter
                                     ForceCloseBlock();
 
                                     IF par = (IF)curr;
-                                    ELSEIF_BLOCK b = OpenBlock(ElseIf, new ELSEIF_BLOCK(par, cond));
+                                    ELSE_BLOCK eb = OpenBlock(Else, new ELSE_BLOCK(par));
 
-                                    par.AddElseIf(b);
+                                    par.SetElse(eb);
                                 }
                                 else
-                                    err("errors.preproc.misplaced_elseif", true);
-                            }
-                            else
+                                    err("errors.preproc.misplaced_else", true);
+                            }),
+                            ("^endif$", new[] { Switch, Select }, _ =>
                             {
-                                IF b = OpenBlock(IfElifElseBlock, new IF(curr));
-                                IF_BLOCK ib = OpenBlock(If, new IF_BLOCK(b, cond));
-
-                                b.SetIf(ib);
-                            }
-                        }),
-                        (@"^(else)?if\s+.+$", new[] { Switch, Select }, _ => err("errors.preproc.missing_then", true)),
-                        ("^else$", new[] { Switch, Select }, _ =>
-                        {
-                            ControlBlock cb = eblocks.Peek().CB;
-
-                            if (cb == If || cb == ElseIf)
+                                TryCloseBlock(If);
+                                TryCloseBlock(IfElifElseBlock);
+                            }),
+                            ("^select$", new[] { Switch, Select }, _ => OpenBlock(Select, new SELECT(curr))),
+                            ("^endselect$", new[] { Switch }, _ =>
                             {
-                                ForceCloseBlock();
+                                if (eblocks.Peek().CB == Case)
+                                    TryCloseBlock(Case);
 
-                                IF par = (IF)curr;
-                                ELSE_BLOCK eb = OpenBlock(Else, new ELSE_BLOCK(par));
+                                SELECT sw = eblocks.Peek().Entity as SELECT;
 
-                                par.SetElse(eb);
-                            }
-                            else
-                                err("errors.preproc.misplaced_else", true);
-                        }),
-                        ("^endif$", new[] { Switch, Select }, _ =>
-                        {
-                            TryCloseBlock(If);
-                            TryCloseBlock(IfElifElseBlock);
-                        }),
-                        ("^select$", new[] { Switch, Select }, _ => OpenBlock(Select, new SELECT(curr))),
-                        ("^endselect$", new[] { Switch }, _ =>
-                        {
-                            if (eblocks.Peek().CB == Case)
-                                TryCloseBlock(Case);
+                                sw.Cases.AddRange(sw.RawLines.Select(x => x as SELECT_CASE));
 
-                            SELECT sw = eblocks.Peek().Entity as SELECT;
-
-                            sw.Cases.AddRange(sw.RawLines.Select(x => x as SELECT_CASE));
-
-                            TryCloseBlock(Select);
-                        }),
-                        (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(Switch, new SWITCH(curr, m.Get("cond")))),
-                        ("^endswitch$", new[] { Select }, _ =>
-                        {
-                            if (eblocks.Peek().CB == Case)
-                                TryCloseBlock(Case);
-
-                            SWITCH sw = eblocks.Peek().Entity as SWITCH;
-
-                            sw.Cases.AddRange(sw.RawLines.Select(x => x as SWITCH_CASE));
-
-                            TryCloseBlock(Switch);
-                        }),
-                        (@"^case\s+(?<cond>.+)$", new ControlBlock[0], m =>
-                        {
-                            var b = eblocks.Peek();
-                            string cond = m.Get("cond");
-
-                            if (b.CB == Case)
+                                TryCloseBlock(Select);
+                            }),
+                            (@"^switch\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(Switch, new SWITCH(curr, m.Get("cond")))),
+                            ("^endswitch$", new[] { Select }, _ =>
                             {
-                                TryCloseBlock(Case);
+                                if (eblocks.Peek().CB == Case)
+                                    TryCloseBlock(Case);
 
-                                b = eblocks.Peek();
-                            }
+                                SWITCH sw = eblocks.Peek().Entity as SWITCH;
 
-                            if (b.CB == Switch)
-                                OpenBlock(Case, new SWITCH_CASE(null, cond));
-                            else if (b.CB == Select)
-                                OpenBlock(Case, new SELECT_CASE(null, cond));
-                            else
+                                sw.Cases.AddRange(sw.RawLines.Select(x => x as SWITCH_CASE));
+
+                                TryCloseBlock(Switch);
+                            }),
+                            (@"^case\s+(?<cond>.+)$", new ControlBlock[0], m =>
                             {
-                                err("errors.preproc.misplaced_case", true);
+                                var b = eblocks.Peek();
+                                string cond = m.Get("cond");
 
-                                return;
-                            }
-                        }),
-                        ("^continuecase$", new[] { Switch, Select }, _ =>
-                        {
-                            if (AnyParentCount(Switch, Select) > 0)
-                                Append(new CONTINUECASE(curr));
-                            else
-                                err("errors.preproc.misplaced_continuecase", true);
-                        }),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop")))),
-                        (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
-                        ("^next$", new[] { Switch, Select }, _ => TryCloseBlock(For)),
-                        (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(While, new WHILE(curr, m.Get("cond")))),
-                        (@"^exitloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
-                        {
-                            int cnt = AnyParentCount (For, Do, While);
-
-                            if (cnt == 0)
-                                err("errors.preproc.misplaced_exitloop", true);
-                            else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
-                            {
-                                if (levels > cnt)
+                                if (b.CB == Case)
                                 {
-                                    err("warnings.preproc.exit_level_truncated", false, levels, cnt);
+                                    TryCloseBlock(Case);
 
-                                    levels = cnt;
+                                    b = eblocks.Peek();
                                 }
 
-                                Append(new BREAK(curr, levels));
-                            }
-                            else
-                                err("warnings.preproc.exit_level_invalid", false, m.Get("levels"));
-                        }),
-                        (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
-                        {
-                            int cnt = AnyParentCount (For, Do, While);
-
-                            if (cnt == 0)
-                                err("errors.preproc.misplaced_continueloop", true);
-                            else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
-                            {
-                                if (levels > cnt)
+                                if (b.CB == Switch)
+                                    OpenBlock(Case, new SWITCH_CASE(null, cond));
+                                else if (b.CB == Select)
+                                    OpenBlock(Case, new SELECT_CASE(null, cond));
+                                else
                                 {
-                                    err("warnings.preproc.continue_level_truncated", false, levels, cnt);
+                                    err("errors.preproc.misplaced_case", true);
 
-                                    levels = cnt;
+                                    return;
                                 }
+                            }),
+                            ("^continuecase$", new[] { Switch, Select }, _ =>
+                            {
+                                if (AnyParentCount(Switch, Select) > 0)
+                                    Append(new CONTINUECASE(curr));
+                                else
+                                    err("errors.preproc.misplaced_continuecase", true);
+                            }),
+                            (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop"), m.Get("step")))),
+                            (@"^for\s+(?<var>\$[a-z_]\w*)\s*\=\s*(?<start>.+)\s+to\s+(?<stop>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOR(curr, m.Get("var"), m.Get("start"), m.Get("stop")))),
+                            (@"^for\s+(?<var>\$[a-z_]\w*)\s+in\s+(?<range>.+)$", new[] { Switch, Select }, m => OpenBlock(For, new FOREACH(curr, m.Get("var"), m.Get("range")))),
+                            ("^next$", new[] { Switch, Select }, _ => TryCloseBlock(For)),
+                            (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(While, new WHILE(curr, m.Get("cond")))),
+                            (@"^exitloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
+                            {
+                                int cnt = AnyParentCount (For, Do, While);
 
-                                Append(new CONTINUE(curr, levels));
-                            }
-                            else
-                                err("warnings.preproc.continue_level_invalid", false, m.Get("levels"));
-                        }),
-                        ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
-                        ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
-                        (@"^until\s+(?<cond>.+)$", new[] { Switch, Select }, m =>
-                        {
-                            (curr as DO_UNTIL)?.SetCondition(m.Get("cond"));
+                                if (cnt == 0)
+                                    err("errors.preproc.misplaced_exitloop", true);
+                                else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
+                                {
+                                    if (levels > cnt)
+                                    {
+                                        err("warnings.preproc.exit_level_truncated", false, levels, cnt);
 
-                            TryCloseBlock(Do);
-                        }),
-                        (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => OpenBlock(With, new WITH(curr, m.Get("expr")))),
-                        ("^endwith$", new[] { Switch, Select }, _ => TryCloseBlock(Do)),
-                        (@"^(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s*(?<expr>.+)\s*$", new[] { Switch, Select }, m =>
-                        {
-                            string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                            string expr = m.Get("expr");
+                                        levels = cnt;
+                                    }
 
-                            if (modf.Contains("local") && global)
-                                err("warnings.preproc.invalid_local", false);
-                            else if (modf.Contains("global") && !global)
-                                err("errors.preproc.invalid_global", true);
+                                    Append(new BREAK(curr, levels));
+                                }
+                                else
+                                    err("warnings.preproc.exit_level_invalid", false, m.Get("levels"));
+                            }),
+                            (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
+                            {
+                                int cnt = AnyParentCount (For, Do, While);
 
-                            Append(new DECLARATION(curr, expr, modf));
-                        }),
-                        (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
-                        (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
-                        (@"^(?<var>\$[a-z_]\w*)\s*=\s*(?<func>[a-z_]\w*)$",  new[] { Switch, Select }, m =>
-                        {
-                            string var = m.Get("var");
-                            string f = m.Get("func");
+                                if (cnt == 0)
+                                    err("errors.preproc.misplaced_continueloop", true);
+                                else if (int.TryParse(m.Get("levels"), out int levels) && levels > 0)
+                                {
+                                    if (levels > cnt)
+                                    {
+                                        err("warnings.preproc.continue_level_truncated", false, levels, cnt);
+
+                                        levels = cnt;
+                                    }
+
+                                    Append(new CONTINUE(curr, levels));
+                                }
+                                else
+                                    err("warnings.preproc.continue_level_invalid", false, m.Get("levels"));
+                            }),
+                            ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
+                            ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
+                            (@"^until\s+(?<cond>.+)$", new[] { Switch, Select }, m =>
+                            {
+                                (curr as DO_UNTIL)?.SetCondition(m.Get("cond"));
+
+                                TryCloseBlock(Do);
+                            }),
+                            (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => OpenBlock(With, new WITH(curr, m.Get("expr")))),
+                            ("^endwith$", new[] { Switch, Select }, _ => TryCloseBlock(Do)),
+                            (@"^(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s*(?<expr>.+)\s*$", new[] { Switch, Select }, m =>
+                            {
+                                string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                                string expr = m.Get("expr");
+
+                                if (modf.Contains("local") && global)
+                                    err("warnings.preproc.invalid_local", false);
+                                else if (modf.Contains("global") && !global)
+                                    err("errors.preproc.invalid_global", true);
+
+                                Append(new DECLARATION(curr, expr, modf));
+                            }),
+                            (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
+                            (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
+                            (@"^\$(?<var>[a-z_]\w*)\s*=\s*(?<func>[a-zλ_]\w*)$",  new[] { Switch, Select }, m =>
+                            {
+                                string var = m.Get("var");
+                                string f = m.Get("func");
 
 
-                            // TODO : function assigned to a variable
+                                // TODO : function assigned to a variable
 
-                        }),
-                        (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
+                            }),
+                            (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
                         }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
                         ++locndx;
@@ -664,7 +667,7 @@ namespace AutoItInterpreter
                 }
             }
 
-            private static unsafe bool ProcessFunctionDeclaration(string Line, Stack<(FunctionDeclarationState fds, FunctionScope sc)> stack, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
+            private static unsafe string ProcessFunctionDeclaration(string Line, Stack<(FunctionDeclarationState fds, FunctionScope sc)> stack, DefinitionContext defcntx, PreInterpreterState st, ErrorReporter err)
             {
                 (FunctionDeclarationState fds, FunctionScope current) = stack.Peek();
 
@@ -693,7 +696,7 @@ namespace AutoItInterpreter
 
                             stack.Push((fds_n, curr));
 
-                            return false;
+                            return null;
                         }
                     }
                     else
@@ -706,7 +709,7 @@ namespace AutoItInterpreter
                     stack.Pop();
                     stack.Push((fds_n, current));
 
-                    return false;
+                    return null;
                 }
                 else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s+as\s*""(?<sig>.*)""\s*from\s*""(?<lib>.*)""$", out m))
                 {
@@ -728,7 +731,19 @@ namespace AutoItInterpreter
                     else
                         st.PInvokeFunctions[name] = (sig, lib, defcntx);
 
-                    return false;
+                    return null;
+                }
+                else if (Line.Match(@"^\$(?<var>[_a-z]\w*)\s*\=\s*func\s*\(\s*(?<params>.*)\s*\)$", out m))
+                {
+                    string var = m.Get("var");
+                    string par = m.Get("params");
+                    string name = $"λ__{_λcount++:x8}";
+                    FunctionScope curr = new FunctionScope(defcntx, name);
+
+                    st.Functions[name] = curr;
+                    stack.Push((FunctionDeclarationState.InsideLambda, curr));
+
+                    return $"${var} = {name}";
                 }
                 else if (Line.Match("^endfunc$", out _))
                 {
@@ -738,15 +753,14 @@ namespace AutoItInterpreter
                     {
                         stack.Pop();
 
-                        if (fds != FunctionDeclarationState.RegularFunction)
+                        if ((fds != FunctionDeclarationState.RegularFunction) && (fds != FunctionDeclarationState.InsideLambda))
                             stack.Push((FunctionDeclarationState.RegularFunction, current));
                     }
 
-                    return false;
+                    return null;
                 }
                 else
-                    return fds == FunctionDeclarationState.RegularFunction
-                        || fds == FunctionDeclarationState.InsideLambda;
+                    return fds == FunctionDeclarationState.RegularFunction || fds == FunctionDeclarationState.InsideLambda ? Line : null;
             }
 
             private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
