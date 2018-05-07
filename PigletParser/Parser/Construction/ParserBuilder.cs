@@ -311,14 +311,11 @@ namespace Piglet.Parser.Construction
                     IPrecedenceGroup shiftPrecedence = grammar.GetPrecedence(shiftingTerminal);
                     IProductionRule<T> productionRule = reductionRules[reduceRuleNumber].Item1;
 
-                    // If the rule has a context dependent precedence, use that. Otherwise use
-                    // the reduce precedence of the last terminal symbol in the production rules precedence                        
-                    IPrecedenceGroup reducePrecedence = productionRule.ContextPrecedence ??
-                        grammar.GetPrecedence(productionRule.Symbols.Reverse().OfType<ITerminal<T>>().FirstOrDefault());
+                    // If the rule has a context dependent precedence, use that. Otherwise use the reduce precedence of the last terminal symbol in the production rules precedence                        
+                    IPrecedenceGroup reducePrecedence = productionRule.ContextPrecedence ?? grammar.GetPrecedence(productionRule.Symbols.Reverse().OfType<ITerminal<T>>().FirstOrDefault());
 
                     // If either rule has no precedence this is not a legal course of action.
-                    // TODO: In bison this is apparently cool, it prefers to shift in this case. I don't know why, but this
-                    // TODO: seems like a dangerous course of action to me.
+                    // TODO: In bison this is apparently cool, it prefers to shift in this case. I don't know why, but this seems like a dangerous course of action to me.
                     if (shiftPrecedence == null || reducePrecedence == null)
                         throw new ShiftReduceConflictException<T>("Grammar contains a shift reduce conflict")
                         {
@@ -330,10 +327,8 @@ namespace Piglet.Parser.Construction
                         table[state, tokenNumber] = reduceValue; // Precedence of reduce is higher, choose to reduce
                     else if (shiftPrecedence.Precedence > reducePrecedence.Precedence)
                         table[state, tokenNumber] = shiftValue; // Shift precedence is higher. Shift
-
                     // Both tokens are in the same precedence group! It's now up to the associativity
-                    // The two tokens CANNOT have different associativity, due to how the configuration works
-                    // which throws up if you try to multiple-define the precedence
+                    // The two tokens CANNOT have different associativity, due to how the configuration works which throws up if you try to multiple-define the precedence
                     else if (shiftPrecedence.Associativity == AssociativityDirection.Left)
                         table[state, tokenNumber] = reduceValue; // Prefer reducing
                     else if (shiftPrecedence.Associativity == AssociativityDirection.Right)

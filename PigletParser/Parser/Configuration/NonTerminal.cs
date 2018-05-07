@@ -17,8 +17,7 @@ namespace Piglet.Parser.Configuration
         public NonTerminal(IParserConfigurator<T> configurator)
         {
             this.configurator = configurator;
-
-            productions = new List<NonTerminalProduction>();
+            this.productions = new List<NonTerminalProduction>();
         }
 
         public IEnumerable<IProductionRule<T>> ProductionRules => productions;
@@ -26,18 +25,16 @@ namespace Piglet.Parser.Configuration
         public IProduction<T> AddProduction(params object[] parts)
         {
             if (parts.Any(part => !(part is string || part is ISymbol<T>)))
-            {
-                throw new ArgumentException("Only string and ISymbol are valid arguments.", "parts");
-            }
+                throw new ArgumentException("Only string and ISymbol are valid arguments.", nameof(parts));
 
             NonTerminalProduction nonTerminalProduction = new NonTerminalProduction(configurator, this, parts);
+
             productions.Add(nonTerminalProduction);
 
             return nonTerminalProduction;
         }
 
-        public override string ToString() =>
-            $"{DebugName} --> {string.Join(" | ", from r in ProductionRules select string.Join(" ", from s in r.Symbols select s is ITerminal<T> ? $"'{s.DebugName}'" : s.DebugName))}";
+        public override string ToString() => $"{DebugName} --> {string.Join(" | ", from r in ProductionRules select string.Join(" ", from s in r.Symbols select s is ITerminal<T> ? $"'{s.DebugName}'" : s.DebugName))}";
 
 
         internal class NonTerminalProduction
@@ -56,34 +53,27 @@ namespace Piglet.Parser.Configuration
             public NonTerminalProduction(IParserConfigurator<T> configurator, INonTerminal<T> resultSymbol, object[] symbols)
             {
                 this.resultSymbol = resultSymbol;
-
-                // Move production symbols to the list
-                this.symbols = new ISymbol<T>[symbols.Length];
+                this.symbols = new ISymbol<T>[symbols.Length]; // Move production symbols to the list
                 int i = 0;
+
                 foreach (object part in symbols)
                 {
-                    if (part is string)
+                    if (part is string regex)
                     {
-                        string regex = (string)part;
                         if (configurator.LexerSettings.EscapeLiterals)
-                        {
                             regex = Regex.Escape(regex);
-                        }
 
                         this.symbols[i] = configurator.CreateTerminal(regex, null, true);
-                        this.symbols[i].DebugName = (string)part;   // Set debug name to unescaped string, so it's easy on the eyes.
+                        this.symbols[i].DebugName = part as string; // Set debug name to unescaped string, so it's easy on the eyes.
                     }
                     else
-                    {
                         this.symbols[i] = (ISymbol<T>)symbols[i];
-                    }
+
                     ++i;
                 }
             }
 
-            public void SetReduceFunction(Func<T[], T> action) =>
-                // This creates a little lambda that ignores the exception
-                ReduceAction = (e, f) => action(f);
+            public void SetReduceFunction(Func<T[], T> action) => ReduceAction = (_, f) => action(f);
 
             public void SetReduceToFirst() => SetReduceFunction(f => f[0]);
 

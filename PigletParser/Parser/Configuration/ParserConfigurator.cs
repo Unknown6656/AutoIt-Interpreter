@@ -105,15 +105,15 @@ namespace Piglet.Parser.Configuration
         {
             foreach (Terminal<T> terminal in symbols.OfType<Terminal<T>>())
             {
-                if (terminalPrecedences.Any( f => f.Terminal == terminal))
+                if (terminalPrecedences.Any(f => f.Terminal == terminal))
                     throw new ParserConfigurationException($"Terminal {terminal.DebugName} has been declared to have a precedence multiple times"); // This terminal is defined multiple times
 
                 terminalPrecedences.Add(new TerminalPrecedence
-                                        {
-                                            Associativity = associativityDirection,
-                                            Terminal = terminal,
-                                            Precedence = currentPrecedence
-                                        });
+                {
+                    Associativity = associativityDirection,
+                    Terminal = terminal,
+                    Precedence = currentPrecedence
+                });
             }
 
             PrecedenceGroup group = new PrecedenceGroup  { Precedence = currentPrecedence };

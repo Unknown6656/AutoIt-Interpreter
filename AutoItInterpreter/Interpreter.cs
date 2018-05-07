@@ -258,7 +258,7 @@ namespace AutoItInterpreter
                 {
                     string tline = line.Trim();
 
-                    if (tline.Match(@"^\#(csharp\-start|css)(\b|\s+|$)", out _))
+                    if (tline.Match(@"^\#cs\[csharp\](\b|\s+|$)", out _))
                     {
                         if (!options.AllowUnsafeCode)
                             state.ReportKnownError("errors.preproc.csharp_requires_unsafe", new DefinitionContext(context.SourcePath, lcnt));
@@ -266,7 +266,7 @@ namespace AutoItInterpreter
                         ls |= LineState.CSharp;
                         csharp.start = lcnt;
                     }
-                    else if (tline.Match(@"^\#(csharp\-end|cse)(\b|\s+|$)", out _))
+                    else if (tline.Match(@"^\#ce\[csharp\](\b|\s+|$)", out _))
                     {
                         ls &= ~LineState.CSharp;
 
@@ -353,16 +353,16 @@ namespace AutoItInterpreter
             {
                 Dictionary<string, FUNCTION> funcdir = new Dictionary<string, FUNCTION>
                 {
-                    [GLOBAL_FUNC_NAME] = PreProcessFunction(state.GlobalFunction, GLOBAL_FUNC_NAME, true)
+                    [GLOBAL_FUNC_NAME] = PreprocessFunction(state.GlobalFunction, GLOBAL_FUNC_NAME, true)
                 };
 
                 foreach (string name in state.Functions.Keys)
                     if (name != GLOBAL_FUNC_NAME)
-                        funcdir[name] = PreProcessFunction(state.Functions[name], name, false);
+                        funcdir[name] = PreprocessFunction(state.Functions[name], name, false);
 
                 return funcdir;
 
-                FUNCTION PreProcessFunction(FunctionScope func, string name, bool global)
+                FUNCTION PreprocessFunction(FunctionScope func, string name, bool global)
                 {
                     Stack<(Entity Entity, ControlBlock CB)> eblocks = new Stack<(Entity, ControlBlock)>();
                     var lines = func.Lines.ToArray();
@@ -632,7 +632,7 @@ namespace AutoItInterpreter
                             }),
                             (@"^return\s+(?<val>.+)$", new[] { Switch, Select }, m => Append(new RETURN(curr, m.Get("val")))),
                             (@"^redim\s+(?<var>\$[a-z_]\w*)(?<dim>(\s*\[.+\])+\s*)$",  new[] { Switch, Select }, m => Append(new REDIM(curr, m.Get("var"), m.Get("dim").Split('[').Skip(1).Select(d => d.TrimEnd(']').Trim()).ToArray()))),
-                            (@"^\$(?<var>[a-z_]\w*.*)\s*=\s*(?<func>[a-zλ_]\w*)$",  new[] { Switch, Select }, m => Append(new λ_ASSIGNMENT(curr, m.Get("var"), m.Get("func")))),
+                            (@"^(?<var>\$[a-z_]\w*.*)\s*=\s*(?<func>[a-zλ_]\w*)$",  new[] { Switch, Select }, m => Append(new λ_ASSIGNMENT(curr, m.Get("var"), m.Get("func")))),
                             (".*", new[] { Switch, Select }, _ => Append(new RAWLINE(curr, line))),
                         }.Select<(string, ControlBlock[], Action<Match>), (string, Action<Match>)>(x => (x.Item1, m => Conflicts(() => x.Item3(m), x.Item2))).ToArray());
 
@@ -727,7 +727,7 @@ namespace AutoItInterpreter
                     string par = m.Get("params");
                     string idx = m.Get("indexer");
                     string name = $"λ__{_λcount++:x8}";
-                    FunctionScope curr = new FunctionScope(defctx, name);
+                    FunctionScope curr = new FunctionScope(defctx, par);
 
                     st.Functions[name] = curr;
                     stack.Push((FunctionDeclarationState.InsideLambda, curr));
@@ -993,7 +993,7 @@ namespace AutoItInterpreter
                     }
                     EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
                     {
-                        if (parsemexpr(expr, (assign ? aexparser : exparser), suppress) is MULTI_EXPRESSIONS m)
+                        if (parsemexpr(expr, assign ? aexparser : exparser, suppress) is MULTI_EXPRESSIONS m)
                             if (m.Length > 1)
                             {
                                 if (!suppress)
@@ -1634,7 +1634,7 @@ namespace AutoItInterpreter
                                 };
                             case λ_ASSIGNMENT i:
                                 {
-                                    if (parseexpr('$' + i.VariableName.Trim(), false, false) is EXPRESSION expr)
+                                    if (parseexpr(i.VariableName.Trim(), false, false) is EXPRESSION expr)
                                         return new AST_Λ_ASSIGNMENT_STATEMENT
                                         {
                                             VariableExpression = expr,

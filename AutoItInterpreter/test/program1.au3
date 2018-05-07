@@ -1,6 +1,6 @@
 ﻿#include-once
-#include <APIComConstants.au3>
-#include 'header-1.au3'
+; #include <APIComConstants.au3>
+; #include 'header-1.au3'
 
 
 Func f2($a, $b)
@@ -14,9 +14,9 @@ func sleep as "void sleep(int)" from "kernel32.dll"
 dllcall("mylib.a", "int", "NTfunc_W", "bool", false, "hwnd", null, "uint64", @sec, "float", $kek)
 sleep(5000)
 
-#css
+#cs[csharp]
     System.Console.WriteLine("this is unsafe!!");
-#cse #ce
+#ce[csharp]
 
 $func1[4] = f2
 $func2 = Func($a, $b)

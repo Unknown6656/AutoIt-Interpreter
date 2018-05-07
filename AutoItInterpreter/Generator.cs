@@ -292,6 +292,7 @@ namespace {NAMESPACE}
                     case AST_Λ_ASSIGNMENT_STATEMENT s:
                         string fname = s.Function.Trim();
                         string mod = FUNC_MODULE;
+                        string opt = "";
 
                         if (state.ASTFunctions.ContainsKey(fname))
                         {
@@ -299,9 +300,12 @@ namespace {NAMESPACE}
                             mod = TYPE;
                         }
                         else
+                        {
+                            opt = " | BindingFlags.IgnoreCase";
                             fname = $"\"{fname}\"";
+                        }
 
-                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod({fname}, BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase));");
+                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod({fname}, BindingFlags.NonPublic | BindingFlags.Static{opt}));");
 
                         return;
                     default:
