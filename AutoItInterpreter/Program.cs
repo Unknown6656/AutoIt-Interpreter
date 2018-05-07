@@ -181,6 +181,7 @@ namespace AutoItInterpreter
                 resetstdout();
             }
             catch (Exception ex)
+            when (!Debugger.IsAttached)
             {
                 ret = -1;
                 resetstdout();

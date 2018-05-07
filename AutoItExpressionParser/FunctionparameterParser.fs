@@ -76,3 +76,4 @@ type FunctionparameterParser(optimize : bool) =
 
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]
+        x.Configuration.LexerSettings.IgnoreCase <- true

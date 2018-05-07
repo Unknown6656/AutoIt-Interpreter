@@ -31,7 +31,7 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
         let nt_array_init_expression    = x.nt<EXPRESSION list>()
         let nt_expression_ext           = x.nt<EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
-        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..21 |]
+        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..22 |]
         let nt_funccall                 = x.nt<FUNCCALL>()
         let nt_funcparams               = x.nt<EXPRESSION list>()
         let nt_literal                  = x.nt<LITERAL>()
@@ -207,116 +207,116 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
 
 
 
-
+        
+        let reduce_m x m = List.iter (fun e -> reduce3 !@x !@x (fst e) !@(x + 1) (snd e)) m
+                           reduce0 !@x !@(x + 1)
+        let reduce_mm = List.iter (fun e -> reduce_m (fst e) (snd e))
 
         reduce1 nt_expression !@0 (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
-        
-        let reduce_m x = reduce0 !@x !@(x + 1)
-                         List.iter (fun e -> reduce3 !@x !@x (fst e) !@(x + 1) (snd e))
-        let reduce_mm = List.iter (fun e -> reduce_m (fst e) (snd e))
-        
+
+        reduce5 !@0 !@0 t_symbol_questionmark !@1 t_symbol_colon !@1 (fun c _ a _ b -> TernaryExpression(c, a, b))
+        reduce0 !@0 !@1
+
         [
-            0, [
+            1, [
                 t_keyword_impl, (fun a _ b -> BinaryExpression(Or, UnaryExpression(Not, a), b))
             ]
-            1, [
+            2, [
                 t_keyword_nor, (fun a _ b -> BinaryExpression(Nor, a, b))
                 t_keyword_or, (fun a _ b -> BinaryExpression(Or, a, b))
             ]
-            2, [
+            3, [
                 t_keyword_nxor, (fun a _ b -> BinaryExpression(Nxor, a, b))
                 t_keyword_xor, (fun a _ b -> BinaryExpression(Xor, a, b))
             ]
-            3, [
+            4, [
                 t_keyword_nand, (fun a _ b -> BinaryExpression(Nand, a, b))
                 t_keyword_and, (fun a _ b -> BinaryExpression(And, a, b))
             ]
-            4, [
+            5, [
                 t_operator_comp_lte, (fun a _ b -> BinaryExpression(LowerEqual, a, b))
                 t_operator_comp_lt, (fun a _ b -> BinaryExpression(Lower, a, b))
                 t_operator_comp_gte, (fun a _ b -> BinaryExpression(GreaterEqual, a, b))
                 t_operator_comp_gt, (fun a _ b -> BinaryExpression(Greater, a, b))
             ]
-            5, [
+            6, [
                 t_operator_comp_neq, (fun a _ b -> BinaryExpression(Unequal, a, b))
                 t_operator_comp_eq, (fun a _ b -> BinaryExpression(EqualCaseSensitive, a, b))
                 t_symbol_equal, (fun a _ b -> BinaryExpression(EqualCaseInsensitive, a, b))
             ]
-            6, [
+            7, [
                 t_symbol_ampersand, (fun a _ b -> BinaryExpression(StringConcat, a, b))
             ]
         ]
         |> reduce_mm
         
-        reduce0 !@7 !@8
-        reduce5 !@7 !@7 t_operator_at1 !@8 t_operator_dotrange !@8 (fun e _ s _ l -> UnaryExpression(String1Index(s, l), e))
-        reduce5 !@7 !@7 t_operator_at0 !@8 t_operator_dotrange !@8 (fun e _ s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
-        reduce3 !@7 !@7 t_operator_at1 !@8 (fun e _ s -> UnaryExpression(String1Index(s, Literal (Number 1m)), e))
-        reduce3 !@7 !@7 t_operator_at0 !@8 (fun e _ s -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), Literal (Number 1m)), e))
+        reduce5 !@8 !@8 t_operator_at1 !@9 t_operator_dotrange !@9 (fun e _ s _ l -> UnaryExpression(String1Index(s, l), e))
+        reduce5 !@8 !@8 t_operator_at0 !@9 t_operator_dotrange !@9 (fun e _ s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        reduce3 !@8 !@8 t_operator_at1 !@9 (fun e _ s -> UnaryExpression(String1Index(s, Literal (Number 1m)), e))
+        reduce3 !@8 !@8 t_operator_at0 !@9 (fun e _ s -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), Literal (Number 1m)), e))
+        reduce0 !@8 !@9
 
         [
-            8, [
+            9, [
                 t_operator_bit_nor, (fun a _ b -> BinaryExpression(BitwiseNor, a, b))
                 t_operator_bit_or, (fun a _ b -> BinaryExpression(BitwiseOr, a, b))
             ]
-            9, [
+            10, [
                 t_operator_bit_nxor, (fun a _ b -> BinaryExpression(BitwiseNxor, a, b))
                 t_operator_bit_xor, (fun a _ b -> BinaryExpression(BitwiseXor, a, b))
             ]
-            10, [
+            11, [
                 t_operator_bit_nand, (fun a _ b -> BinaryExpression(BitwiseNand, a, b))
                 t_operator_bit_and, (fun a _ b -> BinaryExpression(BitwiseAnd, a, b))
             ]
-            11, [
+            12, [
                 t_operator_bit_rol, (fun a _ b -> BinaryExpression(BitwiseRotateLeft, a, b))
                 t_operator_bit_ror, (fun a _ b -> BinaryExpression(BitwiseRotateRight, a, b))
             ]
-            12, [
+            13, [
                 t_operator_bit_shl, (fun a _ b -> BinaryExpression(BitwiseShiftLeft, a, b))
                 t_operator_bit_shr, (fun a _ b -> BinaryExpression(BitwiseShiftRight, a, b))
             ]
-            13, [
+            14, [
                 t_symbol_plus, (fun a _ b -> BinaryExpression(Add, a, b))
                 t_symbol_minus, (fun a _ b -> BinaryExpression(Subtract, a, b))
             ]
-            14, [
+            15, [
                 t_symbol_asterisk, (fun a _ b -> BinaryExpression(Multiply, a, b))
                 t_symbol_slash, (fun a _ b -> BinaryExpression(Divide, a, b))
                 t_symbol_percent, (fun a _ b -> BinaryExpression(Modulus, a, b))
             ]
-            15, [
+            16, [
                 t_symbol_hat, (fun a _ b -> BinaryExpression(Power, a, b))
             ]
         ]
         |> reduce_mm
 
-        reduce0 !@16 !@17
-        reduce2 !@16 t_symbol_numbersign !@16 (fun _ e -> UnaryExpression(StringLength, e))
-        reduce2 !@16 t_keyword_not !@16 (fun _ e -> UnaryExpression(Not, e))
-        reduce2 !@16 t_symbol_minus !@16 (fun _ e -> UnaryExpression(Negate, e))
-        reduce2 !@16 t_symbol_plus !@16 (fun _ e -> e)
-        reduce2 !@16 t_operator_bit_not !@16 (fun _ e -> UnaryExpression(BitwiseNot, e))
-        
+        reduce2 !@17 t_symbol_numbersign !@17 (fun _ e -> UnaryExpression(StringLength, e))
+        reduce2 !@17 t_keyword_not !@17 (fun _ e -> UnaryExpression(Not, e))
+        reduce2 !@17 t_symbol_minus !@17 (fun _ e -> UnaryExpression(Negate, e))
+        reduce2 !@17 t_symbol_plus !@17 (fun _ e -> e)
+        reduce2 !@17 t_operator_bit_not !@17 (fun _ e -> UnaryExpression(BitwiseNot, e))
         reduce0 !@17 !@18
-        reduce3 !@17 !@18 t_symbol_dot nt_dot_members (fun e _ m -> DotAccess(e, m))
-
+        
+        reduce3 !@18 !@19 t_symbol_dot nt_dot_members (fun e _ m -> DotAccess(e, m))
         reduce0 !@18 !@19
-        reduce4 !@18 !@18 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
-        reduce3 !@18 !@18 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
-        
-        reduce0 !@19 !@20
-        reduce2 !@19 !@19 nt_array_indexer (fun e i -> ArrayAccess(e, i))
 
-        reduce0 !@20 !@21
-        reduce3 !@20 t_symbol_oparen !@20 t_symbol_cparen (fun _ e _ -> e)
+        reduce4 !@19 !@19 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
+        reduce3 !@19 !@19 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reduce0 !@19 !@20
         
-     // TODO
-     // reduce5 !@21 nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
-        reduce1 !@21 t_variable VariableExpression
-        reduce1 !@21 nt_funccall FunctionCall
-        reduce1 !@21 nt_literal Literal
-        reduce1 !@21 t_macro Macro
-        reduce0 !@21 t_string_3
+        reduce2 !@20 !@20 nt_array_indexer (fun e i -> ArrayAccess(e, i))
+        reduce0 !@20 !@21
+
+        reduce3 !@21 t_symbol_oparen !@21 t_symbol_cparen (fun _ e _ -> e)
+        reduce0 !@21 !@22
+
+        reduce1 !@22 t_variable VariableExpression
+        reduce1 !@22 nt_funccall FunctionCall
+        reduce1 !@22 nt_literal Literal
+        reduce1 !@22 t_macro Macro
+        reduce0 !@22 t_string_3
 
         reduce1 nt_dot_member t_identifier Field
         reduce1 nt_dot_member nt_funccall Method
@@ -368,3 +368,4 @@ type ExpressionParser(optimize : bool, assignment : bool, declaration : bool) =
             reduce3 nt_assignment_expression t_variable nt_operator_binary_ass nt_expression (fun v o e -> ScalarAssignment(o, v, e))
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]
+        x.Configuration.LexerSettings.IgnoreCase <- true

@@ -112,3 +112,4 @@ type PInvokeParser() =
                                                                                    })
 
         x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]
+        x.Configuration.LexerSettings.IgnoreCase <- true
