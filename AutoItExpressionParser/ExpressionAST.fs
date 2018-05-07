@@ -110,7 +110,7 @@ and EXPRESSION =
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
     | ToExpression of EXPRESSION * EXPRESSION
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
-    | ArrayInitExpression of EXPRESSION list
+    | ArrayInitExpression of EXPRESSION list * EXPRESSION list // indexers, initexpr
     | ArrayAccess of EXPRESSION * EXPRESSION // index
     | DotAccess of EXPRESSION * MEMBER list
 and ASSIGNMENT_EXPRESSION =
@@ -218,9 +218,9 @@ let rec private ToAString =
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
     | AssignmentExpression (ScalarAssignment (o, v, e)) -> sprintf "%s %s %s" (v.ToString()) (AssToAString o) (ToAString e)
     | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> sprintf "%s[%s] %s %s" (v.ToString()) (String.Join (", ", (List.map ToAString i))) (AssToAString o) (ToAString e)
-    | ArrayInitExpression e -> sprintf "[ %s ]" (e
-                                                 |> List.map ToAString
-                                                 |> String.concat ", ")
+    | ArrayInitExpression (_, e) -> sprintf "[ %s ]" (e
+                                                      |> List.map ToAString
+                                                      |> String.concat ", ")
     | ArrayAccess (v, e) -> sprintf "%s[%s]" (ToAString v) (ToAString e)
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with
