@@ -253,23 +253,23 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let reducet i h x y f = let n = !@(i + 1)
                                 let c = !@i
                                 let f = (fun a _ b _ c -> f a b c)
+                                reduce0 c n
                                 match h with
                                 | TernaryLeft -> reduce5 c c x n y n f
                                 | TernaryMiddle -> reduce5 c n x c y n f
                                 | TernaryRight -> reduce5 c n x n y c f
-                                reduce0 c n
         let reduceb i h x f = let n = !@(i + 1)
                               let c = !@i
                               let f = (fun a _ b -> f a b)
+                              reduce0 c n
                               match h with
                               | BinaryLeft -> reduce3 c c x n f
                               | BinaryRight -> reduce3 c n x c f
-                              reduce0 c n
         let reducebe i h x f = reduceb i h x (fun a b -> BinaryExpression(f, a, b))
-        let reduceu i h x f = match h with
+        let reduceu i h x f = reduce0 !@i !@(i + 1)
+                              match h with
                               | UnaryPrefix -> reduce2 !@i x !@i (fun _ e -> f e)
                               | UnaryPostfix -> reduce2 !@i !@i x (fun e _ -> f e)
-                              reduce0 !@i !@(i + 1)
         let reduceue i h x f = reduceu i h x (fun e -> UnaryExpression(f, e))
         
 
@@ -296,9 +296,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
             reduce2 nt_array_init_expressions t_symbol_obrack t_symbol_cbrack (fun _ _ -> [])
             reduce3 nt_array_init_expression nt_expression t_symbol_comma nt_array_init_expression (fun e _ es -> e::es)
             reduce1 nt_array_init_expression nt_expression (fun e -> [e])
-        else
-            reduce0 nt_expression_ext nt_expression
-            
+
         if x.AllowAssignment then
             reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
         
@@ -324,7 +322,11 @@ type ExpressionParser(opt : ExpressionParserOptions) =
             reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
             reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
 
+        if not x.DeclarationMode then
+            reduce0 nt_expression_ext nt_expression
+            
         reduce1 nt_expression !@0 (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
+        
         reducet 0 TernaryRight t_symbol_questionmark t_symbol_colon (fun c x y -> TernaryExpression(c, x, y))
         reduceb 1 BinaryLeft t_keyword_impl (fun a b -> BinaryExpression(Or, UnaryExpression(Not, a), b))
         reducebe 2 BinaryLeft t_keyword_nor Nor

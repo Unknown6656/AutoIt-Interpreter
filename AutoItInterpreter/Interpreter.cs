@@ -927,13 +927,13 @@ namespace AutoItInterpreter
             {
                 List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
                 ExpressionParserOptions optimize = options.Settings.UseOptimization ? ExpressionParserOptions.Optimized : default;
-                FunctionparameterParser fpparser = new FunctionparameterParser(options.Settings.UseOptimization);
-                ExpressionParser dexparser = new ExpressionParser(ExpressionParserOptions.AllowAssignment | ExpressionParserOptions.DeclarationMode | optimize);
-                ExpressionParser aexparser = new ExpressionParser(ExpressionParserOptions.AllowAssignment | optimize);
-                ExpressionParser exparser = new ExpressionParser(optimize);
+                FunctionparameterParser p_funcparam = new FunctionparameterParser(options.Settings.UseOptimization);
+                ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserOptions.DeclarationMode | optimize);
+                ExpressionParser p_assignment = new ExpressionParser(ExpressionParserOptions.AllowAssignment | optimize);
+                ExpressionParser p_expression = new ExpressionParser(optimize);
                 AST_FUNCTION _currfunc = null;
 
-                foreach (dynamic parser in new dynamic[] { fpparser, dexparser, aexparser, exparser })
+                foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration })
                     parser.Initialize();
 
                 foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
@@ -993,7 +993,7 @@ namespace AutoItInterpreter
                     }
                     EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
                     {
-                        if (parsemexpr(expr, assign ? aexparser : exparser, suppress) is MULTI_EXPRESSION[] m)
+                        if (parsemexpr(expr, assign ? p_assignment : p_expression, suppress) is MULTI_EXPRESSION[] m)
                             if (m.Length > 1)
                             {
                                 if (!suppress)
@@ -1051,7 +1051,7 @@ namespace AutoItInterpreter
 
                                     try
                                     {
-                                        @params = fpparser.Parse(i.RawParameters);
+                                        @params = p_funcparam.Parse(i.RawParameters);
                                     }
                                     catch (Exception ex)
                                     {
@@ -1248,7 +1248,7 @@ namespace AutoItInterpreter
                                         return new AST_SWITCH_CASE_EXPRESSION
                                         {
                                             Statements = proclines(),
-                                            Expressions = parsemexpr(expr, exparser)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                            Expressions = parsemexpr(expr, p_expression)?.ToArray() ?? new MULTI_EXPRESSION[0]
                                         };
                                 }
                             case RETURN i:
@@ -1539,7 +1539,7 @@ namespace AutoItInterpreter
                             case DECLARATION i:
                                 {
                                     AST_FUNCTION targetfunc = i.Modifiers.Contains("global") ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
-                                    MULTI_EXPRESSION[] expressions = parsemexpr(i.Expression, dexparser);
+                                    MULTI_EXPRESSION[] expressions = parsemexpr(i.Expression, p_delcaration);
                                     List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
                                     bool @const = i.Modifiers.Contains("const");
 

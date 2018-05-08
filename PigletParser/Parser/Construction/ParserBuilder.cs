@@ -236,6 +236,7 @@ namespace Piglet.Parser.Construction
                                     // Augment exception with correct symbols for the poor user
                                     e.PreviousReduceSymbol = reductionRules[-(1 + e.PreviousValue)].Item1.ResultSymbol;
                                     e.NewReduceSymbol = reductionRules[reductionRule].Item1.ResultSymbol;
+
                                     throw;
                                 }
                         }
@@ -273,12 +274,11 @@ namespace Piglet.Parser.Construction
         {
             // This is an error condition, find out what sort of exception it is
             short oldValue = table[state, tokenNumber];
-            if (oldValue != value && oldValue != short.MinValue)
-            {
+
+            if ((oldValue != value) && (oldValue != short.MinValue))
                 try
                 {
-                    if (oldValue < 0 && value < 0)
-                        // Both values are reduce. Throw a reduce reduce conflict. This is not solveable
+                    if (oldValue < 0 && value < 0) // Both values are reduce. Throw a reduce reduce conflict. This is not solveable. NOTE: Bison takes the first rule (here 'oldValue')
                         throw new ReduceReduceConflictException<T>("Grammar contains a reduce reduce conflict");
 
                     int shiftTokenNumber = tokenNumber;
@@ -295,11 +295,9 @@ namespace Piglet.Parser.Construction
                     }
                     else
                     {
-                        // TODO: Unsure if this is a real case. The only testcases 
-                        // TODO: that end up here are retarded tests which are cyclic in nature.
+                        // TODO: Unsure if this is a real case. The only testcases that end up here are retarded tests which are cyclic in nature.
                         // TODO: These cases always fail later on anyway due to conflicts.
-                        // The old value was a shift
-                        // the new value must be a reduce
+                        // The old value was a shift, the new value must be a reduce
                         shiftValue = oldValue;
                         reduceValue = value;
                         reduceRuleNumber = -(value + 1);
@@ -350,7 +348,6 @@ namespace Piglet.Parser.Construction
 
                     throw;
                 }
-            }
             else
                 table[state, tokenNumber] = value;
         }
