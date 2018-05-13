@@ -343,8 +343,11 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
         reducebe 15 BinaryLeft t_symbol_ampersand StringConcat
-        reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
-        reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        
+        //reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
+        //reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        reduce0 !@16 !@18
+
         reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
         reduceb 19 BinaryLeft t_operator_at0 (fun e i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number 1m), Literal <| Number 1m), e))
         reducebe 20 BinaryLeft t_operator_bit_nor BitwiseNor
