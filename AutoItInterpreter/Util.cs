@@ -323,6 +323,214 @@ namespace AutoItInterpreter
                         Console.WriteLine($"[{(err.Type == ErrorType.Fatal ? "ERR." : err.Type == ErrorType.Warning ? "WARN" : "NOTE")}]  {err}");
             }
         }
+
+        public static void DisplayFinalResult(FinalResult res)
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+
+            const int iwdith = 60;
+            int iheight = 12 + GetSmallText().Length;
+            int w = Console.WindowWidth - 1;
+            int sdist = (Console.WindowWidth - iwdith) / 2;
+            Random rand = new Random(Guid.NewGuid().GetHashCode());
+            byte[] rline = new byte[w];
+
+            for (int y = 0; y < iheight + 4; ++y)
+            {
+                rand.NextBytes(rline);
+
+                for (int x = 0; x < w; ++x)
+                    Console.Write((char)((rline[x] % 0x4f) + ' '));
+
+                Console.WriteLine();
+            }
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.CursorLeft = sdist;
+            Console.CursorTop -= iheight + 1;
+            Console.Write($"O{new string('=', iwdith - 2)}O");
+
+            foreach (string line in GetBigText())
+            {
+                Console.CursorTop++;
+                Console.CursorLeft = sdist;
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write('|');
+                Console.ForegroundColor = GetFGColor();
+                Console.Write(line);
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write('|');
+
+            }
+
+            foreach (string line in GetSmallText())
+            {
+                Console.CursorTop++;
+                Console.CursorLeft = sdist;
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write('|');
+                Console.ForegroundColor = GetFGColor();
+                Console.Write(line);
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write('|');
+            }
+
+            Console.CursorTop++;
+            Console.CursorLeft = sdist;
+            Console.Write($"|{new string(' ', iwdith - 2)}|");
+            Console.CursorTop++;
+            Console.CursorLeft = sdist;
+            Console.Write($"O{new string('=', iwdith - 2)}O");
+            Console.CursorTop += 3;
+            Console.CursorLeft = 0;
+            Console.ForegroundColor = ConsoleColor.Gray;
+
+            string[] GetBigText()
+            {
+                string bigtxt;
+
+                switch (res)
+                {
+                    case FinalResult.OK:
+                    case FinalResult.OK_Notes:
+                    case FinalResult.OK_Warnings:
+                        bigtxt = @"
+   @@@@@  @@  @@   @@@@    @@@@   @@@@@@   @@@@@   @@@@@
+  @@      @@  @@  @@  @@  @@  @@  @@      @@      @@   
+   @@@@   @@  @@  @@      @@      @@@@     @@@@    @@@@
+      @@  @@  @@  @@  @@  @@  @@  @@          @@      @@
+  @@@@@    @@@@    @@@@    @@@@   @@@@@@  @@@@@   @@@@@
+";
+                        break;
+                    case FinalResult.Errors_Compiled:
+                        bigtxt = @"
+      @@@@@    @@@     @@@@@   @@@@@  @@@@@@  @@@@@
+      @@  @@  @@ @@   @@      @@      @@      @@  @@
+      @@@@@   @@ @@    @@@@    @@@@   @@@@    @@  @@
+      @@     @@@@@@@      @@      @@  @@      @@  @@
+      @@     @@   @@  @@@@@   @@@@@   @@@@@@  @@@@@
+";
+                        break;
+                    default:
+                        bigtxt = @"
+    @@@@@@   @@@    @@  @@      @@  @@  @@@@@   @@@@@@
+    @@      @@ @@   @@  @@      @@  @@  @@  @@  @@
+    @@@@    @@ @@   @@  @@      @@  @@  @@@@@   @@@@
+    @@     @@@@@@@  @@  @@      @@  @@  @@ @@   @@
+    @@     @@   @@  @@  @@@@@@   @@@@   @@  @@  @@@@@@
+";
+                        break;
+                }
+
+                return bigtxt.Split("\n").Select(x => x.Trim('\r').PadRight(iwdith - 2, ' ')).ToArray();
+            }
+            string[] GetSmallText()
+            {
+                string smalltxt;
+
+                switch (res)
+                {
+                    case FinalResult.OK:
+                    case FinalResult.OK_Notes:
+                        smalltxt = @"
+|        THE SCRIPT COULD BE COMPILED SUCCESSFULLY.        |
+";
+                        break;
+                    case FinalResult.OK_Warnings:
+                        smalltxt = @"
+|     THE SCRIPT COULD BE COMPILED WITH SOME WARNINGS.     |
+";
+                        break;
+                    case FinalResult.Errors_Compiled:
+                        smalltxt = @"
+| THE SCRIPT COULDN'T NORMALLY HAVE BEEN COMPILED, HOWEVER |
+| SOME ERRORS HAVE BEEN SUPRESSED. BINARY MIGHT BE BROKEN. |
+";
+                        break;
+                    default:
+                        smalltxt = @"
+|   THE SCRIPT COULDN'T BE COMPILED DUE TO SOME CRITICAL   |
+|                     COMPILER ERRORS.                     |
+";
+                        break;
+                }
+
+                return smalltxt.Trim().Split("\n").Select(x => x.Trim('\r').Trim('|')).ToArray();
+            }
+            ConsoleColor GetFGColor()
+            {
+                switch (res)
+                {
+                    case FinalResult.OK:
+                    case FinalResult.OK_Notes:
+                    case FinalResult.OK_Warnings:
+                        return ConsoleColor.Green;
+                    case FinalResult.Errors_Compiled:
+                        return ConsoleColor.Yellow;
+                    default:
+                        return ConsoleColor.Red;
+                }
+            }
+
+            /*
+            
+          | . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . |
+          | . . . . . . . | . . . . . . . | . . . . . . . | . . . . . . . |
+          | . . . | . . . | . . . | . . . | . . . | . . . | . . . | . . . |
+          | . | . | . | . | . | . | . | . | . | . | . | . | . | . | . | . |
+          1   5   9   13  17  21  25  29  33  37  41  45  49  53  57  61  65
+          '   '   '   '   '   '   '   '   '   '   '   '   '   '   '   '   '
+   1 ---  O==========================================================O
+       -  |                                                          |
+   3  --  |    @@@@@@   @@@    @@  @@      @@  @@  @@@@@   @@@@@@    |
+       -  |    @@      @@ @@   @@  @@      @@  @@  @@  @@  @@        |
+   5 ---  |    @@@@    @@ @@   @@  @@      @@  @@  @@@@@   @@@@      |
+       -  |    @@     @@@@@@@  @@  @@      @@  @@  @@ @@   @@        |
+   7  --  |    @@     @@   @@  @@  @@@@@@   @@@@   @@  @@  @@@@@@    |
+       -  |                                                          |
+   9 ---  O==========================================================O
+       -  |                                                          |
+      --  |      @@@@@    @@@     @@@@@   @@@@@  @@@@@@  @@@@@       |
+       -  |      @@  @@  @@ @@   @@      @@      @@      @@  @@      |
+     ---  |      @@@@@   @@ @@    @@@@    @@@@   @@@@    @@  @@      |
+       -  |      @@     @@@@@@@      @@      @@  @@      @@  @@      |
+      --  |      @@     @@   @@  @@@@@   @@@@@   @@@@@@  @@@@@       |
+       -  |                                                          |
+     ---  O==========================================================O
+       -  |                                                          |
+      --  |   @@@@@  @@  @@   @@@@    @@@@   @@@@@@   @@@@@   @@@@@  |
+       -  |  @@      @@  @@  @@  @@  @@  @@  @@      @@      @@      |
+     ---  |   @@@@   @@  @@  @@      @@      @@@@     @@@@    @@@@   |
+       -  |      @@  @@  @@  @@  @@  @@  @@  @@          @@      @@  |
+      --  |  @@@@@    @@@@    @@@@    @@@@   @@@@@@  @@@@@   @@@@@   |
+       -  |                                                          |
+          O==========================================================O
+          |        THE SCRIPT COULD BE COMPILED SUCCESSFULLY.        |
+          O==========================================================O
+          |     THE SCRIPT COULD BE COMPILED WITH SOME WARNINGS.     |
+          O==========================================================O
+          | THE SCRIPT COULDN'T NORMALLY HAVE BEEN COMPILED, HOWEVER |
+          | SOME ERRORS HAVE BEEN SUPRESSED. BINARY MIGHT BE BROKEN. |
+          O==========================================================O
+          |   THE SCRIPT COULDN'T BE COMPILED DUE TO SOME CRITICAL   |
+          |                     COMPILER ERRORS.                     |
+          O==========================================================O                                                                           
+
+             */
+
+        }
+
+
+        public enum FinalResult
+            : byte
+        {
+            OK,
+            OK_Notes,
+            OK_Warnings,
+            Errors_Compiled,
+            Errors_Failed
+        }
     }
 
     public sealed class PathEqualityComparer

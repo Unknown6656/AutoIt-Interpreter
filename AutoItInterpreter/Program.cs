@@ -200,6 +200,8 @@ namespace AutoItInterpreter
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(sb.ToString());
                 Console.ForegroundColor = ConsoleColor.Gray;
+
+                DebugPrintUtil.DisplayFinalResult(DebugPrintUtil.FinalResult.Errors_Failed);
             }
 
             if (Debugger.IsAttached)

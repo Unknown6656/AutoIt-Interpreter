@@ -65,6 +65,7 @@ namespace AutoItInterpreter
         public InterpreterState Interpret()
         {
             DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit++-compiler");
+            DebugPrintUtil.FinalResult fr;
             InterpreterState state;
             bool success = false;
 
@@ -82,7 +83,11 @@ namespace AutoItInterpreter
                 void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null, 0), args);
 
                 if (ret != 0)
+                {
                     cmperr("errors.generator.cannot_create_dotnet", ret);
+
+                    fr = DebugPrintUtil.FinalResult.Errors_Failed;
+                }
                 else
                 {
                     TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
@@ -106,7 +111,11 @@ namespace AutoItInterpreter
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 
                     if (ret != 0)
+                    {
                         cmperr("errors.generator.build_failed", ret);
+
+                        fr = DebugPrintUtil.FinalResult.Errors_Failed;
+                    }
                     else
                     {
                         DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}");
@@ -128,13 +137,20 @@ namespace AutoItInterpreter
 
                         foreach (FileInfo file in bindir.EnumerateFiles())
                             file.CopyTo($"{targetdir.FullName}/{file.Name}", true);
+
+                        fr = state.Errors.Any(err => err.Type == ErrorType.Fatal) ? DebugPrintUtil.FinalResult.Errors_Compiled :
+                             state.Errors.Any(err => err.Type == ErrorType.Warning) ? DebugPrintUtil.FinalResult.OK_Warnings :
+                             state.Errors.Length > 0 ? DebugPrintUtil.FinalResult.OK_Notes : DebugPrintUtil.FinalResult.OK;
                     }
                 }
 
                 state.ElevateWarningsToErrors();
 
                 if (Options.UseVerboseOutput)
+                {
                     DebugPrintUtil.DisplayCodeAndErrors(state);
+                    DebugPrintUtil.DisplayFinalResult(fr);
+                }
 
                 DebugPrintUtil.DisplayErrors(state, Options);
                 DebugPrintUtil.PrintSeperator(null);
