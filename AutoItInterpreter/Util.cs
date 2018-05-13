@@ -58,7 +58,11 @@ namespace AutoItInterpreter
                 n();
         }
 
-        public static IEnumerable<U> Filter<T, U>(this IEnumerable<T> e) where U : T => e.Where(x => x is U).Select(x => (U)x);
+        public static IEnumerable<U> SelectWhere<T, U>(this IEnumerable<T> e, Func<T, U> s, Func<U, bool> w) => e.Select(s).Where(w);
+
+        public static IEnumerable<U> WhereSelect<T, U>(this IEnumerable<T> e, Func<T, bool> w, Func<T, U> s) => e.Where(w).Select(s);
+
+        public static IEnumerable<U> Filter<T, U>(this IEnumerable<T> e) where U : T => e.WhereSelect(x => x is U, x => (U)x);
 
         public static bool IsValidJson(this string str)
         {

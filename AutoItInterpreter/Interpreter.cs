@@ -936,9 +936,7 @@ namespace AutoItInterpreter
                 foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration })
                     parser.Initialize();
 
-                foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(from kvp in state.Functions
-                                                                                                                                where kvp.Key != GLOBAL_FUNC_NAME
-                                                                                                                                select (kvp.Key, kvp.Value)))
+                foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(state.Functions.WhereSelect(x => x.Key != GLOBAL_FUNC_NAME, x => (x.Key, x.Value))))
                     state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
 
                 state.PInvokeSignatures = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();

@@ -111,26 +111,34 @@ The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do al
 
 ## Operator Precedence
 
-The following displays a list of operator precendences in AutoIt++. The top-most row represents operators with the highest precedence. Inside the row, the operators are parsed and matched from left to right.
+The following displays a list of operator precendence groups in AutoIt++. The top-most row represents operators or constructs with the highest precedence. Inside the row, the operators are parsed and matched from left to right.
 
-| Operator(s)                                                   | Associativity |
-|---------------------------------------------------------------|---------------|
-| `#`, `+`, `-`, `!`, `~`                                       | Right (Unary) |
-| `^`                                                           | Left          |
-| `*`, `/`, `%`                                                 | Left          |
-| `+`, `-`                                                      | Left          |
-| `<<`, `>>`                                                    | Left          |
-| `<<<`, `>>>`                                                  | Left          |
-| `~&&`, `&&`                                                   | Left          |
-| `~^^`, `^^`                                                   | Left          |
-| <code>~&#124;&#124;</code>, <code>&#124;&#124;</code>         | Left          |
-| <code>@&#124; ..</code>, `@ ..`, <code>@&#124;</code>, `@`    | _Dunno, right I think_ |
-| `&`                                                           | Left          |
-| `<>`, `==`, `=`                                               | Left          |
-| `Nand`, `And`                                                 | Left          |
-| `Nxor`, `Xor`                                                 | Left          |
-| `Nor`, `Or`                                                   | Left          |
-| `Impl`                                                        | Left          |
+| Operator(s) / Construct(s)                                        | Associativity |
+|-------------------------------------------------------------------|---------------|
+| `( ... )` parenthesizing                                          | Unary         |
+| `func(...)`, `@macro`, `$variable`, literals, numbers and strings |               |
+| `[]` array access                                                 | (Left)        |
+| `()` λ function call                                              | (Left)        |
+| `.` "dot" member access                                           | (Left)        |
+| `!`, `-`, `+`, `~`                                                | Unary prefix  |
+| `#`                                                               | Unary postfix |
+| `^`                                                               | Right         |
+| `%`, `/`, `*`                                                     | Left          |
+| `-`, `+`                                                          | Left          |
+| `<<`, `>>`                                                        | Left          |
+| `<<<`, `>>>`                                                      | Left          |
+| `~&&`, `&&`                                                       | Left          |
+| `~^^`, `^^`                                                       | Left          |
+| <code>~&#124;&#124;</code>, <code>&#124;&#124;</code>             | Left          |
+| <code>@&#124;</code>, `@`                                         | Left          |
+| <code>@&#124; ..</code>, `@ ..`                                   | Left (Ternary)|
+| `&`                                                               | Left          |
+| `<>`, `==`, `=`                                                   | Left          |
+| `<=`, `<`, `>=`, `>`                                              | Left          |
+| `Nand`, `And`                                                     | Left          |
+| `Nxor`, `Xor`                                                     | Left          |
+| `Nor`, `Or`                                                       | Left          |
+| `Impl`                                                            | Left          |
 
 # AutoIt++ string interpolation
 

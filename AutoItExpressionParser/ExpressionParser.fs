@@ -110,7 +110,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
 
         let nt_expression_ext           = x.nt<EXPRESSION>()
         let nt_expression               = x.nt<EXPRESSION>()
-        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..50 |]
+        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..49 |]
         let nt_funccall                 = x.nt<FUNCCALL>()
         let nt_funcparams               = x.nt<EXPRESSION list>()
         let nt_literal                  = x.nt<LITERAL>()
@@ -155,7 +155,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let t_operator_comp_eq          = x.t @"=="
         let t_operator_at1              = x.t @"@\|"
         let t_operator_at0              = x.t @"@"
-        let t_operator_dotrange         = x.t @"\.?\.\."
+        let t_operator_dotrange         = x.t @"\.\."
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
         let t_symbol_questionmark       = x.t @"\?"
@@ -357,8 +357,8 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reducebe 27 BinaryLeft t_operator_bit_ror BitwiseRotateRight
         reducebe 28 BinaryLeft t_operator_bit_shl BitwiseShiftLeft
         reducebe 29 BinaryLeft t_operator_bit_shr BitwiseShiftRight
-        reducebe 30 BinaryLeft t_symbol_plus Add
-        reducebe 31 BinaryLeft t_symbol_minus Subtract
+        reducebe 30 BinaryLeft t_symbol_minus Subtract
+        reducebe 31 BinaryLeft t_symbol_plus Add
         reducebe 32 BinaryLeft t_symbol_percent Modulus
         reducebe 33 BinaryLeft t_symbol_slash Divide
         reducebe 34 BinaryLeft t_symbol_asterisk Multiply
@@ -376,18 +376,16 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reduce0 !@43 !@44
         reduce2 !@43 !@43 nt_array_indexer (fun e i -> ArrayAccess(e, i))
         reduce0 !@44 !@45
-        reduce3 !@44 t_symbol_oparen !@45 t_symbol_cparen (fun _ e _ -> e)
+        reduce1 !@44 nt_funccall FunctionCall
         reduce0 !@45 !@46
-        reduce1 !@45 nt_funccall FunctionCall
+        reduce1 !@45 t_macro Macro
         reduce0 !@46 !@47
-        reduce1 !@46 t_macro Macro
+        reduce1 !@46 t_variable VariableExpression
         reduce0 !@47 !@48
-        reduce1 !@47 t_variable VariableExpression
+        reduce0 !@47 t_string_3
         reduce0 !@48 !@49
-        reduce0 !@48 t_string_3
-        reduce0 !@49 !@50
-        reduce1 !@49 nt_literal Literal
-        reduce0 !@50 !@0
+        reduce1 !@48 nt_literal Literal
+        reduce3 !@49 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
 
         reduce2 nt_dot_member t_symbol_dot t_identifier (fun _ e -> [Field e])
         reduce2 nt_dot_member t_symbol_dot nt_funccall (fun _ e -> [Method e])
