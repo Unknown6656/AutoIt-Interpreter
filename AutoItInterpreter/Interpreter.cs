@@ -20,7 +20,7 @@ namespace AutoItInterpreter
     using static ExpressionAST;
     using static PInvoke;
     using static ControlBlock;
-
+    using Piglet.Parser.Configuration;
 
     public delegate void ErrorReporter(string name, params object[] args);
 
@@ -72,6 +72,15 @@ namespace AutoItInterpreter
             try
             {
                 subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
+
+                if (Options.UseVerboseOutput)
+                    Console.WriteLine($"Pre-compiling internal methods for {Win32.System} ({Environment.OSVersion}, {RuntimeInformation.OSArchitecture})");
+
+                foreach (Type t in new[] { typeof(Interpreter), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(ISymbol<>) })
+                    t.Assembly.PreJIT();
+
+                if (Options.UseVerboseOutput)
+                    Console.WriteLine("Finished pre-compiling.");
 
                 state = LinePreprocessor.PreprocessLines(RootContext, Options);
                 state.RootDocument = RootContext.SourcePath;

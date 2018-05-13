@@ -1,5 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Linq;
 using System.IO;
 using System;
@@ -118,6 +120,21 @@ namespace AutoItInterpreter
                 default:
                     return OS.Linux;
             }
+        }
+
+        public static void PreJIT(this Assembly assembly)
+        {
+            foreach (RuntimeMethodHandle ptr in assembly.GetTypes().SelectMany(t => t.GetConstructors(BindingFlags.NonPublic
+                                                                                                    | BindingFlags.Public
+                                                                                                    | BindingFlags.NonPublic
+                                                                                                    | BindingFlags.Instance
+                                                                                                    | BindingFlags.Static).Select(c => c.MethodHandle)
+                                                                             .Concat(t.GetMethods(BindingFlags.DeclaredOnly
+                                                                                                | BindingFlags.NonPublic
+                                                                                                | BindingFlags.Public
+                                                                                                | BindingFlags.Instance
+                                                                                                | BindingFlags.Static).Select(m => m.MethodHandle))))
+                RuntimeHelpers.PrepareMethod(ptr);
         }
     }
 
@@ -382,7 +399,7 @@ namespace AutoItInterpreter
             Console.CursorTop++;
             Console.CursorLeft = sdist;
             Console.Write($"O{new string('=', iwdith - 2)}O");
-            Console.CursorTop += 3;
+            Console.CursorTop += 4;
             Console.CursorLeft = 0;
             Console.ForegroundColor = ConsoleColor.Gray;
 
@@ -445,7 +462,8 @@ namespace AutoItInterpreter
                     case FinalResult.Errors_Compiled:
                         smalltxt = @"
 | THE SCRIPT COULDN'T NORMALLY HAVE BEEN COMPILED, HOWEVER |
-| SOME ERRORS HAVE BEEN SUPRESSED. BINARY MIGHT BE BROKEN. |
+|      SOME ERRORS HAVE BEEN SUPRESSED. THE RESULTING      |
+|           APPLICATION WILL PROBABLY NOT WORK.            |
 ";
                         break;
                     default:
