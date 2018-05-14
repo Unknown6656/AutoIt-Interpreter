@@ -8,6 +8,8 @@ using System;
 
 using Microsoft.FSharp.Collections;
 
+using Piglet.Parser.Configuration;
+
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
@@ -20,7 +22,6 @@ namespace AutoItInterpreter
     using static ExpressionAST;
     using static PInvoke;
     using static ControlBlock;
-    using Piglet.Parser.Configuration;
 
     public delegate void ErrorReporter(string name, params object[] args);
 
@@ -153,7 +154,8 @@ namespace AutoItInterpreter
                     }
                 }
 
-                state.ElevateWarningsToErrors();
+                if (Options.TreatWarningsAsErrors)
+                    state.ElevateWarningsToErrors();
 
                 if (Options.UseVerboseOutput)
                 {
@@ -1039,20 +1041,22 @@ namespace AutoItInterpreter
                         try
                         {
                             MULTI_EXPRESSION[] mes = p.Parse(expr);
-                            IEnumerable<EXPRESSION> exprs = mes.SelectMany(me =>
-                            {
-                                switch (me)
-                                {
-                                    case MULTI_EXPRESSION.SingleValue sv:
-                                        return new[] { sv.Item };
-                                    case MULTI_EXPRESSION.ValueRange vr:
-                                        return new[] { vr.Item1, vr.Item2 };
-                                }
 
-                                return new EXPRESSION[0];
-                            });
+                            funccalls.AddRange(from exp in mes.SelectMany(me =>
+                                               {
+                                                   switch (me)
+                                                   {
+                                                       case MULTI_EXPRESSION.SingleValue sv:
+                                                           return new[] { sv.Item };
+                                                       case MULTI_EXPRESSION.ValueRange vr:
+                                                           return new[] { vr.Item1, vr.Item2 };
+                                                   }
 
-                            funccalls.AddRange(exprs.SelectMany(Analyzer.GetFunctionCallExpressions).Select(t => (e.DefinitionContext, t.Item1, t.Item2.ToArray())));
+                                                   return new EXPRESSION[0];
+                                               })
+                                               from fce in Analyzer.GetFunctionCallExpressions(exp)
+                                               where fce.Item1 != null
+                                               select (e.DefinitionContext, fce.Item1, fce.Item2?.ToArray() ?? new EXPRESSION[0]));
 
                             return mes;
                         }
@@ -1658,13 +1662,22 @@ namespace AutoItInterpreter
                             case λ_ASSIGNMENT i:
                                 {
                                     if (parseexpr(i.VariableName.Trim(), false, false) is EXPRESSION expr)
-                                        return new AST_Λ_ASSIGNMENT_STATEMENT
-                                        {
-                                            VariableExpression = expr,
-                                            Function = i.FunctionName.ToLower(),
-                                        };
+                                    {
+                                        string fname = i.FunctionName.ToLower();
+
+                                        if (fname == "dllcall")
+                                            err("errors.astproc.dllcall_assign");
+                                        else
+                                            return new AST_Λ_ASSIGNMENT_STATEMENT
+                                            {
+                                                VariableExpression = expr,
+                                                Function = fname,
+                                            };
+                                    }
                                     else
-                                        break; // TODO : error
+                                        ; // TODO : error
+
+                                    break;
                                 }
                             default:
                                 err("errors.astproc.unknown_entity", e?.GetType()?.FullName ?? "<null>");

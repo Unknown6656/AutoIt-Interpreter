@@ -54,7 +54,8 @@
             "invalid_system": 1217,
             "pinvoke_sig_invalid": 1218,
             "dllcall_odd_argc": 1219,
-            "dllcall_const_args": 1220
+            "dllcall_const_args": 1220,
+            "dllcall_assign": 1221
         },
         "generator": {
             "cannot_create": 1301,

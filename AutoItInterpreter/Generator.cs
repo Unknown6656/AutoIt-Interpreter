@@ -71,7 +71,7 @@ namespace AutoItInterpreter
                 else
                     try
                     {
-                        return FUNC_MODULE + '.' + typeof(AutoItFunctions).GetMethod(func, BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase).Name;
+                        return $"{FUNC_MODULE}.{typeof(AutoItFunctions).GetMethod(func, BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase).Name}";
                     }
                     catch
                     {
