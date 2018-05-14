@@ -96,29 +96,23 @@ type ExpressionParser(opt : ExpressionParserOptions) =
             |> decimal
             |> Number
             
-        let nt_result                   = x.nt<MULTI_EXPRESSION[]>()
-        let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>()
-        let nt_multi_expression         = x.nt<MULTI_EXPRESSION>()
-        
-        
-        
-        let nt_array_indexer            = x.nt<EXPRESSION>()
-        let nt_array_indexers           = x.nt<EXPRESSION list>()
-        let nt_array_init_expressions   = x.nt<EXPRESSION list>()
-        let nt_array_init_expression    = x.nt<EXPRESSION list>()
-
-
-        let nt_expression_ext           = x.nt<EXPRESSION>()
-        let nt_expression               = x.nt<EXPRESSION>()
-        let nt_subexpression            = Array.map (fun _ -> x.nt<EXPRESSION>()) [| 0..49 |]
-        let nt_funccall                 = x.nt<FUNCCALL>()
-        let nt_funcparams               = x.nt<EXPRESSION list>()
-        let nt_literal                  = x.nt<LITERAL>()
-        let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>()
-        let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>()
-        let nt_dot_members              = x.nt<MEMBER list>()
-        let nt_dot_member               = x.nt<MEMBER list>()
-        
+        let nt_result                   = x.nt<MULTI_EXPRESSION[]>      "result"
+        let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>   "multi-expressions"
+        let nt_multi_expression         = x.nt<MULTI_EXPRESSION>        "multi-expression"
+        let nt_array_indexer            = x.nt<EXPRESSION>              "array-indexer"
+        let nt_array_indexers           = x.nt<EXPRESSION list>         "array-indexers"
+        let nt_array_init_expressions   = x.nt<EXPRESSION list>         "array-init-expressions"
+        let nt_array_init_expression    = x.nt<EXPRESSION list>         "array-init-expression"
+        let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
+        let nt_expression               = x.nt<EXPRESSION>              "expression"
+        let nt_subexpression            = Array.map (fun i -> x.nt<EXPRESSION> (sprintf "expression-%d" i)) [| 0..49 |]
+        let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
+        let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
+        let nt_literal                  = x.nt<LITERAL>                 "literal"
+        let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>   "assignment-expression"
+        let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>     "binary-assignment-operator"
+        let nt_dot_members              = x.nt<MEMBER list>             "dot-members"
+        let nt_dot_member               = x.nt<MEMBER list>             "dot-member"
         let t_operator_assign_nand      = x.t @"~&&="
         let t_operator_assign_and       = x.t @"&&="
         let t_operator_assign_nxor      = x.t @"~^^="
@@ -155,7 +149,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let t_operator_comp_eq          = x.t @"=="
         let t_operator_at1              = x.t @"@\|"
         let t_operator_at0              = x.t @"@"
-        let t_operator_dotrange         = x.t @"\.\."
+        let t_operator_dotrange         = x.t @"\.\." // TODO
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
         let t_symbol_questionmark       = x.t @"\?"
@@ -253,23 +247,23 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let reducet i h x y f = let n = !@(i + 1)
                                 let c = !@i
                                 let f = (fun a _ b _ c -> f a b c)
-                                reduce0 c n
                                 match h with
                                 | TernaryLeft -> reduce5 c c x n y n f
                                 | TernaryMiddle -> reduce5 c n x c y n f
                                 | TernaryRight -> reduce5 c n x n y c f
+                                reduce0 c n
         let reduceb i h x f = let n = !@(i + 1)
                               let c = !@i
                               let f = (fun a _ b -> f a b)
-                              reduce0 c n
                               match h with
                               | BinaryLeft -> reduce3 c c x n f
                               | BinaryRight -> reduce3 c n x c f
+                              reduce0 c n
         let reducebe i h x f = reduceb i h x (fun a b -> BinaryExpression(f, a, b))
-        let reduceu i h x f = reduce0 !@i !@(i + 1)
-                              match h with
+        let reduceu i h x f = match h with
                               | UnaryPrefix -> reduce2 !@i x !@i (fun _ e -> f e)
                               | UnaryPostfix -> reduce2 !@i !@i x (fun e _ -> f e)
+                              reduce0 !@i !@(i + 1)
         let reduceue i h x f = reduceu i h x (fun e -> UnaryExpression(f, e))
         
 
@@ -340,12 +334,17 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reducebe 10 BinaryLeft t_operator_comp_gte GreaterEqual
         reducebe 11 BinaryLeft t_operator_comp_gt Greater
         reducebe 12 BinaryLeft t_operator_comp_neq Unequal
-        reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
+
+        ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
+        // reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
+        reduce0 !@13 !@14
+        
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
         reducebe 15 BinaryLeft t_symbol_ampersand StringConcat
         
-        //reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
-        //reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
+        // reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
+        // reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
         reduce0 !@16 !@18
 
         reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
@@ -371,23 +370,26 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reduceue 38 UnaryPrefix t_symbol_minus Negate
         reduceue 39 UnaryPrefix t_symbol_plus Identity
         reduceue 40 UnaryPrefix t_operator_bit_not BitwiseNot
-        reduce0 !@41 !@42
         reduce2 !@41 !@42 nt_dot_members (fun e m -> DotAccess(e, m))
-        reduce0 !@42 !@43
+        reduce0 !@41 !@42
         reduce4 !@42 !@42 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
         reduce3 !@42 !@42 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reduce0 !@42 !@43
+        reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
+                                                                        | i::is -> acc (ArrayAccess(e, i)) is
+                                                                        | [] -> e
+                                                        acc e i)
         reduce0 !@43 !@44
-        reduce2 !@43 !@43 nt_array_indexer (fun e i -> ArrayAccess(e, i))
-        reduce0 !@44 !@45
         reduce1 !@44 nt_funccall FunctionCall
-        reduce0 !@45 !@46
+        reduce0 !@44 !@45
         reduce1 !@45 t_macro Macro
-        reduce0 !@46 !@47
+        reduce0 !@45 !@46
         reduce1 !@46 t_variable VariableExpression
-        reduce0 !@47 !@48
+        reduce0 !@46 !@47
         reduce0 !@47 t_string_3
-        reduce0 !@48 !@49
+        reduce0 !@47 !@48
         reduce1 !@48 nt_literal Literal
+        reduce0 !@48 !@49
         reduce3 !@49 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
 
         reduce2 nt_dot_member t_symbol_dot t_identifier (fun _ e -> [Field e])

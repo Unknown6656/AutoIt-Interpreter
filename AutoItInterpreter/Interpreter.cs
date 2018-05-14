@@ -76,7 +76,7 @@ namespace AutoItInterpreter
                 if (Options.UseVerboseOutput)
                     Console.WriteLine($"Pre-compiling internal methods for {Win32.System} ({Environment.OSVersion}, {RuntimeInformation.OSArchitecture})");
 
-                foreach (Type t in new[] { typeof(Interpreter), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(ISymbol<>) })
+                foreach (Type t in new[] { typeof(ISymbol<>), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(Interpreter) })
                     t.Assembly.PreJIT();
 
                 if (Options.UseVerboseOutput)
@@ -1801,13 +1801,14 @@ namespace AutoItInterpreter
                 foreach ((DefinitionContext context, string func, EXPRESSION[] args) in calls)
                 {
                     void err(string name, params object[] argv) => state.ReportKnownError(name, context, argv);
+                    string lfunc = func.ToLower();
 
-                    if (BUILT_IN_FUNCTIONS.Any(x => x.Name == func))
+                    if (BUILT_IN_FUNCTIONS.Any(x => x.Name == lfunc))
                     {
-                        (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == func);
+                        (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == lfunc);
 
                         if (!os.Contains(target))
-                            err("errors.astproc.invalid_system", target, string.Join(",", os.Select(x => x.ToString())));
+                            err("errors.astproc.invalid_system", target, string.Join(",", os));
 
                         if (us && !options.AllowUnsafeCode)
                             err("errors.astproc.unsafe_func", f);
@@ -1824,13 +1825,13 @@ namespace AutoItInterpreter
                             else if (msg is NoteAttribute n)
                                 state.ReportKnownNote(n.MessageName, context, n.Arguments);
                     }
-                    else if (!state.ASTFunctions.ContainsKey(func.ToLower()))
+                    else if (!state.ASTFunctions.ContainsKey(lfunc))
                         err("errors.astproc.func_not_declared", func);
-                    else if (IsReservedCall(func.ToLower()))
+                    else if (IsReservedCall(lfunc))
                         err("errors.astproc.reserved_call", func);
                     else
                     {
-                        AST_FUNCTION f = state.ASTFunctions[func.ToLower()];
+                        AST_FUNCTION f = state.ASTFunctions[lfunc];
                         int index = 0;
 
                         foreach (EXPRESSION arg in args)

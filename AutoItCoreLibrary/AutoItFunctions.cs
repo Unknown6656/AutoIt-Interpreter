@@ -223,17 +223,23 @@ namespace AutoItCoreLibrary
                 case "year":
                     return DateTime.Now.Year.ToString("D4");
 
-                    #endregion
+                #endregion
                 #region Additional
 
-                case "null":
-                    return "\0";
-                case "vtab":
-                    return "\v";
+                case "e":
+                    return (var)Math.E;
                 case "nl":
                     return Environment.NewLine;
+                case "null":
+                    return "\0";
+                case "phi":
+                    return 1.618033988749894848204586834m;
+                case "pi":
+                    return (var)Math.PI;
+                case "vtab":
+                    return "\v";
 
-                    #endregion
+                #endregion
             }
 
             return null;
@@ -797,6 +803,8 @@ namespace AutoItCoreLibrary
 
 
 
+        [BuiltinFunction]
+        public static var Sin(var v) => (var)Math.Sin((double)v);
 
 
 

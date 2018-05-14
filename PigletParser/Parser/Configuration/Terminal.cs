@@ -17,6 +17,6 @@ namespace Piglet.Parser.Configuration
             RegExp = DebugName = regExp;
         }
 
-        public override string ToString() => $"{DebugName} {{{RegExp}}}";
+        public override string ToString() => DebugName == RegExp ? DebugName : $"{DebugName} {{{RegExp}}}";
     }
 }

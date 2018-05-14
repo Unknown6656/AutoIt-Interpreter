@@ -33,6 +33,7 @@ namespace AutoItInterpreter
         private const string PARAM_PREFIX = "__param_";
         private const string DISCARD = "__discard";
         private const string MACROS = "__macros";
+        private const string MACROS_GLOBAL = MACROS + "_g";
         private const string VARS = "__vars";
 
 
@@ -93,7 +94,7 @@ namespace {NAMESPACE}
 {{
     public static unsafe class {APPLICATION_MODULE}
     {{
-        private static {TYPE_MAC_RPOVIDER} {MACROS};
+        private static {TYPE_MAC_RPOVIDER} {MACROS_GLOBAL};
         private static {TYPE_VAR_RPOVIDER} {VARS};
         private static {TYPE} {DISCARD};
 ".TrimEnd());
@@ -126,7 +127,14 @@ namespace {NAMESPACE}
                 return Assembly.Load(rm.GetObject(dll) as byte[]);
             }};
 
-            {MACROS} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, null /* TODO */ );
+            {MACROS_GLOBAL} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, s =>
+            {{
+                switch (s.ToLower())
+                {{
+                    // TODO
+                }}
+                return null;
+            }});
             {VARS} = new {TYPE_VAR_RPOVIDER}();
             {DISCARD} = {TYPE}.Default;
             {TYPE} result = ___globalentrypoint();
@@ -136,6 +144,16 @@ namespace {NAMESPACE}
 
         private static {TYPE} ___globalentrypoint()
         {{
+            AutoItMacroDictionary {MACROS} = new AutoItMacroDictionary({MACROS_GLOBAL}, s =>
+            {{
+                switch (s.ToLower())
+                {{
+                    case ""numparams"":
+                    case ""numoptparams"": return 0;
+                    case ""function"": return """";
+                }}
+                return null;
+            }});
 ".TrimEnd());
 
                     foreach (AST_LOCAL_VARIABLE v in function.ExplicitLocalVariables)
@@ -153,6 +171,20 @@ namespace {NAMESPACE}
                     sb.AppendLine($@"
         private static {TYPE} {FUNC_PREFIX}{fn}({string.Join(", ", paramters)})
         {{
+            AutoItMacroDictionary {MACROS} = new AutoItMacroDictionary({MACROS_GLOBAL}, s =>
+            {{
+                switch (s.ToLower())
+                {{
+                    case ""numparams"":
+                        return {paramters.Count()};
+                    case ""numoptparams"":
+                        return {function.Parameters.Count(x => x is AST_FUNCTION_PARAMETER_OPT)};
+                    case ""function"":
+                        return ""{fn}"";
+                }}
+                return null;
+            }});
+
             {TYPE} inner()
             {{
 ".TrimEnd());

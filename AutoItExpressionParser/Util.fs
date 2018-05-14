@@ -156,7 +156,9 @@ type AbstractParser<'a>() =
     member x.Configuration with get() = config
     member internal x.t = x.Configuration.CreateTerminal >> TerminalWrapper<string>
     member internal x.tf<'T> regex (onParse : (string -> 'T)) = TerminalWrapper<'T>(x.Configuration.CreateTerminal(regex, (fun s -> box (onParse s))))
-    member internal x.nt<'T>() = NonTerminalWrapper<'T>(x.Configuration.CreateNonTerminal())
+    member internal x.nt<'T> name = name
+                                    |> x.Configuration.CreateNonTerminal
+                                    |> NonTerminalWrapper<'T>
     member internal x.a d s =
         let arg = List.map (fun (f : SymbolWrapper<_>) -> downcast f.Symbol)
                >> List.toArray

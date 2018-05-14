@@ -35,6 +35,25 @@ namespace AutoItCoreLibrary
             if (!dic.ContainsKey(name))
                 dic[name] = AutoItVariantType.Default;
         }
+
+        public override string ToString()
+        {
+            HashSet<string> keys = new HashSet<string>();
+            List<string> strs = new List<string>();
+
+            if (_locals.TryPeek(out var dic))
+                foreach (string loc in dic.Keys)
+                {
+                    keys.Add(loc.ToLower());
+                    strs.Add($"{loc} = {dic[loc]}");
+                }
+
+            foreach (string glob in _globals.Keys)
+                if (!keys.Contains(glob.ToLower()))
+                    strs.Add($"{glob} = {_globals[glob]}");
+
+            return $"{{ {string.Join(", ", strs)} }}";
+        }
     }
 
     public sealed class AutoItMacroDictionary

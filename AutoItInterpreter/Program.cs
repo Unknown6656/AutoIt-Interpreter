@@ -26,7 +26,7 @@ namespace AutoItInterpreter
             int __inner__()
             {
                 Directory.SetCurrentDirectory(ASM_FILE.Directory.FullName);
-                Console.BufferWidth = Math.Max(200, Console.BufferWidth);
+                Console.BufferWidth = Math.Max(201, Console.BufferWidth);
                 Console.Title = TITLE;
 
                 Dictionary<string, List<string>> dic = ParseParameters(argv,

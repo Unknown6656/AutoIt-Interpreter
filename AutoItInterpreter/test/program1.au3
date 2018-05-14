@@ -20,7 +20,9 @@ sleep(5000)
 
 $func1[4] = f2
 $func2 = Func($a, $b)
-             ConsoleWrite($"called with ($a, $b)!\n")
+            $s = sin($a)
+            ConsoleWrite($"called with ($a, $b)!\n")
+            ConsoleWriteLine($"sin($a) == $s")
          EndFunc
 $func3 = beep
          

@@ -18,12 +18,11 @@ type FunctionparameterParser(optimize : bool) =
             |> decimal
             |> Number
             
-        let nt_decl                 = x.nt<FUNCTION_PARAMETER[]>()
-        let nt_decll                = x.nt<FUNCTION_PARAMETER list>()
-        let nt_decli                = x.nt<FUNCTION_PARAMETER>()
-        let nt_decl_def             = x.nt<FUNCTION_PARAMETER_DEFVAL>()
-        let nt_literal              = x.nt<LITERAL>()
-        
+        let nt_decl                 = x.nt<FUNCTION_PARAMETER[]>        "function-declaration"
+        let nt_decll                = x.nt<FUNCTION_PARAMETER list>     "parameters"
+        let nt_decli                = x.nt<FUNCTION_PARAMETER>          "parameter"
+        let nt_decl_def             = x.nt<FUNCTION_PARAMETER_DEFVAL>   "default-parameter"
+        let nt_literal              = x.nt<LITERAL>                     "literal"
         let t_symbol_equal          = x.t @"="
         let t_symbol_comma          = x.t @","
         let t_keyword_const         = x.t @"const"
@@ -38,8 +37,7 @@ type FunctionparameterParser(optimize : bool) =
         let t_dec                   = x.tf @"(\+|-)?(\d+\.\d*(e(\+|-)?\d+)?|\.?\d+(e(\+|-)?\d+)?)" (fun s -> match decimal.TryParse s with
                                                                                                                  | (true, d) -> d
                                                                                                                  | _ -> decimal.Parse(s, NumberStyles.Float)
-                                                                                                                 |> Number
-                                                                                                       ) 
+                                                                                                                 |> Number) 
         let t_variable              = x.tf @"$[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> VARIABLE(s.Substring 1))
         let t_macro                 = x.tf @"@[a-zA-Z_][a-zA-Z0-9_]*"                              (fun s -> MACRO(s.Substring 1))
         let t_string_1              = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""                      (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))

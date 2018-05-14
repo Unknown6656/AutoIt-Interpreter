@@ -124,17 +124,30 @@ namespace AutoItInterpreter
 
         public static void PreJIT(this Assembly assembly)
         {
-            foreach (RuntimeMethodHandle ptr in assembly.GetTypes().SelectMany(t => t.GetConstructors(BindingFlags.NonPublic
-                                                                                                    | BindingFlags.Public
-                                                                                                    | BindingFlags.NonPublic
-                                                                                                    | BindingFlags.Instance
-                                                                                                    | BindingFlags.Static).Select(c => c.MethodHandle)
-                                                                             .Concat(t.GetMethods(BindingFlags.DeclaredOnly
-                                                                                                | BindingFlags.NonPublic
-                                                                                                | BindingFlags.Public
-                                                                                                | BindingFlags.Instance
-                                                                                                | BindingFlags.Static).Select(m => m.MethodHandle))))
-                RuntimeHelpers.PrepareMethod(ptr);
+            foreach (MethodBase method in assembly.GetTypes().SelectMany(t => t.GetConstructors(BindingFlags.NonPublic
+                                                                                              | BindingFlags.Public
+                                                                                              | BindingFlags.NonPublic
+                                                                                              | BindingFlags.Instance
+                                                                                              | BindingFlags.Static).Select(c => c as MethodBase)
+                                                                      .Concat(t.GetMethods(BindingFlags.DeclaredOnly
+                                                                                         | BindingFlags.NonPublic
+                                                                                         | BindingFlags.Public
+                                                                                         | BindingFlags.Instance
+                                                                                         | BindingFlags.Static))))
+                if (method is MethodInfo nfo && (nfo.IsGenericMethodDefinition || nfo.IsGenericMethod))
+                    try
+                    {
+                        Type[] gentypeargs = nfo.GetGenericArguments().Select(_ => typeof(object)).ToArray();
+                        MethodInfo genins = nfo.MakeGenericMethod(gentypeargs);
+
+                        RuntimeHelpers.PrepareMethod(genins.MethodHandle);
+                    }
+                    catch
+                    {
+                        RuntimeHelpers.PrepareMethod(method.MethodHandle);
+                    }
+                else
+                    RuntimeHelpers.PrepareMethod(method.MethodHandle);
         }
     }
 
@@ -463,7 +476,7 @@ namespace AutoItInterpreter
                         smalltxt = @"
 | THE SCRIPT COULDN'T NORMALLY HAVE BEEN COMPILED, HOWEVER |
 |      SOME ERRORS HAVE BEEN SUPRESSED. THE RESULTING      |
-|           APPLICATION WILL PROBABLY NOT WORK.            |
+|      APPLICATION WILL PROBABLY NOT WORK AS INTENDED.     |
 ";
                         break;
                     default:

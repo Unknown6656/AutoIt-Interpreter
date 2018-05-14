@@ -55,11 +55,10 @@ open PInvoke
 type PInvokeParser() =
     inherit AbstractParser<PINVOKE_SIGNATURE>()
     override x.BuildParser() =
-        let nt_decl             = x.nt<PINVOKE_SIGNATURE>()
-        let nt_params           = x.nt<PINVOKE_TYPE list>()
-        let nt_rtype            = x.nt<PINVOKE_RETURN_TYPE>()
-        let nt_type             = x.nt<PINVOKE_TYPE>()
-        
+        let nt_decl             = x.nt<PINVOKE_SIGNATURE>   "signature"
+        let nt_params           = x.nt<PINVOKE_TYPE list>   "parameters"
+        let nt_rtype            = x.nt<PINVOKE_RETURN_TYPE> "return-type"
+        let nt_type             = x.nt<PINVOKE_TYPE>        "parameter-type"
         let t_symbol_oparen     = x.t @"\("
         let t_symbol_cparen     = x.t @"\)"
         let t_symbol_asterisk   = x.t @"\*"
