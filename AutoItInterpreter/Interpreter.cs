@@ -954,11 +954,10 @@ namespace AutoItInterpreter
             internal static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
             {
                 List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
-                ExpressionParserOptions optimize = options.Settings.UseOptimization ? ExpressionParserOptions.Optimized : default;
                 FunctionparameterParser p_funcparam = new FunctionparameterParser(options.Settings.UseOptimization);
-                ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserOptions.DeclarationMode | optimize);
-                ExpressionParser p_assignment = new ExpressionParser(ExpressionParserOptions.AllowAssignment | optimize);
-                ExpressionParser p_expression = new ExpressionParser(optimize);
+                ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserMode.Declaration);
+                ExpressionParser p_assignment = new ExpressionParser(ExpressionParserMode.Assignment);
+                ExpressionParser p_expression = new ExpressionParser(ExpressionParserMode.Regular);
                 HashSet<string> λ_assigned = new HashSet<string>();
                 AST_FUNCTION _currfunc = null;
 

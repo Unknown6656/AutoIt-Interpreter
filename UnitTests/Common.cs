@@ -262,8 +262,8 @@ namespace UnitTests
             UseMSBuildErrorOutput = false,
             UseVerboseOutput = false
         };
-        private static readonly ExpressionParser _aparser = new ExpressionParser(ExpressionParserOptions.Optimized | ExpressionParserOptions.AllowAssignment);
-        private static readonly ExpressionParser _parser = new ExpressionParser(ExpressionParserOptions.Optimized);
+        private static readonly ExpressionParser _aparser = new ExpressionParser(ExpressionParserMode.Assignment);
+        private static readonly ExpressionParser _parser = new ExpressionParser(ExpressionParserMode.Regular);
         private static readonly DirectoryInfo _testdir;
 
 

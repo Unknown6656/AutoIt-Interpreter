@@ -5,59 +5,6 @@ open AutoItExpressionParser.ExpressionAST
 open System.Text.RegularExpressions
 open System.Globalization
 
-(* Operator precedence:
-    ?:
-    impl
-    nor
-    or
-    nxor
-    xor
-    nand
-    and
-    <=
-    <
-    >=
-    >
-    <>
-    =       (cis)
-    ==      (cs)
-    &
-    @|..
-    @..
-    @|
-    @
-    ~||
-    ||
-    ~^^
-    ^^
-    ~&&
-    &&
-    <<<
-    >>>
-    <<
-    >>
-    +
-    -
-    %
-    /
-    *
-    ^
-    #       (u, post)
-    !       (u, pre)
-    -       (u, pre)
-    +       (u, pre)
-    ~       (u, pre)
-    .x      (u, post)
-    x(y)    (u, post)
-    [x]     (u, post)
-    (x)     (u, infx)
-    funccall
-    macro
-    variable
-    string_3
-    literal
-*)
-
 
 type 'a cslist = System.Collections.Generic.List<'a>
 
@@ -72,20 +19,15 @@ type private UnaryReduceHint =
     | UnaryPrefix
     | UnaryPostfix
 
-[<System.FlagsAttribute>]
-type ExpressionParserOptions =
-    | Optimized = 1
-    | AllowAssignment = 2
-    | AllowToRange = 4
-    | DeclarationMode = 8
+type ExpressionParserMode =
+    | Regular = 1
+    | Assignment = 2
+    | Declaration = 3
+    | ToRange = 4
 
-type ExpressionParser(opt : ExpressionParserOptions) =
+type ExpressionParser(mode : ExpressionParserMode) =
     inherit AbstractParser<MULTI_EXPRESSION[]>()
-    let hasflag f = (opt &&& f) = f
-    member x.AllowToRange = hasflag ExpressionParserOptions.AllowToRange
-    member x.UseOptimization = hasflag ExpressionParserOptions.Optimized
-    member x.AllowAssignment = hasflag ExpressionParserOptions.AllowAssignment
-    member x.DeclarationMode = hasflag ExpressionParserOptions.DeclarationMode
+    member x.ParserMode = mode
     override x.BuildParser() =
         let lparse p (f : string -> long) (s : string) =
             let s = s.TrimStart('+').ToLower().Replace(p, "")
@@ -98,17 +40,16 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let nt_result                   = x.nt<MULTI_EXPRESSION[]>      "result"
         let nt_multi_expressions        = x.nt<MULTI_EXPRESSION list>   "multi-expressions"
         let nt_multi_expression         = x.nt<MULTI_EXPRESSION>        "multi-expression"
-        let nt_array_indexer            = x.nt<EXPRESSION>              "array-indexer"
         let nt_array_indexers           = x.nt<EXPRESSION list>         "array-indexers"
-        let nt_array_init_expressions   = x.nt<EXPRESSION list>         "array-init-expressions"
-        let nt_array_init_expression    = x.nt<EXPRESSION list>         "array-init-expression"
+        let nt_array_indexer            = x.nt<EXPRESSION>              "array-indexer"
+        let nt_array_init_wrapper       = x.nt<INIT_EXPRESSION list>    "array-init-wrapper"
+        let nt_array_init_expression    = x.nt<INIT_EXPRESSION list>    "array-init-expression"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
         let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..49 |]
         let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
         let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
         let nt_literal                  = x.nt<LITERAL>                 "literal"
-        let nt_assignment_expression    = x.nt<ASSIGNMENT_EXPRESSION>   "assignment-expression"
         let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>     "binary-assignment-operator"
         let nt_dot_members              = x.nt<MEMBER list>             "dot-members"
         let nt_dot_member               = x.nt<MEMBER list>             "dot-member"
@@ -148,7 +89,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let t_operator_comp_eq          = x.t @"=="
         let t_operator_at1              = x.t @"@\|"
         let t_operator_at0              = x.t @"@"
-        let t_operator_dotrange         = x.t @"\.\." // TODO
+        let t_operator_dotrange         = x.t @"\.?\.\." // TODO
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
         let t_symbol_questionmark       = x.t @"\?"
@@ -175,71 +116,71 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         let t_keyword_xor               = x.t @"xor"
         let t_keyword_or                = x.t @"or"
         let t_keyword_not               = x.t @"(not|!)"
-        let t_literal_true              = x.tf @"true"                                  (fun _ -> True)
-        let t_literal_false             = x.tf @"false"                                 (fun _ -> False)
-        let t_literal_null              = x.tf @"null"                                  (fun _ -> Null)
-        let t_literal_default           = x.tf @"default"                               (fun _ -> Default)
-        let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"          (lparse "0x" (fun s -> long.Parse(s.TrimEnd 'h', NumberStyles.HexNumber)))
-        let t_bin                       = x.tf @"(\+|-)?0b[01]+"                        (lparse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
-        let t_oct                       = x.tf @"(\+|-)?0o[0-7]+"                       (lparse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
-        let t_dec                       = x.tf @"(\+|-)?\d+(\.\d+)?(e(\+|-)?\d+)?"      (fun s -> match decimal.TryParse s with
-                                                                                                  | (true, d) -> d
-                                                                                                  | _ -> decimal.Parse(s, NumberStyles.Float)
-                                                                                                  |> Number
-                                                                                        ) 
-        let t_variable                  = x.tf @"$[a-z_]\w*"                            (fun s -> VARIABLE(s.Substring 1))
-        let t_macro                     = x.tf @"@[a-z_]\w*"                            (fun s -> MACRO(s.Substring 1))
-        let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""       (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
-        let t_string_2                  = x.tf @"'(([^']*''[^']*)*|[^']+)'"             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
-        let t_string_3                  = x.tf @"$""(([^""]*\\""[^""]*)*|[^""]+)"""     (fun s -> 
-                                                                                             let mutable s = s.Remove(s.Length - 1)
-                                                                                                              .Remove(0, 2)
-                                                                                                              .Trim()
-                                                                                             let r = Regex(@"(?<!\\)(?:\\{2})*((?<type>\$|@)(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-                                                                                             let l = cslist<EXPRESSION>()
-                                                                                             let proc (s : string) =
-                                                                                                 let s = s.Replace(@"\\", "\ufffe")
-                                                                                                          .Replace(@"\""", "\"")
-                                                                                                          .Replace(@"\r", "\r")
-                                                                                                          .Replace(@"\n", "\n")
-                                                                                                          .Replace(@"\t", "\t")
-                                                                                                          .Replace(@"\v", "\v")
-                                                                                                          .Replace(@"\b", "\b")
-                                                                                                          .Replace(@"\a", "\a")
-                                                                                                          .Replace(@"\f", "\f")
-                                                                                                          .Replace(@"\d", "\x7f")
-                                                                                                          .Replace(@"\0", "\0")
-                                                                                                          .Replace(@"\$", "$")
-                                                                                                          .Replace(@"\@", "@")
-                                                                                                          .Replace(@"\ufffe", "\\")
-                                                                                                 let r p s = Regex.Replace(
-                                                                                                                 s,
-                                                                                                                 p,
-                                                                                                                 (fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString()),
-                                                                                                                 RegexOptions.Compiled ||| RegexOptions.IgnoreCase
-                                                                                                             )
-                                                                                                 s
-                                                                                                 |> r @"\\u(?<code>[0-9a-f]{4})"
-                                                                                                 |> r @"\\x(?<code>[0-9a-f]{2})"
-                                                                                                 |> String
-                                                                                                 |> Literal
-                                                                                             while r.IsMatch s do
-                                                                                                 let mt = (r.Match s).Groups
-                                                                                                 let t = mt.["type"].ToString() = "$"
-                                                                                                 let m = mt.["var"]
-                                                                                                 l.Add(proc (s.Remove (m.Index - 1)))
-                                                                                                 l.Add(if t then m.ToString()
-                                                                                                                 |> VARIABLE
-                                                                                                                 |> VariableExpression
-                                                                                                       else m.ToString()
-                                                                                                            |> MACRO
-                                                                                                            |> Macro)
-                                                                                                 s <- s.Substring (m.Index + m.Length)
-                                                                                             l
-                                                                                             |> Seq.toList
-                                                                                             |> List.reduce (fun x y -> BinaryExpression (StringConcat, x, y))
-                                                                                        )
-        let t_identifier                = x.tf @"[_a-z]\w*"                             id
+        let t_literal_true              = x.tf @"true"                              (fun _ -> True)
+        let t_literal_false             = x.tf @"false"                             (fun _ -> False)
+        let t_literal_null              = x.tf @"null"                              (fun _ -> Null)
+        let t_literal_default           = x.tf @"default"                           (fun _ -> Default)
+        let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"      (lparse "0x" (fun s -> long.Parse(s.TrimEnd 'h', NumberStyles.HexNumber)))
+        let t_bin                       = x.tf @"(\+|-)?0b[01]+"                    (lparse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
+        let t_oct                       = x.tf @"(\+|-)?0o[0-7]+"                   (lparse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
+        let t_dec                       = x.tf @"(\+|-)?\d+(\.\d+)?(e(\+|-)?\d+)?"  (fun s -> match decimal.TryParse s with
+                                                                                              | (true, d) -> d
+                                                                                              | _ -> decimal.Parse(s, NumberStyles.Float)
+                                                                                              |> Number
+                                                                                    ) 
+        let t_variable                  = x.tf @"$[a-z_]\w*"                        (fun s -> VARIABLE(s.Substring 1))
+        let t_macro                     = x.tf @"@[a-z_]\w*"                        (fun s -> MACRO(s.Substring 1))
+        let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""   (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
+        let t_string_2                  = x.tf @"'(([^']*''[^']*)*|[^']+)'"         (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
+        let t_string_3                  = x.tf @"$""(([^""]*\\""[^""]*)*|[^""]+)""" (fun s -> 
+                                                                                         let mutable s = s.Remove(s.Length - 1)
+                                                                                                          .Remove(0, 2)
+                                                                                                          .Trim()
+                                                                                         let r = Regex(@"(?<!\\)(?:\\{2})*((?<type>\$|@)(?<var>[a-z_]\w*)\b)", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+                                                                                         let l = cslist<EXPRESSION>()
+                                                                                         let proc (s : string) =
+                                                                                             let s = s.Replace(@"\\", "\ufffe")
+                                                                                                      .Replace(@"\""", "\"")
+                                                                                                      .Replace(@"\r", "\r")
+                                                                                                      .Replace(@"\n", "\n")
+                                                                                                      .Replace(@"\t", "\t")
+                                                                                                      .Replace(@"\v", "\v")
+                                                                                                      .Replace(@"\b", "\b")
+                                                                                                      .Replace(@"\a", "\a")
+                                                                                                      .Replace(@"\f", "\f")
+                                                                                                      .Replace(@"\d", "\x7f")
+                                                                                                      .Replace(@"\0", "\0")
+                                                                                                      .Replace(@"\$", "$")
+                                                                                                      .Replace(@"\@", "@")
+                                                                                                      .Replace(@"\ufffe", "\\")
+                                                                                             let r p s = Regex.Replace(
+                                                                                                             s,
+                                                                                                             p,
+                                                                                                             (fun (m : Match) -> (char.ConvertFromUtf32(int.Parse(m.Groups.["code"].ToString(), NumberStyles.HexNumber))).ToString()),
+                                                                                                             RegexOptions.Compiled ||| RegexOptions.IgnoreCase
+                                                                                                         )
+                                                                                             s
+                                                                                             |> r @"\\u(?<code>[0-9a-f]{4})"
+                                                                                             |> r @"\\x(?<code>[0-9a-f]{2})"
+                                                                                             |> String
+                                                                                             |> Literal
+                                                                                         while r.IsMatch s do
+                                                                                             let mt = (r.Match s).Groups
+                                                                                             let t = mt.["type"].ToString() = "$"
+                                                                                             let m = mt.["var"]
+                                                                                             l.Add(proc (s.Remove (m.Index - 1)))
+                                                                                             l.Add(if t then m.ToString()
+                                                                                                             |> VARIABLE
+                                                                                                             |> VariableExpression
+                                                                                                   else m.ToString()
+                                                                                                        |> MACRO
+                                                                                                        |> Macro)
+                                                                                             s <- s.Substring (m.Index + m.Length)
+                                                                                         l
+                                                                                         |> Seq.toList
+                                                                                         |> List.reduce (fun x y -> BinaryExpression (StringConcat, x, y))
+                                                                                    )
+        let t_identifier                = x.tf @"[_a-z]\w*"                         id
 
         let (!@) x = nt_subexpression.[x]
 
@@ -272,29 +213,15 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reduce1 nt_multi_expressions nt_multi_expression (fun m -> [m])
         reduce1 nt_multi_expression nt_expression_ext SingleValue
 
-        if x.AllowToRange then
+        match x.ParserMode with
+        | ExpressionParserMode.Regular ->
+            reduce0 nt_expression_ext nt_expression
+        | ExpressionParserMode.ToRange ->
+            reduce0 nt_expression_ext nt_expression
             reduce3 nt_multi_expression nt_expression_ext t_keyword_to nt_expression_ext (fun a _ b -> ValueRange(a, b))
-        
-        if x.DeclarationMode then
-            let asg v e = (Assign, v, e)
-                          |> ScalarAssignment
-                          |> AssignmentExpression
-
-            reduce4 nt_expression_ext t_variable nt_array_indexers t_symbol_equal nt_array_init_expressions (fun v i _ e -> asg v (ArrayInitExpression(i, e)))
-            reduce2 nt_expression_ext t_variable nt_array_indexers (fun v i -> asg v (ArrayInitExpression(i, [])))
-            reduce3 nt_expression_ext t_variable t_symbol_equal nt_expression (fun v _ e -> asg v e)
-            reduce1 nt_expression_ext t_variable (fun v -> asg v (Literal Default))
-
-            reduce3 nt_array_init_expressions t_symbol_obrack nt_array_init_expression t_symbol_cbrack (fun _ es _ -> es)
-            reduce2 nt_array_init_expressions t_symbol_obrack t_symbol_cbrack (fun _ _ -> [])
-            reduce3 nt_array_init_expression nt_expression t_symbol_comma nt_array_init_expression (fun e _ es -> e::es)
-            reduce1 nt_array_init_expression nt_expression (fun e -> [e])
-
-        if x.AllowAssignment then
-            reduce1 nt_expression_ext nt_assignment_expression AssignmentExpression
-        
-            reduce4 nt_assignment_expression t_variable nt_array_indexers nt_operator_binary_ass nt_expression (fun v i o e -> ArrayAssignment(o, v, i, e))
-            reduce3 nt_assignment_expression t_variable nt_operator_binary_ass nt_expression (fun v o e -> ScalarAssignment(o, v, e))    
+        | ExpressionParserMode.Assignment ->
+            reduce4 nt_expression_ext t_variable nt_array_indexers nt_operator_binary_ass nt_expression (fun v i o e -> AssignmentExpression(ArrayAssignment(o, v, i, e)))
+            reduce3 nt_expression_ext t_variable nt_operator_binary_ass nt_expression (fun v o e -> AssignmentExpression(ScalarAssignment(o, v, e)))
 
             reduce1 nt_operator_binary_ass t_operator_assign_sub (fun _ -> AssignSubtract)
             reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignAdd)
@@ -314,11 +241,25 @@ type ExpressionParser(opt : ExpressionParserOptions) =
             reduce1 nt_operator_binary_ass t_operator_assign_shl (fun _ -> AssignShiftLeft)
             reduce1 nt_operator_binary_ass t_operator_assign_shr (fun _ -> AssignShiftRight)
             reduce1 nt_operator_binary_ass t_symbol_equal (fun _ -> Assign)
+        | ExpressionParserMode.Declaration ->
+            let asg v e = (Assign, v, e)
+                          |> ScalarAssignment
+                          |> AssignmentExpression
 
-        if not x.DeclarationMode then
-            reduce0 nt_expression_ext nt_expression
+            reduce4 nt_expression_ext t_variable nt_array_indexers t_symbol_equal nt_array_init_expression (fun v i _ e -> asg v (ArrayInitExpression(i, e)))
+            reduce2 nt_expression_ext t_variable nt_array_indexers (fun v i -> asg v (ArrayInitExpression(i, [])))
+            reduce3 nt_expression_ext t_variable t_symbol_equal nt_expression (fun v _ e -> asg v e)
+            reduce1 nt_expression_ext t_variable (fun v -> asg v (Literal Default))
             
-        reduce1 nt_expression !@0 (fun e -> if x.UseOptimization then Analyzer.ProcessExpression e else e)
+            reduce3 nt_array_init_wrapper nt_array_init_wrapper t_symbol_comma nt_array_init_expression (fun es _ e -> es@[Multiple e])
+            reduce1 nt_array_init_wrapper nt_array_init_expression (fun e -> [Multiple e])
+
+            reduce3 nt_array_init_expression t_symbol_obrack nt_array_init_wrapper t_symbol_cbrack (fun _ e _ -> [Multiple e])
+            reduce2 nt_array_init_expression t_symbol_obrack t_symbol_cbrack (fun _ _ -> [])
+            reduce1 nt_array_init_expression nt_expression (fun e -> [Single e])
+        | _ -> ()
+        
+        reduce1 nt_expression !@0 Analyzer.ProcessExpression
         
         reducet 0 TernaryRight t_symbol_questionmark t_symbol_colon (fun c x y -> TernaryExpression(c, x, y))
         reduceb 1 BinaryLeft t_keyword_impl (fun a b -> BinaryExpression(Or, UnaryExpression(Not, a), b))
@@ -336,6 +277,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
 
         ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
         // reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
+        // reduce3 !@13 !@14 t_symbol_equal !@14 (fun x _ y -> BinaryExpression(EqualCaseInsensitive, x, y))
         reduce0 !@13 !@14
         
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
@@ -374,13 +316,11 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reduce4 !@42 !@42 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
         reduce3 !@42 !@42 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
         reduce0 !@42 !@43
-
-        if not x.DeclarationMode then
-            //reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
-            //                                                                | i::is -> acc (ArrayAccess(e, i)) is
-            //                                                                | [] -> e
-            //                                                acc e i)
-            ()
+        
+        //reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
+        //                                                                | i::is -> acc (ArrayAccess(e, i)) is
+        //                                                                | [] -> e
+        //                                                acc e i)
 
         reduce0 !@43 !@44
         reduce1 !@44 nt_funccall FunctionCall

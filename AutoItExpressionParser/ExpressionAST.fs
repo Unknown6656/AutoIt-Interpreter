@@ -99,6 +99,9 @@ and MEMBER =
     | Field of string
     | Method of FUNCCALL
 and FUNCCALL = string * EXPRESSION list
+and INIT_EXPRESSION =
+    | Multiple of INIT_EXPRESSION list
+    | Single of EXPRESSION
 and EXPRESSION =
     | Literal of LITERAL
     | FunctionCall of FUNCCALL
@@ -110,7 +113,7 @@ and EXPRESSION =
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
     | ToExpression of EXPRESSION * EXPRESSION
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
-    | ArrayInitExpression of EXPRESSION list * EXPRESSION list // indexers, initexpr
+    | ArrayInitExpression of EXPRESSION list * INIT_EXPRESSION list // indexers, initexpr
     | ArrayAccess of EXPRESSION * EXPRESSION // index
     | DotAccess of EXPRESSION * MEMBER list
 and ASSIGNMENT_EXPRESSION =
@@ -218,9 +221,15 @@ let rec private ToAString =
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
     | AssignmentExpression (ScalarAssignment (o, v, e)) -> sprintf "%s %s %s" (v.ToString()) (AssToAString o) (ToAString e)
     | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> sprintf "%s[%s] %s %s" (v.ToString()) (String.Join (", ", (List.map ToAString i))) (AssToAString o) (ToAString e)
-    | ArrayInitExpression (_, e) -> sprintf "[ %s ]" (e
-                                                      |> List.map ToAString
-                                                      |> String.concat ", ")
+    | ArrayInitExpression (_, e) ->
+        let rec tstr = function
+                       | Single e -> ToAString e
+                       | Multiple es -> sprintf "[ %s ]" (es
+                                                          |> List.map tstr
+                                                          |> String.concat ", ")
+        sprintf "[ %s ]" (e
+                          |> List.map tstr
+                          |> String.concat ", ")
     | ArrayAccess (v, e) -> sprintf "%s[%s]" (ToAString v) (ToAString e)
     | DotAccess (v, d) -> d
                           |> List.map (fun d -> "." + match d with

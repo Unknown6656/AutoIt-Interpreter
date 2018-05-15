@@ -280,7 +280,13 @@ let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y]
     | TernaryExpression (x, y, z) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y; GetFunctionCallExpressions z]
-    | ArrayInitExpression (i, e) -> List.map GetFunctionCallExpressions (i @ e)
+    | ArrayInitExpression (i, es) ->
+        let rec gfce = function
+                       | Single e -> GetFunctionCallExpressions e
+                       | Multiple es -> List.map gfce es
+                                     |> List.concat
+        List.map gfce es
+        @ List.map GetFunctionCallExpressions i
     | DotAccess (_, m) -> List.choose (function
                                        | Method f -> Some [f]
                                        | _ -> None) m
@@ -301,5 +307,9 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetVariables x; GetVariables y]
     | TernaryExpression (x, y, z) -> [GetVariables x; GetVariables y; GetVariables z]
-    | ArrayInitExpression (i, e) -> List.map GetVariables (e @ i)
+    | ArrayInitExpression (i, es) -> let rec gv = function
+                                                  | Single e -> GetVariables e
+                                                  | Multiple es -> List.map gv es
+                                                                |> List.concat
+                                     List.map GetVariables i @ List.map gv es
     |> List.concat
