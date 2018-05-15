@@ -369,35 +369,30 @@ type ExpressionParser(opt : ExpressionParserOptions) =
         reduceue 38 UnaryPrefix t_symbol_minus Negate
         reduceue 39 UnaryPrefix t_symbol_plus Identity
         reduceue 40 UnaryPrefix t_operator_bit_not BitwiseNot
-
         reduce2 !@41 !@42 nt_dot_members (fun e m -> DotAccess(e, m))
         reduce0 !@41 !@42
-
         reduce4 !@42 !@42 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
         reduce3 !@42 !@42 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
         reduce0 !@42 !@43
 
-        //reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
-        //                                                                | i::is -> acc (ArrayAccess(e, i)) is
-        //                                                                | [] -> e
-        //                                                acc e i)
-        reduce0 !@43 !@44
+        if not x.DeclarationMode then
+            //reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
+            //                                                                | i::is -> acc (ArrayAccess(e, i)) is
+            //                                                                | [] -> e
+            //                                                acc e i)
+            ()
 
+        reduce0 !@43 !@44
         reduce1 !@44 nt_funccall FunctionCall
         reduce0 !@44 !@45
-
         reduce1 !@45 t_macro Macro
         reduce0 !@45 !@46
-
         reduce1 !@46 t_variable VariableExpression
         reduce0 !@46 !@47
-
         reduce0 !@47 t_string_3
         reduce0 !@47 !@48
-
         reduce1 !@48 nt_literal Literal
         reduce0 !@48 !@49
-
         reduce3 !@49 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
 
         reduce2 nt_dot_member t_symbol_dot t_identifier (fun _ e -> [Field e])
@@ -413,7 +408,7 @@ type ExpressionParser(opt : ExpressionParserOptions) =
 
         reduce3 nt_array_indexer t_symbol_obrack nt_expression t_symbol_cbrack (fun _ e _ -> e)
         reduce1 nt_array_indexers nt_array_indexer (fun e -> [e])
-        reduce2 nt_array_indexers nt_array_indexers nt_array_indexer (@)
+        reduce2 nt_array_indexers nt_array_indexers nt_array_indexer (fun es e -> es@[e])
         
         reduce0 nt_literal t_literal_true
         reduce0 nt_literal t_literal_false

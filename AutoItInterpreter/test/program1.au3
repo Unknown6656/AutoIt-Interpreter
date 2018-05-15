@@ -1,6 +1,6 @@
 ﻿#include-once
 ; #include <APIComConstants.au3>
-; #include 'header-1.au3'
+#include 'header-1.au3'
 
 
 Func f2($a, $b)

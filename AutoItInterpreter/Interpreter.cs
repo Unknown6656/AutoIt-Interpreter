@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.IO;
@@ -1044,6 +1045,7 @@ namespace AutoItInterpreter
                             return mes;
                         }
                         catch (Exception ex)
+                        when (!Debugger.IsAttached)
                         {
                             if (!suppress)
                                 err("errors.astproc.parser_error", expr, ex.Message);
