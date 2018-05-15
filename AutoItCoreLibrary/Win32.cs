@@ -32,6 +32,9 @@ namespace AutoItCoreLibrary
 
         [DllImport("coredll", SetLastError = true)]
         internal static extern void* CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, void* lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, void* hTemplateFile);
+
+        [DllImport("user32.dll")]
+        internal static extern void* GetKeyboardLayout(int thread);
     }
 
     public enum OS

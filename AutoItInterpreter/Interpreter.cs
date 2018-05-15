@@ -958,6 +958,7 @@ namespace AutoItInterpreter
                 ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserOptions.DeclarationMode | optimize);
                 ExpressionParser p_assignment = new ExpressionParser(ExpressionParserOptions.AllowAssignment | optimize);
                 ExpressionParser p_expression = new ExpressionParser(optimize);
+                HashSet<string> λ_assigned = new HashSet<string>();
                 AST_FUNCTION _currfunc = null;
 
                 foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration })
@@ -968,7 +969,7 @@ namespace AutoItInterpreter
 
                 state.PInvokeSignatures = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
 
-                ValidateFunctionCalls(state, options, funccalls.ToArray());
+                ValidateFunctionCalls(state, options, λ_assigned, funccalls.ToArray());
 
                 dynamic process(Entity e)
                 {
@@ -1016,24 +1017,6 @@ namespace AutoItInterpreter
 
                         return expr;
                     }
-                    EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
-                    {
-                        if (parsemexpr(expr, assign ? p_assignment : p_expression, suppress) is MULTI_EXPRESSION[] m)
-                            if (m.Length > 1)
-                            {
-                                if (!suppress)
-                                    err("errors.astproc.no_comma_allowed", expr);
-                            }
-                            else if (m[0].IsValueRange)
-                            {
-                                if (!suppress)
-                                    err("errors.astproc.no_range_allowed", expr);
-                            }
-                            else
-                                return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
-
-                        return null;
-                    }
                     MULTI_EXPRESSION[] parsemexpr(string expr, ExpressionParser p, bool suppress = false)
                     {
                         expr = expr.Trim();
@@ -1067,6 +1050,24 @@ namespace AutoItInterpreter
 
                             return null;
                         }
+                    }
+                    EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
+                    {
+                        if (parsemexpr(expr, assign ? p_assignment : p_expression, suppress) is MULTI_EXPRESSION[] m)
+                            if (m.Length > 1)
+                            {
+                                if (!suppress)
+                                    err("errors.astproc.no_comma_allowed", expr);
+                            }
+                            else if (m[0].IsValueRange)
+                            {
+                                if (!suppress)
+                                    err("errors.astproc.no_range_allowed", expr);
+                            }
+                            else
+                                return (m[0] as MULTI_EXPRESSION.SingleValue)?.Item;
+
+                        return null;
                     }
                     dynamic __inner()
                     {
@@ -1544,7 +1545,7 @@ namespace AutoItInterpreter
                                                 };
                                             else
                                             {
-                                                if (!ex.IsFunctionCall)
+                                                if (!ex.IsFunctionCall && !ex.IsΛFunctionCall)
                                                     if (Analyzer.IsStatic(ex))
                                                     {
                                                         note("notes.optimized_away");
@@ -1668,11 +1669,16 @@ namespace AutoItInterpreter
                                         if (fname == "dllcall")
                                             err("errors.astproc.dllcall_assign");
                                         else
+                                        {
+                                            if (!λ_assigned.Contains(fname))
+                                                λ_assigned.Add(fname);
+
                                             return new AST_Λ_ASSIGNMENT_STATEMENT
                                             {
                                                 VariableExpression = expr,
                                                 Function = fname,
                                             };
+                                        }
                                     }
                                     else
                                         ; // TODO : error
@@ -1731,7 +1737,9 @@ namespace AutoItInterpreter
                     if (sig is null)
                         state.ReportKnownError("errors.astproc.pinvoke_sig_invalid", ctx, s, name);
                     else if (used_sigs.Contains((lib, sig)))
-                        state.ReportKnownError("warnings.astproc.pinvoke_already_declared", ctx, s, lib);
+                        state.ReportKnownWarning("warnings.astproc.pinvoke_already_declared", ctx, s, lib);
+                    else if (Array.Find(BUILT_IN_FUNCTIONS, x => x.Name.ToLower() == name).Name is string builtin)
+                        state.ReportKnownError("errors.general.reserved_name", ctx, builtin);
                     else
                     {
                         used_sigs.Add((lib, sig));
@@ -1807,7 +1815,7 @@ namespace AutoItInterpreter
                 return used_sigs.ToArray();
             }
 
-            private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, params (DefinitionContext, string, EXPRESSION[])[] calls)
+            private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, IEnumerable<string> λassignments, params (DefinitionContext, string, EXPRESSION[])[] calls)
             {
                 OS target = options.Compatibility.GetOperatingSystem();
 
@@ -1868,7 +1876,7 @@ namespace AutoItInterpreter
                 }
 
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
-                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ'))
+                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ') && !λassignments.Contains(uncalled.ToLower()))
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
             }
 

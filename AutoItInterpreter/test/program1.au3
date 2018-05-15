@@ -10,7 +10,6 @@ EndFunc
 func sleep as "void sleep(int)" from "kernel32.dll"
 
 
-
 dllcall("mylib.a", "int", "NTfunc_W", "bool", false, "hwnd", null, "uint64", @sec, "float", $kek)
 sleep(5000)
 
@@ -18,13 +17,13 @@ sleep(5000)
     System.Console.WriteLine("this is unsafe!!");
 #ce[csharp]
 
-$func1[4] = f2
+$func1[4] = beep
 $func2 = Func($a, $b)
             $s = sin($a)
             ConsoleWrite($"called with ($a, $b)!\n")
             ConsoleWriteLine($"sin($a) == $s")
          EndFunc
-$func3 = beep
+$func3 = f2
          
 $func1(3.1, -5)
 $func2(42, 88)

@@ -11,6 +11,7 @@ using System;
 
 namespace AutoItCoreLibrary
 {
+    using System.Threading;
     using static Win32;
 
     using var = AutoItVariantType;
@@ -114,8 +115,12 @@ namespace AutoItCoreLibrary
                 case "ipaddress2": // TODO: ip address of second network adapter. returns 0.0.0.0 if not applicable.
                 case "ipaddress3": // TODO: ip address of third network adapter. returns 0.0.0.0 if not applicable.
                 case "ipaddress4": // TODO: ip address of fourth network adapter. returns 0.0.0.0 if not applicable.
-                case "kblayout": // TODO: returns code denoting keyboard layout. see appendix for possible values.
                     break;
+                case "kblayout":
+                    return GetPlatformSpecific(
+                        () => ((long)GetKeyboardLayout(Thread.CurrentThread.ManagedThreadId)).ToString("x8"),
+                        () => null // TODO
+                    );
                 case "lf":
                     return "\n";
                 case "localappdatadir":
@@ -141,10 +146,11 @@ namespace AutoItCoreLibrary
                 case "numparams": // TODO: number of parameters used in calling the user function.
                     break;
                 case "osarch":
-                    return Environment.Is64BitOperatingSystem ? "x64" : "x86";
-                case "osbuild": // TODO: returns the os build number. for example, windows 2003 server returns 3790
-                case "oslang": // TODO: returns code denoting os language. see appendix for possible values.
-                    break;
+                    return Environment.Is64BitOperatingSystem ? "X64" : "X86";
+                case "osbuild":
+                    return Environment.OSVersion.Version.Build;
+                case "oslang":
+                    return CultureInfo.CurrentCulture.LCID.ToString("x4");
                 case "osservicepack":
                     return Environment.OSVersion.ServicePack;
                 case "ostype":
@@ -175,23 +181,38 @@ namespace AutoItCoreLibrary
                     return Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
                 case "startupdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                case "sw_disable": // TODO: disables the window.
-                case "sw_enable": // TODO: enables the window.
-                case "sw_hide": // TODO: hides the window and activates another window.
-                case "sw_lock": // TODO: lock the window to avoid repainting.
-                case "sw_maximize": // TODO: activates the window and displays it as a maximized window.
-                case "sw_minimize": // TODO: minimizes the specified window and activates the next top-level window in the z order.
-                case "sw_restore": // TODO: activates and displays the window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when restoring a minimized window.
-                case "sw_show": // TODO: activates the window and displays it in its current size and position.
-                case "sw_showdefault": // TODO: sets the show state based on the sw_ value specified by the program that started the application.
-                case "sw_showmaximized": // TODO: activates the window and displays it as a maximized window.
-                case "sw_showminimized": // TODO: activates the window and displays it as a minimized window.
-                case "sw_showminnoactive": // TODO: displays the window as a minimized window. this value is similar to @sw_showminimized, except the window is not activated.
-                case "sw_showna": // TODO: displays the window in its current size and position. this value is similar to @sw_show, except the window is not activated.
-                case "sw_shownoactivate": // TODO: displays a window in its most recent size and position. this value is similar to @sw_shownormal, except the window is not activated.
-                case "sw_shownormal": // TODO: activates and displays a window. if the window is minimized or maximized, the system restores it to its original size and position. an application should specify this flag when displaying the window for the first time.
-                case "sw_unlock": // TODO: unlock window to allow painting.
-                    break;
+                case "sw_disable":
+                    return 65;
+                case "sw_enable":
+                    return 64;
+                case "sw_hide":
+                    return 0;
+                case "sw_lock":
+                    return 66;
+                case "sw_maximize":
+                    return 3;
+                case "sw_minimize":
+                    return 6;
+                case "sw_restore":
+                    return 9;
+                case "sw_show":
+                    return 5;
+                case "sw_showdefault":
+                    return 10;
+                case "sw_showmaximized":
+                    return 3;
+                case "sw_showminimized":
+                    return 2;
+                case "sw_showminnoactive":
+                    return 7;
+                case "sw_showna":
+                    return 8;
+                case "sw_shownoactivate":
+                    return 4;
+                case "sw_shownormal":
+                    return 1;
+                case "sw_unlock":
+                    return 67;
                 case "systemdir":
                     return Environment.GetFolderPath(Environment.SpecialFolder.System);
                 case "systemdirx86":
@@ -226,6 +247,10 @@ namespace AutoItCoreLibrary
                 #endregion
                 #region Additional
 
+                case "date":
+                    return DateTime.Now.ToString("yyyy-MM-dd");
+                case "date_time":
+                    return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
                 case "e":
                     return (var)Math.E;
                 case "nl":
@@ -236,6 +261,10 @@ namespace AutoItCoreLibrary
                     return 1.618033988749894848204586834m;
                 case "pi":
                     return (var)Math.PI;
+                case "time":
+                    return DateTime.Now.ToString("HH:mm:ss");
+                case "time_l":
+                    return DateTime.Now.ToString("HH:mm:ss.ffffff");
                 case "vtab":
                     return "\v";
 

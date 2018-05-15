@@ -164,6 +164,7 @@ let rec ProcessConstants e =
                     if x = y then
                         match o with
                         | Nxor
+                        | BitwiseNxor
                         | EqualCaseSensitive
                         | EqualCaseInsensitive
                         | GreaterEqual
@@ -180,6 +181,10 @@ let rec ProcessConstants e =
                         | And
                         | BitwiseOr
                         | BitwiseAnd -> x
+                        | Nor
+                        | Nand -> UnaryExpression(Not, x)
+                        | BitwiseNor
+                        | BitwiseNand -> UnaryExpression(BitwiseNot, x)
                         | _ -> proc()
                     else
                         match o with
