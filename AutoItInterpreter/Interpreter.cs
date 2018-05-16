@@ -1604,16 +1604,38 @@ namespace AutoItInterpreter
                                                                               let _ = stat &= iscst
                                                                               where iscst
                                                                               select (decimal)cst.Value).ToArray();
-                                                            INIT_EXPRESSION[] vals = arrinit.Item2.ToArray();
+                                                            FSharpList<INIT_EXPRESSION> vals = arrinit.Item2;
 
                                                             if ((vals.Length > 0) && stat)
-                                                            {
+                                                                if (dims.Contains(0m))
+                                                                    note("notes.init_0_dim", dims.Length);
+                                                                else
+                                                                {
+                                                                    int[] valdims = Analyzer.GetMatrixDimensions(vals);
 
+                                                                    if ((valdims.Length % 2) == 0)
+                                                                    {
+                                                                        err("errors.astproc.init_internal_error");
 
-                                                                // verify dimensions
+                                                                        return null;
+                                                                    }
+                                                                    else
+                                                                        for (int j = 0; j < valdims.Length; ++j)
+                                                                            if (((j % 2) == 0) && (valdims[j] != 1))
+                                                                            {
+                                                                                err("errors.astproc.init_internal_error");
 
+                                                                                return null;
+                                                                            }
+                                                                            else if (((j % 2) == 1) && (valdims[j] != (int)dims[j / 2]))
+                                                                            {
+                                                                                err("errors.astproc.init_dimension_mismatch", j / 2, (int)dims[j / 2], valdims[j]);
 
-                                                            }
+                                                                                return null;
+                                                                            }
+                                                                            else
+                                                                                continue;
+                                                                }
                                                             else if (vals.Length > 0)
                                                             {
                                                                 err("errors.astproc.init_no_dynamic_dimensions");
@@ -1652,8 +1674,6 @@ namespace AutoItInterpreter
                                         })
                                         .Where(expr => expr != null)
                                         .ToArray();
-
-                                        // TODO
 
                                         return new AST_SCOPE
                                         {

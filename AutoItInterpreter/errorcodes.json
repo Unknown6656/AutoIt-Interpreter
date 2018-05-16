@@ -58,7 +58,9 @@
             "dllcall_const_args": 1221,
             "dllcall_assign": 1222,
             "trailing_comma": 1223,
-            "init_no_dynamic_dimensions": 1224
+            "init_no_dynamic_dimensions": 1224,
+            "init_internal_error": 1225,
+            "init_dimension_mismatch": 1226,
         },
         "generator": {
             "cannot_create": 1301,
@@ -92,6 +94,7 @@
         "uncalled_function": 3003,
         "unsafe_autoit3": 3004,
         "empty_function": 3005,
-        "unnecessary_function_comp": 3006
+        "unnecessary_function_comp": 3006,
+        "init_0_dim": 3007
     }
 }

@@ -326,5 +326,20 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
                                      List.map GetVariables i @ List.map gv es
     |> List.concat
 
-//let rec ValidateArrayDimensions (e : INIT_EXPRESSION[]) =
-    
+let rec GetArrayDimensions e =
+    match List.map (function Single _ -> Some 0 | Multiple e -> GetArrayDimensions e) e
+        |> List.distinct with
+    | [Some x] -> Some (x + 1)
+    | [] -> Some 0
+    | _ -> None
+
+let GetMatrixDimensions e =
+    let rec getdim e =
+        match List.choose (function Single _ -> Some [] | Multiple e -> getdim e) e
+           |> List.distinct with
+        | [x] -> Some (e.Length::x)
+        | [] -> Some [e.Length]
+        | _ -> None
+    match getdim e with
+    | Some l -> List.toArray l
+    | None -> [||]

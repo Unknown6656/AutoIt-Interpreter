@@ -66,7 +66,9 @@
             "dllcall_const_args": "The function 'DllCall' currently requires constant string arguments for the entry point and type names. This will be fixed in the near future.",
             "dllcall_assign": "The function 'DllCall' cannot be λ-assigned to a variable.",
             "trailing_comma": "Invalid trailing comma in the declaration expression.",
-            "init_no_dynamic_dimensions": "Array initalization dimensions must be compile-time static, when providing the initial values using the '... = [ ... ]' notation."
+            "init_no_dynamic_dimensions": "Array initalization dimensions must be compile-time static, when providing the initial values using the '... = [ ... ]' notation.",
+            "init_internal_error": "Some internal error occured during the parsing of the array initialization expression",
+            "init_dimension_mismatch": "The dimension no. {0} in the definition does not match the provided one: The size {1} was provided in the definition, however the according dimension in the initialization expression has the size {2}."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
@@ -100,6 +102,7 @@
         "uncalled_function": "The function '{0}' will never be called.",
         "unsafe_execute": "Calling the function 'Execute' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
         "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics.",
-        "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations."
+        "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
+        "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored."
     }
 }
