@@ -1,7 +1,8 @@
 ﻿#include-once
 ; #include <APIComConstants.au3>
-#include 'header-1.au3'
+global $mong = "kek"
 
+#include 'header-1.au3'
 
 Func f2($a, $b)
     consolewriteline($"function f2 was called with:\n\t\$a = $a\n\t\$b = $b")

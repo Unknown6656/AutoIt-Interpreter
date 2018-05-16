@@ -6,6 +6,8 @@ using System.Linq;
 using System.IO;
 using System;
 
+using Microsoft.FSharp.Core;
+
 using Newtonsoft.Json.Linq;
 
 using AutoItCoreLibrary;
@@ -148,6 +150,24 @@ namespace AutoItInterpreter
                     }
                 else
                     RuntimeHelpers.PrepareMethod(method.MethodHandle);
+        }
+
+        public static bool IsSome<T>(this FSharpOption<T> opt) => FSharpOption<T>.get_IsSome(opt);
+
+        public static bool IsNone<T>(this FSharpOption<T> opt) => FSharpOption<T>.get_IsNone(opt);
+
+        public static bool IsSome<T>(this FSharpOption<T> opt, out T val)
+        {
+            if (opt.IsSome())
+            {
+                val = opt.Value;
+
+                return true;
+            }
+            else
+                val = default;
+
+            return false;
         }
     }
 

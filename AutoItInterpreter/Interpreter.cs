@@ -8,6 +8,7 @@ using System.IO;
 using System;
 
 using Microsoft.FSharp.Collections;
+using Microsoft.FSharp.Core;
 
 using Piglet.Parser.Configuration;
 
@@ -976,48 +977,20 @@ namespace AutoItInterpreter
                     void err(string path, params object[] args) => state.ReportKnownError(path, e.DefinitionContext, args);
                     void warn(string path, params object[] args) => state.ReportKnownWarning(path, e.DefinitionContext, args);
                     void note(string path, params object[] args) => state.ReportKnownNote(path, e.DefinitionContext, args);
-                    AST_STATEMENT[] proclines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
-                    EXPRESSION opt(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
-                    AST_CONDITIONAL_BLOCK proccond()
+                    EXPRESSION optimize(EXPRESSION expr) => Analyzer.ProcessExpression(expr);
+                    AST_STATEMENT[] process_lines() => e.RawLines.SelectMany(rl => process(rl) as AST_STATEMENT[]).Where(l => l != null).ToArray();
+                    AST_CONDITIONAL_BLOCK process_condition()
                     {
-                        EXPRESSION expr = parsefexpr((e as ConditionalEntity)?.RawCondition, false);
+                        EXPRESSION expr = try_parse_expression((e as ConditionalEntity)?.RawCondition, false);
 
                         return new AST_CONDITIONAL_BLOCK
                         {
                             Condition = expr,
-                            Statements = proclines(),
+                            Statements = process_lines(),
                             Context = e.DefinitionContext
                         };
                     }
-                    EXPRESSION parsefexpr(string exprstr, bool assign)
-                    {
-                        EXPRESSION expr;
-
-                        if ((expr = parseexpr(exprstr, assign)) is null)
-                        {
-                            expr = parseexpr($"{DISCARD_VARIBLE} = ({exprstr})", true, true);
-
-                            if (expr != null)
-                            {
-                                state.RemoveLastErrorOrWarning();
-
-                                switch ((expr as EXPRESSION.AssignmentExpression)?.Item)
-                                {
-                                    case ASSIGNMENT_EXPRESSION.ArrayAssignment a:
-                                        expr = a.Item4;
-
-                                        break;
-                                    case ASSIGNMENT_EXPRESSION.ScalarAssignment a:
-                                        expr = a.Item3;
-
-                                        break;
-                                }
-                            }
-                        }
-
-                        return expr;
-                    }
-                    MULTI_EXPRESSION[] parsemexpr(string expr, ExpressionParser p, bool suppress = false)
+                    MULTI_EXPRESSION[] parse_multi_expressions(string expr, ExpressionParser p, bool suppress = false)
                     {
                         expr = expr.Trim();
 
@@ -1044,7 +1017,6 @@ namespace AutoItInterpreter
                             return mes;
                         }
                         catch (Exception ex)
-                        when (!Debugger.IsAttached)
                         {
                             if (!suppress)
                                 err("errors.astproc.parser_error", expr, ex.Message);
@@ -1052,9 +1024,9 @@ namespace AutoItInterpreter
                             return null;
                         }
                     }
-                    EXPRESSION parseexpr(string expr, bool assign, bool suppress = false)
+                    EXPRESSION parse_expression(string expr, bool assign, bool suppress = false)
                     {
-                        if (parsemexpr(expr, assign ? p_assignment : p_expression, suppress) is MULTI_EXPRESSION[] m)
+                        if (parse_multi_expressions(expr, assign ? p_assignment : p_expression, suppress) is MULTI_EXPRESSION[] m)
                             if (m.Length > 1)
                             {
                                 if (!suppress)
@@ -1070,6 +1042,35 @@ namespace AutoItInterpreter
 
                         return null;
                     }
+                    EXPRESSION try_parse_expression(string exprstr, bool assign)
+                    {
+                        EXPRESSION expr;
+
+                        if ((expr = parse_expression(exprstr, assign)) is null)
+                        {
+                            expr = parse_expression($"{DISCARD_VARIBLE} = ({exprstr})", true, true);
+
+                            if (expr != null)
+                            {
+                                state.RemoveLastErrorOrWarning();
+
+                                switch ((expr as EXPRESSION.AssignmentExpression)?.Item)
+                                {
+                                    case ASSIGNMENT_EXPRESSION.ArrayAssignment a:
+                                        expr = a.Item4;
+
+                                        break;
+                                    case ASSIGNMENT_EXPRESSION.ScalarAssignment a:
+                                        expr = a.Item3;
+
+                                        break;
+                                }
+                            }
+                        }
+
+                        return expr;
+                    }
+
                     dynamic __inner()
                     {
                         switch (e)
@@ -1125,7 +1126,7 @@ namespace AutoItInterpreter
                                     if (i.Name == GLOBAL_FUNC_NAME)
                                         state.ASTFunctions[GLOBAL_FUNC_NAME] = _currfunc;
 
-                                    if ((_currfunc.Statements = proclines()).Length == 0)
+                                    if ((_currfunc.Statements = process_lines()).Length == 0)
                                         note("notes.empty_function", i.Name);
 
                                     if (i.Name != GLOBAL_FUNC_NAME)
@@ -1143,11 +1144,11 @@ namespace AutoItInterpreter
                                 };
                             case IF_BLOCK _:
                             case ELSEIF_BLOCK _:
-                                return proccond();
+                                return process_condition();
                             case ELSE_BLOCK i:
-                                return proclines();
+                                return process_lines();
                             case WHILE i:
-                                return (AST_WHILE_STATEMENT)proccond();
+                                return (AST_WHILE_STATEMENT)process_condition();
                             case DO_UNTIL i:
                                 {
                                     return new AST_WHILE_STATEMENT
@@ -1159,7 +1160,7 @@ namespace AutoItInterpreter
                                             {
                                             new AST_IF_STATEMENT
                                             {
-                                                If = proccond(),
+                                                If = process_condition(),
                                                 OptionalElse = new AST_STATEMENT[]
                                                 {
                                                     new AST_BREAK_STATEMENT { Level = 1 }
@@ -1187,7 +1188,7 @@ namespace AutoItInterpreter
                                     AST_LOCAL_VARIABLE exprvar = new AST_LOCAL_VARIABLE
                                     {
                                         Variable = VARIABLE.NewTemporary,
-                                        InitExpression = parseexpr(i.Expression, false)
+                                        InitExpression = parse_expression(i.Expression, false)
                                     };
                                     EXPRESSION exprvare = EXPRESSION.NewVariableExpression(exprvar.Variable);
                                     dynamic[] cases = i.Cases.Select(x => process(x)[0]).ToArray();
@@ -1205,19 +1206,19 @@ namespace AutoItInterpreter
                                                 IEnumerable<EXPRESSION> expr = ce.Expressions.Select(ex =>
                                                 {
                                                     if (ex is MULTI_EXPRESSION.SingleValue sv)
-                                                        return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, opt(sv.Item));
+                                                        return EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.EqualCaseSensitive, exprvare, optimize(sv.Item));
                                                     else if (ex is MULTI_EXPRESSION.ValueRange vr)
                                                         return EXPRESSION.NewBinaryExpression(
                                                             OPERATOR_BINARY.And,
                                                             EXPRESSION.NewBinaryExpression(
                                                             OPERATOR_BINARY.GreaterEqual,
                                                                 exprvare,
-                                                                opt(vr.Item1)
+                                                                optimize(vr.Item1)
                                                             ),
                                                             EXPRESSION.NewBinaryExpression(
                                                                 OPERATOR_BINARY.LowerEqual,
                                                                 exprvare,
-                                                                opt(vr.Item2)
+                                                                optimize(vr.Item2)
                                                             )
                                                         );
                                                     else
@@ -1263,8 +1264,8 @@ namespace AutoItInterpreter
                             case SELECT_CASE i:
                                 return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
                                 {
-                                    Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parseexpr(i.RawCondition, false),
-                                    Statements = proclines(),
+                                    Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parse_expression(i.RawCondition, false),
+                                    Statements = process_lines(),
                                     Context = i.DefinitionContext
                                 };
                             case SWITCH_CASE i:
@@ -1276,8 +1277,8 @@ namespace AutoItInterpreter
                                     else
                                         return new AST_SWITCH_CASE_EXPRESSION
                                         {
-                                            Statements = proclines(),
-                                            Expressions = parsemexpr(expr, p_expression)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                            Statements = process_lines(),
+                                            Expressions = parse_multi_expressions(expr, p_expression)?.ToArray() ?? new MULTI_EXPRESSION[0]
                                         };
                                 }
                             case RETURN i:
@@ -1287,7 +1288,7 @@ namespace AutoItInterpreter
 
                                     return new AST_RETURN_STATEMENT
                                     {
-                                        Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parseexpr(i.Expression, false)
+                                        Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parse_expression(i.Expression, false)
                                     };
                                 }
                             case CONTINUECASE _:
@@ -1306,7 +1307,7 @@ namespace AutoItInterpreter
                                 };
                             case WITH i:
                                 {
-                                    if (parseexpr(i.Expression, true) is EXPRESSION expr)
+                                    if (parse_expression(i.Expression, true) is EXPRESSION expr)
                                     {
                                         if (!expr.IsVariableExpression)
                                             err("errors.astproc.obj_expression_required", i.Expression);
@@ -1325,9 +1326,9 @@ namespace AutoItInterpreter
                             case FOR i:
                                 {
                                     DefinitionContext defctx = i.DefinitionContext;
-                                    EXPRESSION start = parseexpr(i.StartExpression, false);
-                                    EXPRESSION stop = parseexpr(i.StopExpression, false);
-                                    EXPRESSION step = i.OptStepExpression is string stepexpr ? parseexpr(stepexpr, false) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
+                                    EXPRESSION start = parse_expression(i.StartExpression, false);
+                                    EXPRESSION stop = parse_expression(i.StopExpression, false);
+                                    EXPRESSION step = i.OptStepExpression is string stepexpr ? parse_expression(stepexpr, false) : EXPRESSION.NewLiteral(LITERAL.NewNumber(1));
                                     AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
                                     {
                                         Variable = new VARIABLE(i.VariableExpression),
@@ -1336,7 +1337,7 @@ namespace AutoItInterpreter
                                     AST_LOCAL_VARIABLE upvar = new AST_LOCAL_VARIABLE
                                     {
                                         Variable = VARIABLE.NewTemporary,
-                                        InitExpression = opt(EXPRESSION.NewBinaryExpression(
+                                        InitExpression = optimize(EXPRESSION.NewBinaryExpression(
                                             OPERATOR_BINARY.LowerEqual,
                                             start,
                                             stop
@@ -1399,7 +1400,7 @@ namespace AutoItInterpreter
                                                             {
                                                                 Context = defctx,
                                                                 Condition = cond,
-                                                                Statements = proclines().Concat(new AST_STATEMENT[]
+                                                                Statements = process_lines().Concat(new AST_STATEMENT[]
                                                                 {
                                                                     new AST_ASSIGNMENT_EXPRESSION_STATEMENT
                                                                     {
@@ -1437,7 +1438,7 @@ namespace AutoItInterpreter
                                         InitExpression = EXPRESSION.NewLiteral(LITERAL.Null)
                                     };
 
-                                    if (parseexpr(i.RangeExpression, false) is EXPRESSION collexpr)
+                                    if (parse_expression(i.RangeExpression, false) is EXPRESSION collexpr)
                                     {
                                         AST_LOCAL_VARIABLE collvar = new AST_LOCAL_VARIABLE
                                         {
@@ -1471,7 +1472,7 @@ namespace AutoItInterpreter
                                                     )
                                                 },
                                             }
-                                            .Concat(proclines())
+                                            .Concat(process_lines())
                                             .Concat(new AST_STATEMENT[]
                                             {
                                                 new AST_IF_STATEMENT
@@ -1534,7 +1535,7 @@ namespace AutoItInterpreter
                                 {
                                     if (i.RawContent is string exprstr)
                                     {
-                                        EXPRESSION expr = parsefexpr(exprstr, true);
+                                        EXPRESSION expr = try_parse_expression(exprstr, true);
 
                                         // TODO : with-statement rawline ?
 
@@ -1568,90 +1569,108 @@ namespace AutoItInterpreter
                             case DECLARATION i:
                                 {
                                     AST_FUNCTION targetfunc = i.Modifiers.Contains("global") ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
-                                    MULTI_EXPRESSION[] expressions = parsemexpr(i.Expression, p_delcaration);
                                     List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
                                     bool @const = i.Modifiers.Contains("const");
 
-                                    if (expressions is null)
+                                    if (parse_multi_expressions(i.Expression, p_delcaration) is MULTI_EXPRESSION[] expressions)
                                     {
-                                        state.ReportError($"The expression '{i.Expression}' could not be parsed <--- serious error!!!", i.DefinitionContext, 0);
+                                        VARIABLE[] vars = expressions.Select(mexpr =>
+                                        {
+                                            if (mexpr is MULTI_EXPRESSION.SingleValue sv)
+                                                return sv.Item;
+                                            else
+                                                err("errors.astproc.no_range_as_init");
 
-                                        break; // TODO
-                                    }
-
-                                    VARIABLE[] vars = expressions.Select(mexpr =>
-                                    {
-                                        if (mexpr is MULTI_EXPRESSION.SingleValue sv)
-                                            return sv.Item;
-                                        else
-                                            err("errors.astproc.no_range_as_init");
-
-                                        return null;
-                                    })
-                                    .Where(expr => expr != null)
-                                    .Select(expr =>
-                                    {
-                                        if ((expr as EXPRESSION.AssignmentExpression)?.Item is ASSIGNMENT_EXPRESSION.ScalarAssignment scaexpr && scaexpr.Item3 != null)
-                                            if (scaexpr.Item1 == OPERATOR_ASSIGNMENT.Assign)
-                                            {
-                                                VARIABLE var = scaexpr.Item2;
-                                                AST_LOCAL_VARIABLE prev = targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var));
-
-                                                if (prev is null)
+                                            return null;
+                                        })
+                                        .Where(expr => expr != null)
+                                        .Select(expr =>
+                                        {
+                                            if ((expr as EXPRESSION.AssignmentExpression)?.Item is ASSIGNMENT_EXPRESSION.ScalarAssignment scaexpr && scaexpr.Item3 != null)
+                                                if (scaexpr.Item1 == OPERATOR_ASSIGNMENT.Assign)
                                                 {
-                                                    targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
-                                                    {
-                                                        Constant = @const,
-                                                        Variable = var
-                                                    });
-                                                    statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                                    {
-                                                        Context = i.DefinitionContext,
-                                                        Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
-                                                            OPERATOR_ASSIGNMENT.Assign,
-                                                            var,
-                                                            scaexpr.Item3
-                                                        )
-                                                    });
+                                                    VARIABLE var = scaexpr.Item2;
 
-                                                    return var;
+                                                    if (targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var)) is AST_LOCAL_VARIABLE prev)
+                                                        err("errors.astproc.variable_exists", prev);
+                                                    else
+                                                    {
+                                                        if (scaexpr.Item3 is EXPRESSION.ArrayInitExpression arrinit)
+                                                        {
+                                                            bool stat = true;
+                                                            decimal[] dims = (from EXPRESSION ex in arrinit.Item1
+                                                                              let cst = Analyzer.GetConstantValue(ex)
+                                                                              let iscst = cst.IsSome()
+                                                                              let _ = stat &= iscst
+                                                                              where iscst
+                                                                              select (decimal)cst.Value).ToArray();
+                                                            INIT_EXPRESSION[] vals = arrinit.Item2.ToArray();
+
+                                                            if ((vals.Length > 0) && stat)
+                                                            {
+
+
+                                                                // verify dimensions
+
+
+                                                            }
+                                                            else if (vals.Length > 0)
+                                                            {
+                                                                err("errors.astproc.init_no_dynamic_dimensions");
+
+                                                                return null;
+                                                            }
+                                                        }
+
+                                                        targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                                        {
+                                                            Context = i.DefinitionContext,
+                                                            Constant = @const,
+                                                            Variable = var,
+                                                        });
+                                                        statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                        {
+                                                            Context = i.DefinitionContext,
+                                                            Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                                                OPERATOR_ASSIGNMENT.Assign,
+                                                                var,
+                                                                scaexpr.Item3
+                                                            )
+                                                        });
+
+                                                        return var;
+                                                    }
                                                 }
                                                 else
-                                                    err("errors.astproc.variable_exists", var);
-                                            }
+                                                    err("errors.astproc.init_invalid_operator", scaexpr.Item1);
+                                            else if (@const)
+                                                err("errors.astproc.missing_value");
                                             else
-                                                err("errors.astproc.init_invalid_operator", scaexpr.Item1);
-                                        else if (@const)
-                                            err("errors.astproc.missing_value");
-                                        else if (expr is EXPRESSION.VariableExpression vexpr)
+                                                err("errors.astproc.init_invalid_expression");
+
+                                            return null;
+                                        })
+                                        .Where(expr => expr != null)
+                                        .ToArray();
+
+                                        // TODO
+
+                                        return new AST_SCOPE
                                         {
-                                            VARIABLE var = vexpr.Item;
+                                            Statements = statements.ToArray(),
+                                        };
+                                    }
+                                    else if (i.Expression.Trim().EndsWith(','))
+                                        err("errors.astproc.trailing_comma");
 
-
-
-
-                                            // TODO
-
-                                        }
-                                        else
-                                            err("errors.astproc.init_invalid_expression");
-
-                                        return null;
-                                    })
-                                    .Where(expr => expr != null)
-                                    .ToArray();
-
-                                    return new AST_SCOPE
-                                    {
-                                        Statements = statements.ToArray(),
-                                    };
+                                    break;
                                 }
                             case REDIM i:
                                 return new AST_REDIM_STATEMENT
                                 {
                                     DimensionExpressions = i.Dimensions.Select(x =>
                                     {
-                                        EXPRESSION expr = parseexpr($"{DISCARD_VARIBLE} = ({x})", true);
+                                        EXPRESSION expr = parse_expression($"{DISCARD_VARIBLE} = ({x})", true);
                                         EXPRESSION vexpr = ((expr as EXPRESSION.AssignmentExpression)?.Item as ASSIGNMENT_EXPRESSION.ScalarAssignment)?.Item3;
 
                                         if (vexpr is null)
@@ -1663,7 +1682,7 @@ namespace AutoItInterpreter
                                 };
                             case λ_ASSIGNMENT i:
                                 {
-                                    if (parseexpr(i.VariableName.Trim(), false, false) is EXPRESSION expr)
+                                    if (parse_expression(i.VariableName.Trim(), false, false) is EXPRESSION expr)
                                     {
                                         string fname = i.FunctionName.ToLower();
 

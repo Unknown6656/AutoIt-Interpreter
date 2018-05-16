@@ -14,6 +14,7 @@ namespace AutoItInterpreter.PartialAST
         public bool Constant { set; get; }
         public VARIABLE Variable { set; get; }
         public EXPRESSION InitExpression { set; get; }
+        public DefinitionContext? Context { set; get; }
 
 
         public override string ToString() => $"{(Constant ? "const " : "")}{Variable}{(InitExpression is null ? "" : " = " + InitExpression.Print())}";

@@ -56,6 +56,7 @@
 
             "no_range_as_init": "The initialization expression is invalid, as it is a value range instead of an single-valued expression.",
             "missing_value": "Constant variables must be initialized with a value upon declaration.",
+            "variable_exists": "The variable '{0}' has already been declared prior to this statement (see {1}).",
             "init_invalid_operator": "Variables cannot be initiliazied with the operator '{0}'. Use the operator '=' instead.",
             "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
             "unsafe_func": "The function '{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
@@ -63,7 +64,9 @@
             "pinvoke_sig_invalid": "The signature '{0}' is not valid for the P/Invoke function '{1}'.",
             "dllcall_odd_argc": "The function 'DllCall' requires an odd amount of arguments.",
             "dllcall_const_args": "The function 'DllCall' currently requires constant string arguments for the entry point and type names. This will be fixed in the near future.",
-            "dllcall_assign": "The function 'DllCall' cannot be λ-assigned to a variable."
+            "dllcall_assign": "The function 'DllCall' cannot be λ-assigned to a variable.",
+            "trailing_comma": "Invalid trailing comma in the declaration expression.",
+            "init_no_dynamic_dimensions": "Array initalization dimensions must be compile-time static, when providing the initial values using the '... = [ ... ]' notation."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",

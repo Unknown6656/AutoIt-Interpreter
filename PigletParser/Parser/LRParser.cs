@@ -32,15 +32,13 @@ namespace Piglet.Parser
         {
             Stack<T> valueStack = new Stack<T>();
             Stack<int> parseStack = new Stack<int>();
+            // This holds the last exception we found when parsing, since we will need to pass this to an error handler once the proper handler has been found
+            ParseException exception = null;
 
             // Push default state onto the parse stack. Default state is always 0
             parseStack.Push(0);
 
             Tuple<int, T> input = lexerInstance.Next();
-
-            // This holds the last exception we found when parsing, since we
-            // will need to pass this to an error handler once the proper handler has been found
-            ParseException exception = null;
 
             while (true)
             {
@@ -79,16 +77,14 @@ namespace Piglet.Parser
 
                     // Go for error recovery!
                     while (ParseTable.Action[parseStack.Peek(), errorTokenNumber] == short.MinValue)
-                    {
-                        // If we run out of stack while searching for the error handler, throw the exception
-                        // This is what happens when there is no error handler defined at all.
                         if (parseStack.Count <= 2)
-                            throw exception;
-
-                        parseStack.Pop(); // Pop state
-                        parseStack.Pop(); // Pop token
-                        valueStack.Pop(); // Pop whatever value
-                    }
+                            throw exception; // If we run out of stack while searching for the error handler, throw the exception. This is what happens when there is no error handler defined at all.
+                        else
+                        {
+                            parseStack.Pop(); // Pop state
+                            parseStack.Pop(); // Pop token
+                            valueStack.Pop(); // Pop whatever value
+                        }
 
                     // Shift the error token unto the stack
                     state = parseStack.Peek();
@@ -102,8 +98,8 @@ namespace Piglet.Parser
                     // We have now found a state where error recovery is enabled. This means that we 
                     // continue to scan the input stream looking for something which is accepted.
                     // End of input will cause the exception to be thrown
-                    for (; (ParseTable.Action[state, input.Item1] == short.MinValue) && (input.Item1 != endOfInputTokenNumber); input = lexerInstance.Next())
-                        ; // nom nom nom
+                    while ((ParseTable.Action[state, input.Item1] == short.MinValue) && (input.Item1 != endOfInputTokenNumber))
+                        input = lexerInstance.Next(); // nom nom nom
 
                     // Ran out of file looking for the end of the error rule
                     if (input.Item1 == endOfInputTokenNumber)

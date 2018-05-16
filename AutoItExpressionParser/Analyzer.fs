@@ -266,6 +266,18 @@ and EvaluatesToFalse e = EvaluatesTo (e, Literal False)
 
 and EvaluatesToTrue e = EvaluatesTo (e, Literal True)
 
+let GetConstantValue e =
+    match ProcessConstants e with
+    | Literal l ->
+        match l with
+        | LITERAL.String s -> Some (variant s)
+        | Number d -> Some (variant.FromDecimal d)
+        | Null -> Some variant.Null
+        | Default -> Some variant.Default
+        | True -> Some variant.True
+        | False -> Some variant.False
+    | _ -> None
+
 let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     match e with
     | Literal _
@@ -313,3 +325,6 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
                                                                 |> List.concat
                                      List.map GetVariables i @ List.map gv es
     |> List.concat
+
+//let rec ValidateArrayDimensions (e : INIT_EXPRESSION[]) =
+    
