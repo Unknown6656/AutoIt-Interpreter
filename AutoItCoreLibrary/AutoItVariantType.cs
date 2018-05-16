@@ -287,6 +287,7 @@ namespace AutoItCoreLibrary
             }
         }
         public static AutoItVariantType NewMatrix(params long[] sizes) => new AutoItVariantType(new AutoItVariantData(sizes));
+        public static AutoItVariantType NewMatrix(params AutoItVariantType[] sizes) => NewMatrix(sizes.Select(x => x.ToLong()).ToArray());
         public static AutoItVariantType RedimMatrix(AutoItVariantType input, params long[] sizes)
         {
             if (input.IsString)
@@ -340,6 +341,7 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType BitwiseShl(AutoItVariantType v1, AutoItVariantType v2) => v2 < 0 ? BitwiseShr(v1, -v2) : (long)v1 << ((int)Math.Min(v2, 64));
         public static AutoItVariantType BitwiseRor(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShr(v1, v2), BitwiseShl(v1, 64 - v2));
         public static AutoItVariantType BitwiseRol(AutoItVariantType v1, AutoItVariantType v2) => BitwiseOr(BitwiseShl(v1, v2), BitwiseShr(v1, 64 - v2));
+        public static AutoItVariantType IntegerDivide(AutoItVariantType v1, AutoItVariantType v2) => AutoItFunctions.Floor(AutoItFunctions.Floor(v1) / AutoItFunctions.Floor(v2));
         public static AutoItVariantType Power(AutoItVariantType v1, AutoItVariantType v2) => v1 ^ v2;
         public static AutoItVariantType Concat(AutoItVariantType v1, AutoItVariantType v2) => v1 & v2;
         public static AutoItVariantType Concat(IEnumerable<AutoItVariantType> v) => v.Aggregate(Concat);

@@ -78,6 +78,7 @@ let rec ProcessConstants e =
             | Subtract -> !* (-)
             | Multiply -> !* (*)
             | Divide -> !* (/)
+            | IntegerDivide -> !@ variant.IntegerDivide
             | Modulus -> !* (%)
             | Power -> !@ variant.Power
             | BitwiseNand -> !@ variant.BitwiseNand

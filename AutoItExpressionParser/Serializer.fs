@@ -19,6 +19,7 @@ type Serializer (settings : SerializerSettings) =
                          AssignSubtract, Subtract
                          AssignMultiply, Multiply
                          AssignDivide, Divide
+                         AssignIntegerDivide, IntegerDivide
                          AssignModulus, Modulus
                          AssignConcat, StringConcat
                          AssignPower, Power
@@ -59,6 +60,7 @@ type Serializer (settings : SerializerSettings) =
                     | Subtract -> !!"-"
                     | Multiply -> !!"*"
                     | Divide -> !!"/"
+                    | IntegerDivide -> !<"IntegerDivide"
                     | Modulus -> !!"%"
                     | Power -> !!"^"
                     | BitwiseAnd -> !<"BitwiseAnd"
@@ -128,7 +130,18 @@ type Serializer (settings : SerializerSettings) =
                       | AssignmentExpression ae -> match ae with
                                                    | ScalarAssignment (o, v, e) -> printass (printvar v) [] o e
                                                    | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
-                      | ArrayInitExpression _
+                      | ArrayInitExpression (is, es) ->
+                            match es with
+                            | [] -> sprintf "%s.NewMatrix(%s)" (x.Settings.VariableTypeName) (String.Join(", ", List.map printexpr is))
+                            | _ ->
+                                let rec parr iss = function
+                                                   | Single e -> printexpr e
+                                                   | Multiple es -> 
+                                                        if iss then
+                                                            sprintf "%s.NewArray(%s)" (x.Settings.VariableTypeName) (String.Join(", ", List.map (parr false) es))
+                                                        else
+                                                            parr true es.[0]
+                                parr false (Multiple es)
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
             | Literal _ -> sprintf "(%s)(%s)" (x.Settings.VariableTypeName) (str e)

@@ -43,6 +43,7 @@ type OPERATOR_ASSIGNMENT =
     | AssignAdd
     | AssignSubtract
     | AssignMultiply
+    | AssignIntegerDivide
     | AssignDivide
     | AssignModulus
     | AssignConcat
@@ -75,6 +76,7 @@ type OPERATOR_BINARY =
     | Add
     | Subtract
     | Multiply
+    | IntegerDivide
     | Divide
     | Modulus
     | Power
@@ -147,6 +149,7 @@ let private AssToAString =
     | AssignAdd -> "+="
     | AssignSubtract -> "-="
     | AssignMultiply -> "*="
+    | AssignIntegerDivide -> "\\="
     | AssignDivide -> "/="
     | AssignModulus -> "%="
     | AssignConcat -> "&="
@@ -180,6 +183,7 @@ let private BinToAString o a b =
             | Add -> "(%s + %s)"
             | Subtract -> "(%s - %s)"
             | Multiply -> "(%s * %s)"
+            | IntegerDivide -> "(%s \\ %s)"
             | Divide -> "(%s / %s)"
             | Modulus -> "(%s %% %s)"
             | Power -> "(%s ^ %s)"

@@ -46,7 +46,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let nt_array_init_expression    = x.nt<INIT_EXPRESSION list>    "array-init-expression"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
-        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..49 |]
+        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..50 |]
         let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
         let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
         let nt_literal                  = x.nt<LITERAL>                 "literal"
@@ -67,6 +67,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_operator_assign_sub       = x.t @"-="
         let t_operator_assign_mul       = x.t @"\*="
         let t_operator_assign_div       = x.t @"/="
+        let t_operator_assign_intdiv    = x.t @"\\="
         let t_operator_assign_mod       = x.t @"%="
         let t_operator_assign_con       = x.t @"&="
         let t_operator_assign_pow       = x.t @"^="
@@ -99,6 +100,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_symbol_minus              = x.t @"-"
         let t_symbol_plus               = x.t @"\+"
         let t_symbol_asterisk           = x.t @"\*"
+        let t_symbol_backslash          = x.t @"\\"
         let t_symbol_slash              = x.t @"/"
         let t_symbol_percent            = x.t @"%"
         let t_symbol_hat                = x.t @"^"
@@ -227,6 +229,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
             reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignAdd)
             reduce1 nt_operator_binary_ass t_operator_assign_mul (fun _ -> AssignMultiply)
             reduce1 nt_operator_binary_ass t_operator_assign_div (fun _ -> AssignDivide)
+            reduce1 nt_operator_binary_ass t_operator_assign_intdiv (fun _ -> AssignIntegerDivide)
             reduce1 nt_operator_binary_ass t_operator_assign_mod (fun _ -> AssignModulus)
             reduce1 nt_operator_binary_ass t_operator_assign_con (fun _ -> AssignConcat)
             reduce1 nt_operator_binary_ass t_operator_assign_pow (fun _ -> AssignPower)
@@ -274,20 +277,16 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reducebe 10 BinaryLeft t_operator_comp_gte GreaterEqual
         reducebe 11 BinaryLeft t_operator_comp_gt Greater
         reducebe 12 BinaryLeft t_operator_comp_neq Unequal
-
         ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
         // reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
         // reduce3 !@13 !@14 t_symbol_equal !@14 (fun x _ y -> BinaryExpression(EqualCaseInsensitive, x, y))
         reduce0 !@13 !@14
-        
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
         reducebe 15 BinaryLeft t_symbol_ampersand StringConcat
-        
         ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
         // reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
         // reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
         reduce0 !@16 !@18
-
         reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
         reduceb 19 BinaryLeft t_operator_at0 (fun e i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number 1m), Literal <| Number 1m), e))
         reducebe 20 BinaryLeft t_operator_bit_nor BitwiseNor
@@ -304,36 +303,35 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reducebe 31 BinaryLeft t_symbol_plus Add
         reducebe 32 BinaryLeft t_symbol_percent Modulus
         reducebe 33 BinaryLeft t_symbol_slash Divide
-        reducebe 34 BinaryLeft t_symbol_asterisk Multiply
-        reducebe 35 BinaryRight t_symbol_hat Power
-        reduceue 36 UnaryPostfix t_symbol_numbersign StringLength
-        reduceue 37 UnaryPrefix t_keyword_not Not
-        reduceue 38 UnaryPrefix t_symbol_minus Negate
-        reduceue 39 UnaryPrefix t_symbol_plus Identity
-        reduceue 40 UnaryPrefix t_operator_bit_not BitwiseNot
-        reduce2 !@41 !@42 nt_dot_members (fun e m -> DotAccess(e, m))
-        reduce0 !@41 !@42
-        reduce4 !@42 !@42 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
-        reduce3 !@42 !@42 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reducebe 34 BinaryLeft t_symbol_backslash IntegerDivide
+        reducebe 35 BinaryLeft t_symbol_asterisk Multiply
+        reducebe 36 BinaryRight t_symbol_hat Power
+        reduceue 37 UnaryPostfix t_symbol_numbersign StringLength
+        reduceue 38 UnaryPrefix t_keyword_not Not
+        reduceue 39 UnaryPrefix t_symbol_minus Negate
+        reduceue 40 UnaryPrefix t_symbol_plus Identity
+        reduceue 41 UnaryPrefix t_operator_bit_not BitwiseNot
+        reduce2 !@42 !@43 nt_dot_members (fun e m -> DotAccess(e, m))
         reduce0 !@42 !@43
-        
-        //reduce2 !@43 !@44 nt_array_indexers (fun e i -> let rec acc e = function
+        reduce4 !@43 !@43 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
+        reduce3 !@43 !@43 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reduce0 !@43 !@44
+        //reduce2 !@44 !@45 nt_array_indexers (fun e i -> let rec acc e = function
         //                                                                | i::is -> acc (ArrayAccess(e, i)) is
         //                                                                | [] -> e
         //                                                acc e i)
-
-        reduce0 !@43 !@44
-        reduce1 !@44 nt_funccall FunctionCall
         reduce0 !@44 !@45
-        reduce1 !@45 t_macro Macro
+        reduce1 !@45 nt_funccall FunctionCall
         reduce0 !@45 !@46
-        reduce1 !@46 t_variable VariableExpression
+        reduce1 !@46 t_macro Macro
         reduce0 !@46 !@47
-        reduce0 !@47 t_string_3
+        reduce1 !@47 t_variable VariableExpression
         reduce0 !@47 !@48
-        reduce1 !@48 nt_literal Literal
+        reduce0 !@48 t_string_3
         reduce0 !@48 !@49
-        reduce3 !@49 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
+        reduce1 !@49 nt_literal Literal
+        reduce0 !@49 !@50
+        reduce3 !@50 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
 
         reduce2 nt_dot_member t_symbol_dot t_identifier (fun _ e -> [Field e])
         reduce2 nt_dot_member t_symbol_dot nt_funccall (fun _ e -> [Method e])

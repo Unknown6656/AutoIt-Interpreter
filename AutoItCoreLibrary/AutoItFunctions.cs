@@ -668,6 +668,8 @@ namespace AutoItCoreLibrary
 
 
 
+        [BuiltinFunction]
+        public static var Floor(var v) => Math.Floor(v);
 
 
 

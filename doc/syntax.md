@@ -42,6 +42,22 @@ The truth table for the logical operators is defined as follows:
 | `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`| `false`|
 | `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` | `true` |
 
+## Arithmetic operator `\`
+
+The operator `\` can be compared to VisualBasic.NET's `\`-operator, which represents an integer division, meaning that the following epxressions are translated thus:
+```autoit
+10 / 3      ; 3.33333333333333333333333...
+10 \ 3      ; 3
+```
+Generally, any expression
+```autoit
+$a = $b \ $c
+```
+could be translated as
+```autoit
+$a = floor(floor($b) / floor($c))
+```
+
 ## Bitwise arithmetical operators
 
 A whole set of bitwise arithmetical binary infix operators have been introduced with AutoIt++:
@@ -123,7 +139,7 @@ The following displays a list of operator precendence groups in AutoIt++. The to
 | `!`, `-`, `+`, `~`                                                | Unary prefix  |
 | `#`                                                               | Unary postfix |
 | `^`                                                               | Right         |
-| `%`, `/`, `*`                                                     | Left          |
+| `%`, `/`, `\`, `*`                                                | Left          |
 | `-`, `+`                                                          | Left          |
 | `<<`, `>>`                                                        | Left          |
 | `<<<`, `>>>`                                                      | Left          |
