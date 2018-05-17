@@ -61,6 +61,7 @@
             "init_no_dynamic_dimensions": 1224,
             "init_internal_error": 1225,
             "init_dimension_mismatch": 1226,
+            "variable_is_const": 1227
         },
         "generator": {
             "cannot_create": 1301,

@@ -68,7 +68,8 @@
             "trailing_comma": "Invalid trailing comma in the declaration expression.",
             "init_no_dynamic_dimensions": "Array initalization dimensions must be compile-time static, when providing the initial values using the '... = [ ... ]' notation.",
             "init_internal_error": "Some internal error occured during the parsing of the array initialization expression",
-            "init_dimension_mismatch": "The dimension no. {0} in the definition does not match the provided one: The size {1} was provided in the definition, however the according dimension in the initialization expression has the size {2}."
+            "init_dimension_mismatch": "The dimension no. {0} in the definition does not match the provided one: The size {1} was provided in the definition, however the according dimension in the initialization expression has the size {2}.",
+            "variable_is_const": "The value cannot be assigned to the variable or parameter '{0}', as it has been marked as constant."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
