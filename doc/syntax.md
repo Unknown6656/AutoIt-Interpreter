@@ -23,9 +23,12 @@ For a more detailed and formal syntax description of the AutoIt++ dialect, pleas
 As AutoIt3 has only a small amount of operators compared to languages like C#, C++ or F# (in which you can even define new operators!),
 the AutoIt++ variant adds the following operators in order to improve code compactness and increase the developer's productivity:
 
-## New logical operators: `Nor`, `Nand`, `Xor`, `Nxor`, `Impl` and `!`
+## New logical operators: `Nor`, `Nand`, `Xor`, `Nxor` (a.k.a. `Xnor`), `Impl` and `!`
 
 To extend the set of the logical (boolean) operators `And` and `Or`, the operators `Nor`, `Nand`, `Xor`, `Nxor`, `Impl`, `!` have been added.
+<br/>
+To fullfill the request of [@Zedly](https://github.com/Zedly), the alias `Xnor` for the operator `Nxor` has been introduced. In this article, however, the operator will be
+addressed as `Nxor`.
 <br/>
 The operator `!` is the short variant of the prfix (unary) operator `Not`. The other new operators are binary infix ones which can be used e.g. as follows:
 ```autoit
