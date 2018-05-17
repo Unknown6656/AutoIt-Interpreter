@@ -42,12 +42,12 @@ EndIf
 
 The truth table for the logical operators is defined as follows:
 
-| `A`   | `B`   | `And` | `Nand` | `Or`  | `Nor` | `Xor` | `Nxor` | `Impl` |
-|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|:-----:|:------:|:------:|
-|`false`|`false`|`false`| `true` |`false`| `true`|`false`| `true` | `true` |
-|`false`| `true`|`false`| `true` | `true`|`false`| `true`| `false`| `true` |
-| `true`|`false`|`false`| `true` | `true`|`false`| `true`| `false`| `false`|
-| `true`| `true`| `true`| `false`| `true`|`false`|`false`| `true` | `true` |
+| `A`   | `B`   | `A And B` | `A Nand B` | `A Or B` | `A Nor B` | `A Xor B` | `A Nxor B` | `A Impl B` |
+|:-----:|:-----:|:---------:|:----------:|:--------:|:---------:|:---------:|:----------:|:----------:|
+|`false`|`false`| `false`   | `true`     | `false`  |  `true`   | `false`   | `true`     | `true`     |
+|`false`| `true`| `false`   | `true`     |  `true`  | `false`   |  `true`   | `false`    | `true`     |
+| `true`|`false`| `false`   | `true`     |  `true`  | `false`   |  `true`   | `false`    | `false`    |
+| `true`| `true`|  `true`   | `false`    |  `true`  | `false`   | `false`   | `true`     | `true`     |
 
 ## Arithmetic operator `\`
 
@@ -111,22 +111,22 @@ To keep compatibility with AutoIt's indexing operator `[ ... ]`, strings can als
 
 ### String and array length using `#`
 
-A length of a string or an array can be taken using the prefix operator `#` as follows:
+A length of a string or an array can be taken using the postfix operator `#` as follows:
 ```autoit
 dim $arr[5] = [ 0, 1, 2, 3, 4 ]
 $str = "my string"
 
-$l_arr = #$arr ; has the value 5
-$l_str = #$str ; has the value 9
+$l_arr = $arr# ; has the value 5
+$l_str = $str# ; has the value 9
 ```
 
 ## Unary Operators `#`, `!` and `~`
 
-As partly mentioned in previous paragraphs, AutoIt++ introduces the following right-associative unary prefix operators:
+As partly mentioned in previous paragraphs, AutoIt++ introduces the following unary operators:
 
- - `#`: **String/Array Length**
- - `!`: **Logical (Boolean) Not**
- - `~`: **Bitwise Not**
+ - `#`: **String/Array Length** (left-associative, postfix)
+ - `!`: **Logical (Boolean) Not** (right-associative, prefix)
+ - `~`: **Bitwise Not** (right-associative, prefix)
 
 The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do also exist and work as is being expected by the AutoIt3 specification and mathematical standards.
 
@@ -142,32 +142,32 @@ TODO
 
 The following displays a list of operator precendence groups in AutoIt++. The top-most row represents operators or constructs with the highest precedence. Inside the row, the operators are parsed and matched from left to right.
 
-| Operator(s) / Construct(s)                                        | Associativity |
-|-------------------------------------------------------------------|---------------|
-| `( ... )` parenthesizing                                          | Unary         |
-| `func(...)`, `@macro`, `$variable`, literals, numbers and strings |               |
-| `[]` array access                                                 | (Left)        |
-| `()` λ function call                                              | (Left)        |
-| `.` "dot" member access                                           | (Left)        |
-| `!`, `-`, `+`, `~`                                                | Unary prefix  |
-| `#`                                                               | Unary postfix |
-| `^`                                                               | Right         |
-| `%`, `/`, `\`, `*`                                                | Left          |
-| `-`, `+`                                                          | Left          |
-| `<<`, `>>`                                                        | Left          |
-| `<<<`, `>>>`                                                      | Left          |
-| `~&&`, `&&`                                                       | Left          |
-| `~^^`, `^^`                                                       | Left          |
-| <code>~&#124;&#124;</code>, <code>&#124;&#124;</code>             | Left          |
-| <code>@&#124;</code>, `@`                                         | Left          |
-| <code>@&#124; ..</code>, `@ ..`                                   | Left (Ternary)|
-| `&`                                                               | Left          |
-| `<>`, `==`, `=`                                                   | Left          |
-| `<=`, `<`, `>=`, `>`                                              | Left          |
-| `Nand`, `And`                                                     | Left          |
-| `Nxor`, `Xor`                                                     | Left          |
-| `Nor`, `Or`                                                       | Left          |
-| `Impl`                                                            | Left          |
+| Operator(s) / Construct(s)                                        | Associativity        |
+|-------------------------------------------------------------------|----------------------|
+| `( ... )` parenthesizing                                          | Unary                |
+| `func(...)`, `@macro`, `$variable`, literals, numbers and strings |                      |
+| `[]` array access                                                 | (Left)               |
+| `()` λ function call                                              | (Left)               |
+| `.` "dot" member access                                           | (Left)               |
+| `!`, `-`, `+`, `~`                                                | (Right) Unary prefix |
+| `#`                                                               | (Left) Unary postfix |
+| `^`                                                               | Right                |
+| `%`, `/`, `\`, `*`                                                | Left                 |
+| `-`, `+`                                                          | Left                 |
+| `<<`, `>>`                                                        | Left                 |
+| `<<<`, `>>>`                                                      | Left                 |
+| `~&&`, `&&`                                                       | Left                 |
+| `~^^`, `^^`                                                       | Left                 |
+| <code>~&#124;&#124;</code>, <code>&#124;&#124;</code>             | Left                 |
+| <code>@&#124;</code>, `@`                                         | Left                 |
+| <code>@&#124; ..</code>, `@ ..`                                   | Left (Ternary)       |
+| `&`                                                               | Left                 |
+| `<>`, `==`, `=`                                                   | Left                 |
+| `<=`, `<`, `>=`, `>`                                              | Left                 |
+| `Nand`, `And`                                                     | Left                 |
+| `Nxor`, `Xor`                                                     | Left                 |
+| `Nor`, `Or`                                                       | Left                 |
+| `Impl`                                                            | Left                 |
 
 # AutoIt++ string interpolation
 
