@@ -315,7 +315,7 @@ $functions[7][2] = beep
 $result = $functions[7][2](440, 1000)
 ```
 
-**NOTE: Due to internal runtime behaviour, all optional parameters must be passed when using λ-executions. Otherwise, errors might occur. This should be changed in the near future. **
+**NOTE: Due to internal runtime behaviour, all optional parameters must be passed when using λ-executions. Otherwise, errors might occur. This should be changed in the near future.**
 
 # `new`-Exprssions
 
@@ -355,7 +355,7 @@ $arr2 = new { { 1 }, { 2, 3 }, { 4, 5, 6 } }
 This could result in some semantic data loss when using the `ReDim`-statement on arrays created with the `new`-expression.
 
 
-**NOTE: Due to unresolved parser issues, it is recommended to wrap any `new { ... }` epxression in parentheses. **
+**NOTE: Due to unresolved parser issues, it is recommended to wrap any** `new { ... }`**-epxression in parentheses.**
 
 # Inline C#-Code
 

@@ -14,6 +14,7 @@ Reference:
 
  - `xxx` describes manadatory non-terminal symbols
  - `'xxx'` describes manadatory terminal symbols
+ - `< ... >` describes a regex expression
  - `[ ... ]` describes optional groups
  - `xxx yyy` describes the concatenation of `xxx` and `yyy`
  - `xxx | yyy` describes the unification of `xxx` and `yyy`
@@ -27,34 +28,82 @@ It has to be noted, that indentation and cases are to be ignored during the pars
 The following syntax tree describes, how a valid AutoIt++ code file (hereby called `program`) will be parsed:
 
 ```
-             program := [global_lines] %EOF%
+                       program := [global_lines] %EOF%
+                
+                  global_lines := global_lines %NL% global_line 
+                                | global_line
+                
+                   global_line := function_declaration
+                                | global_variable_declaration
+                                | statement
+                                | preprocessor_directive
+         
+          function_declaration := 'Func' function_name '(' [function_parameters] ')' %NL%
+                                  [function_body]
+                                  'EndFunc'
+          
+           function_parameters := function_parameters ',' variable_name
+                                | variable_name
 
-        global_lines := global_lines %NL% global_line 
-                      | global_line
+                 function_body := function_body %NL% local_line
+                                | local_line %NL%
+          
+                    local_line := local_variable_declaration
+                                | statement
+                                | preprocessor_directive
+         
+   global_variable_declaration := global_modifiers variable_name
+                                | global_modifiers variable_name '=' expression
+                                | global_modifiers variable_name dynamic_indexers
+                                | global_modifiers variable_name static_indexers '=' array_init_expression
 
-         global_line := function_declaration
-                      | global_variable_declaration
-                      | statement
-                      | preprocessor_directive
+              global_modifiers := 'Static' [global_scope]
+                                | global_scope ['Const']
 
-function_declaration := 'Func' function_name '(' [function_parameters] ')' %NL%
-                        [function_body %NL%]
-                        'EndFunc'
+                  global_scope := 'Dim'
+                                | 'Global'
+    
+    local_variable_declaration := local_modifiers variable_name
+                                | local_modifiers variable_name '=' expression
+                                | local_modifiers variable_name dynamic_indexers
+                                | local_modifiers variable_name static_indexers '=' array_init_expression
 
- function_parameters :=
+               local_modifiers := 'Static' [local_scope]
+                                | local_scope ['Const']
 
-                        TODO
+                   local_scope := 'Dim'
+                                | 'Local'
+                                
+                 function_name := identifier
+                 
+                 variable_name := '$' identifier
+
+                    macro_name := '@' identifier
+
+                    identifier := < [_a-z][_a-z0-9]* >
+                    
+
+                                TODO
 
 
-       function_body := local_lines
+               static_indexers :=
 
-         local_lines := local_lines %NL% local_line
-                      | local_line
+              dynamic_indexers :=
 
-          local_line := local_variable_declaration
-                      | statement
-                      | preprocessor_directive
+         array_init_expression :=
 
-TODO
+                     statement := statement_if
+                                | statement_while
+                                | statement_for
+
+                                TODO
+
+                    expression := 
+
+        preprocessor_directive :=
+
+
+
+                                TODO
 
 ```
