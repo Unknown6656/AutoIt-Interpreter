@@ -133,7 +133,7 @@ namespace AutoItInterpreter
                         DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}");
                         DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName + "-compiled");
 
-                        foreach (FileInfo file in bindir.GetFiles("*.json").Concat(bindir.GetFiles("*.pdb")))
+                        foreach (FileInfo file in bindir.GetFiles("*.pdb"))
                             file.Delete();
 
                         if (!targetdir.Exists)
