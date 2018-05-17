@@ -24,12 +24,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118B-4538-8A35-36D3A68DB14C}"
 	ProjectSection(SolutionItems) = preProject
 		doc\language.md = doc\language.md
+		syntax-tree.md = syntax-tree.md
 		doc\syntax.md = doc\syntax.md
 		doc\usage.md = doc\usage.md
 		doc\wtf.png = doc\wtf.png
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTests", "CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

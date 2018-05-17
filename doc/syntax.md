@@ -13,6 +13,9 @@ This article highlights the most important differences between AutoIt3's and Aut
 6) [Inline C#-code](#inline-c-code)
 7) TODO
 
+<br/>
+For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
+
 ------
 
 # AutoIt++ operators
@@ -114,10 +117,6 @@ $l_arr = #$arr ; has the value 5
 $l_str = #$str ; has the value 9
 ```
 
-## Assignment operators
-
-TODO
-
 ## Unary Operators `#`, `!` and `~`
 
 As partly mentioned in previous paragraphs, AutoIt++ introduces the following right-associative unary prefix operators:
@@ -127,6 +126,14 @@ As partly mentioned in previous paragraphs, AutoIt++ introduces the following ri
  - `~`: **Bitwise Not**
 
 The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do also exist and work as is being expected by the AutoIt3 specification and mathematical standards.
+
+## Ternary 'inline-if' operator `... ? ... : ...`
+
+TODO
+
+## Assignment operators
+
+TODO
 
 ## Operator Precedence
 
@@ -235,7 +242,80 @@ More general information about Platform Invocation Services can be found in [thi
 
 # λ-Expressions
 
-TODO
+AutoIt++ introduces a restriced set of syntax functionalities, which allows the creation of anonymous or λ-functions.
+
+## Anonymous λ-functions
+
+λ-functions can be created as follows:
+```
+<variable> '=' 'Func' '(' <opt_parameters> ')'
+                    <statements>
+               'EndFunc'
+```
+The current syntax requires λ-functions to be assigned directly to a variable or an array-element outside a declaration expression.
+<br/>
+This means, that the following expressions would be currently **invalid**:
+```autoit
+; λ-assignments must not be used during declaration-statements
+Global Const $MY_FUNC = Func($a, $b)
+                            Return $a * Sin($b)
+                        EndFunc
+
+; λ-expressions cannot be used inside 'nested' expressions
+$result = (Func($a)
+              Return $a ^ 2
+           EndFunc)(5)
+```
+
+However, the following expressions **are valid**:
+```autoit
+$my_functions[3] = Func($a, $b)
+                       Return $a * Sin($b)
+                   EndFunc
+
+$get_tau = Func()
+               Return @PI * 2
+           EndFunc
+```
+
+## λ-assignments
+
+AutoIt also permits the assignment of existing functions (including built-in ones and P/Invoke-definitions) as λ-expressions. This, however, must also be only used as direct assignment:
+```autoit
+Func GetTau()
+    Return @pi * 2
+EndFunc
+
+Func beep As "int Beep(int, int)" From "kernel32.dll"
+
+
+$my_func = GetTau
+$functions[7][2] = beep
+```
+
+## λ-execution
+
+To execute any λ-assigned or -defined functions, one uses the same syntax notation as with 'regular' functions:
+```autoit
+$get_tau = Func()
+               Return @PI * 2
+           EndFunc
+
+
+$tau = $get_tau()
+$pi = ($get_tau() / 2)
+```
+
+It also works with arry-element-assigned λ-expressions or nested expressions:
+```autoit
+Func beep As "int Beep(int, int)" From "kernel32.dll"
+
+
+$functions[7][2] = beep
+$result = $functions[7][2](440, 1000)
+```
+
+**NOTE: Due to internal runtime behaviour, all optional parameters must be passed when using λ-executions. Otherwise, errors might occur. This should be changed in the near future. **
 
 # `new`-Exprssions
 
@@ -252,8 +332,8 @@ $matrix = new{ { 1, 0 }, { 0, -1 } }
 ```
 The syntax can also be used inside any expression, e.g.:
 ```autoit
-$func = sin((new { 0, 42, @pi })[2])
-;     = sin(@pi)
+$func = Sin((new { 0, 42, @PI })[2])
+;     = Sin(@PI)
 ;     = 0
 ```
 
@@ -273,6 +353,9 @@ $arr2 = new { { 1 }, { 2, 3 }, { 4, 5, 6 } }
 ```
 
 This could result in some semantic data loss when using the `ReDim`-statement on arrays created with the `new`-expression.
+
+
+**NOTE: Due to unresolved parser issues, it is recommended to wrap any `new { ... }` epxression in parentheses. **
 
 # Inline C#-Code
 
