@@ -86,6 +86,7 @@
         "generator": {
             "failed_clean_output": 2201
         },
+        "func_not_impl": 2998,
         "not_impl": 2999
     },
     "notes": {

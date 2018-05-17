@@ -1,9 +1,5 @@
 ﻿; shamelessly copied from https://raw.githubusercontent.com/tarreislam/Autoit-Unit-Tester/master/UnitTester.au3
 
-#include-once
-#include 'header-2.au3'
-#include 'header-2.au3'
-
 #cs
 	Copyright (c) 2017 TarreTarreTarre <tarre.islam@gmail.com>
 

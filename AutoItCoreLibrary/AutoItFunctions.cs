@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using System.Net;
@@ -11,7 +12,6 @@ using System;
 
 namespace AutoItCoreLibrary
 {
-    using System.Threading;
     using static Win32;
 
     using var = AutoItVariantType;
@@ -360,9 +360,9 @@ namespace AutoItCoreLibrary
         public static var Abs(var v) => v < 0 ? -v : v;
         [BuiltinFunction]
         public static var ACos(var v) => (var)Math.Acos((double)v);
-        [BuiltinFunction, Warning("warnings.not_impl")]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var AdlibRegister(var v) => throw new NotImplementedException(); // TODO
-        [BuiltinFunction, Warning("warnings.not_impl")]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var AdlibUnRegister(var v) => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var Asc(var v) => v.Length > 0 ? v[0] > 'ÿ' ? '?' : v[0] : 0L;
@@ -372,7 +372,7 @@ namespace AutoItCoreLibrary
         public static var ASin(var v) => (var)Math.Asin((double)v);
         [BuiltinFunction]
         public static var Atan(var v) => (var)Math.Atan((double)v);
-        [BuiltinFunction, Warning("warnings.not_impl")]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var AutoItSetOption(var o, var? p = null) => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var AutoItWinGetTitle() => throw new NotImplementedException(); // TODO
@@ -441,7 +441,7 @@ namespace AutoItCoreLibrary
 
             return res;
         }
-        [BuiltinFunction, Warning("warnings.not_impl")]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var BitRotate(var v, var? shift = null, var? size = null)
         {
             var offs = shift ?? 1;
@@ -524,7 +524,7 @@ namespace AutoItCoreLibrary
         public static var Chr(var v) => ((char)(byte)(long)v).ToString();
         [BuiltinFunction]
         public static var ChrW(var v) => ((char)(long)v).ToString();
-        [BuiltinFunction, Warning("warnings.not_impl")]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var ClipGet() => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
         public static var ClipPut(var v) => __(() =>
@@ -536,9 +536,7 @@ namespace AutoItCoreLibrary
         public static var ConsoleRead() => Console.ReadLine();
         [BuiltinFunction]
         public static var ConsoleWrite(var v) => __(() => Console.Write(v.ToString()));
-
         // TODO : Control* functions
-
         [BuiltinFunction]
         public static var Cos(var v) => (var)Math.Cos((double)v);
         [BuiltinFunction]
@@ -607,9 +605,7 @@ namespace AutoItCoreLibrary
         });
         [BuiltinFunction]
         public static var DirRemove(var d, var? f = null) => Try(() => Directory.Delete(d, f ?? false));
-
         // TODO : Dll* functions
-
         [BuiltinFunction]
         public static var DllCall(var dll, var _, var func, params var[] args)
         {
@@ -619,9 +615,7 @@ namespace AutoItCoreLibrary
 
             return (var)meth.Invoke(null, args.Where((__, i) => (i % 2) == 1).Select(x => x as object).ToArray());
         }
-
         // TODO : Dll* functions
-
         [BuiltinFunction]
         public static var DriveGetDrive(var t)
         {
@@ -665,7 +659,14 @@ namespace AutoItCoreLibrary
 
             return var.NewArray(new var[] { drives.LongLength }.Concat(drives.Select(d => (var)d.Name.TrimEnd('/', '\\'))).ToArray());
         }
-
+        // TODO : Drive* functions
+        [BuiltinFunction]
+        public static var EnvGet(var var) => Environment.GetEnvironmentVariable(var);
+        [BuiltinFunction]
+        public static var EnvSet(var var, var? val = null) => __(() =>
+            Environment.SetEnvironmentVariable(var, val ?? "", string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(var)) ? EnvironmentVariableTarget.Process : EnvironmentVariableTarget.Machine));
+        [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(EnvUpdate))]
+        public static var EnvUpdate() => 1;
 
 
         [BuiltinFunction]
@@ -858,6 +859,14 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
         [BuiltinFunction]
+        public static var DnsGetIP(var v) => Dns.GetHostEntry(v).AddressList[0].ToString();
+        [BuiltinFunction]
+        public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
+        [BuiltinFunction]
+        public static var Fail(var s) => throw new InvalidOperationException(s);
+        [BuiltinFunction]
+        public static var Identity(var v) => v;
+        [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
             string inp = (s.ToString()).Substring((int)(offs ?? 0L));
@@ -875,15 +884,6 @@ namespace AutoItCoreLibrary
 
             return "";
         }
-
-
-
-        [BuiltinFunction]
-        public static var DnsGetIP(var v) => Dns.GetHostEntry(v).AddressList[0].ToString();
-        [BuiltinFunction]
-        public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
-        [BuiltinFunction]
-        public static var Identity(var v) => v;
         [BuiltinFunction]
         public static dynamic TryConvert(var v, var type)
         {
