@@ -9,8 +9,9 @@ This article highlights the most important differences between AutoIt3's and Aut
 2) [AutoIt++ string interpolation](#autoit-string-interpolation)
 3) [P/Invoke functions](#pinvoke-functions)
 4) [λ-Expressions](#λ-expressions)
-5) [Inline C#-code](#inline-c-code)
-6) TODO
+5) [`new`-exprssions](#new-expressions)
+6) [Inline C#-code](#inline-c-code)
+7) TODO
 
 ------
 
@@ -100,6 +101,8 @@ $str2 = $text @| 1..4   ; "Hell"
 $str3 = $text @ 2+5..5  ; "World"
 ```
 
+To keep compatibility with AutoIt's indexing operator `[ ... ]`, strings can also be indexed using the `[ ... ]`-notation. The index is zero-based.
+
 ### String and array length using `#`
 
 A length of a string or an array can be taken using the prefix operator `#` as follows:
@@ -164,23 +167,23 @@ Interpolated strings have a leading dollar symbol (`$`) and can interpolate vari
 To escape any dollar- or at-characters inside an interpolated string, it must be prefixed with a backslash (`\`). To escape a backslash in an interpolated string, one must type to backslashes (`\\`).
 A backslash can also be used as control-sequence prefix for the following entities:
 
-| Expression | Translation |
-|------------|------------|
-| `\"` | The ASCII character `"` (`0x22`) |
-| `\r` | The control-character `CR` (carrige return, `0x0D`) |
-| `\n` | The control-character `LF` (line feed, `0x0A`) |
-| `\t` | The control-character `HT` (horizontal tab, `0x09`) |
-| `\v` | The control-character `VT` (vertical tab, `0x0B`) |
-| `\b` | The control-character `BS` (backspace, `0x08`) |
-| `\a` | The control-character `BEL` (bell, `0x07`) |
-| `\f` | The control-character `FF` (form format, `0x0C`) |
-| `\d` | The control-character `DEL` (delete, `0x7F`) |
-| `\0` | The control-character `NUL` (null, `0x00`) |
-| `\\` | The ASCII character `\` (`0x5C`) |
-| `\$` | The ASCII character `$` (`0x24`) |
-| `\@` | The ASCII character `@` (`0x40`) |
-| `\x--` | The ASCII character represented by the two hexadecimal digits `--` |
-| `\u----` | The UNICODE character represented by the four hexadecimal digits `----` |
+| Expression | Translation                                                              |
+|------------|--------------------------------------------------------------------------|
+| `\"`       | The ASCII character `"` (`0x22`)                                         |
+| `\r`       | The control-character `CR` (carrige return, `0x0D`)                      |
+| `\n`       | The control-character `LF` (line feed, `0x0A`)                           |
+| `\t`       | The control-character `HT` (horizontal tab, `0x09`)                      |
+| `\v`       | The control-character `VT` (vertical tab, `0x0B`)                        |
+| `\b`       | The control-character `BS` (backspace, `0x08`)                           |
+| `\a`       | The control-character `BEL` (bell, `0x07`)                               |
+| `\f`       | The control-character `FF` (form format, `0x0C`)                         |
+| `\d`       | The control-character `DEL` (delete, `0x7F`)                             |
+| `\0`       | The control-character `NUL` (null, `0x00`)                               |
+| `\\`       | The ASCII character `\` (`0x5C`)                                         |
+| `\$`       | The ASCII character `$` (`0x24`)                                         |
+| `\@`       | The ASCII character `@` (`0x40`)                                         |
+| `\x--`     | The ASCII character represented by the two hexadecimal digits `--`       |
+| `\u----`   | The UNICODE character represented by the four hexadecimal digits `----`  |
 
 Usage example:
 ```autoit
@@ -233,6 +236,43 @@ More general information about Platform Invocation Services can be found in [thi
 # λ-Expressions
 
 TODO
+
+# `new`-Exprssions
+
+Arrays can be initializized using the following AutoIt3-compatible syntax:
+```autoit
+Dim $array[5] = [ 1, 2, 3, 4, 5 ]
+Dim $matrix[2][2] = [ [ 1, 0 ], [ 0, -1 ] ]
+```
+
+AutoIt++ introduces the following syntax to allow 'anonymous'- or 'inline'-initialization of arrays:
+```autoit
+$array = new{ 1, 2, 3, 4, 5 }
+$matrix = new{ { 1, 0 }, { 0, -1 } }
+```
+The syntax can also be used inside any expression, e.g.:
+```autoit
+$func = sin((new { 0, 42, @pi })[2])
+;     = sin(@pi)
+;     = 0
+```
+
+Opposed to the AutoIt3-compatible array initialization syntax, `new`-expressions do not require that nested arrays' dimensions are distinct between the elements in themselves.
+This means, that the following code is valid:
+```autoit
+$jagged = new { { 1, 2, 3 }, { 4, 5 }, { 6 } }
+```
+However, due to the internal storage method of arrays, invalid dimensions could be displayed. The array dimensions are determined by the first element, which means that the following
+arrays have different dimensions from the runtime's point of view:
+```autoit
+$arr1 = new { { 1, 2, 3 }, { 4, 5 }, { 6 } }
+$arr2 = new { { 1 }, { 2, 3 }, { 4, 5, 6 } }
+
+; arr1 has the dimensions 3 x 3
+; arr2 has the dimensions 3 x 1
+```
+
+This could result in some semantic data loss when using the `ReDim`-statement on arrays created with the `new`-expression.
 
 # Inline C#-Code
 

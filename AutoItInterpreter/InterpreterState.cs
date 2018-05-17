@@ -22,6 +22,11 @@ namespace AutoItInterpreter
         public const string DISCARD_VARIBLE = "$___discard___";
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
+        public static readonly string[] RESERVED_KEYWORDS =
+        {
+            "new",
+            // TODO : add other ones?
+        };
 
         private static readonly OS[] ALL_OS = new[] { OS.Windows, OS.MacOS, OS.Linux };
         private static readonly CompilerIntrinsicMessage[] NO_MSG = new CompilerIntrinsicMessage[0];
@@ -45,7 +50,7 @@ namespace AutoItInterpreter
         {
             name = name?.ToLower() ?? "";
 
-            return new[] { GLOBAL_FUNC_NAME, ERROR_VARIBLE, DISCARD_VARIBLE, CSHARP_INLINE }.Contains(name)
+            return new[] { GLOBAL_FUNC_NAME, ERROR_VARIBLE, DISCARD_VARIBLE, CSHARP_INLINE }.Concat(RESERVED_KEYWORDS).Contains(name)
                 || name.Match("^__(<>.+|.+<>)$", out _);
         }
 

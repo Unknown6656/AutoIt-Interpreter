@@ -46,13 +46,15 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let nt_array_init_expression    = x.nt<INIT_EXPRESSION list>    "array-init-expression"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
-        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..50 |]
+        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..51 |]
         let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
         let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
         let nt_literal                  = x.nt<LITERAL>                 "literal"
         let nt_operator_binary_ass      = x.nt<OPERATOR_ASSIGNMENT>     "binary-assignment-operator"
         let nt_dot_members              = x.nt<MEMBER list>             "dot-members"
         let nt_dot_member               = x.nt<MEMBER list>             "dot-member"
+        let nt_inline_array_wrapper     = x.nt<INIT_EXPRESSION list>    "inline-array-wrapper"
+        let nt_inline_array_expression  = x.nt<INIT_EXPRESSION list>    "inline-array-expression"
         let t_operator_assign_nand      = x.t @"~&&="
         let t_operator_assign_and       = x.t @"&&="
         let t_operator_assign_nxor      = x.t @"~^^="
@@ -109,7 +111,10 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_symbol_cparen             = x.t @"\)"
         let t_symbol_obrack             = x.t @"\["
         let t_symbol_cbrack             = x.t @"\]"
+        let t_symbol_ocurly             = x.t @"\{"
+        let t_symbol_ccurly             = x.t @"\}"
         let t_keyword_to                = x.t @"to"
+        let t_keyword_new               = x.t @"new"
         let t_keyword_impl              = x.t @"impl"
         let t_keyword_nand              = x.t @"nand"
         let t_keyword_nor               = x.t @"nor"
@@ -327,11 +332,20 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduce0 !@46 !@47
         reduce1 !@47 t_variable VariableExpression
         reduce0 !@47 !@48
-        reduce0 !@48 t_string_3
+        reduce4 !@48 t_symbol_oparen t_keyword_new nt_inline_array_expression t_symbol_cparen (fun _ _ i _ -> ArrayInitExpression([], i))
         reduce0 !@48 !@49
-        reduce1 !@49 nt_literal Literal
+        reduce0 !@49 t_string_3
         reduce0 !@49 !@50
-        reduce3 !@50 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
+        reduce1 !@50 nt_literal Literal
+        reduce0 !@50 !@51
+        reduce3 !@51 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
+
+        reduce3 nt_inline_array_wrapper nt_inline_array_wrapper t_symbol_comma nt_inline_array_expression (fun es _ e -> es@[Multiple e])
+        reduce1 nt_inline_array_wrapper nt_inline_array_expression (fun e -> [Multiple e])
+
+        reduce3 nt_inline_array_expression t_symbol_ocurly nt_inline_array_wrapper t_symbol_ccurly (fun _ e _ -> [Multiple e])
+        reduce2 nt_inline_array_expression t_symbol_ocurly t_symbol_ccurly (fun _ _ -> [])
+        reduce1 nt_inline_array_expression nt_expression (fun e -> [Single e])
 
         reduce2 nt_dot_member t_symbol_dot t_identifier (fun _ e -> [Field e])
         reduce2 nt_dot_member t_symbol_dot nt_funccall (fun _ e -> [Method e])

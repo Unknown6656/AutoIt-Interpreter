@@ -274,7 +274,7 @@ namespace AutoItCoreLibrary
         {
             vars = vars ?? new AutoItVariantType[0];
 
-            if (vars.Select(v => v.Dimensions).Distinct().Count() != 1)
+            if (vars.Select(v => v.Dimensions).Distinct().Count() > 1)
                 throw new InvalidArrayAccessExcpetion();
             else
             {

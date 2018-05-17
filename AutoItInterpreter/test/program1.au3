@@ -27,3 +27,13 @@ $func3 = f2
          
 $func1(3.1, -5)
 $func2(42, 88)
+
+
+
+$array = (new{})
+$array = (new{$array})
+$array = (new{{}, {}})
+$array = (new{@macro, $func2($array)})
+$array = (new{1, 2, 3, 4})
+$array = (new{{1, 2}, {3, 4}})
+$array = (new{{{1}, {2}}, {{3}, {4}}})

@@ -36,11 +36,12 @@ type Serializer (settings : SerializerSettings) =
                      ]
     member x.Settings with get() = settings
     member x.Serialize e =
-        let (!/) = sprintf "%s.%s" x.Settings.VariableTypeName
+        let varn = x.Settings.VariableTypeName
+        let (!/) = sprintf "%s.%s" varn
         let printvar (v : VARIABLE) = sprintf "%s[\"%s\"]" (x.Settings.VariableDictionary) v.Name
         let printbin a o b =
             let (!!) = sprintf "(%%s %s %%s)"
-            let (!<) = sprintf "%s.%s(%%s, %%s)" (x.Settings.VariableTypeName)
+            let (!<) = sprintf "%s.%s(%%s, %%s)" varn
             let f = match o with
                     | StringConcat -> !!"&"
                     | EqualCaseSensitive -> !!"=="
@@ -81,7 +82,7 @@ type Serializer (settings : SerializerSettings) =
                     else printbin v (adict.[o]) (printexpr e)
             sprintf "%s%s = (%s)%s" v (match i with
                                        | [] -> ""
-                                       | i -> "[" + (String.Join(", ", List.map printexpr i)) + "]") (x.Settings.VariableTypeName) e
+                                       | i -> "[" + (String.Join(", ", List.map printexpr i)) + "]") varn e
         and printexpr e =
             let str = function
                       | Literal l -> match l with
@@ -132,13 +133,16 @@ type Serializer (settings : SerializerSettings) =
                                                    | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
                       | ArrayInitExpression (is, es) ->
                             match es with
-                            | [] -> sprintf "%s.NewMatrix(%s)" (x.Settings.VariableTypeName) (String.Join(", ", List.map printexpr is))
+                            | [] -> match is with
+                                    | [] -> sprintf "%s.NewMatrix(new %s[0])" varn varn
+                                    | _ -> sprintf "%s.NewMatrix(%s)" varn (String.Join(", ", List.map printexpr is))
                             | _ ->
                                 let rec parr iss = function
                                                    | Single e -> printexpr e
-                                                   | Multiple es -> 
+                                                   | Multiple [] -> sprintf "%s.NewMatrix(new %s[0])" varn varn
+                                                   | Multiple es ->
                                                         if iss then
-                                                            sprintf "%s.NewArray(%s)" (x.Settings.VariableTypeName) (String.Join(", ", List.map (parr false) es))
+                                                            sprintf "%s.NewArray(%s)" varn (String.Join(", ", List.map (parr false) es))
                                                         else
                                                             parr true es.[0]
                                 parr false (Multiple es)
