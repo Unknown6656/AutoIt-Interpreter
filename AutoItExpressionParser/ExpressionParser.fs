@@ -134,7 +134,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
                                                                                               | (true, d) -> d
                                                                                               | _ -> decimal.Parse(s, NumberStyles.Float)
                                                                                               |> Number
-                                                                                    ) 
+                                                                                    )
         let t_variable                  = x.tf @"$[a-z_]\w*"                        (fun s -> VARIABLE(s.Substring 1))
         let t_macro                     = x.tf @"@[a-z_]\w*"                        (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""   (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
@@ -183,6 +183,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
                                                                                                         |> MACRO
                                                                                                         |> Macro)
                                                                                              s <- s.Substring (m.Index + m.Length)
+                                                                                         l.Add(proc s)
                                                                                          l
                                                                                          |> Seq.toList
                                                                                          |> List.reduce (fun x y -> BinaryExpression (StringConcat, x, y))

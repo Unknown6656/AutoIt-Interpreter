@@ -26,7 +26,7 @@ module PInvoke =
                                 | Float32 -> "float"
                                 | Float64 -> "double"
                                 | Float128 -> "decimal"
-                                | AString -> "[MarshalAs(UnmanagedType.BStr)] StringBuilder"
+                                | AString -> "[MarshalAs(UnmanagedType.LPStr)] StringBuilder"
                                 | WString -> "[MarshalAs(UnmanagedType.LPWStr)] StringBuilder"
                                 | VoidPtr -> "void*"
                                 | DynamicStruct -> "dynamic"

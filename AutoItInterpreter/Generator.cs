@@ -330,7 +330,7 @@ namespace {NAMESPACE}
                         string del;
 
                         if (state.ASTFunctions.ContainsKey(fname))
-                            del = $"{TYPE}.NewDelegate(new delegate{state.ASTFunctions[fname].Parameters.Length}({FUNC_PREFIX}{fname}))";
+                            del = $"{TYPE}.NewDelegate(typeof({APPLICATION_MODULE}).GetMethod(nameof({FUNC_PREFIX}{fname}), BindingFlags.NonPublic | BindingFlags.Static))";
                         else
                             del = $"{TYPE}.NewDelegate(typeof({FUNC_MODULE}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase))";
 
