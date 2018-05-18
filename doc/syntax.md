@@ -240,7 +240,23 @@ DllCall("kernel32.dll", "BOOL", "Beep", "DWORD", 262, "DWORD", 1000)
 ```
 
 A transalation of C++ to AutoIt3- or AutoIt++-types can be found in [this AutoIt3 documentation article](https://www.autoitscript.com/autoit3/docs/functions/DllCall.htm).
-<br/>
+However, AutoIt++ also allows the following type aliases _(case-insensitive)_:
+
+| AutoIt++ type string(s)                                                                                                       | C++ equivalent(s)                             | C# equivalent(s)                              | Size          |
+|:-----------------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------:|:-------------------------------------------- :|:-------------:|
+| `void`, `none`, `unit`                                                                                                        | `void`                                        | `void`                                        | 0 B           |
+| `byte`, `boolean`                                                                                                             | (`unsigend`) `char`, `BOOLEAN`                | `byte`, `sbyte`                               | 1 B           |
+| `word`, `short`, `ushort                                                                                                      | `wchar`, `WORD`, (`unsigend`) `short`         | `char`, `short`, `ushort`                     | 2 B           |
+| `dword`, `int`, `uint`, `long`, `ulong`, `bool`,                                                                              | `DWORD`, (`unsigend`) `int`, `BOOL`           | `int`, `uint`                                 | 4 B           |
+| `int64`, `uint64`, `hresult`                                                                                                  | (`unsigend`) `long long`, `HRESULT`           | `long`, `ulong`                               | 8 B           |
+| `ptr`, `hwnd`, `void*`, `lparam`, `wparam`, `dword_ptr`, `lresult`, `handle`, `int_ptr`, `uint_ptr`, `long_ptr`, `ulong_ptr`  | `HWND`, `LPARAM`, `LRESULT`, `WPARAM`, `---*` | `---*`, `IntPtr`, `UIntPtr`, `delegate`       | 4 or 8 B      |
+| `float`, `single`, `float32`                                                                                                  | `float`                                       | `float`                                       | 4 B           |
+| `double`, `float64`                                                                                                           | `double`                                      | `double`                                      | 8 B           |
+| `decimal`, `float128`                                                                                                         | `__float128`, `float128` (Boost Library)      | `decimal`                                     | 16 B          |
+| `str`, `astr`, `string`, `astring`                                                                                            | `char*`, `LPSTR`, `LPCSTR`                    | `string`, `StringBuilder`, `byte*`, `byte[]`  | 2x B (+4 B)   |
+| `wstr`, `w_str`, `wstring`, `w_string`                                                                                        | `wchar*`, `LPWSTR`, `LPWCSTR`, `LPCTSTR`      | `string`, `StringBuilder`, `char*`, `char[]`  | 1x B (+4 B)   |
+| `dynamic`, `var`, `struct`                                                                                                    | `struct`, `union`, `class`                    | `struct`, `enum`, `unmanaged`, `dynamic`      | ---           |
+
 More general information about Platform Invocation Services can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Platform_Invocation_Services).
 
 # λ-Expressions
