@@ -243,7 +243,7 @@ A transalation of C++ to AutoIt3- or AutoIt++-types can be found in [this AutoIt
 However, AutoIt++ also allows the following type aliases _(case-insensitive)_:
 
 | AutoIt++ type string(s)                                                                                                       | C++ equivalent(s)                             | C# equivalent(s)                              | Size          |
-|:-----------------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------:|:---------------------------------------------:|:-------------:|
+|-------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-----------------------------------------------|---------------|
 | `void`, `none`, `unit`                                                                                                        | `void`                                        | `void`                                        | 0 B           |
 | `byte`, `boolean`                                                                                                             | (`unsigend`) `char`, `BOOLEAN`                | `byte`, `sbyte`                               | 1 B           |
 | `word`, `short`, `ushort                                                                                                      | `wchar`, `WORD`, (`unsigend`) `short`         | `char`, `short`, `ushort`                     | 2 B           |
