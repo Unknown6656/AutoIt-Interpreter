@@ -66,8 +66,10 @@ namespace AutoItInterpreter
 
                 if (state.ASTFunctions.ContainsKey(func))
                     return null;
-                else if (pins.Contains(func))
-                    return func;
+                else if ((from p in pins
+                          where p.Equals(func, StringComparison.InvariantCultureIgnoreCase)
+                          select p).FirstOrDefault() is string fn)
+                    return fn;
                 else
                     try
                     {
@@ -89,6 +91,8 @@ using System.Text;
 using System;
 
 using {nameof(AutoItCoreLibrary)};
+
+#pragma warning disable CS0162
 
 namespace {NAMESPACE}
 {{
@@ -323,21 +327,14 @@ namespace {NAMESPACE}
                         return;
                     case AST_Λ_ASSIGNMENT_STATEMENT s:
                         string fname = s.Function.Trim();
-                        string mod = FUNC_MODULE;
-                        string opt = "";
+                        string del;
 
                         if (state.ASTFunctions.ContainsKey(fname))
-                        {
-                            fname = $"nameof({FUNC_PREFIX}{fname})";
-                            mod = TYPE;
-                        }
+                            del = $"{TYPE}.NewDelegate(new delegate{state.ASTFunctions[fname].Parameters.Length}({FUNC_PREFIX}{fname}))";
                         else
-                        {
-                            opt = " | BindingFlags.IgnoreCase";
-                            fname = $"\"{fname}\"";
-                        }
+                            del = $"{TYPE}.NewDelegate(typeof({FUNC_MODULE}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase))";
 
-                        println($"{tstr(s.VariableExpression)} = AutoItVariantType.NewDelegate(typeof({mod}).GetMethod({fname}, BindingFlags.NonPublic | BindingFlags.Static{opt}));");
+                        println($"{tstr(s.VariableExpression)} = {del};");
 
                         return;
                     default:

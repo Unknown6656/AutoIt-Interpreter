@@ -1,5 +1,9 @@
 ﻿[x] λs
+[ ] fix λs on unitizitalized method-pointers
 [ ] fix λ: optional arguments
+[ ] λ currying
+[ ] one-liner function declarations:
+                        Func add($a, $b) -> $a + $b
 [x] substrings
 [-] arrays
     [x] declaration
@@ -14,7 +18,8 @@
     [-] official syntax tree of AU++
     [ ] examples
 [ ] start functions
-[ ] const variables : assignment
+[ ] exit functions
+[x] const variables : assignment
 [x] -Wall compiler flag
 [ ] 'execute'-function
     [ ] reflection ?
@@ -23,6 +28,6 @@
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
 [ ] implement main return
-[ ] implement local macros
+[x] implement local macros
 [x] fix ternary inline if
 [ ] COM-interop

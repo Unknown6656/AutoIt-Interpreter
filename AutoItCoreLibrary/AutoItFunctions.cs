@@ -885,7 +885,7 @@ namespace AutoItCoreLibrary
             return "";
         }
         [BuiltinFunction]
-        public static dynamic TryConvert(var v, var type)
+        public static dynamic TryConvertTo(var v, var type)
         {
             string tstr = type.ToLower();
 
@@ -915,6 +915,35 @@ namespace AutoItCoreLibrary
                 return v.ToStringBuilder();
             else
                 throw new NotImplementedException($"Cannot convert a variant to the type '{tstr}' (yet).");
+        }
+        [BuiltinFunction]
+        public static var TryConvertFrom(dynamic v, var type)
+        {
+            string tstr = type.ToLower();
+
+            switch (tstr)
+            {
+                case "byte":
+                case "short":
+                case "int":
+                    return var.FromInt(v);
+                case "long":
+                    return var.FromLong(v);
+                case "float":
+                case "double":
+                    return var.FromDouble(v);
+                case "decimal":
+                    return var.FromDecimal(v);
+                case "dynamic":
+                    return var.FromIntPtr(v);
+            }
+
+            if (tstr.StartsWith("void*"))
+                return var.FromIntPtr((IntPtr)v);
+            else if (tstr.Contains("stringbuilder"))
+                return var.FromString(v?.ToString() ?? "");
+            else
+                throw new NotImplementedException($"Cannot convert the type '{tstr}' to a variant (yet).");
         }
 
         #endregion

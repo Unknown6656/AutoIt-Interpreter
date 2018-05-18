@@ -10,4 +10,34 @@
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AssemblyName>autoitcorlib</AssemblyName>
     </PropertyGroup>
+    <ItemGroup>
+      <None Include="AutoItDelegate.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>AutoItDelegate.tt</DependentUpon>
+      </None>
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Scripty.MsBuild" Version="0.7.4" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Update="AutoItDelegate.csx">
+        <Generator>ScriptyGenerator</Generator>
+        <CustomToolNamespace>ScriptyGenerator</CustomToolNamespace>
+      </None>
+      <None Update="AutoItDelegate.tt">
+        <Generator>TextTemplatingFileGenerator</Generator>
+        <LastGenOutput>AutoItDelegate.cs</LastGenOutput>
+      </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Update="AutoItDelegate.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>AutoItDelegate.tt</DependentUpon>
+      </Compile>
+    </ItemGroup>
 </Project>

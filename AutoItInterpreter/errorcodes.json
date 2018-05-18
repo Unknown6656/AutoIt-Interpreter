@@ -97,6 +97,7 @@
         "unsafe_autoit3": 3004,
         "empty_function": 3005,
         "unnecessary_function_comp": 3006,
-        "init_0_dim": 3007
+        "init_0_dim": 3007,
+        "λ_assignement_optional_params": 3008
     }
 }

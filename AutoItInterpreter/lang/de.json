@@ -105,6 +105,7 @@
         "unsafe_execute": "Calling the function 'Execute' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
         "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics.",
         "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
-        "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored."
+        "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored.",
+        "λ_assignement_optional_params": "The optional parameters will be treated as required ones for the function '{0}'. If any parameter is omitted, the λ-call will be curryied."
     }
 }

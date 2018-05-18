@@ -1,40 +1,26 @@
 ﻿#include-once
-#include <APIComConstants.au3>
 #include "header-1.au3"
-#include 'header-2.au3'
 
 
 Func f2($a, $b)
     consolewriteline($"function f2 was called with:\n\t\$a = $a\n\t\$b = $b")
 EndFunc
 
-func sleep as "void sleep(int)" from "kernel32.dll"
+Func beep_boop As "int Beep(int, int)" From "kernel32.dll"
 
-
-dllcall("mylib.a", "int", "NTfunc_W", "bool", false, "hwnd", null, "uint64", @sec, "float", $kek)
-sleep(5000)
 
 #cs[csharp]
     System.Console.WriteLine("this is unsafe!!");
 #ce[csharp]
 
-$func1[4] = beep
-$func2 = Func($a, $b)
+$func1 = beep_boop
+$func2 = Func($a, $b = 0)
             $s = sin($a)
             ConsoleWrite($"called with ($a, $b)!\n")
             ConsoleWriteLine($"sin($a) == $s")
          EndFunc
 $func3 = f2
          
-$func1(3.1, -5)
-$func2(42, 88)
+$func1(440, 3000)
+$func2(3.1, -5)
 
-
-
-$array = (new{})
-$array = (new{$array})
-$array = (new{{}, {}})
-$array = (new{@macro, $func2($array)})
-$array = (new{1, 2, 3, 4})
-$array = (new{{1, 2}, {3, 4}})
-$array = (new{{{1}, {2}}, {{3}, {4}}})

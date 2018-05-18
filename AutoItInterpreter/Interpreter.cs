@@ -7,7 +7,6 @@ using System.IO;
 using System;
 
 using Microsoft.FSharp.Collections;
-using Microsoft.FSharp.Core;
 
 using Piglet.Parser.Configuration;
 
@@ -161,7 +160,9 @@ namespace AutoItInterpreter
 
                 if (Options.UseVerboseOutput)
                 {
-                    DebugPrintUtil.DisplayCodeAndErrors(state);
+                    if (state.Errors.Length > 0)
+                        DebugPrintUtil.DisplayCodeAndErrors(state);
+
                     DebugPrintUtil.DisplayFinalResult(fr);
                 }
 
@@ -955,12 +956,12 @@ namespace AutoItInterpreter
             internal static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
             {
                 List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
+                Dictionary<string, List<DefinitionContext>> λ_assignments = new Dictionary<string, List<DefinitionContext>>();
                 FunctionparameterParser p_funcparam = new FunctionparameterParser(options.Settings.UseOptimization);
                 ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserMode.Declaration);
                 ExpressionParser p_assignment = new ExpressionParser(ExpressionParserMode.Assignment);
                 ExpressionParser p_expression = new ExpressionParser(ExpressionParserMode.Regular);
                 Stack<List<string>> constants = new Stack<List<string>>();
-                HashSet<string> λ_assigned = new HashSet<string>();
                 AST_FUNCTION _currfunc = null;
 
                 foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration })
@@ -971,7 +972,7 @@ namespace AutoItInterpreter
 
                 state.PInvokeSignatures = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
 
-                ValidateFunctionCalls(state, options, λ_assigned, funccalls.ToArray());
+                ValidateFunctionCalls(state, options, λ_assignments, funccalls.ToArray());
 
                 dynamic process(Entity e)
                 {
@@ -1742,8 +1743,10 @@ namespace AutoItInterpreter
                                             err("errors.astproc.dllcall_assign");
                                         else
                                         {
-                                            if (!λ_assigned.Contains(fname))
-                                                λ_assigned.Add(fname);
+                                            if (!λ_assignments.ContainsKey(fname))
+                                                λ_assignments[fname] = new List<DefinitionContext>();
+
+                                            λ_assignments[fname].Add(i.DefinitionContext);
 
                                             return new AST_Λ_ASSIGNMENT_STATEMENT
                                             {
@@ -1822,21 +1825,34 @@ namespace AutoItInterpreter
                         (VARIABLE, PINVOKE_TYPE)[] pars = sig.Paramters.Select(t => (new VARIABLE("_p" + cnt++), t)).ToArray();
                         EXPRESSION iexpr = EXPRESSION.NewFunctionCall(
                             new Tuple<string, FSharpList<EXPRESSION>>(
-                                AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
-                                ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
-                                    new Tuple<string, FSharpList<EXPRESSION>>(
-                                        nameof(AutoItFunctions.TryConvert),
-                                        ListModule.OfSeq(
-                                            new EXPRESSION[2]
-                                            {
-                                                EXPRESSION.NewVariableExpression(x.Item1),
-                                                EXPRESSION.NewLiteral(
-                                                    LITERAL.NewString(x.Item2.ToString())
+                                nameof(AutoItFunctions.TryConvertFrom),
+                                new FSharpList<EXPRESSION>(
+                                    EXPRESSION.NewFunctionCall(
+                                        new Tuple<string, FSharpList<EXPRESSION>>(
+                                            AutoItFunctions.GeneratePInvokeWrapperName(lib, sig.Name),
+                                            ListModule.OfSeq(pars.Select(x => EXPRESSION.NewFunctionCall(
+                                                new Tuple<string, FSharpList<EXPRESSION>>(
+                                                    nameof(AutoItFunctions.TryConvertTo),
+                                                    ListModule.OfSeq(
+                                                        new EXPRESSION[2]
+                                                        {
+                                                            EXPRESSION.NewVariableExpression(x.Item1),
+                                                            EXPRESSION.NewLiteral(
+                                                                LITERAL.NewString(x.Item2.ToString())
+                                                            )
+                                                        }
+                                                    )
                                                 )
-                                            }
+                                            )))
                                         )
+                                    ),
+                                    new FSharpList<EXPRESSION>(
+                                        EXPRESSION.NewLiteral(
+                                            LITERAL.NewString(sig.ReturnType.ToString())
+                                        ),
+                                        FSharpList<EXPRESSION>.Empty
                                     )
-                                )))
+                                )
                             )
                         );
 
@@ -1889,7 +1905,7 @@ namespace AutoItInterpreter
                 return used_sigs.ToArray();
             }
 
-            private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, IEnumerable<string> λassignments, params (DefinitionContext, string, EXPRESSION[])[] calls)
+            private static void ValidateFunctionCalls(InterpreterState state, InterpreterOptions options, Dictionary<string, List<DefinitionContext>> λassignments, params (DefinitionContext, string, EXPRESSION[])[] calls)
             {
                 OS target = options.Compatibility.GetOperatingSystem();
 
@@ -1950,8 +1966,16 @@ namespace AutoItInterpreter
                 }
 
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
-                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ') && !λassignments.Contains(uncalled.ToLower()))
+                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ') && !λassignments.ContainsKey(uncalled.ToLower()))
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
+
+                foreach (string func in λassignments.Keys)
+                    if (state.ASTFunctions.ContainsKey(func) && state.ASTFunctions[func].Parameters.Any(p => p is AST_FUNCTION_PARAMETER_OPT))
+                        foreach (DefinitionContext ctx in λassignments[func])
+                            state.ReportKnownNote("notes.λ_assignement_optional_params", ctx, state.ASTFunctions[func].Name);
+                    else if (BUILT_IN_FUNCTIONS.FirstOrDefault(bif => bif.Name.Equals(func, StringComparison.InvariantCultureIgnoreCase)) is var builtin && builtin.Name != null)
+                        foreach (DefinitionContext ctx in λassignments[func])
+                            state.ReportKnownNote("notes.λ_assignement_optional_params", ctx, builtin.Name);
             }
 
             private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
