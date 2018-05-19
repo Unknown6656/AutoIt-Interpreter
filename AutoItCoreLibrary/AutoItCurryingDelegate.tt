@@ -13,7 +13,7 @@ namespace AutoItCoreLibrary
     using v = AutoItVariantType;
 
 <#
-    const int COUNT = 32;
+    const int COUNT = 64;
 
     for (int i = 1; i <= COUNT; ++i)
     {
