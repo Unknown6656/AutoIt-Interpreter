@@ -334,7 +334,7 @@ $functions[7][2] = beep
 $result = $functions[7][2](440, 1000)
 ```
 
-**NOTE: Due to internal runtime behaviour, all optional parameters must be passed when using λ-executions. Otherwise, errors might occur. This should be changed in the near future.**
+TODO : add information about currying
 
 # `new`-Exprssions
 

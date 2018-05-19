@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using System.Globalization;
 using System.Collections;
 using System.Reflection;
@@ -18,6 +19,7 @@ namespace AutoItCoreLibrary
         #region PRIVATE FIELDS
 
         private readonly AutoItVariantData _data;
+        private static long _ccntr = 1;
 
         #endregion
         #region PUBLIC PROPERTIES
@@ -200,7 +202,42 @@ namespace AutoItCoreLibrary
         {
             object res = null;
 
-            UseGCHandledData<MethodInfo>(m => res = m.Invoke(target, argv));
+            UseGCHandledData<MethodInfo>(m =>
+            {
+                ParameterInfo[] pars = m.GetParameters();
+                int req = pars.Count(p => !p.IsOptional);
+
+                if (argv.Length < req)
+                {
+                    int o = pars.Count(p => p.IsOptional);
+
+                    Type[] cparams = new Type[pars.Length - argv.Length];
+
+                    for (int i = 0; i < cparams.Length; ++i)
+                       cparams[i] = i < cparams.Length - o ? typeof(AutoItVariantType) : typeof(AutoItVariantType?);
+
+                    DynamicMethod curry = new DynamicMethod($"__partialλ_{_ccntr++:x16}", typeof(AutoItVariantType), cparams, typeof(AutoItVariantType).Module, true);
+
+                    
+
+                    
+                    // TODO : currying
+
+
+
+
+                    res = NewDelegate(curry);
+                }
+                else
+                {
+                    object[] args = new object[pars.Length];
+
+                    for (int i = 0; i < argv.Length; ++i)
+                        args[i] = argv[i];
+
+                    res = m.Invoke(target, args);
+                }
+            });
 
             return res;
         }
