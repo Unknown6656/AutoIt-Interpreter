@@ -11,9 +11,20 @@
         <AssemblyName>autoitcorlib</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
+      <None Include="AutoItCurryingDelegate.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>AutoItCurryingDelegate.tt</DependentUpon>
+      </None>
+    </ItemGroup>
+    <ItemGroup>
       <PackageReference Include="Scripty.MsBuild" Version="0.7.4" />
     </ItemGroup>
     <ItemGroup>
+      <None Update="AutoItCurryingDelegate.tt">
+        <Generator>TextTemplatingFileGenerator</Generator>
+        <LastGenOutput>AutoItCurryingDelegate.cs</LastGenOutput>
+      </None>
       <None Update="AutoItDelegate.csx">
         <Generator>ScriptyGenerator</Generator>
         <CustomToolNamespace>ScriptyGenerator</CustomToolNamespace>
@@ -21,5 +32,12 @@
     </ItemGroup>
     <ItemGroup>
       <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Update="AutoItCurryingDelegate.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>AutoItCurryingDelegate.tt</DependentUpon>
+      </Compile>
     </ItemGroup>
 </Project>
