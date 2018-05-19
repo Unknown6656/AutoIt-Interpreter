@@ -13,55 +13,95 @@ namespace AutoItCoreLibrary
     using v = AutoItVariantType;
 
 <#
-    const int COUNT = 64;
+    const int COUNT = 48;
 
     for (int i = 1; i <= COUNT; ++i)
-    {
-#>
-    internal delegate v AutoItDelegate<#=i #>(<#=string.Join(", ", Enumerable.Range(0, i).Select(x => "v p" + x)) #>);
-<#
-    }
-
-    for (int i = 1; i <= COUNT; ++i)
-    {
-        string typename = "AutoItCurryingDelegate" + i;
-        string delname = "AutoItDelegate" + i;
-        string par(int x) => "p" + x;
-#>
-
-    internal sealed class <#=typename #>
-    {
-        public <#=delname #> Function { set; get; }
-
-        public <#=typename #>()
-            : this(null)
+        for (int j = 0; j <= i; ++j)
         {
+            string a_mand = string.Join(", ", Enumerable.Range(0, i - j).Select(x => $"v p{x}"));
+            string a_opt = string.Join(", ", Enumerable.Range(i - j, j).Select(x => $"v? p{x} = null"));
+
+            if ((a_mand.Length > 0) && (a_opt.Length > 0))
+                a_mand += ", ";
+#>
+    public delegate v AutoItDelegate<#=i #>Opt<#=j #>(<#=a_mand + a_opt #>);
+<#
         }
+
+    for (int i = 1; i <= COUNT; ++i)
+        for (int j = 0; j <= i; ++j)
+        {
+            string typename = $"AutoItCurryingDelegate{i}Opt{j}";
+            string delname = $"AutoItDelegate{i}Opt{j}";
+            string par(int x) => $"p{x}";
+#>
+
+    public sealed class <#=typename #>
+    {
+        public <#=delname #> Function { get; }
 
         public <#=typename #>(<#=delname #> f) => Function = f;
 
         public <#=typename #> Call() => this;
 <#
-        string allparams = string.Join(", ", Enumerable.Range(0, i).Select(par));
+            string allparams = string.Join(", ", Enumerable.Range(0, i).Select(par));
 
-        for (int j = 1; j < i; ++j)
-        {
+            for (int k = 1; k <= i; ++k)
+                if (k <= i - j)
+                {
+                    string parstr = string.Join(", ", Enumerable.Range(0, k).Select(x => $"v p{x}"));
+
+                    if (k < i)
+                    {
 #>
 
-        public AutoItCurryingDelegate<#=i - j #> Call(<#=string.Join(", ", Enumerable.Range(0, j).Select(x => "v p" + x)) #>) =>
-            new AutoItCurryingDelegate<#=i - j #>((<#=string.Join(", ", Enumerable.Range(j, i - j).Select(x => "v p" + x)) #>) => Function(<#=allparams #>));
+        public AutoItCurryingDelegate<#=i - k #>Opt0 Call(<#=parstr #>) =>
+            new AutoItCurryingDelegate<#=i - k #>Opt0((<#=string.Join(", ", Enumerable.Range(k, i - k).Select(par)) #>) => Function(<#=allparams #>));
 <#
-        }
+                    }
+                    else
+                    {
 #>
 
-        public v Call(<#=string.Join(", ", Enumerable.Range(0, i).Select(x => "v p" + x)) #>) =>
-            Function(<#=allparams #>);
+        public v Call(<#=parstr #>) => Function(<#=allparams #>);
+<#
+                    }
+                }
+                else
+                {
+                    string deltypestr = $"AutoItCurryingDelegate{i - k}Opt{i - k}";
+                    
+                    string delpars_mand = string.Join(", ", Enumerable.Range(0, i - j).Select(x => $"v p{x}"));
+                    string delpars_opt = string.Join(", ", Enumerable.Range(i - j, k - i + j).Select(x => $"v? p{x} = null"));
+                    
+                    string delargs_opt = string.Join(", ", Enumerable.Range(k, i - k).Select(par));
+                    
+                    if ((delpars_mand.Length > 0) && (delpars_opt.Length > 0))
+                        delpars_mand += ", ";
+
+                    if (k < i)
+                    {
+#>
+
+        public <#=deltypestr #> Call(<#=delpars_mand + delpars_opt #>) =>
+            new <#=deltypestr #>((<#=delargs_opt #>) => Function(<#=allparams #>));
+<#
+                    }
+                    else
+                    {
+#>
+
+        public v Call(<#=delpars_mand + delpars_opt #>) => Function(<#=allparams #>);
+<#
+                    }
+                }
+#>
 
         public static implicit operator <#=delname #>(<#=typename #> del) => del.Function;
 
         public static implicit operator <#=typename #>(<#=delname #> del) => new <#=typename #>(del);
     }
 <#
-    }
+        }
 #>
 }

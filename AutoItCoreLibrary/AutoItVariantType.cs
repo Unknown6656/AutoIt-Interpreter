@@ -200,35 +200,14 @@ namespace AutoItCoreLibrary
 
         internal object Call(object target, params object[] argv)
         {
-            object res = null;
+            object res = this;
 
             UseGCHandledData<MethodInfo>(m =>
             {
                 ParameterInfo[] pars = m.GetParameters();
                 int req = pars.Count(p => !p.IsOptional);
 
-                if (argv.Length < req)
-                {
-                    int o = pars.Count(p => p.IsOptional);
-
-                    Type[] cparams = new Type[pars.Length - argv.Length];
-
-                    for (int i = 0; i < cparams.Length; ++i)
-                       cparams[i] = i < cparams.Length - o ? typeof(AutoItVariantType) : typeof(AutoItVariantType?);
-
-                    DynamicMethod curry = new DynamicMethod($"__partialλ_{_ccntr++:x16}", typeof(AutoItVariantType), cparams, typeof(AutoItVariantType).Module, true);
-
-                    
-
-                    
-                    // TODO : currying
-
-
-
-
-                    res = NewDelegate(curry);
-                }
-                else
+                if (argv.Length >= req)
                 {
                     object[] args = new object[pars.Length];
 
@@ -236,6 +215,21 @@ namespace AutoItCoreLibrary
                         args[i] = argv[i];
 
                     res = m.Invoke(target, args);
+                }
+                else if (argv.Length > 0)
+                {
+                    Assembly asm = typeof(AutoItVariantType).Assembly;
+                    Type t_cdel = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItCurryingDelegate{req}");
+                    Type t_del = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItDelegate{req}");
+
+                    Delegate d_om = m.CreateDelegate(t_del);
+                    object d_cd = Activator.CreateInstance(t_cdel, d_om);
+
+                    MethodInfo call = t_cdel.GetMethod("Call", argv.Select(_ => typeof(AutoItVariantType)).ToArray());
+
+                    dynamic curry = call.Invoke(d_cd, argv);
+
+                    res = NewDelegate(curry.Function.Method);
                 }
             });
 
