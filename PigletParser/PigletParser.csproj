@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <AssemblyName>pigletlib</AssemblyName>
     <RootNamespace>Piglet</RootNamespace>
   </PropertyGroup>
     <PropertyGroup>
-        <Optimize>false</Optimize>
+        <Optimize>true</Optimize>
         <OutputPath>bin</OutputPath>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>false</AllowUnsafeBlocks>

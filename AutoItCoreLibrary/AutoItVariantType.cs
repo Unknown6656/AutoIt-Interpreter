@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 using System.Globalization;
 using System.Collections;
 using System.Reflection;
@@ -190,6 +189,71 @@ namespace AutoItCoreLibrary
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         #endregion
+        #region CALLS, DELEGATES, CURRYING
+
+        internal static AutoItVariantType CreateDelegate(MethodInfo m)
+        {
+            ParameterInfo[] pars = m.GetParameters();
+
+            if (pars.Any(p => p.ParameterType != typeof(AutoItVariantType) && p.ParameterType != typeof(AutoItVariantType?)) || (m.ReturnType != typeof(AutoItVariantType)))
+                throw new ArgumentException("A delegate cannot be created from this method type.", nameof(m));
+
+            Assembly asm = typeof(AutoItVariantType).Assembly;
+            int optcount = pars.Count(p => p.ParameterType != typeof(AutoItVariantType));
+            Type t_cdel = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItCurryingDelegate{pars.Length}Opt{optcount}");
+            Type t_del = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItDelegate{pars.Length}Opt{optcount}");
+
+            Delegate d_om = m.CreateDelegate(t_del);
+            object d_cd = Activator.CreateInstance(t_cdel, d_om);
+
+            return NewGCHandledData(d_cd);
+        }
+
+        internal AutoItVariantType Call(params object[] argv)
+        {
+            if (argv.Length > AutoItCurryingDelegate.MAX_ARGC)
+                throw new ArgumentOutOfRangeException(nameof(argv), $"Curryied invocation currently only allows a maximum of {AutoItCurryingDelegate.MAX_ARGC} parameters.");
+
+            AutoItVariantType res = this;
+
+            try
+            {
+                UseGCHandledData<AutoItCurryingDelegate>(del =>
+                {
+                    dynamic iacd = del;
+                    Type type = del.GetType();
+                    CurryableAttribute attr = type.GetCustomAttribute<CurryableAttribute>(true);
+
+                    if ((argv.Length == 0) && (attr.RequiredArguments > 0))
+                        return;
+
+                    if (argv.Length >= attr.RequiredArguments)
+                        argv = argv.Concat(Enumerable.Range(0, attr.TotalArguments - argv.Length).Select(_ => null as AutoItVariantType? as object)).ToArray();
+
+                    int i = 0;
+                    Type[] argtypes = argv.Select(_ => ++i > attr.RequiredArguments ? typeof(AutoItVariantType?) : typeof(AutoItVariantType)).ToArray();
+                    MethodInfo call = type.GetMethod("Call", argtypes);
+                    dynamic curry = call.Invoke(del, argv);
+
+                    if (curry is AutoItCurryingDelegate)
+                        res = AutoItVariantType.NewGCHandledData(curry);
+                    else if (curry is AutoItVariantType v)
+                        res = v;
+                    else
+                        res = AutoItVariantType.NewGCHandledData(curry);
+                });
+            }
+            catch (InvalidOperationException)
+            {
+                throw new InvalidOperationException("This object instance is not a callable function");
+            }
+
+            return res;
+        }
+
+        public AutoItVariantType Call(params AutoItVariantType[] argv) => Call(argv.Select(x => x as object).ToArray());
+
+        #endregion
         #region INSTANCE FUNCTIONS
 
         public AutoItVariantType ToLower() => ToString().ToLower();
@@ -197,53 +261,6 @@ namespace AutoItCoreLibrary
         public AutoItVariantType ToUpper() => ToString().ToUpper();
 
         public AutoItVariantType OneBasedSubstring(AutoItVariantType start, AutoItVariantType count) => ToString().Substring(start.ToInt() - 1, count.ToInt());
-
-        internal object Call(object target, params object[] argv)
-        {
-            object res = this;
-
-            UseGCHandledData<MethodInfo>(m =>
-            {
-                ParameterInfo[] pars = m.GetParameters();
-                int req = pars.Count(p => !p.IsOptional);
-
-                if (argv.Length >= req)
-                {
-                    object[] args = new object[pars.Length];
-
-                    for (int i = 0; i < argv.Length; ++i)
-                        args[i] = argv[i];
-
-                    res = m.Invoke(target, args);
-                }
-                else if (argv.Length > 0)
-                {
-                    Assembly asm = typeof(AutoItVariantType).Assembly;
-                    Type t_cdel = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItCurryingDelegate{req}");
-                    Type t_del = asm.GetType($"{nameof(AutoItCoreLibrary)}.AutoItDelegate{req}");
-
-                    Delegate d_om = m.CreateDelegate(t_del);
-                    object d_cd = Activator.CreateInstance(t_cdel, d_om);
-
-                    MethodInfo call = t_cdel.GetMethod("Call", argv.Select(_ => typeof(AutoItVariantType)).ToArray());
-
-                    dynamic curry = call.Invoke(d_cd, argv);
-
-                    res = NewDelegate(curry.Function.Method);
-                }
-            });
-
-            return res;
-        }
-
-        public AutoItVariantType Call(object target, params AutoItVariantType[] argv)
-        {
-            object res = Call(target, argv.Select(x => x as object).ToArray());
-
-            return res is AutoItVariantType v ? v : NewGCHandledData(res);
-        }
-
-        public AutoItVariantType Call(params AutoItVariantType[] argv) => Call(null, argv);
 
         public bool ToBool() => this;
 
@@ -299,7 +316,7 @@ namespace AutoItCoreLibrary
         public static bool GreaterEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 >= v2;
 
         public static AutoItVariantType NewDelegate<T>(T func) where T : Delegate => NewDelegate(func?.Method);
-        public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : NewGCHandledData(func);
+        public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : CreateDelegate(func);
         public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {

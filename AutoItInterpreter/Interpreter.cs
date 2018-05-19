@@ -1979,14 +1979,6 @@ namespace AutoItInterpreter
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
                     if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ') && !λassignments.ContainsKey(uncalled.ToLower()))
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
-
-                foreach (string func in λassignments.Keys)
-                    if (state.ASTFunctions.ContainsKey(func) && state.ASTFunctions[func].Parameters.Any(p => p is AST_FUNCTION_PARAMETER_OPT))
-                        foreach (DefinitionContext ctx in λassignments[func])
-                            state.ReportKnownNote("notes.λ_assignement_optional_params", ctx, state.ASTFunctions[func].Name);
-                    else if (BUILT_IN_FUNCTIONS.FirstOrDefault(bif => bif.Name.Equals(func, StringComparison.InvariantCultureIgnoreCase)) is var builtin && builtin.Name != null)
-                        foreach (DefinitionContext ctx in λassignments[func])
-                            state.ReportKnownNote("notes.λ_assignement_optional_params", ctx, builtin.Name);
             }
 
             private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
