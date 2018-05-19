@@ -1,4 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿// #define PRE_BUILD
+// #define USE_PUBLISHER
+
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Text;
@@ -118,9 +121,13 @@ namespace AutoItInterpreter
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
 
                     DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
-
+#if PRE_BUILD || !USE_PUBLISHER
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
-
+#endif
+#if USE_PUBLISHER
+                    if (ret == 0)
+                        ret = ApplicationGenerator.PublishDotnetProject(subdir);
+#endif
                     if (ret != 0)
                     {
                         cmperr("errors.generator.build_failed", ret);
@@ -129,7 +136,11 @@ namespace AutoItInterpreter
                     }
                     else
                     {
+#if USE_PUBLISHER
+                        DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}/publish");
+#else
                         DirectoryInfo bindir = subdir.CreateSubdirectory($"bin/{target.Identifier}");
+#endif
                         DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName + "-compiled");
 
                         foreach (FileInfo file in bindir.GetFiles("*.pdb"))

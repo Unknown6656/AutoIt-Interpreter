@@ -484,6 +484,25 @@ using System.Reflection;
                 return proc.ExitCode;
             }
         }
+
+        public static int PublishDotnetProject(DirectoryInfo dir)
+        {
+            using (Process proc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    WorkingDirectory = dir.FullName,
+                    Arguments = "publish -c Release --force --self-contained -v m",
+                    FileName = "dotnet",
+                }
+            })
+            {
+                proc.Start();
+                proc.WaitForExit();
+
+                return proc.ExitCode;
+            }
+        }
     }
 
     public sealed class TargetSystem
