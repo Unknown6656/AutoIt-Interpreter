@@ -334,7 +334,42 @@ $functions[7][2] = beep
 $result = $functions[7][2](440, 1000)
 ```
 
-TODO : add information about currying
+# λ-currying
+
+Given e.g. a function
+<img src="http://latex.codecogs.com/svg.latex?F%20%3A%20A%20*%20B%20*%20C%20%5Crightarrow%20D"/>
+it could be interpreted as it curryable form
+<img src="http://latex.codecogs.com/svg.latex?F%20%3A%20A%20%5Crightarrow%20B%20%5Crightarrow%20C%20%5Crightarrow%20D"/>.
+
+If a parameter <img src="http://latex.codecogs.com/svg.latex?a%20%5Cin%20A"/> is passed to the function <img src="http://latex.codecogs.com/svg.latex?F"/>, the resulting "curried" function
+has the following form: <img src="http://latex.codecogs.com/svg.latex?F%27%20%3A%20B%20%5Crightarrow%20C%20%5Crightarrow%20D"/>.
+
+This concept has been transfered to λ-calls in AutoIt++: ommitting any mandataory parameter inside a λ-call leads to λ-currying of the associated function.
+
+```autoit
+$f = Func($a, $b, $c, $d)
+         ConsoleWriteLine($"λ called with ($a, $b, $c, $d).")
+     EndFunc
+
+$g = $f(42)                 ; $g is now a function accepting the parameters $b, $c and $d
+$h = $g("test", -0.5)       ; $h is now a function accepting the parameter $d
+
+$x = $h(true)               ; prints 'λ called with (42, test, -0.5, true).'
+$y = $h(-1.7)               ; prints 'λ called with (42, test, -0.5, -1.7).'
+$z = $g(0, "foo", "bar")    ; prints 'λ called with (42, 0, foo, bar).'
+```
+
+If the function or its curried version contains any optional argument, the function is executed in the original sense, as soon as all mandatory arguments are passed:
+```autoit
+$f = Func($a, $b, $c = 9)
+         ConsoleWriteLine($"λ called with ($a, $b, $c).")
+     EndFunc
+
+$g = $f(42)                 ; $g is now a function accepting the parameters $b and [$c]
+
+$x = $g(-1)                 ; prints 'λ called with (42, -1, 9).'
+$y = $g(0, 0.2)             ; prints 'λ called with (42, 0, 0.2).'
+```
 
 # `new`-Exprssions
 

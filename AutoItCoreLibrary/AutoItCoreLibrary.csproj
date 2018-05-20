@@ -18,16 +18,9 @@
       </None>
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="Scripty.MsBuild" Version="0.7.4" />
-    </ItemGroup>
-    <ItemGroup>
       <None Update="AutoItCurryingDelegate.tt">
         <Generator>TextTemplatingFileGenerator</Generator>
         <LastGenOutput>AutoItCurryingDelegate.cs</LastGenOutput>
-      </None>
-      <None Update="AutoItDelegate.csx">
-        <Generator>ScriptyGenerator</Generator>
-        <CustomToolNamespace>ScriptyGenerator</CustomToolNamespace>
       </None>
     </ItemGroup>
     <ItemGroup>

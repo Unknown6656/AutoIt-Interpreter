@@ -1,1 +1,0 @@
-﻿// TODO : automatic delegate generation
