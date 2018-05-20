@@ -181,8 +181,11 @@ namespace AutoItInterpreter
                     DebugPrintUtil.DisplayFinalResult(fr);
                 }
 
-                DebugPrintUtil.DisplayErrors(state, Options);
-                DebugPrintUtil.PrintSeperator(null);
+                if (state.Errors.Length > 0)
+                {
+                    DebugPrintUtil.DisplayErrors(state, Options);
+                    DebugPrintUtil.PrintSeperator(null);
+                }
 
                 success = true;
             }
