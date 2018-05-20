@@ -168,20 +168,26 @@ namespace AutoItCoreLibrary
         {
             if (IsString)
             {
+                void* ptr = this;
+
                 try
                 {
-                    GCHandle gch = this;
+                    // do some silly action to assert reading permissions (without the assertion being optimized away)
+                    if (((decimal)*((int*)ptr) + this).GetHashCode() != 0)
+                    {
+                        GCHandle gch = GCHandle.FromIntPtr((IntPtr)ptr);
 
-                    return $"{gch.AddrOfPinnedObject():16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
+                        return $"{gch.AddrOfPinnedObject():16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
+                    }
                 }
                 catch
                 {
                 }
-
-                return _data.StringData;
             }
             else
                 return $"[ {string.Join(", ", _data.VariantData.Select(x => x.ToDebugString()))} ]";
+
+            return _data.StringData;
         }
 
         public override bool Equals(object obj) => obj is AutoItVariantType o && Equals(o);

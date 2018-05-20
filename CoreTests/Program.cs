@@ -18,15 +18,16 @@ namespace CoreTests
                     for (int x = 0; x < 3; ++x)
                         mat[z, y, x] = $"({z}|{y}|{x})";
 
-            AutoItVariableDictionary dic = new AutoItVariableDictionary();
+            AutoItFunctions.Debug(mat);
 
-            dic["mat"] = mat;
+            mat[1, 1, 1] = v.NewDelegate<AutoItDelegate4Opt1>(TOP_KEK);
 
-            var s1 = dic["mat"].ToDebugString();
+            void* ptr = mat[1, 1, 1];
+            byte val = *((byte*)ptr);
 
-            dic["mat"] = v.RedimMatrix(dic["mat"], 2, 2, 2);
 
-            var s2 = dic["mat"].ToDebugString();
+
+            AutoItFunctions.Debug(mat);
         }
 
         public static v TOP_KEK(v v1, v v2, v v3, v? v4 = null) => $"v1={v1}, v2={v2}, v3={v3}, v4={v4 ?? v.Null}";
