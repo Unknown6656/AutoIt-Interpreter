@@ -1,10 +1,10 @@
 ﻿[x] λs
-[ ] fix λs on unitizitalized method-pointers
-[-] fix λ: optional arguments
-[-] λ currying
-[ ] one-liner function declarations:
-                        Func add($a, $b) -> $a + $b
+    [x] fix λs on unitizitalized method-pointers
+    [x] fix λ: optional arguments
+    [x] λ currying
+[x] one-liner function declarations
 [x] substrings
+[ ] fix @|.. and @.. operators
 [-] arrays
     [x] declaration
     [-] redim

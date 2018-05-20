@@ -7,11 +7,11 @@ This article highlights the most important differences between AutoIt3's and Aut
 
 1) [AutoIt++ operators](#autoit-operators)
 2) [AutoIt++ string interpolation](#autoit-string-interpolation)
-3) [P/Invoke functions](#pinvoke-functions)
-4) [λ-Expressions](#λ-expressions)
-5) [`new`-exprssions](#new-expressions)
-6) [Inline C#-code](#inline-c-code)
-7) TODO
+3) [One-liner functions](#one-liner-functions)
+4) [P/Invoke functions](#pinvoke-functions)
+5) [λ-Expressions](#λ-expressions)
+6) [`new`-exprssions](#new-expressions)
+7) [Inline C#-code](#inline-c-code)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -210,6 +210,38 @@ More general information about interpolated strings can be found in [this Wikipe
 <br/>
 More general information about the ASCII control characters can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Control_character#In_ASCII).
 
+# One-liner functions
+
+"Simple" functions often have the following form:
+```autoit
+Func name( <parameters> )
+    <single expression>
+EndFunc
+```
+The single expresion can optionally be preceded by an `Return`-keyword.
+
+To reduce the bloat created by such tiny functions, AutoIt++ introduces the one-line function syntax as follows:
+```autoit
+Func name( <parameters> ) -> <expression>
+```
+
+The following examples show how the syntax can be used:
+```autoit
+Func PrintAreaOfCircle($radius)
+    ConsoleWriteLine($"A circle with the radius $radius has the area " & ($radius ^ 2 * @PI))
+EndFunc
+
+Func SomethingComplex($a, $b, $c = @E)
+    Return $c ^ (Sin($a) * $b)
+EndFunc
+
+; are now equivalent to:
+
+Func PrintAreaOfCircle($radius) -> ConsoleWriteLine($"A circle with the radius $radius has the area " & ($radius ^ 2 * @PI))
+
+Func SomethingComplex($a, $b, $c = @E) -> $c ^ (Sin($a) * $b)
+```
+
 # P/Invoke functions
 
 P/Invoke (also known as _"Platform Invocation Services"_) is a feature for .NET languages to call unmanaged code from managed languages, e.g. call C++ from C#.
@@ -340,7 +372,7 @@ Given e.g. a function
 <img src="http://latex.codecogs.com/svg.latex?F%20%3A%20A%20*%20B%20*%20C%20%5Crightarrow%20D"/>
 it could be interpreted as it curryable form
 <img src="http://latex.codecogs.com/svg.latex?F%20%3A%20A%20%5Crightarrow%20B%20%5Crightarrow%20C%20%5Crightarrow%20D"/>.
-
+<br/>
 If a parameter <img src="http://latex.codecogs.com/svg.latex?a%20%5Cin%20A"/> is passed to the function <img src="http://latex.codecogs.com/svg.latex?F"/>, the resulting "curried" function
 has the following form: <img src="http://latex.codecogs.com/svg.latex?F%27%20%3A%20B%20%5Crightarrow%20C%20%5Crightarrow%20D"/>.
 
@@ -370,6 +402,8 @@ $g = $f(42)                 ; $g is now a function accepting the parameters $b a
 $x = $g(-1)                 ; prints 'λ called with (42, -1, 9).'
 $y = $g(0, 0.2)             ; prints 'λ called with (42, 0, 0.2).'
 ```
+
+More information about currying can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Currying)
 
 # `new`-Exprssions
 

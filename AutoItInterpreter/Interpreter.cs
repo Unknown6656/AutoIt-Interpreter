@@ -56,7 +56,12 @@ namespace AutoItInterpreter
             Options. Settings.IncludeDirectories = Options.Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
 
             if (RootContext.Content is null)
+                RootContext = new InterpreterContext(path + ".au3");
+
+            if (RootContext.Content is null)
                 throw new FileNotFoundException(Options.Language["errors.general.file_nopen"], path);
+            else
+                path += ".au3";
 
             string projectname = RootContext.SourcePath.Name;
             string ext = RootContext.SourcePath.Extension;
@@ -703,7 +708,24 @@ namespace AutoItInterpreter
             {
                 (FunctionDeclarationState fds, FunctionScope current) = stack.Peek();
 
-                if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out Match m))
+                if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)\s*->\s*(?<expr>[^\s]+.*)*\s*$", out Match m))
+                {
+                    string name = m.Get("name");
+                    string lname = name.ToLower();
+
+                    if (st.Functions.ContainsKey(lname))
+                        err("errors.preproc.function_exists", name, st.Functions[lname].Context);
+                    else if (st.PInvokeFunctions.ContainsKey(lname))
+                        err("errors.preproc.function_exists", name, st.PInvokeFunctions[lname].Context);
+                    else if (current != null)
+                        err("errors.preproc.function_nesting");
+                    else
+                    {
+                        st.Functions[lname] = new FunctionScope(defctx, m.Get("params").Trim());
+                        st.Functions[lname].Lines.Add(($"Return {m.Get("expr").Trim()}", defctx));
+                    }
+                }
+                else if (Line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<params>.*)\s*\)$", out m))
                 {
                     FunctionDeclarationState fds_n;
 
@@ -753,9 +775,9 @@ namespace AutoItInterpreter
                     else if (string.IsNullOrWhiteSpace(sig))
                         err("errors.preproc.pinvoke_no_sig", name);
                     else if (st.Functions.ContainsKey(lname))
-                        err("errors.preproc.function_exists", m.Get("name"), st.Functions[lname].Context);
+                        err("errors.preproc.function_exists", name, st.Functions[lname].Context);
                     else if (st.PInvokeFunctions.ContainsKey(lname))
-                        err("errors.preproc.function_exists", m.Get("name"), st.PInvokeFunctions[lname].Context);
+                        err("errors.preproc.function_exists", name, st.PInvokeFunctions[lname].Context);
                     else if (current != null)
                         err("errors.preproc.function_nesting");
                     else
