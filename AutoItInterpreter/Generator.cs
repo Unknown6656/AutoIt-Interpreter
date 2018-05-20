@@ -62,9 +62,7 @@ namespace AutoItInterpreter
             IEnumerable<string> pins = state.PInvokeSignatures.Select(x => AutoItFunctions.GeneratePInvokeWrapperName(x.Item1, x.Item2.Name));
             Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, FUNC_PREFIX, func =>
             {
-                func = func.ToLower();
-
-                if (state.ASTFunctions.ContainsKey(func))
+                if (state.ASTFunctions.ContainsKey(func.ToLower()))
                     return null;
                 else if ((from p in pins
                           where p.Equals(func, StringComparison.InvariantCultureIgnoreCase)
@@ -77,7 +75,14 @@ namespace AutoItInterpreter
                     }
                     catch
                     {
-                        return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
+                        if (Array.Find(BUILT_IN_FUNCTIONS, bif => bif.Name.Equals(func, StringComparison.InvariantCultureIgnoreCase)).Name is string fun)
+                            return $"{FUNC_MODULE}.{fun}";
+                        else
+                        {
+                            state.ReportKnownError("errors.astproc.func_not_declared", default, func);
+
+                            return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
+                        }
                     }
             }));
             string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
@@ -93,6 +98,7 @@ using System;
 using {nameof(AutoItCoreLibrary)};
 
 #pragma warning disable CS0162
+#pragma warning disable CS1522
 
 namespace {NAMESPACE}
 {{
@@ -330,11 +336,18 @@ namespace {NAMESPACE}
                         string del;
 
                         if (state.ASTFunctions.ContainsKey(fname))
-                            del = $"{TYPE}.NewDelegate(typeof({APPLICATION_MODULE}).GetMethod(nameof({FUNC_PREFIX}{fname}), BindingFlags.NonPublic | BindingFlags.Static))";
+                            del = $"typeof({APPLICATION_MODULE}).GetMethod(nameof({FUNC_PREFIX}{fname}), BindingFlags.NonPublic | BindingFlags.Static)";
                         else
-                            del = $"{TYPE}.NewDelegate(typeof({FUNC_MODULE}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase))";
+                            del = $"typeof({FUNC_MODULE}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase)";
 
-                        println($"{tstr(s.VariableExpression)} = {del};");
+                        println($"{tstr(s.VariableExpression)} = {TYPE}.{nameof(AutoItVariantType.NewDelegate)}({del});");
+
+                        return;
+                    case AST_REDIM_STATEMENT s:
+                        string varexpr = tstr(EXPRESSION.NewVariableExpression(s.Variable));
+                        string dimexpr = string.Concat(s.DimensionExpressions.Select(dim => $", ({tstr(dim)}).{nameof(AutoItVariantType.ToLong)}()"));
+
+                        println($"{varexpr} = {TYPE}.{nameof(AutoItVariantType.RedimMatrix)}({varexpr}{dimexpr});");
 
                         return;
                     default:

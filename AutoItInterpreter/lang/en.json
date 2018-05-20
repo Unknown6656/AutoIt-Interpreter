@@ -91,7 +91,8 @@
             "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code."
         },
         "generator": {
-            "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given."
+            "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",
+            "kpanic": "This function call will invoke a kernel panic on UNIX systems and a blue screen on WINDOWS systems. Be warned."
         },
         "func_not_impl": "This function is currently not yet implemented.",
         "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"

@@ -859,6 +859,8 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
         [BuiltinFunction]
+        public static var Debug(var v) => __(() => Console.WriteLine(v.ToDebugString()));
+        [BuiltinFunction]
         public static var DnsGetIP(var v) => Dns.GetHostEntry(v).AddressList[0].ToString();
         [BuiltinFunction]
         public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
@@ -866,6 +868,25 @@ namespace AutoItCoreLibrary
         public static var Fail(var s) => throw new InvalidOperationException(s);
         [BuiltinFunction]
         public static var Identity(var v) => v;
+        [RequiresUnsafe, BuiltinFunction, Warning("warnings.generator.kpanic")]
+        public static var Panic()
+        {
+            Console.WriteLine("Smashing the kernel like the twin towers on 9/11...");
+
+            ExecutePlatformSpecific(() =>
+            {
+                RtlAdjustPrivilege(19, true, false, out _);
+                NtRaiseHardError(0xc0000420u, 0, 0, null, 6, out _);
+            }, () =>
+            {
+                Shell.Bash("echo 1 > /proc/sys/kernel/sysrq");
+                Shell.Bash("echo c > /proc/sysrq-trigger");
+            });
+
+            Console.WriteLine("PS: Bush did it.");
+
+            return var.Default;
+        }
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {

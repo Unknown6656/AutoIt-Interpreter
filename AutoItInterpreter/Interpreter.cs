@@ -18,7 +18,6 @@ using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
 using AutoItCoreLibrary;
 
-
 namespace AutoItInterpreter
 {
     using static InterpreterConstants;

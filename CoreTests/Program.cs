@@ -18,20 +18,15 @@ namespace CoreTests
                     for (int x = 0; x < 3; ++x)
                         mat[z, y, x] = $"({z}|{y}|{x})";
 
-            v mat2 = mat.Clone();
+            AutoItVariableDictionary dic = new AutoItVariableDictionary();
 
-            mat2[0, 0, 0] = v.NewDelegate(new AutoItDelegate0Opt0(kek));
-            mat2[0, 0, 0].Call();
+            dic["mat"] = mat;
 
-            var s = mat.ToDebugString();
-            var s2 = mat2.ToDebugString();
-        }
+            var s1 = dic["mat"].ToDebugString();
 
-        public static v kek()
-        {
-            Console.WriteLine("lel");
+            dic["mat"] = v.RedimMatrix(dic["mat"], 2, 2, 2);
 
-            return "";
+            var s2 = dic["mat"].ToDebugString();
         }
 
         public static v TOP_KEK(v v1, v v2, v v3, v? v4 = null) => $"v1={v1}, v2={v2}, v3={v3}, v4={v4 ?? v.Null}";

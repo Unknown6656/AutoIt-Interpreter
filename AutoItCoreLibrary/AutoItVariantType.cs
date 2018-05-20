@@ -167,7 +167,19 @@ namespace AutoItCoreLibrary
         public string ToDebugString()
         {
             if (IsString)
+            {
+                try
+                {
+                    GCHandle gch = this;
+
+                    return $"{gch.AddrOfPinnedObject():16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
+                }
+                catch
+                {
+                }
+
                 return _data.StringData;
+            }
             else
                 return $"[ {string.Join(", ", _data.VariantData.Select(x => x.ToDebugString()))} ]";
         }

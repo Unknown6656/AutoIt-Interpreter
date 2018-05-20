@@ -35,6 +35,12 @@ namespace AutoItCoreLibrary
 
         [DllImport("user32.dll")]
         internal static extern void* GetKeyboardLayout(int thread);
+
+        [DllImport("ntdll.dll")]
+        internal static extern int RtlAdjustPrivilege(int Privilege, bool bEnablePrivilege, bool IsThreadPrivilege, out bool PreviousValue);
+
+        [DllImport("ntdll.dll")]
+        internal static extern int NtRaiseHardError(uint ErrorStatus, uint NumberOfParameters, uint UnicodeStringParameterMask, void* Parameters, uint ValidResponseOption, out uint Response);
     }
 
     public enum OS
