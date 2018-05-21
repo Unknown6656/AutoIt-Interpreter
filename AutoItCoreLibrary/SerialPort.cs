@@ -1,5 +1,4 @@
-﻿using System.Security.Permissions;
-using System.Collections.Generic;
+﻿using System.Runtime.InteropServices;
 using System.ComponentModel;
 using System.Threading;
 using System.Text;
@@ -46,7 +45,7 @@ namespace AutoItCoreLibrary
         private int _readbuffersize = 4096;
         private int _writebuffersize = 2048;
 
-        private SerialStream _internalserialstream;
+        private SerialStream stream;
         private byte[] _inbuffer = new byte[defaultBufferSize];
         private char[] _onechar = new char[1];
         private char[] _singlecharbuffer;
@@ -59,7 +58,7 @@ namespace AutoItCoreLibrary
         public event EventHandler<SerialError> ErrorReceived;
 
 
-        public Stream BaseStream => AssertOpen(_internalserialstream);
+        public Stream BaseStream => AssertOpen(stream);
 
         public int BaudRate
         {
@@ -68,26 +67,28 @@ namespace AutoItCoreLibrary
             {
                 if (value <= 0)
                     throw new ArgumentOutOfRangeException(nameof(BaudRate));
-
-                (IsOpen ? ref _internalserialstream.BaudRate : ref _rate) = value;
+                else if (IsOpen)
+                    stream.BaudRate = value;
+                else
+                    _rate = value;
             }
         }
 
         public bool BreakState
         {
-            get => AssertOpen(_internalserialstream.BreakState);
-            set => AssertOpen(() => _internalserialstream.BreakState = value);
+            get => AssertOpen(stream.BreakState);
+            set => AssertOpen(() => stream.BreakState = value);
         }
 
-        public int BytesToWrite => AssertOpen(_internalserialstream.BytesToWrite);
+        public int BytesToWrite => AssertOpen(stream.BytesToWrite);
 
-        public int BytesToRead => AssertOpen(_internalserialstream.BytesToRead + CachedBytesToRead);
+        public int BytesToRead => AssertOpen(stream.BytesToRead + CachedBytesToRead);
 
         private int CachedBytesToRead => _readlen - _readpos;
 
-        public bool CDHolding => AssertOpen(_internalserialstream.CDHolding);
+        public bool CDHolding => AssertOpen(stream.CDHolding);
 
-        public bool CtsHolding => AssertOpen(_internalserialstream.CtsHolding);
+        public bool CtsHolding => AssertOpen(stream.CtsHolding);
 
         public int DataBits
         {
@@ -97,28 +98,43 @@ namespace AutoItCoreLibrary
                 if (value < MIN_DATABITS || value > MAX_DATABITS)
                     throw new ArgumentOutOfRangeException(nameof(DataBits));
 
-                (IsOpen ? ref _internalserialstream.DataBits : ref _databits) = value;
+                if (IsOpen)
+                    stream.DataBits = value;
+                else
+                    _databits = value;
             }
         }
 
         public bool DiscardNull
         {
             get => _discardnull;
-            set => (IsOpen ? ref _internalserialstream.DiscardNull : ref _discardnull) = value;
+            set
+            {
+                if (IsOpen)
+                    stream.DiscardNull = value;
+                else
+                    _discardnull = value;
+            }
         }
 
-        public bool DsrHolding => AssertOpen(_internalserialstream.DsrHolding);
+        public bool DsrHolding => AssertOpen(stream.DsrHolding);
 
         public bool DtrEnable
         {
             get
             {
                 if (IsOpen)
-                    _dtrenable = _internalserialstream.DtrEnable;
+                    _dtrenable = stream.DtrEnable;
 
                 return _dtrenable;
             }
-            set => (IsOpen ? ref _internalserialstream.DtrEnable : ref _dtrenable) = value;
+            set
+            {
+                if (IsOpen)
+                    stream.DtrEnable = value;
+                else
+                    _dtrenable = value;
+            }
         }
 
         public Encoding Encoding
@@ -146,12 +162,14 @@ namespace AutoItCoreLibrary
             {
                 if (value < Handshake.None || value > Handshake.RequestToSendXOnXOff)
                     throw new ArgumentOutOfRangeException(nameof(Handshake));
-
-                (IsOpen ? ref _internalserialstream.Handshake : ref _handshake) = value;
+                else if (IsOpen)
+                    stream.Handshake = value;
+                else
+                    _handshake = value;
             }
         }
 
-        public bool IsOpen => _internalserialstream?.IsOpen ?? false;
+        public bool IsOpen => stream?.IsOpen ?? false;
 
         public string NewLine
         {
@@ -166,15 +184,23 @@ namespace AutoItCoreLibrary
             {
                 if (value < Parity.None || value > Parity.Space)
                     throw new ArgumentOutOfRangeException(nameof(Parity));
-
-                (IsOpen ? ref _internalserialstream.Parity : ref _parity) = value;
+                else if (IsOpen)
+                    stream.Parity = value;
+                else
+                    _parity = value;
             }
         }
 
         public byte ParityReplace
         {
             get => _parityreplace;
-            set => (IsOpen ? ref _internalserialstream.ParityReplace : ref _parityreplace) = value;
+            set
+            {
+                if (IsOpen)
+                    stream.ParityReplace = value;
+                else
+                    _parityreplace = value;
+            }
         }
 
         public string PortName
@@ -212,8 +238,10 @@ namespace AutoItCoreLibrary
             {
                 if ((value < 0) && (value != InfiniteTimeout))
                     throw new ArgumentOutOfRangeException(nameof(ReadTimeout));
+                else if (IsOpen)
+                    stream.ReadTimeout = value;
                 else
-                    (IsOpen ? ref _internalserialstream.ReadTimeout : ref _rimeout) = value;
+                    _rimeout = value;
             }
         }
 
@@ -228,10 +256,7 @@ namespace AutoItCoreLibrary
                 _receivedbytesthreshold = value;
 
                 if (IsOpen)
-                {
-                    SerialDataReceivedEventArgs args = new SerialDataReceivedEventArgs(SerialData.Chars);
-                    CatchReceivedEvents(this, args);
-                }
+                    CatchReceivedEvents(this, SerialData.Chars);
             }
         }
 
@@ -240,11 +265,17 @@ namespace AutoItCoreLibrary
             get
             {
                 if (IsOpen)
-                    _rtsenable = _internalserialstream.RtsEnable;
+                    _rtsenable = stream.RtsEnable;
 
                 return _rtsenable;
             }
-            set => (IsOpen ? ref _internalserialstream.RtsEnable : ref _rtsenable) = value;
+            set
+            {
+                if (IsOpen)
+                    stream.RtsEnable = value;
+                else
+                    _rtsenable = value;
+            }
         }
 
         public StopBits StopBits
@@ -254,8 +285,10 @@ namespace AutoItCoreLibrary
             {
                 if (value < StopBits.One || value > StopBits.OnePointFive)
                     throw new ArgumentOutOfRangeException(nameof(StopBits));
-
-                (IsOpen ? ref _internalserialstream.StopBits : ref _stopbits) = value;
+                else if (IsOpen)
+                    stream.StopBits = value;
+                else
+                    _stopbits = value;
             }
         }
 
@@ -280,8 +313,10 @@ namespace AutoItCoreLibrary
             {
                 if ((value < 0) && (value != InfiniteTimeout))
                     throw new ArgumentOutOfRangeException(nameof(_wtimeout));
+                else if (IsOpen)
+                    stream.WriteTimeout = value;
                 else
-                    (IsOpen ? ref _internalserialstream.WriteTimeout : ref _wtimeout) = value;
+                    _wtimeout = value;
             }
         }
 
@@ -331,9 +366,9 @@ namespace AutoItCoreLibrary
         {
             if (disposing && IsOpen)
             {
-                _internalserialstream?.Flush();
-                _internalserialstream?.Close();
-                _internalserialstream = null;
+                stream?.Flush();
+                stream?.Close();
+                stream = null;
             }
 
             base.Dispose(disposing);
@@ -341,47 +376,24 @@ namespace AutoItCoreLibrary
 
         public void DiscardInBuffer() => AssertOpen(() =>
         {
-            _internalserialstream.DiscardInBuffer();
+            stream.DiscardInBuffer();
             _readpos = _readlen = 0;
         });
 
-        public void DiscardOutBuffer() => AssertOpen(() => _internalserialstream.DiscardOutBuffer());
+        public void DiscardOutBuffer() => AssertOpen(() => stream.DiscardOutBuffer());
 
         public static string[] GetPortNames() => new string[0];
-
-#if NYT
-        private static unsafe char[] CallQueryDosDevice(string name, out int dataSize) {
-            char[] buffer = new char[1024];
- 
-            fixed (char *bufferPtr = buffer) {
-                dataSize =  UnsafeNativeMethods.QueryDosDevice(name, buffer, buffer.Length);
-                while (dataSize <= 0) {
-                    int lastError = Marshal.GetLastWin32Error();
-                    if (lastError == NativeMethods.ERROR_INSUFFICIENT_BUFFER || lastError == NativeMethods.ERROR_MORE_DATA) {
-                        buffer = new char[buffer.Length * 2];
-                        dataSize = UnsafeNativeMethods.QueryDosDevice(null, buffer, buffer.Length);
-                    }
-                    else {
-                        throw new Win32Exception();
-                    }
-                }
-            }
-            return buffer;
-        }
-#endif
 
         public void Open()
         {
             if (IsOpen)
                 throw new InvalidOperationException("Port is already open");
 
-            _internalserialstream = new SerialStream(_name, _rate, _parity, _databits, _stopbits, _rimeout,
-                _wtimeout, _handshake, _dtrenable, _rtsenable, _discardnull, _parityreplace);
-
-            _internalserialstream.SetBufferSizes(_readbuffersize, _writebuffersize);
-            _internalserialstream.ErrorReceived += new EventHandler(CatchErrorEvents);
-            _internalserialstream.PinChanged += new EventHandler(CatchPinChangedEvents);
-            _internalserialstream.DataReceived += new EventHandler(CatchReceivedEvents);
+            stream = new SerialStream(_name, _rate, _parity, _databits, _stopbits, _rimeout, _wtimeout, _handshake, _dtrenable, _rtsenable, _discardnull, _parityreplace);
+            stream.SetBufferSizes(_readbuffersize, _writebuffersize);
+            stream.ErrorReceived += new EventHandler<SerialError>(CatchErrorEvents);
+            stream.PinChanged += new EventHandler<SerialPinChange>(CatchPinChangedEvents);
+            stream.DataReceived += new EventHandler<SerialData>(CatchReceivedEvents);
         }
 
         // Read Design pattern:
@@ -430,7 +442,7 @@ namespace AutoItCoreLibrary
 
             int bytesLeftToRead = count - bytesReadToBuffer;
 
-            bytesReadToBuffer += _internalserialstream.Read(buffer, offset + bytesReadToBuffer, bytesLeftToRead);
+            bytesReadToBuffer += stream.Read(buffer, offset + bytesReadToBuffer, bytesLeftToRead);
 
             _decoder.Reset();
 
@@ -469,13 +481,13 @@ namespace AutoItCoreLibrary
             {
                 if (timeout == 0)
                 {
-                    int bytesInStream = _internalserialstream.BytesToRead;
+                    int bytesInStream = stream.BytesToRead;
 
                     if (bytesInStream == 0)
                         bytesInStream = 1;
 
                     MaybeResizeBuffer(bytesInStream);
-                    _readlen += _internalserialstream.Read(_inbuffer, _readlen, bytesInStream);
+                    _readlen += stream.Read(_inbuffer, _readlen, bytesInStream);
 
                     return ReadBufferIntoChars(_onechar, 0, 1, false) != 0 ? _onechar[0] : throw new TimeoutException();
                 }
@@ -485,10 +497,10 @@ namespace AutoItCoreLibrary
                 do
                 {
                     if (timeout == InfiniteTimeout)
-                        nextByte = _internalserialstream.ReadByte(InfiniteTimeout);
+                        nextByte = stream.ReadByte(); // InfiniteTimeout
                     else if (timeout - timeUsed >= 0)
                     {
-                        nextByte = _internalserialstream.ReadByte(timeout - timeUsed);
+                        nextByte = stream.ReadByte();// timeout - timeUsed
                         timeUsed = Environment.TickCount - startTicks;
                     }
                     else
@@ -515,7 +527,7 @@ namespace AutoItCoreLibrary
             else if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count));
             else if (buffer.Length - offset < count)
-                throw new ArgumentException(SR.GetString(SR.Argument_InvalidOffLen));
+                throw new ArgumentException("Invalid ofset length.");
             else
                 return InternalRead(buffer, offset, count, _rimeout, false);
         });
@@ -526,11 +538,11 @@ namespace AutoItCoreLibrary
                 return 0;
 
             int startTicks = Environment.TickCount;
-            int bytesInStream = _internalserialstream.BytesToRead;
+            int bytesInStream = stream.BytesToRead;
 
             MaybeResizeBuffer(bytesInStream);
 
-            _readlen += _internalserialstream.Read(_inbuffer, _readlen, bytesInStream);
+            _readlen += stream.Read(_inbuffer, _readlen, bytesInStream);
 
             if (_decoder.GetCharCount(_inbuffer, _readpos, CachedBytesToRead) > 0)
                 return ReadBufferIntoChars(buffer, offset, count, countMultiByteCharsAsOne);
@@ -544,7 +556,7 @@ namespace AutoItCoreLibrary
             {
                 MaybeResizeBuffer(maxReadSize);
 
-                _readlen += _internalserialstream.Read(_inbuffer, _readlen, maxReadSize);
+                _readlen += stream.Read(_inbuffer, _readlen, maxReadSize);
                 justRead = ReadBufferIntoChars(buffer, offset, count, countMultiByteCharsAsOne);
 
                 if (justRead > 0)
@@ -623,7 +635,7 @@ namespace AutoItCoreLibrary
             {
                 _decoder.Reset();
 
-                return _internalserialstream.ReadByte();
+                return stream.ReadByte();
             }
         });
 
@@ -634,7 +646,7 @@ namespace AutoItCoreLibrary
             if (_readpos < _readlen)
                 Buffer.BlockCopy(_inbuffer, _readpos, bytesReceived, 0, CachedBytesToRead);
 
-            _internalserialstream.Read(bytesReceived, CachedBytesToRead, bytesReceived.Length - (CachedBytesToRead));
+            stream.Read(bytesReceived, CachedBytesToRead, bytesReceived.Length - (CachedBytesToRead));
 
             Decoder localDecoder = Encoding.GetDecoder();
             int numCharsReceived = localDecoder.GetCharCount(bytesReceived, 0, bytesReceived.Length);
@@ -678,11 +690,11 @@ namespace AutoItCoreLibrary
             int timeNow;
             StringBuilder currentLine = new StringBuilder();
             char lastValueChar = value[value.Length - 1];
-            int bytesInStream = _internalserialstream.BytesToRead;
+            int bytesInStream = stream.BytesToRead;
 
             MaybeResizeBuffer(bytesInStream);
 
-            _readlen += _internalserialstream.Read(_inbuffer, _readlen, bytesInStream);
+            _readlen += stream.Read(_inbuffer, _readlen, bytesInStream);
 
             int beginReadPos = _readpos;
 
@@ -772,7 +784,7 @@ namespace AutoItCoreLibrary
             {
                 byte[] bytesToWrite = _encoding.GetBytes(text);
 
-                _internalserialstream.Write(bytesToWrite, 0, bytesToWrite.Length, _wtimeout);
+                stream.Write(bytesToWrite, 0, bytesToWrite.Length, _wtimeout);
             }
         });
 
@@ -789,7 +801,7 @@ namespace AutoItCoreLibrary
         public void Write(byte[] buffer, int offset, int count)
         {
             if (AssertParams(buffer, offset, count))
-                _internalserialstream.Write(buffer, offset, count, _wtimeout);
+                stream.Write(buffer, offset, count, _wtimeout);
         }
 
         public void WriteLine(string text) => Write(text + NewLine);
@@ -813,7 +825,6 @@ namespace AutoItCoreLibrary
         private void CatchErrorEvents(object src, SerialError e)
         {
             EventHandler<SerialError> eventHandler = ErrorReceived;
-            SerialStream stream = _internalserialstream;
 
             if ((eventHandler != null) && (stream != null))
                 lock (stream)
@@ -824,7 +835,6 @@ namespace AutoItCoreLibrary
         private void CatchPinChangedEvents(object src, SerialPinChange e)
         {
             EventHandler<SerialPinChange> eventHandler = PinChanged;
-            SerialStream stream = _internalserialstream;
 
             if ((eventHandler != null) && (stream != null))
                 lock (stream)
@@ -835,14 +845,13 @@ namespace AutoItCoreLibrary
         private void CatchReceivedEvents(object src, SerialData e)
         {
             EventHandler<SerialData> eventHandler = DataReceived;
-            SerialStream stream = _internalserialstream;
             bool raise = false;
 
             if ((eventHandler != null) && (stream != null))
                 lock (stream)
                     try
                     {
-                        raise = stream.IsOpen && (SerialData.Eof == e.EventType || BytesToRead >= _receivedbytesthreshold);
+                        raise = stream.IsOpen && ((e == SerialData.Eof) || (BytesToRead >= _receivedbytesthreshold));
                     }
                     catch
                     {
@@ -889,47 +898,44 @@ namespace AutoItCoreLibrary
         }
     }
 
-    internal sealed class SerialStream
+    internal sealed unsafe class SerialStream
         : Stream
     {
-        private const int EVT_ERROR = (int)(SerialError.Frame | SerialError.Overrun | SerialError.RXOver | SerialError.RXParity | SerialError.TXFull);
-        private const int EVT_RECV = (int)(SerialData.Chars | SerialData.Eof);
-        private const int EVT_PINCH = (int)(SerialPinChange.Break | SerialPinChange.CDChanged | SerialPinChange.CtsChanged | SerialPinChange.Ring | SerialPinChange.DsrChanged);
         private const int INF_TIMEOUT = -2;
 
-        private DCB dcb;
-        private COMSTAT comStat;
-        private COMMPROP commProp;
-        private COMMTIMEOUTS commTimeouts;
+        private static readonly IOCompletionCallback _iocallback = new IOCompletionCallback(AsyncFSCallback);
 
-        private string _name;
+        private readonly EventLoopRunner _evtrunner;
+        private COMMTIMEOUTS _com_timeout;
+        private COMMPROP _com_prop;
+        private COMSTAT _com_stat;
+        private DCB _dcb;
+
+        private Handshake _handshake;
         private byte _parityreplace = (byte)'?';
-        private bool _isasync = true;
         private bool _rtsenable;
         private bool _inbreak;
-        private Handshake _handshake;
+        private byte[] _tmpbuf;
 
-
-        internal SafeFileHandle _handle;
-        internal EventLoopRunner eventRunner;
-
-        private byte[] tempBuf;                 // used to avoid multiple array allocations in ReadByte()
-
-        // called whenever any async i/o operation completes.
-        private unsafe static readonly IOCompletionCallback IOCallback = new IOCompletionCallback(SerialStream.AsyncFSCallback);
 
         internal event EventHandler<SerialPinChange> PinChanged;
         internal event EventHandler<SerialError> ErrorReceived;
         internal event EventHandler<SerialData> DataReceived;
 
 
-        public override bool CanRead => _handle != null;
+        public string Name { get; }
+
+        public bool IsAsync { get; } = true;
+
+        public SafeFileHandle Handle { get; private set; }
+
+        public override bool CanRead => Handle != null;
 
         public override bool CanSeek => false;
 
-        public override bool CanTimeout => _handle != null;
+        public override bool CanTimeout => Handle != null;
 
-        public override bool CanWrite => _handle != null;
+        public override bool CanWrite => Handle != null;
 
         public override long Length => throw new NotSupportedException();
 
@@ -941,22 +947,22 @@ namespace AutoItCoreLibrary
 
         internal int BaudRate
         {
-            get => (int)dcb.BaudRate;
+            get => (int)_dcb.BaudRate;
             set
             {
-                if (value <= 0 || (value > commProp.dwMaxBaud && commProp.dwMaxBaud > 0))
+                if (value <= 0 || (value > _com_prop.dwMaxBaud && _com_prop.dwMaxBaud > 0))
                     throw new ArgumentOutOfRangeException(nameof(BaudRate));
-
-                if (value != dcb.BaudRate)
+                else if (value != _dcb.BaudRate)
                 {
-                    int baudRateOld = (int)dcb.BaudRate;
+                    int baudRateOld = (int)_dcb.BaudRate;
 
-                    dcb.BaudRate = (uint)value;
+                    _dcb.BaudRate = (uint)value;
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        dcb.BaudRate = (uint)baudRateOld;
-                        InternalResources.WinIOError();
+                        _dcb.BaudRate = (uint)baudRateOld;
+
+                        Win32.WinIOError();
                     }
                 }
             }
@@ -969,11 +975,11 @@ namespace AutoItCoreLibrary
             {
                 if (value)
                 {
-                    if (!UnsafeNativeMethods.SetCommBreak(_handle))
-                        InternalResources.WinIOError();
+                    if (!Win32.SetCommBreak(Handle))
+                        Win32.WinIOError();
                 }
-                else if (!UnsafeNativeMethods.ClearCommBreak(_handle))
-                    InternalResources.WinIOError();
+                else if (!Win32.ClearCommBreak(Handle))
+                    Win32.WinIOError();
 
                 _inbreak = value;
             }
@@ -981,42 +987,42 @@ namespace AutoItCoreLibrary
 
         internal int DataBits
         {
-            get => dcb.ByteSize;
+            get => _dcb.ByteSize;
             set
             {
-                if (value != dcb.ByteSize)
+                if (value != _dcb.ByteSize)
                 {
-                    byte byteSizeOld = dcb.ByteSize;
+                    byte byteSizeOld = _dcb.ByteSize;
 
-                    dcb.ByteSize = (byte)value;
+                    _dcb.ByteSize = (byte)value;
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        dcb.ByteSize = byteSizeOld;
-                        InternalResources.WinIOError();
+                        _dcb.ByteSize = byteSizeOld;
+                        Win32.WinIOError();
                     }
                 }
             }
         }
 
-
         internal bool DiscardNull
         {
-            get => GetDcbFlag(NativeMethods.FNULL) == 1;
+            get => GetDcbFlag(Win32.FNULL) == 1;
             set
             {
-                int fNullFlag = GetDcbFlag(NativeMethods.FNULL);
+                int fNullFlag = GetDcbFlag(Win32.FNULL);
 
                 if ((value ? 0 : 1) == fNullFlag)
                 {
                     int fNullOld = fNullFlag;
 
-                    SetDcbFlag(NativeMethods.FNULL, value ? 1 : 0);
+                    SetDcbFlag(Win32.FNULL, value ? 1 : 0);
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        SetDcbFlag(NativeMethods.FNULL, fNullOld);
-                        InternalResources.WinIOError();
+                        SetDcbFlag(Win32.FNULL, fNullOld);
+
+                        Win32.WinIOError();
                     }
                 }
             }
@@ -1024,21 +1030,22 @@ namespace AutoItCoreLibrary
 
         internal bool DtrEnable
         {
-            get => GetDcbFlag(NativeMethods.FDTRCONTROL) == NativeMethods.DTR_CONTROL_ENABLE;
+            get => GetDcbFlag(Win32.FDTRCONTROL) == Win32.DTR_CONTROL_ENABLE;
             set
             {
-                int fDtrControlOld = GetDcbFlag(NativeMethods.FDTRCONTROL);
+                int fDtrControlOld = GetDcbFlag(Win32.FDTRCONTROL);
 
-                SetDcbFlag(NativeMethods.FDTRCONTROL, value ? NativeMethods.DTR_CONTROL_ENABLE : NativeMethods.DTR_CONTROL_DISABLE);
+                SetDcbFlag(Win32.FDTRCONTROL, value ? Win32.DTR_CONTROL_ENABLE : Win32.DTR_CONTROL_DISABLE);
 
-                if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                if (!Win32.SetCommState(Handle, ref _dcb))
                 {
-                    SetDcbFlag(NativeMethods.FDTRCONTROL, fDtrControlOld);
-                    InternalResources.WinIOError();
+                    SetDcbFlag(Win32.FDTRCONTROL, fDtrControlOld);
+
+                    Win32.WinIOError();
                 }
 
-                if (!UnsafeNativeMethods.EscapeCommFunction(_handle, value ? NativeMethods.SETDTR : NativeMethods.CLRDTR))
-                    InternalResources.WinIOError();
+                if (!Win32.EscapeCommFunction(Handle, value ? Win32.SETDTR : Win32.CLRDTR))
+                    Win32.WinIOError();
             }
         }
 
@@ -1050,79 +1057,79 @@ namespace AutoItCoreLibrary
                 if (value != _handshake)
                 {
                     Handshake handshakeOld = _handshake;
-                    int fInOutXOld = GetDcbFlag(NativeMethods.FINX);
-                    int fOutxCtsFlowOld = GetDcbFlag(NativeMethods.FOUTXCTSFLOW);
-                    int fRtsControlOld = GetDcbFlag(NativeMethods.FRTSCONTROL);
+                    int fInOutXOld = GetDcbFlag(Win32.FINX);
+                    int fOutxCtsFlowOld = GetDcbFlag(Win32.FOUTXCTSFLOW);
+                    int fRtsControlOld = GetDcbFlag(Win32.FRTSCONTROL);
 
                     _handshake = value;
 
                     int fInXOutXFlag = (_handshake == Handshake.XOnXOff || _handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0;
 
-                    SetDcbFlag(NativeMethods.FINX, fInXOutXFlag);
-                    SetDcbFlag(NativeMethods.FOUTX, fInXOutXFlag);
-                    SetDcbFlag(NativeMethods.FOUTXCTSFLOW, (_handshake == Handshake.RequestToSend || _handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
+                    SetDcbFlag(Win32.FINX, fInXOutXFlag);
+                    SetDcbFlag(Win32.FOUTX, fInXOutXFlag);
+                    SetDcbFlag(Win32.FOUTXCTSFLOW, (_handshake == Handshake.RequestToSend || _handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
 
                     if ((_handshake == Handshake.RequestToSend || _handshake == Handshake.RequestToSendXOnXOff))
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_HANDSHAKE);
+                        SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_HANDSHAKE);
                     else if (_rtsenable)
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_ENABLE);
+                        SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_ENABLE);
                     else
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_DISABLE);
+                        SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_DISABLE);
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
                         _handshake = handshakeOld;
 
-                        SetDcbFlag(NativeMethods.FINX, fInOutXOld);
-                        SetDcbFlag(NativeMethods.FOUTX, fInOutXOld);
-                        SetDcbFlag(NativeMethods.FOUTXCTSFLOW, fOutxCtsFlowOld);
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, fRtsControlOld);
+                        SetDcbFlag(Win32.FINX, fInOutXOld);
+                        SetDcbFlag(Win32.FOUTX, fInOutXOld);
+                        SetDcbFlag(Win32.FOUTXCTSFLOW, fOutxCtsFlowOld);
+                        SetDcbFlag(Win32.FRTSCONTROL, fRtsControlOld);
 
-                        InternalResources.WinIOError();
+                        Win32.WinIOError();
                     }
                 }
             }
         }
 
-        internal bool IsOpen => _handle != null && !eventRunner.ShutdownLoop;
+        internal bool IsOpen => Handle != null && !_evtrunner.ShutdownLoop;
 
         internal Parity Parity
         {
-            get => (Parity)dcb.Parity;
+            get => (Parity)_dcb.Parity;
             set
             {
-                if ((byte)value != dcb.Parity)
+                if ((byte)value != _dcb.Parity)
                 {
-                    byte parityOld = dcb.Parity;
-                    int fParityOld = GetDcbFlag(NativeMethods.FPARITY);
-                    byte ErrorCharOld = dcb.ErrorChar;
-                    int fErrorCharOld = GetDcbFlag(NativeMethods.FERRORCHAR);
+                    byte parityOld = _dcb.Parity;
+                    int fParityOld = GetDcbFlag(Win32.FPARITY);
+                    byte ErrorCharOld = _dcb.ErrorChar;
+                    int fErrorCharOld = GetDcbFlag(Win32.FERRORCHAR);
 
-                    dcb.Parity = (byte)value;
+                    _dcb.Parity = (byte)value;
 
-                    int parityFlag = (dcb.Parity == (byte)Parity.None) ? 0 : 1;
+                    int parityFlag = (_dcb.Parity == (byte)Parity.None) ? 0 : 1;
 
-                    SetDcbFlag(NativeMethods.FPARITY, parityFlag);
+                    SetDcbFlag(Win32.FPARITY, parityFlag);
 
                     if (parityFlag == 1)
                     {
-                        SetDcbFlag(NativeMethods.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
-                        dcb.ErrorChar = _parityreplace;
+                        SetDcbFlag(Win32.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
+                        _dcb.ErrorChar = _parityreplace;
                     }
                     else
                     {
-                        SetDcbFlag(NativeMethods.FERRORCHAR, 0);
-                        dcb.ErrorChar = (byte)'\0';
+                        SetDcbFlag(Win32.FERRORCHAR, 0);
+                        _dcb.ErrorChar = (byte)'\0';
                     }
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        dcb.Parity = parityOld;
-                        SetDcbFlag(NativeMethods.FPARITY, fParityOld);
+                        _dcb.Parity = parityOld;
+                        SetDcbFlag(Win32.FPARITY, fParityOld);
 
-                        dcb.ErrorChar = ErrorCharOld;
-                        SetDcbFlag(NativeMethods.FERRORCHAR, fErrorCharOld);
+                        _dcb.ErrorChar = ErrorCharOld;
+                        SetDcbFlag(Win32.FERRORCHAR, fErrorCharOld);
 
-                        InternalResources.WinIOError();
+                        Win32.WinIOError();
                     }
                 }
             }
@@ -1130,34 +1137,39 @@ namespace AutoItCoreLibrary
 
         internal byte ParityReplace
         {
-            get => parityReplace;
+            get => _parityreplace;
             set
             {
                 if (value != _parityreplace)
                 {
                     byte parityReplaceOld = _parityreplace;
-                    byte errorCharOld = dcb.ErrorChar;
-                    int fErrorCharOld = GetDcbFlag(NativeMethods.FERRORCHAR);
+                    byte errorCharOld = _dcb.ErrorChar;
+                    int fErrorCharOld = GetDcbFlag(Win32.FERRORCHAR);
 
                     _parityreplace = value;
 
-                    if (GetDcbFlag(NativeMethods.FPARITY) == 1)
+                    if (GetDcbFlag(Win32.FPARITY) == 1)
                     {
-                        SetDcbFlag(NativeMethods.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
-                        dcb.ErrorChar = _parityreplace;
+                        SetDcbFlag(Win32.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
+
+                        _dcb.ErrorChar = _parityreplace;
                     }
                     else
                     {
-                        SetDcbFlag(NativeMethods.FERRORCHAR, 0);
-                        dcb.ErrorChar = (byte)'\0';
+                        SetDcbFlag(Win32.FERRORCHAR, 0);
+
+                        _dcb.ErrorChar = (byte)'\0';
                     }
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
                         _parityreplace = parityReplaceOld;
-                        SetDcbFlag(NativeMethods.FERRORCHAR, fErrorCharOld);
-                        dcb.ErrorChar = errorCharOld;
-                        InternalResources.WinIOError();
+
+                        SetDcbFlag(Win32.FERRORCHAR, fErrorCharOld);
+
+                        _dcb.ErrorChar = errorCharOld;
+
+                        Win32.WinIOError();
                     }
                 }
             }
@@ -1178,42 +1190,42 @@ namespace AutoItCoreLibrary
         // on a serial port connection.
         public override int ReadTimeout
         {
-            get => commTimeouts.ReadTotalTimeoutConstant == INF_TIMEOUT ? SerialPort.InfiniteTimeout : commTimeouts.ReadTotalTimeoutConstant;
+            get => _com_timeout.ReadTotalTimeoutConstant == INF_TIMEOUT ? SerialPort.InfiniteTimeout : _com_timeout.ReadTotalTimeoutConstant;
             set => AssertHandle(() =>
             {
                 if (value < 0 && value != SerialPort.InfiniteTimeout)
                     throw new ArgumentOutOfRangeException(nameof(ReadTimeout));
 
-                int oldReadConstant = commTimeouts.ReadTotalTimeoutConstant;
-                int oldReadInterval = commTimeouts.ReadIntervalTimeout;
-                int oldReadMultipler = commTimeouts.ReadTotalTimeoutMultiplier;
+                int oldReadConstant = _com_timeout.ReadTotalTimeoutConstant;
+                int oldReadInterval = _com_timeout.ReadIntervalTimeout;
+                int oldReadMultipler = _com_timeout.ReadTotalTimeoutMultiplier;
 
                 if (value == 0)
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = 0;
-                    commTimeouts.ReadTotalTimeoutMultiplier = 0;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = 0;
+                    _com_timeout.ReadTotalTimeoutMultiplier = 0;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
                 else if (value == SerialPort.InfiniteTimeout)
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = INF_TIMEOUT;
-                    commTimeouts.ReadTotalTimeoutMultiplier = NativeMethods.MAXDWORD;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = INF_TIMEOUT;
+                    _com_timeout.ReadTotalTimeoutMultiplier = -1;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
                 else
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = value;
-                    commTimeouts.ReadTotalTimeoutMultiplier = NativeMethods.MAXDWORD;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = value;
+                    _com_timeout.ReadTotalTimeoutMultiplier = -1;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
 
-                if (!UnsafeNativeMethods.SetCommTimeouts(_handle, ref commTimeouts))
+                if (!Win32.SetCommTimeouts(Handle, ref _com_timeout))
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = oldReadConstant;
-                    commTimeouts.ReadTotalTimeoutMultiplier = oldReadMultipler;
-                    commTimeouts.ReadIntervalTimeout = oldReadInterval;
+                    _com_timeout.ReadTotalTimeoutConstant = oldReadConstant;
+                    _com_timeout.ReadTotalTimeoutMultiplier = oldReadMultipler;
+                    _com_timeout.ReadIntervalTimeout = oldReadInterval;
 
-                    InternalResources.WinIOError();
+                    Win32.WinIOError();
                 }
             });
         }
@@ -1222,12 +1234,12 @@ namespace AutoItCoreLibrary
         {
             get
             {
-                int fRtsControl = GetDcbFlag(NativeMethods.FRTSCONTROL);
+                int fRtsControl = GetDcbFlag(Win32.FRTSCONTROL);
 
-                if (fRtsControl == NativeMethods.RTS_CONTROL_HANDSHAKE)
+                if (fRtsControl == Win32.RTS_CONTROL_HANDSHAKE)
                     throw new InvalidOperationException();
 
-                return fRtsControl == NativeMethods.RTS_CONTROL_ENABLE;
+                return fRtsControl == Win32.RTS_CONTROL_ENABLE;
             }
             set
             {
@@ -1236,26 +1248,26 @@ namespace AutoItCoreLibrary
 
                 if (value != _rtsenable)
                 {
-                    int fRtsControlOld = GetDcbFlag(NativeMethods.FRTSCONTROL);
+                    int fRtsControlOld = GetDcbFlag(Win32.FRTSCONTROL);
 
                     _rtsenable = value;
 
                     if (value)
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_ENABLE);
+                        SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_ENABLE);
                     else
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_DISABLE);
+                        SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_DISABLE);
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        SetDcbFlag(NativeMethods.FRTSCONTROL, fRtsControlOld);
+                        SetDcbFlag(Win32.FRTSCONTROL, fRtsControlOld);
 
                         _rtsenable = !_rtsenable;
 
-                        InternalResources.WinIOError();
+                        Win32.WinIOError();
                     }
 
-                    if (!UnsafeNativeMethods.EscapeCommFunction(_handle, value ? NativeMethods.SETRTS : NativeMethods.CLRRTS))
-                        InternalResources.WinIOError();
+                    if (!Win32.EscapeCommFunction(Handle, value ? Win32.SETRTS : Win32.CLRRTS))
+                        Win32.WinIOError();
                 }
             }
         }
@@ -1264,11 +1276,11 @@ namespace AutoItCoreLibrary
         {
             get
             {
-                switch(dcb.StopBits)
+                switch (_dcb.StopBits)
                 {
-                    case NativeMethods.ONE5STOPBITS:
+                    case Win32.ONE5STOPBITS:
                         return StopBits.OnePointFive;
-                    case NativeMethods.TWOSTOPBITS:
+                    case Win32.TWOSTOPBITS:
                         return StopBits.Two;
                     default:
                         return StopBits.One;
@@ -1276,23 +1288,24 @@ namespace AutoItCoreLibrary
             }
             set
             {
-                byte nativeValue = (byte)NativeMethods.TWOSTOPBITS;
+                byte nativeValue = Win32.TWOSTOPBITS;
 
                 if (value == StopBits.One)
-                    nativeValue = (byte)NativeMethods.ONESTOPBIT;
+                    nativeValue = Win32.ONESTOPBIT;
                 else if (value == StopBits.OnePointFive)
-                    nativeValue = (byte)NativeMethods.ONE5STOPBITS;
+                    nativeValue = Win32.ONE5STOPBITS;
 
-                if (nativeValue != dcb.StopBits)
+                if (nativeValue != _dcb.StopBits)
                 {
-                    byte stopBitsOld = dcb.StopBits;
+                    byte stopBitsOld = _dcb.StopBits;
 
-                    dcb.StopBits = nativeValue;
+                    _dcb.StopBits = nativeValue;
 
-                    if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
+                    if (!Win32.SetCommState(Handle, ref _dcb))
                     {
-                        dcb.StopBits = stopBitsOld;
-                        InternalResources.WinIOError();
+                        _dcb.StopBits = stopBitsOld;
+
+                        Win32.WinIOError();
                     }
                 }
             }
@@ -1300,20 +1313,21 @@ namespace AutoItCoreLibrary
 
         public override int WriteTimeout
         {
-            get => commTimeouts.WriteTotalTimeoutConstant == INF_TIMEOUT ? SerialPort.InfiniteTimeout : commTimeouts.WriteTotalTimeoutConstant;
+            get => _com_timeout.WriteTotalTimeoutConstant == INF_TIMEOUT ? SerialPort.InfiniteTimeout : _com_timeout.WriteTotalTimeoutConstant;
             set => AssertHandle(() =>
             {
                 if (value <= 0 && value != SerialPort.InfiniteTimeout)
                     throw new ArgumentOutOfRangeException(nameof(WriteTimeout));
 
-                int oldWriteConstant = commTimeouts.WriteTotalTimeoutConstant;
+                int oldWriteConstant = _com_timeout.WriteTotalTimeoutConstant;
 
-                commTimeouts.WriteTotalTimeoutConstant = ((value == SerialPort.InfiniteTimeout) ? 0 : value);
+                _com_timeout.WriteTotalTimeoutConstant = ((value == SerialPort.InfiniteTimeout) ? 0 : value);
 
-                if (!UnsafeNativeMethods.SetCommTimeouts(_handle, ref commTimeouts))
+                if (!Win32.SetCommTimeouts(Handle, ref _com_timeout))
                 {
-                    commTimeouts.WriteTotalTimeoutConstant = oldWriteConstant;
-                    InternalResources.WinIOError();
+                    _com_timeout.WriteTotalTimeoutConstant = oldWriteConstant;
+
+                    Win32.WinIOError();
                 }
             });
         }
@@ -1324,10 +1338,10 @@ namespace AutoItCoreLibrary
             {
                 int pinStatus = 0;
 
-                if (!UnsafeNativeMethods.GetCommModemStatus(_handle, ref pinStatus))
-                    InternalResources.WinIOError();
+                if (!Win32.GetCommModemStatus(Handle, ref pinStatus))
+                    Win32.WinIOError();
 
-                return (NativeMethods.MS_RLSD_ON & pinStatus) != 0;
+                return (Win32.MS_RLSD_ON & pinStatus) != 0;
             }
         }
 
@@ -1337,10 +1351,10 @@ namespace AutoItCoreLibrary
             {
                 int pinStatus = 0;
 
-                if (!UnsafeNativeMethods.GetCommModemStatus(_handle, ref pinStatus))
-                    InternalResources.WinIOError();
+                if (!Win32.GetCommModemStatus(Handle, ref pinStatus))
+                    Win32.WinIOError();
 
-                return (NativeMethods.MS_CTS_ON & pinStatus) != 0;
+                return (Win32.MS_CTS_ON & pinStatus) != 0;
             }
         }
 
@@ -1350,10 +1364,10 @@ namespace AutoItCoreLibrary
             {
                 int pinStatus = 0;
 
-                if (!UnsafeNativeMethods.GetCommModemStatus(_handle, ref pinStatus))
-                    InternalResources.WinIOError();
+                if (!Win32.GetCommModemStatus(Handle, ref pinStatus))
+                    Win32.WinIOError();
 
-                return (NativeMethods.MS_DSR_ON & pinStatus) != 0;
+                return (Win32.MS_DSR_ON & pinStatus) != 0;
             }
         }
 
@@ -1363,10 +1377,10 @@ namespace AutoItCoreLibrary
             {
                 int errorCode = 0;
 
-                if (!UnsafeNativeMethods.ClearCommError(_handle, ref errorCode, ref comStat))
-                    InternalResources.WinIOError();
+                if (!Win32.ClearCommError(Handle, ref errorCode, ref _com_stat))
+                    Win32.WinIOError();
 
-                return (int)comStat.cbInQue;
+                return (int)_com_stat.cbInQue;
             }
         }
 
@@ -1376,69 +1390,66 @@ namespace AutoItCoreLibrary
             {
                 int errorCode = 0;
 
-                if (!UnsafeNativeMethods.ClearCommError(_handle, ref errorCode, ref comStat))
-                    InternalResources.WinIOError();
+                if (!Win32.ClearCommError(Handle, ref errorCode, ref _com_stat))
+                    Win32.WinIOError();
 
-                return (int)comStat.cbOutQue;
+                return (int)_com_stat.cbOutQue;
             }
         }
 
         internal SerialStream(string name, int bauds, Parity parity, int dataBits, StopBits stopBits, int readTimeout, int writeTimeout, Handshake handshake, bool dtrEnable, bool rtsEnable, bool discardNull, byte parityReplace)
         {
-            int flags = UnsafeNativeMethods.FILE_FLAG_OVERLAPPED;
+            int flags = Win32.FILE_FLAG_OVERLAPPED;
 
             if (Environment.OSVersion.Platform == PlatformID.Win32Windows)
             {
-                flags = UnsafeNativeMethods.FILE_ATTRIBUTE_NORMAL;
-
-                _isasync = false;
+                flags = Win32.FILE_ATTRIBUTE_NORMAL;
+                IsAsync = false;
             }
 
             if (name?.StartsWith("COM", StringComparison.OrdinalIgnoreCase) != true)
                 throw new ArgumentException("Invalid serial port", nameof(name));
 
-            SafeFileHandle tempHandle = UnsafeNativeMethods.CreateFile($@"\\.\{name}", NativeMethods.GENERIC_READ | NativeMethods.GENERIC_WRITE, 0, IntPtr.Zero, UnsafeNativeMethods.OPEN_EXISTING, flags, IntPtr.Zero);
+            SafeFileHandle tempHandle = new SafeFileHandle((IntPtr)Win32.CreateFile($@"\\.\{name}", unchecked((uint)(Win32.GENERIC_READ | Win32.GENERIC_WRITE)), 0, null, 3, (uint)flags, null), true);
 
             if (tempHandle.IsInvalid)
-                InternalResources.WinIOError(name);
+                Win32.WinIOError(name);
 
             try
             {
-                int fileType = UnsafeNativeMethods.GetFileType(tempHandle);
+                int fileType = Win32.GetFileType(tempHandle);
 
-                if ((fileType != UnsafeNativeMethods.FILE_TYPE_CHAR) && (fileType != UnsafeNativeMethods.FILE_TYPE_UNKNOWN))
+                if ((fileType != Win32.FILE_TYPE_CHAR) && (fileType != Win32.FILE_TYPE_UNKNOWN))
                     throw new ArgumentException("Invalid serial port", nameof(name));
 
-                _handle = tempHandle;
-
-                this._name = name;
-                this._handshake = handshake;
-                this._parityreplace = parityReplace;
-
-                tempBuf = new byte[1];
-                commProp = new UnsafeNativeMethods.COMMPROP();
+                Handle = tempHandle;
+                Name = name;
+                _handshake = handshake;
+                _parityreplace = parityReplace;
+                _tmpbuf = new byte[1];
+                _com_prop = new COMMPROP();
 
                 int pinStatus = 0;
 
-                if (!UnsafeNativeMethods.GetCommProperties(_handle, ref commProp) || !UnsafeNativeMethods.GetCommModemStatus(_handle, ref pinStatus))
+                if (!Win32.GetCommProperties(Handle, ref _com_prop) || !Win32.GetCommModemStatus(Handle, ref pinStatus))
                 {
                     int errorCode = Marshal.GetLastWin32Error();
 
-                    if ((errorCode == NativeMethods.ERROR_INVALID_PARAMETER) || (errorCode == NativeMethods.ERROR_INVALID_HANDLE))
+                    if ((errorCode == Win32.ERROR_INVALID_PARAMETER) || (errorCode == Win32.ERROR_INVALID_HANDLE))
                         throw new ArgumentException("Invalid serial port", nameof(name));
                     else
-                        InternalResources.WinIOError(errorCode, string.Empty);
+                        Win32.WinIOError(errorCode, string.Empty);
                 }
-                if (commProp.dwMaxBaud != 0 && bauds > commProp.dwMaxBaud)
+                if (_com_prop.dwMaxBaud != 0 && bauds > _com_prop.dwMaxBaud)
                     throw new ArgumentOutOfRangeException(nameof(bauds));
 
-                comStat = new UnsafeNativeMethods.COMSTAT();
-                dcb = new UnsafeNativeMethods.DCB();
+                _com_stat = new COMSTAT();
+                _dcb = new DCB();
 
                 InitializeDCB(bauds, parity, dataBits, stopBits, discardNull);
 
                 DtrEnable = dtrEnable;
-                this._rtsenable = (GetDcbFlag(NativeMethods.FRTSCONTROL) == NativeMethods.RTS_CONTROL_ENABLE);
+                this._rtsenable = (GetDcbFlag(Win32.FRTSCONTROL) == Win32.RTS_CONTROL_ENABLE);
 
                 if ((handshake != Handshake.RequestToSend) && (handshake != Handshake.RequestToSendXOnXOff))
                     RtsEnable = rtsEnable;
@@ -1446,48 +1457,48 @@ namespace AutoItCoreLibrary
                 // NOTE: this logic should match what is in the ReadTimeout property
                 if (readTimeout == 0)
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = 0;
-                    commTimeouts.ReadTotalTimeoutMultiplier = 0;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = 0;
+                    _com_timeout.ReadTotalTimeoutMultiplier = 0;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
                 else if (readTimeout == SerialPort.InfiniteTimeout)
                 {
                     // SetCommTimeouts doesn't like a value of -1 for some reason, so
                     // we'll use -2(infiniteTimeoutConst) to represent infinite. 
-                    commTimeouts.ReadTotalTimeoutConstant = INF_TIMEOUT;
-                    commTimeouts.ReadTotalTimeoutMultiplier = NativeMethods.MAXDWORD;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = INF_TIMEOUT;
+                    _com_timeout.ReadTotalTimeoutMultiplier = -1;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
                 else
                 {
-                    commTimeouts.ReadTotalTimeoutConstant = readTimeout;
-                    commTimeouts.ReadTotalTimeoutMultiplier = NativeMethods.MAXDWORD;
-                    commTimeouts.ReadIntervalTimeout = NativeMethods.MAXDWORD;
+                    _com_timeout.ReadTotalTimeoutConstant = readTimeout;
+                    _com_timeout.ReadTotalTimeoutMultiplier = -1;
+                    _com_timeout.ReadIntervalTimeout = -1;
                 }
 
-                commTimeouts.WriteTotalTimeoutMultiplier = 0;
-                commTimeouts.WriteTotalTimeoutConstant = (writeTimeout == SerialPort.InfiniteTimeout) ? 0 : writeTimeout;
+                _com_timeout.WriteTotalTimeoutMultiplier = 0;
+                _com_timeout.WriteTotalTimeoutConstant = (writeTimeout == SerialPort.InfiniteTimeout) ? 0 : writeTimeout;
 
-                if (!UnsafeNativeMethods.SetCommTimeouts(_handle, ref commTimeouts))
-                    InternalResources.WinIOError();
+                if (!Win32.SetCommTimeouts(Handle, ref _com_timeout))
+                    Win32.WinIOError();
 
-                if (_isasync && !ThreadPool.BindHandle(_handle))
+                if (IsAsync && !ThreadPool.BindHandle(Handle))
                     throw new IOException();
 
-                UnsafeNativeMethods.SetCommMask(_handle, NativeMethods.ALL_EVENTS);
-                eventRunner = new EventLoopRunner(this);
+                Win32.SetCommMask(Handle, Win32.ALL_EVENTS);
 
-                Thread eventLoopThread = LocalAppContextSwitches.DoNotCatchSerialStreamThreadExceptions
-                    ? new Thread(new ThreadStart(eventRunner.WaitForCommEvent))
-                    : new Thread(new ThreadStart(eventRunner.SafelyWaitForCommEvent));
+                _evtrunner = new EventLoopRunner(this);
 
-                eventLoopThread.IsBackground = true;
-                eventLoopThread.Start();
+                Thread thrd = new Thread(new ThreadStart(_evtrunner.WaitForCommEvent))
+                {
+                    IsBackground = true
+                };
+                thrd.Start();
             }
             catch
             {
                 tempHandle.Close();
-                _handle = null;
+                Handle = null;
 
                 throw;
             }
@@ -1497,34 +1508,34 @@ namespace AutoItCoreLibrary
 
         protected override void Dispose(bool disposing)
         {
-            if (_handle != null && !_handle.IsInvalid)
+            if (Handle != null && !Handle.IsInvalid)
                 try
                 {
-                    eventRunner.endEventLoop = true;
+                    _evtrunner._shutdown = true;
 
                     Thread.MemoryBarrier();
 
                     bool skipSPAccess = false;
 
-                    UnsafeNativeMethods.SetCommMask(_handle, 0);
+                    Win32.SetCommMask(Handle, 0);
 
-                    if (!UnsafeNativeMethods.EscapeCommFunction(_handle, NativeMethods.CLRDTR))
+                    if (!Win32.EscapeCommFunction(Handle, Win32.CLRDTR))
                     {
                         int hr = Marshal.GetLastWin32Error();
                         const int ERROR_DEVICE_REMOVED = 1617;
 
-                        if ((hr == NativeMethods.ERROR_ACCESS_DENIED || hr == NativeMethods.ERROR_BAD_COMMAND || hr == ERROR_DEVICE_REMOVED) && !disposing)
+                        if ((hr == Win32.ERROR_ACCESS_DENIED || hr == Win32.ERROR_BAD_COMMAND || hr == ERROR_DEVICE_REMOVED) && !disposing)
                             skipSPAccess = true;
                         else if (disposing)
-                            InternalResources.WinIOError();
+                            Win32.WinIOError();
                     }
 
-                    if (!skipSPAccess && !_handle.IsClosed)
+                    if (!skipSPAccess && !Handle.IsClosed)
                     {
                         Flush();
                     }
 
-                    eventRunner.waitCommEventWaitHandle.Set();
+                    _evtrunner._evt_comwait.Set();
 
                     if (!skipSPAccess)
                     {
@@ -1532,11 +1543,11 @@ namespace AutoItCoreLibrary
                         DiscardOutBuffer();
                     }
 
-                    if (disposing && eventRunner != null)
+                    if (disposing)
                     {
-                        eventRunner.eventLoopEndedSignal.WaitOne();
-                        eventRunner.eventLoopEndedSignal.Close();
-                        eventRunner.waitCommEventWaitHandle.Close();
+                        _evtrunner?._evt_loopend?.WaitOne();
+                        _evtrunner?._evt_loopend?.Close();
+                        _evtrunner?._evt_comwait?.Close();
                     }
                 }
                 finally
@@ -1544,13 +1555,13 @@ namespace AutoItCoreLibrary
                     if (disposing)
                         lock (this)
                         {
-                            _handle.Close();
-                            _handle = null;
+                            Handle.Close();
+                            Handle = null;
                         }
                     else
                     {
-                        _handle.Close();
-                        _handle = null;
+                        Handle.Close();
+                        Handle = null;
                     }
 
                     base.Dispose(disposing);
@@ -1575,7 +1586,7 @@ namespace AutoItCoreLibrary
 
             try
             {
-                if (!_isasync)
+                if (!IsAsync)
                     result = base.BeginRead(buffer, offset, count, callback, state);
                 else
                     result = BeginReadCore(buffer, offset, count, callback, state);
@@ -1587,18 +1598,6 @@ namespace AutoItCoreLibrary
 
             return result;
         });
-
-        private void AssertHandle(Action f)
-        {
-            if (_handle is null)
-                throw new ObjectDisposedException(null);
-            else
-                f();
-        }
-
-        private T AssertHandle<T>(T f) => _handle is null ? throw new ObjectDisposedException(null) : f;
-
-        private T AssertHandle<T>(Func<T> f) => _handle is null ? throw new ObjectDisposedException(null) : f();
 
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state) => AssertHandle(() =>
         {
@@ -1620,7 +1619,7 @@ namespace AutoItCoreLibrary
 
             try
             {
-                if (!_isasync)
+                if (!IsAsync)
                     result = base.BeginWrite(buffer, offset, count, callback, state);
                 else
                     result = BeginWriteCore(buffer, offset, count, callback, state);
@@ -1635,19 +1634,19 @@ namespace AutoItCoreLibrary
 
         internal void DiscardInBuffer()
         {
-            if (!UnsafeNativeMethods.PurgeComm(_handle, NativeMethods.PURGE_RXCLEAR | NativeMethods.PURGE_RXABORT))
-                InternalResources.WinIOError();
+            if (!Win32.PurgeComm(Handle, Win32.PURGE_RXCLEAR | Win32.PURGE_RXABORT))
+                Win32.WinIOError();
         }
 
         internal void DiscardOutBuffer()
         {
-            if (!UnsafeNativeMethods.PurgeComm(_handle, NativeMethods.PURGE_TXCLEAR | NativeMethods.PURGE_TXABORT))
-                InternalResources.WinIOError();
+            if (!Win32.PurgeComm(Handle, Win32.PURGE_TXCLEAR | Win32.PURGE_TXABORT))
+                Win32.WinIOError();
         }
 
-        public unsafe override int EndRead(IAsyncResult asyncResult)
+        public override int EndRead(IAsyncResult asyncResult)
         {
-            if (!_isasync)
+            if (!IsAsync)
                 return base.EndRead(asyncResult);
             else if (asyncResult is null)
                 throw new ArgumentNullException(nameof(asyncResult));
@@ -1655,10 +1654,10 @@ namespace AutoItCoreLibrary
             SerialStreamAsyncResult afsar = asyncResult as SerialStreamAsyncResult;
 
             if (afsar?._isWrite != false)
-                InternalResources.WrongAsyncResult();
+                throw new ArgumentException("Invalid async result", nameof(asyncResult));
 
             if (1 == Interlocked.CompareExchange(ref afsar._EndXxxCalled, 1, 0))
-                InternalResources.EndReadCalledTwice();
+                throw new InvalidOperationException("Called twice");
 
             bool failed = false;
             WaitHandle wh = afsar._waitHandle;
@@ -1682,16 +1681,16 @@ namespace AutoItCoreLibrary
                 Overlapped.Free(overlappedPtr);
 
             if (afsar._errorCode != 0)
-                InternalResources.WinIOError(afsar._errorCode, _name);
+                Win32.WinIOError(afsar._errorCode, Name);
             else if (failed)
                 throw new IOException();
-            else
-                return afsar._numBytes;
+
+            return afsar._numBytes;
         }
 
-        public unsafe override void EndWrite(IAsyncResult asyncResult)
+        public override void EndWrite(IAsyncResult asyncResult)
         {
-            if (!_isasync)
+            if (!IsAsync)
                 base.EndWrite(asyncResult);
             else
             {
@@ -1703,9 +1702,9 @@ namespace AutoItCoreLibrary
                 SerialStreamAsyncResult afsar = asyncResult as SerialStreamAsyncResult;
 
                 if (afsar == null || !afsar._isWrite)
-                    InternalResources.WrongAsyncResult();
+                    throw new ArgumentException("Invalid async result", nameof(asyncResult));
                 if (1 == Interlocked.CompareExchange(ref afsar._EndXxxCalled, 1, 0))
-                    InternalResources.EndWriteCalledTwice();
+                    throw new InvalidOperationException("Called twice");
 
                 WaitHandle wh = afsar._waitHandle;
 
@@ -1725,15 +1724,15 @@ namespace AutoItCoreLibrary
                     Overlapped.Free(overlappedPtr);
 
                 if (afsar._errorCode != 0)
-                    InternalResources.WinIOError(afsar._errorCode, _name);
+                    Win32.WinIOError(afsar._errorCode, Name);
             }
         }
 
-        public override void Flush() => AssertHandle(() => UnsafeNativeMethods.FlushFileBuffers(_handle));
+        public override void Flush() => AssertHandle(() => Win32.FlushFileBuffers(Handle));
 
         public override int Read(byte[] buffer, int offset, int count) => Read(buffer, offset, count, ReadTimeout);
 
-        internal unsafe int Read(byte[] array, int offset, int count, int timeout) => AssertHandle(() =>
+        internal int Read(byte[] array, int offset, int count, int timeout) => AssertHandle(() =>
         {
             if (array == null)
                 throw new ArgumentNullException(nameof(array));
@@ -1748,14 +1747,14 @@ namespace AutoItCoreLibrary
 
             int numBytes = 0;
 
-            if (_isasync)
+            if (IsAsync)
                 numBytes = EndRead(BeginReadCore(array, offset, count, null, null));
             else
             {
                 numBytes = ReadFileNative(array, offset, count, null, out int hr);
 
                 if (numBytes == -1)
-                    InternalResources.WinIOError();
+                    Win32.WinIOError();
             }
 
             if (numBytes == 0)
@@ -1768,23 +1767,21 @@ namespace AutoItCoreLibrary
         {
             int numBytes = 0;
 
-            if (_isasync)
-                numBytes = EndRead(BeginReadCore(tempBuf, 0, 1, null, null));
+            if (IsAsync)
+                numBytes = EndRead(BeginReadCore(_tmpbuf, 0, 1, null, null));
             else
             {
-                numBytes = ReadFileNative(tempBuf, 0, 1, null, out int hr);
+                numBytes = ReadFileNative(_tmpbuf, 0, 1, null, out int hr);
 
                 if (numBytes == -1)
-                    InternalResources.WinIOError();
+                    Win32.WinIOError();
             }
 
             if (numBytes == 0)
                 throw new TimeoutException();
             else
-                return tempBuf[0];
+                return _tmpbuf[0];
         });
-
-        internal static void WinIOError() => WinIOError(Marshal.GetLastWin32Error(), "");
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
@@ -1792,13 +1789,13 @@ namespace AutoItCoreLibrary
 
         internal void SetBufferSizes(int readBufferSize, int writeBufferSize) => AssertHandle(() =>
         {
-            if (!UnsafeNativeMethods.SetupComm(_handle, readBufferSize, writeBufferSize))
-                InternalResources.WinIOError();
+            if (!Win32.SetupComm(Handle, readBufferSize, writeBufferSize))
+                Win32.WinIOError();
         });
 
         public override void Write(byte[] buffer, int offset, int count) => Write(buffer, offset, count, WriteTimeout);
 
-        internal unsafe void Write(byte[] array, int offset, int count, int timeout) => AssertHandle(() =>
+        internal void Write(byte[] array, int offset, int count, int timeout) => AssertHandle(() =>
         {
 
             if (_inbreak)
@@ -1810,14 +1807,13 @@ namespace AutoItCoreLibrary
             else if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count));
             else if (count == 0)
-                return 0;
+                return;
             else if (array.Length - offset < count)
                 throw new ArgumentException("Invalid offset length.");
 
             int numBytes;
-            int hr;
 
-            if (_isasync)
+            if (IsAsync)
             {
                 IAsyncResult result = BeginWriteCore(array, offset, count, null, null);
                 EndWrite(result);
@@ -1828,14 +1824,14 @@ namespace AutoItCoreLibrary
             }
             else
             {
-                numBytes = WriteFileNative(array, offset, count, null, out hr);
+                numBytes = WriteFileNative(array, offset, count, null, out int hr);
 
                 if (numBytes == -1)
                 {
-                    if (hr == NativeMethods.ERROR_COUNTER_TIMEOUT)
+                    if (hr == Win32.ERROR_COUNTER_TIMEOUT)
                         throw new TimeoutException();
 
-                    InternalResources.WinIOError();
+                    Win32.WinIOError();
                 }
             }
 
@@ -1845,35 +1841,32 @@ namespace AutoItCoreLibrary
 
         public override void WriteByte(byte value) => WriteByte(value, WriteTimeout);
 
-        internal unsafe void WriteByte(byte value, int timeout) => AssertHandle(() =>
+        internal void WriteByte(byte value, int timeout) => AssertHandle(() =>
         {
             if (_inbreak)
                 throw new InvalidOperationException();
 
-            tempBuf[0] = value;
+            _tmpbuf[0] = value;
 
             int numBytes;
 
-            if (_isasync)
+            if (IsAsync)
             {
-                IAsyncResult result = BeginWriteCore(tempBuf, 0, 1, null, null);
+                IAsyncResult result = BeginWriteCore(_tmpbuf, 0, 1, null, null);
 
                 EndWrite(result);
 
-                numBytes = (result as SerialStreamAsyncResult)?._numBytes;
+                numBytes = (result as SerialStreamAsyncResult)?._numBytes ?? 0;
             }
             else
             {
-                numBytes = WriteFileNative(tempBuf, 0, 1, null, out int hr);
+                numBytes = WriteFileNative(_tmpbuf, 0, 1, null, out int hr);
 
                 if (numBytes == -1)
-                {
-                    // This is how writes timeout on Win9x. 
-                    if (Marshal.GetLastWin32Error() == NativeMethods.ERROR_COUNTER_TIMEOUT)
+                    if (Marshal.GetLastWin32Error() == Win32.ERROR_COUNTER_TIMEOUT)
                         throw new TimeoutException();
-
-                    InternalResources.WinIOError();
-                }
+                    else
+                        Win32.WinIOError();
             }
 
             if (numBytes == 0)
@@ -1882,83 +1875,83 @@ namespace AutoItCoreLibrary
 
         private void InitializeDCB(int baudRate, Parity parity, int dataBits, StopBits stopBits, bool discardNull)
         {
-            if (!UnsafeNativeMethods.GetCommState(_handle, ref dcb))
-                InternalResources.WinIOError();
+            if (!Win32.GetCommState(Handle, ref _dcb))
+                Win32.WinIOError();
 
-            dcb.DCBlength = (uint)System.Runtime.InteropServices.Marshal.SizeOf(dcb);
-            dcb.BaudRate = (uint)baudRate;
-            dcb.ByteSize = (byte)dataBits;
+            _dcb.DCBlength = (uint)sizeof(DCB);
+            _dcb.BaudRate = (uint)baudRate;
+            _dcb.ByteSize = (byte)dataBits;
 
             switch (stopBits)
             {
                 case StopBits.One:
-                    dcb.StopBits = NativeMethods.ONESTOPBIT;
+                    _dcb.StopBits = Win32.ONESTOPBIT;
 
                     break;
                 case StopBits.OnePointFive:
-                    dcb.StopBits = NativeMethods.ONE5STOPBITS;
+                    _dcb.StopBits = Win32.ONE5STOPBITS;
 
                     break;
                 case StopBits.Two:
-                    dcb.StopBits = NativeMethods.TWOSTOPBITS;
+                    _dcb.StopBits = Win32.TWOSTOPBITS;
 
                     break;
             }
 
-            dcb.Parity = (byte)parity;
+            _dcb.Parity = (byte)parity;
 
-            SetDcbFlag(NativeMethods.FPARITY, (parity == Parity.None) ? 0 : 1);
-            SetDcbFlag(NativeMethods.FBINARY, 1);
-            SetDcbFlag(NativeMethods.FOUTXCTSFLOW, (_handshake == Handshake.RequestToSend) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
-            // SetDcbFlag(NativeMethods.FOUTXDSRFLOW, (dsrTimeout != 0L) ? 1 : 0);
-            SetDcbFlag(NativeMethods.FOUTXDSRFLOW, 0);
-            SetDcbFlag(NativeMethods.FDTRCONTROL, NativeMethods.DTR_CONTROL_DISABLE);
-            SetDcbFlag(NativeMethods.FDSRSENSITIVITY, 0);
-            SetDcbFlag(NativeMethods.FINX, (_handshake == Handshake.XOnXOff) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
-            SetDcbFlag(NativeMethods.FOUTX, (_handshake == Handshake.XOnXOff) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
+            SetDcbFlag(Win32.FPARITY, (parity == Parity.None) ? 0 : 1);
+            SetDcbFlag(Win32.FBINARY, 1);
+            SetDcbFlag(Win32.FOUTXCTSFLOW, (_handshake == Handshake.RequestToSend) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
+            // SetDcbFlag(Win32.FOUTXDSRFLOW, (dsrTimeout != 0L) ? 1 : 0);
+            SetDcbFlag(Win32.FOUTXDSRFLOW, 0);
+            SetDcbFlag(Win32.FDTRCONTROL, Win32.DTR_CONTROL_DISABLE);
+            SetDcbFlag(Win32.FDSRSENSITIVITY, 0);
+            SetDcbFlag(Win32.FINX, (_handshake == Handshake.XOnXOff) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
+            SetDcbFlag(Win32.FOUTX, (_handshake == Handshake.XOnXOff) || (_handshake == Handshake.RequestToSendXOnXOff) ? 1 : 0);
 
             if (parity != Parity.None)
             {
-                SetDcbFlag(NativeMethods.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
+                SetDcbFlag(Win32.FERRORCHAR, (_parityreplace != '\0') ? 1 : 0);
 
-                dcb.ErrorChar = _parityreplace;
+                _dcb.ErrorChar = _parityreplace;
             }
             else
             {
-                SetDcbFlag(NativeMethods.FERRORCHAR, 0);
+                SetDcbFlag(Win32.FERRORCHAR, 0);
 
-                dcb.ErrorChar = (byte)'\0';
+                _dcb.ErrorChar = (byte)'\0';
             }
 
-            SetDcbFlag(NativeMethods.FNULL, discardNull ? 1 : 0);
+            SetDcbFlag(Win32.FNULL, discardNull ? 1 : 0);
 
             if ((_handshake == Handshake.RequestToSend) || (_handshake == Handshake.RequestToSendXOnXOff))
-                SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_HANDSHAKE);
-            else if (GetDcbFlag(NativeMethods.FRTSCONTROL) == NativeMethods.RTS_CONTROL_HANDSHAKE)
-                SetDcbFlag(NativeMethods.FRTSCONTROL, NativeMethods.RTS_CONTROL_DISABLE);
+                SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_HANDSHAKE);
+            else if (GetDcbFlag(Win32.FRTSCONTROL) == Win32.RTS_CONTROL_HANDSHAKE)
+                SetDcbFlag(Win32.FRTSCONTROL, Win32.RTS_CONTROL_DISABLE);
 
-            dcb.XonChar = NativeMethods.DEFAULTXONCHAR;
-            dcb.XoffChar = NativeMethods.DEFAULTXOFFCHAR;
+            _dcb.XonChar = Win32.DEFAULTXONCHAR;
+            _dcb.XoffChar = Win32.DEFAULTXOFFCHAR;
 
-            dcb.XonLim = dcb.XoffLim = (ushort)(commProp.dwCurrentRxQueue / 4);
-            dcb.EofChar = NativeMethods.EOFCHAR;
-            // dcb.EvtChar = (byte) 0;
-            dcb.EvtChar = NativeMethods.EOFCHAR;
+            _dcb.XonLim = _dcb.XoffLim = (ushort)(_com_prop.dwCurrentRxQueue / 4);
+            _dcb.EofChar = Win32.EOFCHAR;
+            // dcb.EvtChar = (byte)'\0';
+            _dcb.EvtChar = Win32.EOFCHAR;
 
-            if (!UnsafeNativeMethods.SetCommState(_handle, ref dcb))
-                InternalResources.WinIOError();
+            if (!Win32.SetCommState(Handle, ref _dcb))
+                Win32.WinIOError();
         }
 
         internal int GetDcbFlag(int whichFlag)
         {
             uint mask = 0x1;
 
-            if (whichFlag == NativeMethods.FDTRCONTROL || whichFlag == NativeMethods.FRTSCONTROL)
+            if (whichFlag == Win32.FDTRCONTROL || whichFlag == Win32.FRTSCONTROL)
                 mask = 0x3;
-            else if (whichFlag == NativeMethods.FDUMMY2)
+            else if (whichFlag == Win32.FDUMMY2)
                 mask = 0x1FFFF;
 
-            return (int)((dcb.Flags & (mask << whichFlag)) >> whichFlag);
+            return (int)((_dcb.Flags & (mask << whichFlag)) >> whichFlag);
         }
 
         internal void SetDcbFlag(int whichFlag, int setting)
@@ -1967,16 +1960,16 @@ namespace AutoItCoreLibrary
 
             setting <<= whichFlag;
 
-            if (whichFlag == NativeMethods.FDTRCONTROL || whichFlag == NativeMethods.FRTSCONTROL)
+            if (whichFlag == Win32.FDTRCONTROL || whichFlag == Win32.FRTSCONTROL)
                 mask = 0x3;
-            else if (whichFlag == NativeMethods.FDUMMY2)
+            else if (whichFlag == Win32.FDUMMY2)
                 mask = 0x1FFFF;
 
-            dcb.Flags &= ~(mask << whichFlag);
-            dcb.Flags |= ((uint)setting);
+            _dcb.Flags &= ~(mask << whichFlag);
+            _dcb.Flags |= ((uint)setting);
         }
 
-        unsafe private SerialStreamAsyncResult BeginReadCore(byte[] array, int offset, int numBytes, AsyncCallback userCallback, Object stateObject)
+        private SerialStreamAsyncResult BeginReadCore(byte[] array, int offset, int numBytes, AsyncCallback userCallback, Object stateObject)
         {
             SerialStreamAsyncResult asyncResult = new SerialStreamAsyncResult
             {
@@ -1986,20 +1979,20 @@ namespace AutoItCoreLibrary
                 _waitHandle = new ManualResetEvent(false)
             };
             Overlapped overlapped = new Overlapped(0, 0, IntPtr.Zero, asyncResult);
-            NativeOverlapped* intOverlapped = overlapped.Pack(IOCallback, array);
+            NativeOverlapped* intOverlapped = overlapped.Pack(_iocallback, array);
 
             asyncResult._overlapped = intOverlapped;
 
-            if ((ReadFileNative(array, offset, numBytes, intOverlapped, out int hr) == -1) && (hr != NativeMethods.ERROR_IO_PENDING))
-                if (hr == NativeMethods.ERROR_HANDLE_EOF)
-                    InternalResources.EndOfFile();
+            if ((ReadFileNative(array, offset, numBytes, intOverlapped, out int hr) == -1) && (hr != Win32.ERROR_IO_PENDING))
+                if (hr == Win32.ERROR_HANDLE_EOF)
+                    throw new EndOfStreamException();
                 else
-                    InternalResources.WinIOError(hr, "");
+                    Win32.WinIOError(hr, "");
 
             return asyncResult;
         }
 
-        unsafe private SerialStreamAsyncResult BeginWriteCore(byte[] array, int offset, int numBytes, AsyncCallback userCallback, object stateObject)
+        private SerialStreamAsyncResult BeginWriteCore(byte[] array, int offset, int numBytes, AsyncCallback userCallback, object stateObject)
         {
             SerialStreamAsyncResult asyncResult = new SerialStreamAsyncResult
             {
@@ -2009,20 +2002,20 @@ namespace AutoItCoreLibrary
                 _waitHandle = new ManualResetEvent(false)
             };
             Overlapped overlapped = new Overlapped(0, 0, IntPtr.Zero, asyncResult);
-            NativeOverlapped* intOverlapped = overlapped.Pack(IOCallback, array);
+            NativeOverlapped* intOverlapped = overlapped.Pack(_iocallback, array);
 
             asyncResult._overlapped = intOverlapped;
 
-            if ((WriteFileNative(array, offset, numBytes, intOverlapped, out int hr) == -1) && (hr != NativeMethods.ERROR_IO_PENDING))
-                if (hr == NativeMethods.ERROR_HANDLE_EOF)
-                    InternalResources.EndOfFile();
+            if ((WriteFileNative(array, offset, numBytes, intOverlapped, out int hr) == -1) && (hr != Win32.ERROR_IO_PENDING))
+                if (hr == Win32.ERROR_HANDLE_EOF)
+                    throw new EndOfStreamException();
                 else
-                    InternalResources.WinIOError(hr, "");
+                    Win32.WinIOError(hr, "");
 
             return asyncResult;
         }
 
-        private unsafe int ReadFileNative(byte[] bytes, int offset, int count, NativeOverlapped* overlapped, out int hr)
+        private int ReadFileNative(byte[] bytes, int offset, int count, NativeOverlapped* overlapped, out int hr)
         {
             if (bytes.Length - offset < count)
                 throw new IndexOutOfRangeException();
@@ -2038,17 +2031,17 @@ namespace AutoItCoreLibrary
             int numBytesRead = 0;
 
             fixed (byte* p = bytes)
-                if (_isasync)
-                    r = UnsafeNativeMethods.ReadFile(_handle, p + offset, count, IntPtr.Zero, overlapped);
+                if (IsAsync)
+                    r = Win32.ReadFile(Handle, p + offset, count, null, overlapped);
                 else
-                    r = UnsafeNativeMethods.ReadFile(_handle, p + offset, count, out numBytesRead, IntPtr.Zero);
+                    r = Win32.ReadFile(Handle, p + offset, count, out numBytesRead, null);
 
             if (r == 0)
             {
                 hr = Marshal.GetLastWin32Error();
 
-                if (hr == NativeMethods.ERROR_INVALID_HANDLE)
-                    _handle.SetHandleAsInvalid();
+                if (hr == Win32.ERROR_INVALID_HANDLE)
+                    Handle.SetHandleAsInvalid();
 
                 return -1;
             }
@@ -2058,7 +2051,7 @@ namespace AutoItCoreLibrary
             return numBytesRead;
         }
 
-        private unsafe int WriteFileNative(byte[] bytes, int offset, int count, NativeOverlapped* overlapped, out int hr)
+        private int WriteFileNative(byte[] bytes, int offset, int count, NativeOverlapped* overlapped, out int hr)
         {
             if (bytes.Length - offset < count)
                 throw new IndexOutOfRangeException();
@@ -2074,17 +2067,17 @@ namespace AutoItCoreLibrary
             int r = 0;
 
             fixed (byte* p = bytes)
-                if (_isasync)
-                    r = UnsafeNativeMethods.WriteFile(_handle, p + offset, count, IntPtr.Zero, overlapped);
+                if (IsAsync)
+                    r = Win32.WriteFile(Handle, p + offset, count, null, overlapped);
                 else
-                    r = UnsafeNativeMethods.WriteFile(_handle, p + offset, count, out numBytesWritten, IntPtr.Zero);
+                    r = Win32.WriteFile(Handle, p + offset, count, out numBytesWritten, null);
 
             if (r == 0)
             {
                 hr = Marshal.GetLastWin32Error();
 
-                if (hr == NativeMethods.ERROR_INVALID_HANDLE)
-                    _handle.SetHandleAsInvalid();
+                if (hr == Win32.ERROR_INVALID_HANDLE)
+                    Handle.SetHandleAsInvalid();
 
                 return -1;
             }
@@ -2094,7 +2087,7 @@ namespace AutoItCoreLibrary
             return numBytesWritten;
         }
 
-        unsafe private static void AsyncFSCallback(uint errorCode, uint numBytes, NativeOverlapped* pOverlapped)
+        private static void AsyncFSCallback(uint errorCode, uint numBytes, NativeOverlapped* pOverlapped)
         {
             Overlapped overlapped = Overlapped.Unpack(pOverlapped);
             SerialStreamAsyncResult asyncResult = (SerialStreamAsyncResult)overlapped.AsyncResult;
@@ -2107,273 +2100,258 @@ namespace AutoItCoreLibrary
             ManualResetEvent wh = asyncResult._waitHandle;
 
             if (wh?.Set() == false)
-                InternalResources.WinIOError();
+                Win32.WinIOError();
 
             asyncResult._userCallback?.Invoke(asyncResult);
         }
 
-
-
-
-
-        internal sealed class EventLoopRunner
+        private void AssertHandle(Action f)
         {
-            private WeakReference streamWeakReference;
-            internal ManualResetEvent eventLoopEndedSignal = new ManualResetEvent(false);
-            internal ManualResetEvent waitCommEventWaitHandle = new ManualResetEvent(false);
-            private SafeFileHandle handle;
-            private readonly string portName;
-            private bool isAsync;
-            internal bool endEventLoop;
-            private int eventsOccurred;
+            if (Handle is null)
+                throw new ObjectDisposedException(null);
+            else
+                f();
+        }
 
-            WaitCallback callErrorEvents;
-            WaitCallback callReceiveEvents;
-            WaitCallback callPinEvents;
-            IOCompletionCallback freeNativeOverlappedCallback;
+        private T AssertHandle<T>(Func<T> f) => Handle is null ? throw new ObjectDisposedException(null) : f();
 
-            internal unsafe EventLoopRunner(SerialStream stream)
+        internal void RaisePinChanged(SerialPinChange e) => PinChanged?.Invoke(this, e);
+
+        internal void RaiseErrorReceived(SerialError e) => ErrorReceived?.Invoke(this, e);
+
+        internal void RaiseDataReceived(SerialData e) => DataReceived?.Invoke(this, e);
+    }
+
+    internal sealed unsafe class EventLoopRunner
+    {
+        private const int EVT_ERROR = (int)(SerialError.Frame | SerialError.Overrun | SerialError.RXOver | SerialError.RXParity | SerialError.TXFull);
+        private const int EVT_RECV = (int)(SerialData.Chars | SerialData.Eof);
+        private const int EVT_PINCH = (int)(SerialPinChange.Break | SerialPinChange.CDChanged | SerialPinChange.CtsChanged | SerialPinChange.Ring | SerialPinChange.DsrChanged);
+
+        private readonly IOCompletionCallback _freenativeoverlappedcallback;
+        private readonly WaitCallback _callreceiveevents;
+        private readonly WaitCallback _callerrorevents;
+        private readonly WaitCallback _callpinevents;
+
+        private WeakReference StreamWeakReference { get; }
+
+        public SafeFileHandle Handle { get; }
+        public bool IsAsync { get; }
+        public string Name { get; }
+
+
+        internal ManualResetEvent _evt_loopend = new ManualResetEvent(false);
+        internal ManualResetEvent _evt_comwait = new ManualResetEvent(false);
+        private readonly int _vtocc;
+        internal bool _shutdown;
+
+
+        internal EventLoopRunner(SerialStream stream)
+        {
+            Name = stream.Name;
+            Handle = stream.Handle;
+            IsAsync = stream.IsAsync;
+            StreamWeakReference = new WeakReference(stream);
+
+            _callerrorevents = new WaitCallback(CallErrorEvents);
+            _callreceiveevents = new WaitCallback(CallReceiveEvents);
+            _callpinevents = new WaitCallback(CallPinEvents);
+            _freenativeoverlappedcallback = new IOCompletionCallback(FreeNativeOverlappedCallback);
+        }
+
+        internal bool ShutdownLoop => _shutdown;
+
+        internal void WaitForCommEvent()
+        {
+            int unused = 0;
+            bool doCleanup = false;
+            NativeOverlapped* intOverlapped = null;
+
+            while (!ShutdownLoop)
             {
-                handle = stream._handle;
-                streamWeakReference = new WeakReference(stream);
+                SerialStreamAsyncResult asyncResult = null;
 
-                callErrorEvents = new WaitCallback(CallErrorEvents);
-                callReceiveEvents = new WaitCallback(CallReceiveEvents);
-                callPinEvents = new WaitCallback(CallPinEvents);
-                freeNativeOverlappedCallback = new IOCompletionCallback(FreeNativeOverlappedCallback);
-                isAsync = stream._isasync;
-                portName = stream._name;
-            }
-
-            internal bool ShutdownLoop => endEventLoop;
-
-            internal unsafe void WaitForCommEvent()
-            {
-                int unused = 0;
-                bool doCleanup = false;
-                NativeOverlapped* intOverlapped = null;
-
-                while (!ShutdownLoop)
+                if (IsAsync)
                 {
-                    SerialStreamAsyncResult asyncResult = null;
-                    if (isAsync)
+                    asyncResult = new SerialStreamAsyncResult
                     {
-                        asyncResult = new SerialStreamAsyncResult();
-                        asyncResult._userCallback = null;
-                        asyncResult._userStateObject = null;
-                        asyncResult._isWrite = false;
+                        _userCallback = null,
+                        _userStateObject = null,
+                        _isWrite = false,
+                        _numBytes = 2,
+                        _waitHandle = _evt_comwait
+                    };
 
-                        // we're going to use _numBytes for something different in this loop.  In this case, both 
-                        // freeNativeOverlappedCallback and this thread will decrement that value.  Whichever one decrements it
-                        // to zero will be the one to free the native overlapped.  This guarantees the overlapped gets freed
-                        // after both the callback and GetOverlappedResult have had a chance to use it. 
-                        asyncResult._numBytes = 2;
-                        asyncResult._waitHandle = waitCommEventWaitHandle;
+                    _evt_comwait.Reset();
 
-                        waitCommEventWaitHandle.Reset();
-                        Overlapped overlapped = new Overlapped(0, 0, waitCommEventWaitHandle.SafeWaitHandle.DangerousGetHandle(), asyncResult);
-                        // Pack the Overlapped class, and store it in the async result
-                        intOverlapped = overlapped.Pack(freeNativeOverlappedCallback, null);
-                    }
+                    Overlapped overlapped = new Overlapped(0, 0, _evt_comwait.SafeWaitHandle.DangerousGetHandle(), asyncResult);
 
-                    fixed (int* eventsOccurredPtr = &eventsOccurred)
+                    intOverlapped = overlapped.Pack(_freenativeoverlappedcallback, null);
+                }
+
+                fixed (int* eventsOccurredPtr = &_vtocc)
+                    if (!Win32.WaitCommEvent(Handle, eventsOccurredPtr, intOverlapped))
                     {
+                        int hr = Marshal.GetLastWin32Error();
+                        const int ERROR_DEVICE_REMOVED = 1617;
 
-                        if (!UnsafeNativeMethods.WaitCommEvent(handle, eventsOccurredPtr, intOverlapped))
+                        if (hr == Win32.ERROR_ACCESS_DENIED || hr == Win32.ERROR_BAD_COMMAND || hr == ERROR_DEVICE_REMOVED)
                         {
-                            int hr = Marshal.GetLastWin32Error();
-                            // When a device is disconnected unexpectedly from a serial port, there appear to be
-                            // at least three error codes Windows or drivers may return.
-                            const int ERROR_DEVICE_REMOVED = 1617;
-                            if (hr == NativeMethods.ERROR_ACCESS_DENIED || hr == NativeMethods.ERROR_BAD_COMMAND || hr == ERROR_DEVICE_REMOVED)
-                            {
-                                doCleanup = true;
-                                break;
-                            }
-                            if (hr == NativeMethods.ERROR_IO_PENDING)
-                            {
-                                Debug.Assert(isAsync, "The port is not open for async, so we should not get ERROR_IO_PENDING from WaitCommEvent");
-                                int error;
+                            doCleanup = true;
 
-                                // if we get IO pending, MSDN says we should wait on the WaitHandle, then call GetOverlappedResult
-                                // to get the results of WaitCommEvent. 
-                                bool success = waitCommEventWaitHandle.WaitOne();
-                                Debug.Assert(success, "waitCommEventWaitHandle.WaitOne() returned error " + Marshal.GetLastWin32Error());
+                            break;
+                        }
+                        if (hr == Win32.ERROR_IO_PENDING)
+                        {
+                            int error;
+                            bool success = _evt_comwait.WaitOne();
 
-                                do
-                                {
-                                    // NOTE: GetOverlappedResult will modify the original pointer passed into WaitCommEvent.
-                                    success = UnsafeNativeMethods.GetOverlappedResult(handle, intOverlapped, ref unused, false);
-                                    error = Marshal.GetLastWin32Error();
-                                }
-                                while (error == NativeMethods.ERROR_IO_INCOMPLETE && !ShutdownLoop && !success);
-
-                                if (!success)
-                                {
-                                    // Ignore ERROR_IO_INCOMPLETE and ERROR_INVALID_PARAMETER, because there's a chance we'll get
-                                    // one of those while shutting down 
-                                    if (!((error == NativeMethods.ERROR_IO_INCOMPLETE || error == NativeMethods.ERROR_INVALID_PARAMETER) && ShutdownLoop))
-                                        Debug.Assert(false, "GetOverlappedResult returned error, we might leak intOverlapped memory" + error.ToString(CultureInfo.InvariantCulture));
-                                }
-                            }
-                            else if (hr != NativeMethods.ERROR_INVALID_PARAMETER)
+                            do
                             {
-                                // ignore ERROR_INVALID_PARAMETER errors.  WaitCommError seems to return this
-                                // when SetCommMask is changed while it's blocking (like we do in Dispose())
-                                Debug.Assert(false, "WaitCommEvent returned error " + hr);
+                                success = Win32.GetOverlappedResult(Handle, intOverlapped, ref unused, false);
+                                error = Marshal.GetLastWin32Error();
                             }
+                            while (error == Win32.ERROR_IO_INCOMPLETE && !ShutdownLoop && !success);
                         }
                     }
 
-                    if (!ShutdownLoop)
-                        CallEvents(eventsOccurred);
+                if (!ShutdownLoop)
+                    CallEvents(_vtocc);
 
-                    if (isAsync)
-                    {
-                        if (Interlocked.Decrement(ref asyncResult._numBytes) == 0)
-                            Overlapped.Free(intOverlapped);
-                    }
-                } // while (!ShutdownLoop)
-
-                if (doCleanup)
-                {
-                    // the rest will be handled in Dispose()
-                    endEventLoop = true;
+                if (IsAsync && Interlocked.Decrement(ref asyncResult._numBytes) == 0)
                     Overlapped.Free(intOverlapped);
-                }
-                eventLoopEndedSignal.Set();
             }
 
-            private unsafe void FreeNativeOverlappedCallback(uint errorCode, uint numBytes, NativeOverlapped* pOverlapped)
+            if (doCleanup)
             {
-                Overlapped overlapped = Overlapped.Unpack(pOverlapped);
-                SerialStreamAsyncResult asyncResult = (SerialStreamAsyncResult)overlapped.AsyncResult;
+                _shutdown = true;
 
-                if (Interlocked.Decrement(ref asyncResult._numBytes) == 0)
-                    Overlapped.Free(pOverlapped);
+                Overlapped.Free(intOverlapped);
             }
 
-            private void CallEvents(int nativeEvents)
-            {
-                if ((nativeEvents & (NativeMethods.EV_ERR | NativeMethods.EV_RXCHAR)) != 0)
-                {
-                    int errors = 0;
-
-                    if (!UnsafeNativeMethods.ClearCommError(handle, ref errors, IntPtr.Zero))
-                    {
-                        endEventLoop = true;
-
-                        Thread.MemoryBarrier();
-
-                        return;
-                    }
-
-                    errors &= EVT_ERROR;
-
-                    if (errors != 0)
-                        ThreadPool.QueueUserWorkItem(callErrorEvents, errors);
-                }
-
-                if ((nativeEvents & EVT_PINCH) != 0)
-                    ThreadPool.QueueUserWorkItem(callPinEvents, nativeEvents);
-
-                if ((nativeEvents & EVT_RECV) != 0)
-                    ThreadPool.QueueUserWorkItem(callReceiveEvents, nativeEvents);
-            }
-
-            private void CallErrorEvents(object state)
-            {
-                int errors = (int)state;
-                SerialStream stream = (SerialStream)streamWeakReference.Target;
-
-                if (stream == null)
-                    return;
-
-                if (stream.ErrorReceived != null)
-                {
-                    if ((errors & (int)SerialError.TXFull) != 0)
-                        stream.ErrorReceived(stream, SerialError.TXFull);
-                    if ((errors & (int)SerialError.RXOver) != 0)
-                        stream.ErrorReceived(stream, SerialError.RXOver);
-                    if ((errors & (int)SerialError.Overrun) != 0)
-                        stream.ErrorReceived(stream, SerialError.Overrun);
-                    if ((errors & (int)SerialError.RXParity) != 0)
-                        stream.ErrorReceived(stream, SerialError.RXParity);
-                    if ((errors & (int)SerialError.Frame) != 0)
-                        stream.ErrorReceived(stream, SerialError.Frame);
-                }
-
-                stream = null;
-            }
-
-            private void CallReceiveEvents(object state)
-            {
-                int nativeEvents = (int)state;
-                SerialStream stream = (SerialStream)streamWeakReference.Target;
-
-                if (stream == null)
-                    return;
-
-                if (stream.DataReceived != null)
-                {
-                    if ((nativeEvents & (int)SerialData.Chars) != 0)
-                        stream.DataReceived(stream, SerialData.Chars);
-                    if ((nativeEvents & (int)SerialData.Eof) != 0)
-                        stream.DataReceived(stream, SerialData.Eof);
-                }
-
-                stream = null;
-            }
-
-            private void CallPinEvents(object state)
-            {
-                int nativeEvents = (int)state;
-
-                SerialStream stream = (SerialStream)streamWeakReference.Target;
-                if (stream == null)
-                    return;
-
-                if (stream.PinChanged != null)
-                {
-                    if ((nativeEvents & (int)SerialPinChange.CtsChanged) != 0)
-                        stream.PinChanged(stream, SerialPinChange.CtsChanged);
-                    if ((nativeEvents & (int)SerialPinChange.DsrChanged) != 0)
-                        stream.PinChanged(stream, SerialPinChange.DsrChanged);
-                    if ((nativeEvents & (int)SerialPinChange.CDChanged) != 0)
-                        stream.PinChanged(stream, SerialPinChange.CDChanged);
-                    if ((nativeEvents & (int)SerialPinChange.Ring) != 0)
-                        stream.PinChanged(stream, SerialPinChange.Ring);
-                    if ((nativeEvents & (int)SerialPinChange.Break) != 0)
-                        stream.PinChanged(stream, SerialPinChange.Break);
-                }
-
-                stream = null;
-            }
+            _evt_loopend.Set();
         }
 
-        unsafe internal sealed class SerialStreamAsyncResult
-            : IAsyncResult
+        private void FreeNativeOverlappedCallback(uint errorCode, uint numBytes, NativeOverlapped* pOverlapped)
         {
-            internal AsyncCallback _userCallback;
-            internal object _userStateObject;
-            internal bool _isWrite;
-            internal bool _isComplete;
-            internal bool _completedSynchronously;
-            internal ManualResetEvent _waitHandle;
-            internal int _EndXxxCalled;
-            internal int _numBytes;
-            internal int _errorCode;
-            internal NativeOverlapped* _overlapped;
+            Overlapped overlapped = Overlapped.Unpack(pOverlapped);
+            SerialStreamAsyncResult asyncResult = (SerialStreamAsyncResult)overlapped.AsyncResult;
 
-
-            public object AsyncState => _userStateObject;
-
-            public bool IsCompleted => _isComplete;
-
-            public WaitHandle AsyncWaitHandle => _waitHandle;
-
-            public bool CompletedSynchronously => _completedSynchronously;
+            if (Interlocked.Decrement(ref asyncResult._numBytes) == 0)
+                Overlapped.Free(pOverlapped);
         }
+
+        private void CallEvents(int nativeEvents)
+        {
+            if ((nativeEvents & (Win32.EV_ERR | Win32.EV_RXCHAR)) != 0)
+            {
+                int errors = 0;
+
+                if (!Win32.ClearCommError(Handle, ref errors, IntPtr.Zero))
+                {
+                    _shutdown = true;
+
+                    Thread.MemoryBarrier();
+
+                    return;
+                }
+
+                errors &= EVT_ERROR;
+
+                if (errors != 0)
+                    ThreadPool.QueueUserWorkItem(_callerrorevents, errors);
+            }
+
+            if ((nativeEvents & EVT_PINCH) != 0)
+                ThreadPool.QueueUserWorkItem(_callpinevents, nativeEvents);
+
+            if ((nativeEvents & EVT_RECV) != 0)
+                ThreadPool.QueueUserWorkItem(_callreceiveevents, nativeEvents);
+        }
+
+        private void CallErrorEvents(object state)
+        {
+            int errors = (int)state;
+            SerialStream stream = (SerialStream)StreamWeakReference.Target;
+
+            if (stream == null)
+                return;
+
+            if ((errors & (int)SerialError.TXFull) != 0)
+                stream.RaiseErrorReceived(SerialError.TXFull);
+            if ((errors & (int)SerialError.RXOver) != 0)
+                stream.RaiseErrorReceived(SerialError.RXOver);
+            if ((errors & (int)SerialError.Overrun) != 0)
+                stream.RaiseErrorReceived(SerialError.Overrun);
+            if ((errors & (int)SerialError.RXParity) != 0)
+                stream.RaiseErrorReceived(SerialError.RXParity);
+            if ((errors & (int)SerialError.Frame) != 0)
+                stream.RaiseErrorReceived(SerialError.Frame);
+
+            stream = null;
+        }
+
+        private void CallReceiveEvents(object state)
+        {
+            int nativeEvents = (int)state;
+            SerialStream stream = (SerialStream)StreamWeakReference.Target;
+
+            if (stream == null)
+                return;
+
+            if ((nativeEvents & (int)SerialData.Chars) != 0)
+                stream.RaiseDataReceived(SerialData.Chars);
+            if ((nativeEvents & (int)SerialData.Eof) != 0)
+                stream.RaiseDataReceived(SerialData.Eof);
+
+            stream = null;
+        }
+
+        private void CallPinEvents(object state)
+        {
+            int nativeEvents = (int)state;
+            SerialStream stream = (SerialStream)StreamWeakReference.Target;
+
+            if (stream == null)
+                return;
+
+            if ((nativeEvents & (int)SerialPinChange.CtsChanged) != 0)
+                stream.RaisePinChanged(SerialPinChange.CtsChanged);
+            if ((nativeEvents & (int)SerialPinChange.DsrChanged) != 0)
+                stream.RaisePinChanged(SerialPinChange.DsrChanged);
+            if ((nativeEvents & (int)SerialPinChange.CDChanged) != 0)
+                stream.RaisePinChanged(SerialPinChange.CDChanged);
+            if ((nativeEvents & (int)SerialPinChange.Ring) != 0)
+                stream.RaisePinChanged(SerialPinChange.Ring);
+            if ((nativeEvents & (int)SerialPinChange.Break) != 0)
+                stream.RaisePinChanged(SerialPinChange.Break);
+
+            stream = null;
+        }
+    }
+
+    internal sealed unsafe class SerialStreamAsyncResult
+        : IAsyncResult
+    {
+        public AsyncCallback _userCallback;
+        public object _userStateObject;
+        public bool _isWrite;
+        public bool _isComplete;
+        public bool _completedSynchronously;
+        public ManualResetEvent _waitHandle;
+        public int _EndXxxCalled;
+        public int _numBytes;
+        public int _errorCode;
+        public NativeOverlapped* _overlapped;
+
+
+        public object AsyncState => _userStateObject;
+
+        public WaitHandle AsyncWaitHandle => _waitHandle;
+
+        public bool CompletedSynchronously => _completedSynchronously;
+
+        public bool IsCompleted => _isComplete;
     }
 
     internal struct DCB

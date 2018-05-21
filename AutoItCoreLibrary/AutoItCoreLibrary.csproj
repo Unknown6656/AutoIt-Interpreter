@@ -11,12 +11,6 @@
         <AssemblyName>autoitcorlib</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
-      <Compile Remove="SerialPort.cs" />
-    </ItemGroup>
-    <ItemGroup>
-      <Content Include="SerialPort.cs" />
-    </ItemGroup>
-    <ItemGroup>
       <None Include="AutoItCurryingDelegate.cs">
         <DesignTime>True</DesignTime>
         <AutoGen>True</AutoGen>
