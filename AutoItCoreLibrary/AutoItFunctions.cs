@@ -441,7 +441,7 @@ namespace AutoItCoreLibrary
 
             return res;
         }
-        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        [BuiltinFunction]
         public static var BitRotate(var v, var? shift = null, var? size = null)
         {
             var offs = shift ?? 1;
@@ -451,15 +451,41 @@ namespace AutoItCoreLibrary
             else
                 switch (size?.ToUpper() ?? "W")
                 {
-                    case "D":
+                    case "Q":
                         return offs < 0 ? var.BitwiseRor(v, -offs) : var.BitwiseRol(v, offs);
+                    case "D":
+                        {
+                            int o = ((offs + 64) % 32).ToInt();
+                            ulong qw = (ulong)v.ToLong();
+                            uint w = (uint)(qw & 0xffffffff);
+
+                            qw = (qw & 0xffffffff00000000ul) | (w << o) | (w >> (32 - o));
+
+                            return (long)qw;
+                        }
                     case "W":
-                        throw new NotImplementedException(); // TODO
+                        {
+                            int o = ((offs + 64) % 16).ToInt();
+                            ulong qw = (ulong)v.ToLong();
+                            ushort w = (ushort)(qw & 0xffff);
+
+                            qw = (qw & 0xffffffffffff0000ul) | (uint)((ushort)(w << o) & 0xffff) | ((ushort)(w >> (32 - o)));
+
+                            return (long)qw;
+                        }
                     case "B":
-                        throw new NotImplementedException(); // TODO
+                        {
+                            int o = ((offs + 64) % 8).ToInt();
+                            ulong qw = (ulong)v.ToLong();
+                            byte w = (byte)(qw & 'ÿ');
+
+                            qw = (qw & 0xffffffffffffff00ul) | (uint)((byte)(w << o) & 0xff) | ((byte)(w >> (32 - o)));
+
+                            return (long)qw;
+                        }
                 }
 
-            throw new NotImplementedException(); // TODO
+            return v;
         }
         [BuiltinFunction]
         public static var BitShift(var v, var shift) => var.BitwiseShr(v, shift);
@@ -850,7 +876,7 @@ namespace AutoItCoreLibrary
         
 
         #endregion
-        #region Additional functions
+        #region AutoIt++ functions
 
         [BuiltinFunction]
         public static var ATan2(var v1, var v2) => (var)Math.Atan2((double)v1, (double)v2);
@@ -887,6 +913,13 @@ namespace AutoItCoreLibrary
 
             return var.Default;
         }
+
+        [BuiltinFunction]
+        public static var SerialOpen()
+        {
+            Serial
+        }
+
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {

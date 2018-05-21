@@ -5,9 +5,9 @@
 [x] one-liner function declarations
 [x] substrings
 [ ] fix @|.. and @.. operators
-[-] arrays
+[x] arrays
     [x] declaration
-    [-] redim
+    [x] redim
     [x] element assignment
 [ ] enum constants
 [x] pinvoke
@@ -21,6 +21,7 @@
 [ ] exit functions
 [x] const variables : assignment
 [x] -Wall compiler flag
+[x] BSOD/KPanic-function
 [ ] 'execute'-function
     [ ] reflection ?
 [-] implement all funcitions
@@ -31,3 +32,5 @@
 [x] implement local macros
 [x] fix ternary inline if
 [ ] COM-interop
+[ ] more unit tests
+[ ] serial API
