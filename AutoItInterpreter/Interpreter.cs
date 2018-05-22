@@ -535,7 +535,7 @@ namespace AutoItInterpreter
                                 }
                             }),
                             (@"^(else)?if\s+.+$", new[] { Switch, Select }, _ => err("errors.preproc.missing_then", true)),
-                            ("^else$", new[] { Switch, Select }, _ =>
+                            ("^(else|ifn'?t)$", new[] { Switch, Select }, _ =>
                             {
                                 ControlBlock cb = eblocks.Peek().CB;
 

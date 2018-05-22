@@ -40,6 +40,7 @@ For more information about the usage of the interpiler, refer to the [usage page
  - [AutoIt++ Syntax reference](doc/syntax.md)
  - [AutoIt++ Syntax tree reference](doc/syntax-tree.md)
  - [Official AutoIt3 documentation](https://www.autoitscript.com/autoit3/docs/)
+ - [The TODO list](todo.txt)
 
 ## Credits
 

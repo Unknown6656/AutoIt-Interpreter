@@ -12,6 +12,7 @@ This article highlights the most important differences between AutoIt3's and Aut
 5) [λ-Expressions](#λ-expressions)
 6) [`new`-exprssions](#new-expressions)
 7) [Inline C#-code](#inline-c-code)
+8) [`ifn't`](#ifn-t)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -448,3 +449,10 @@ This could result in some semantic data loss when using the `ReDim`-statement on
 # Inline C#-Code
 
 TODO
+
+# `ifn't`
+
+[@Zedly](https://github.com/Zedly)
+
+![ifn't](images/ifnt.jpg)
+
