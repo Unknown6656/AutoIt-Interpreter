@@ -453,7 +453,7 @@ TODO
 
 # `ifn't`
 
-<img alt="ifn't" href="images/ifnt.jpg" height="200"/><br/>
+<img src="images/ifnt.jpg" height="200"/><br/>
 [@Zedly](https://github.com/Zedly)
 
 # `#OnAutoItExitRegister`-Directive
