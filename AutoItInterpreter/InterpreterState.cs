@@ -90,8 +90,8 @@ namespace AutoItInterpreter
         private protected List<InterpreterError> _errors;
 
         public Dictionary<string, (string Signature, string Library, DefinitionContext Context)> PInvokeFunctions { get; }
-        public bool Fatal => Errors.Any(err => err.Type == ErrorType.Fatal);
-        public InterpreterError[] Errors => _errors.ToArray();
+        public List<(string Func, DefinitionContext Context)> StartFunctions { get; }
+        public List<(string Func, DefinitionContext Context)> ExitFunctions { get; }
         public CompileInfo CompileInfo { private protected set; get; }
         public FileInfo RootDocument { get; set; }
         public Language Language { get; set; }
@@ -99,11 +99,17 @@ namespace AutoItInterpreter
         public bool RequireAdmin { set; get; }
         public bool UseTrayIcon { set; get; }
 
+        public bool Fatal => Errors.Any(err => err.Type == ErrorType.Fatal);
+
+        public InterpreterError[] Errors => _errors.ToArray();
+
 
         public AbstractParserState()
         {
             PInvokeFunctions = new Dictionary<string, (string, string, DefinitionContext)>();
             _errors = new List<InterpreterError>();
+            StartFunctions = new List<(string, DefinitionContext)>();
+            ExitFunctions = new List<(string, DefinitionContext)>();
             CompileInfo = new CompileInfo();
             UseTrayIcon = true;
         }
@@ -141,14 +147,12 @@ namespace AutoItInterpreter
         public (string, PINVOKE_SIGNATURE)[] PInvokeSignatures { get; set; }
         public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
         public Dictionary<string, FUNCTION> Functions { get; }
-        public List<string> StartFunctions { get; }
 
 
         public InterpreterState()
         {
             Functions = new Dictionary<string, FUNCTION>();
             ASTFunctions = new Dictionary<string, AST_FUNCTION>();
-            StartFunctions = new List<string>();
         }
 
         public static InterpreterState Convert(PreInterpreterState ps)
@@ -179,7 +183,6 @@ namespace AutoItInterpreter
         public Dictionary<string, FunctionScope> Functions { get; }
         public InterpreterContext CurrentContext { set; get; }
         public List<string> IncludeOncePaths { get; }
-        public List<string> StartFunctions { get; }
 
         public FunctionScope GlobalFunction
         {
@@ -192,7 +195,6 @@ namespace AutoItInterpreter
         {
             Functions = new Dictionary<string, FunctionScope> { [GLOBAL_FUNC_NAME] = null };
             IncludeOncePaths = new List<string>();
-            StartFunctions = new List<string>();
             UseTrayIcon = true;
         }
 

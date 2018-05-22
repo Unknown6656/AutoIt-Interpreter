@@ -246,7 +246,7 @@ namespace AutoItInterpreter
 
                     if (Line.StartsWith('#'))
                     {
-                        string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err);
+                        string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err, defcntx);
 
                         try
                         {
@@ -816,7 +816,7 @@ namespace AutoItInterpreter
                 return false;
             }
 
-            private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err)
+            private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err, DefinitionContext defcntx)
             {
                 string inclpath = "";
 
@@ -877,7 +877,8 @@ namespace AutoItInterpreter
                                 st.IncludeOncePaths.Add(nfo.FullName);
                         }
                     }),
-                    (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add(m.Groups["func"].ToString().Trim())),
+                    (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add((m.Groups["func"].ToString().Trim(), defcntx))),
+                    (@"^onautoitexitregister\b\s*\""(?<func>.*)\""$", m => st.ExitFunctions.Add((m.Groups["func"].ToString().Trim(), defcntx))),
                     (@"^pragma\b\s*(?<opt>[a-z]\w*)\s*\((?<name>[a-z]\w*)\s*\,\s*(?<value>.+)\s*\)$", m =>
                     {
                         string opt = m.Get("opt");
@@ -1998,6 +1999,45 @@ namespace AutoItInterpreter
                         if (func.Equals("execute", StringComparison.InvariantCultureIgnoreCase))
                             state.ReportKnownNote("notes.unsafe_execute", context);
                     }
+                }
+
+                foreach ((string func, DefinitionContext context, bool start) in state.StartFunctions.Select(x => (x.Func, x.Context, true)).Concat(state.ExitFunctions.Select(x => (x.Func, x.Context, false))))
+                {
+                    void err(string m, params object[] args) => state.ReportKnownError(m, context, args);
+                    string lfunc = func.ToLower();
+                    int pcnt = -1;
+
+                    if (state.ASTFunctions.ContainsKey(lfunc))
+                        pcnt = state.ASTFunctions[lfunc].Parameters.Count(x => !(x is AST_FUNCTION_PARAMETER_OPT));
+                    else
+                    {
+                        (string Name, int mcnt, _, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.FirstOrDefault(x => x.Name.ToLower() == lfunc);
+
+                        if (Name != null)
+                        {
+                            pcnt = mcnt;
+
+                            if (!os.Contains(target))
+                                err("errors.astproc.invalid_system", target, string.Join(",", os));
+
+                            if (us && !options.AllowUnsafeCode)
+                                err("errors.astproc.unsafe_func", func);
+
+                            foreach (CompilerIntrinsicMessage msg in msgs)
+                                if (msg is WarningAttribute w)
+                                    state.ReportKnownWarning(w.MessageName, context, w.Arguments);
+                                else if (msg is NoteAttribute n)
+                                    state.ReportKnownNote(n.MessageName, context, n.Arguments);
+                        }
+                    }
+
+                    if (pcnt < 0)
+                        err("errors.astproc.func_not_declared", func);
+                    else if (pcnt > 0)
+                        if (start)
+                            err("errors.astproc.start_func_args", func);
+                        else
+                            err("errors.astproc.exit_func_args", func);
                 }
 
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
