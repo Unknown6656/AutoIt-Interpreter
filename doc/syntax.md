@@ -13,6 +13,7 @@ This article highlights the most important differences between AutoIt3's and Aut
 6) [`new`-exprssions](#new-expressions)
 7) [Inline C#-code](#inline-c-code)
 8) [`ifn't`](#ifnt)
+9) [`#OnAutoItExitRegister`-Directive](#onautoitexitregister-directive)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -454,3 +455,10 @@ TODO
 
 <img alt="ifn't" href="images/ifnt.jpg" height="200"/><br/>
 [@Zedly](https://github.com/Zedly)
+
+# `#OnAutoItExitRegister`-Directive
+
+Complementary to the directive `#OnAutoItStartRegister "..."`, AutoIt++ introduces the directive `#OnAutoItExitRegister "..."`.
+
+TODO
+
