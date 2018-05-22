@@ -89,10 +89,16 @@ namespace AutoItInterpreter
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
 
             sb.AppendLine($@"
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using System.IO.MemoryMappedFiles;
+using System.Collections.Generic;
+using System.Collections;
 using System.Reflection;
 using System.Resources;
 using System.Text;
+using System.Linq;
+using System.Data;
 using System;
 
 using {nameof(AutoItCoreLibrary)};
@@ -137,10 +143,14 @@ namespace {NAMESPACE}
                 return Assembly.Load(rm.GetObject(dll) as byte[]);
             }};
 
+            {TYPE} cmdargs = {TYPE}.NewArray((from arg in argv
+                                              where !arg.Contains(""{AutoItFunctions.MMF_CMDARG}"")
+                                              select ({TYPE})arg).ToArray());
             {MACROS_GLOBAL} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, s =>
             {{
                 switch (s.ToLower())
                 {{
+                    case ""arguments"": return cmdargs;
                     // TODO
                 }}
                 return null;
@@ -149,7 +159,22 @@ namespace {NAMESPACE}
             {DISCARD} = {TYPE}.Default;
             {TYPE} result = ___globalentrypoint();
 
-            // TODO : do something with the main result ?
+            if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDARG}=.+"")) is string mmfarg)
+                try
+                {{
+                    mmfarg = mmfarg.Replace(""{AutoItFunctions.MMF_CMDARG}="", """").Trim();
+
+                    MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(mmfarg);
+                    MemoryMappedViewAccessor acc = mmf.CreateViewAccessor();
+                    byte[] ser = result.Serialize();
+
+                    acc.Write(0, ser.Length);
+                    acc.WriteArray(4, ser, 0, ser.Length);
+                    acc.Dispose();
+                }}
+                catch
+                {{
+                }}
         }}
 
         private static {TYPE} ___globalentrypoint()

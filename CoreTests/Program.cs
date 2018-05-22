@@ -1,6 +1,4 @@
-﻿using System;
-
-using AutoItCoreLibrary;
+﻿using AutoItCoreLibrary;
 
 namespace CoreTests
 {
@@ -24,9 +22,7 @@ namespace CoreTests
 
             void* ptr = mat[1, 1, 1];
             byte val = *((byte*)ptr);
-
-
-
+            
             AutoItFunctions.Debug(mat);
         }
 

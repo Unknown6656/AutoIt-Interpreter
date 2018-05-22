@@ -17,8 +17,8 @@
     [-] syntax reference (differences betw. AU++ and AU3)
     [-] official syntax tree of AU++
     [ ] examples
-[-] fix start functions
-[-] fix exit functions
+[x] fix start functions
+[x] fix exit functions
 [x] const variables : assignment
 [x] -Wall compiler flag
 [x] BSOD/KPanic-function
@@ -28,7 +28,7 @@
 [-] implement all macros
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
-[ ] implement main return
+[-] implement main return
 [x] implement local macros
 [x] fix ternary inline if
 [ ] COM-interop

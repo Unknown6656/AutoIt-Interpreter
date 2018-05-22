@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Linq;
 using System.Text;
 using System;
+using System.IO;
 
 namespace AutoItCoreLibrary
 {
@@ -18,7 +19,6 @@ namespace AutoItCoreLibrary
         #region PRIVATE FIELDS
 
         private readonly AutoItVariantData _data;
-        private static long _ccntr = 1;
 
         #endregion
         #region PUBLIC PROPERTIES
@@ -207,7 +207,7 @@ namespace AutoItCoreLibrary
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         #endregion
-        #region CALLS, DELEGATES, CURRYING
+        #region CALLS + DELEGATES + CURRYING
 
         internal static AutoItVariantType CreateDelegate(MethodInfo m)
         {
@@ -270,6 +270,73 @@ namespace AutoItCoreLibrary
         }
 
         public AutoItVariantType Call(params AutoItVariantType[] argv) => Call(argv.Select(x => x as object).ToArray());
+
+        #endregion
+        #region SERIALIZATION
+
+        public byte[] Serialize()
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter wr = new BinaryWriter(ms))
+            {
+                if (IsString)
+                {
+                    wr.Write((byte)0xff);
+                    wr.Write(ToString());
+                }
+                else
+                {
+                    AutoItVariantType[] arr = this.ToArray();
+
+                    wr.Write((byte)0x20);
+                    wr.Write(arr.Length);
+
+                    foreach (AutoItVariantType elem in arr)
+                    {
+                        byte[] ser = elem.Serialize();
+
+                        wr.Write(ser.Length);
+                        wr.Write(ser);
+                    }
+                }
+
+                return ms.ToArray();
+            }
+        }
+
+        public static AutoItVariantType Deserialize(byte[] arr)
+        {
+            if (arr is null)
+                throw new ArgumentNullException(nameof(arr));
+
+            using (MemoryStream ms = new MemoryStream(arr))
+            using (BinaryReader rd = new BinaryReader(ms))
+            {
+                switch (rd.ReadByte())
+                {
+                    case 0xff:
+                        return rd.ReadString();
+                    case 0x20:
+                        AutoItVariantType[] array = new AutoItVariantType[rd.ReadInt32()];
+
+                        for (int i = 0; i < array.Length; ++i)
+                        {
+                            byte[] ser = new byte[rd.ReadInt32()];
+
+                            rd.Read(ser, 0, ser.Length);
+                            array[i] = Deserialize(ser);
+                        }
+
+                        return NewArray(array);
+                    default:
+                        throw new ArgumentException("Invalid data type descriptor.", nameof(arr));
+                }
+            }
+        }
+
+        public static AutoItVariantType Deserialize(byte[] arr, int offset) => Deserialize(arr, offset, (arr?.Length ?? 0) - offset);
+
+        public static AutoItVariantType Deserialize(byte[] arr, int offset, int length) => Deserialize(arr?.Skip(offset)?.Take(length)?.ToArray());
 
         #endregion
         #region INSTANCE FUNCTIONS

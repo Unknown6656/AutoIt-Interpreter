@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.IO.MemoryMappedFiles;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -23,6 +24,7 @@ namespace AutoItCoreLibrary
     {
         public const string FUNC_PREFIX = "__userfunc_";
         public const string PINVOKE_PREFIX = "__pinvoke_";
+        public const string MMF_CMDARG = "____shared_memory_mapped_file____";
 
         private static var __error;
         private static var __extended;
@@ -1117,6 +1119,57 @@ namespace AutoItCoreLibrary
                 return var.FromString(v?.ToString() ?? "");
             else
                 throw new NotImplementedException($"Cannot convert the type '{tstr}' to a variant (yet).");
+        }
+        [BuiltinFunction]
+        public static var CallAutoItProgram(var path, var args)
+        {
+            try
+            {
+                string mmfname = $"__unique{DateTime.Now.Ticks:x16}";
+
+                args &= $"{MMF_CMDARG}={mmfname}";
+
+                MemoryMappedFile mmf = MemoryMappedFile.CreateOrOpen(mmfname, 1024 * 1024 * 64);
+                MemoryMappedViewAccessor acc = mmf.CreateViewAccessor();
+
+                using (Process proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = path,
+                        Arguments = args,
+                        UseShellExecute = true,
+                    }
+                })
+                {
+                    proc.Start();
+                    proc.WaitForExit();
+                }
+
+                int blen = acc.ReadInt32(0);
+                byte[] arr = new byte[blen];
+
+                acc.ReadArray(4, arr, 0, blen);
+                acc.Dispose();
+                mmf.Dispose();
+
+                return var.Deserialize(arr);
+            }
+            catch (Exception ex)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                while (ex != null)
+                {
+                    sb.AppendLine($"An {ex.GetType()} occured:  {ex.Message}\n{ex.StackTrace}");
+
+                    ex = ex.InnerException;
+                }
+
+                SetError(1, sb.ToString());
+
+                return var.Default;
+            }
         }
 
         #endregion
