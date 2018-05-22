@@ -18,8 +18,6 @@ namespace AutoItInterpreter
     using static InterpreterConstants;
     using static ExpressionAST;
 
-    using EXPRESSIONS = Microsoft.FSharp.Collections.FSharpList<ExpressionAST.EXPRESSION>;
-
 
     public static class ApplicationGenerator
     {
@@ -171,19 +169,7 @@ namespace {NAMESPACE}
                     foreach (AST_LOCAL_VARIABLE v in function.ExplicitLocalVariables)
                         sb.AppendLine($@"            {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e) : TYPE + ".Default")};");
 
-                    foreach ((string func, _) in state.StartFunctions)
-                        _print(new AST_EXPRESSION_STATEMENT
-                        {
-                            Expression = EXPRESSION.NewFunctionCall(new Tuple<string, EXPRESSIONS>(func, EXPRESSIONS.Empty))
-                        }, 4);
-
                     _print(function, 4);
-
-                    foreach ((string func, _) in state.ExitFunctions)
-                        _print(new AST_EXPRESSION_STATEMENT
-                        {
-                            Expression = EXPRESSION.NewFunctionCall(new Tuple<string, EXPRESSIONS>(func, EXPRESSIONS.Empty))
-                        }, 4);
 
                     sb.AppendLine($@"
             return {TYPE}.Default;

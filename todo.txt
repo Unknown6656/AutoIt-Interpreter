@@ -33,5 +33,5 @@
 [x] fix ternary inline if
 [ ] COM-interop
 [ ] more unit tests
-[-] serial API
+[x] serial API
 [x] ifn't

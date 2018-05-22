@@ -166,6 +166,7 @@ namespace AutoItInterpreter
                 Language = ps.Language,
             };
             s.StartFunctions.AddRange(ps.StartFunctions);
+            s.ExitFunctions.AddRange(ps.ExitFunctions);
             s._errors.AddRange(ps.Errors);
 
             foreach (var kvp in ps.PInvokeFunctions)

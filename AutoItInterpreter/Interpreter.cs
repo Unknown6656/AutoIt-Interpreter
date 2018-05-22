@@ -903,7 +903,8 @@ namespace AutoItInterpreter
                         {
                             err("errors.preproc.directive_invalid_value", value, name);
                         }
-                    })
+                    }),
+                    (".*", _ => err("errors.preproc.unknown_directive", line))
                 );
 
                 return inclpath;
@@ -1179,6 +1180,19 @@ namespace AutoItInterpreter
 
                                     if (i.Name != GLOBAL_FUNC_NAME)
                                         _currfunc.Statements = _currfunc.Statements.Concat(process(new RETURN(i)) as AST_STATEMENT[]).ToArray();
+                                    else
+                                        _currfunc.Statements = state.StartFunctions.Select(func => new AST_EXPRESSION_STATEMENT
+                                                               {
+                                                                   Context = func.Context,
+                                                                   Expression = EXPRESSION.NewFunctionCall(new Tuple<string, FSharpList<EXPRESSION>>(func.Func, FSharpList<EXPRESSION>.Empty))
+                                                               })
+                                                               .Concat(_currfunc.Statements)
+                                                               .Concat(state.ExitFunctions.Select(func => new AST_EXPRESSION_STATEMENT
+                                                               {
+                                                                   Context = func.Context,
+                                                                   Expression = EXPRESSION.NewFunctionCall(new Tuple<string, FSharpList<EXPRESSION>>(func.Func, FSharpList<EXPRESSION>.Empty))
+                                                               }))
+                                                               .ToArray();
 
                                     return _currfunc;
                                 }
@@ -2041,7 +2055,11 @@ namespace AutoItInterpreter
                 }
 
                 foreach (string uncalled in state.ASTFunctions.Keys.Except(calls.Select(x => x.Item2).Distinct()))
-                    if ((uncalled != GLOBAL_FUNC_NAME) && !uncalled.Contains('λ') && !λassignments.ContainsKey(uncalled.ToLower()))
+                    if ((uncalled != GLOBAL_FUNC_NAME)
+                     && !uncalled.Contains('λ')
+                     && !λassignments.ContainsKey(uncalled.ToLower())
+                     && !state.StartFunctions.Any(x => x.Func.Equals(uncalled, StringComparison.InvariantCultureIgnoreCase))
+                     && !state.ExitFunctions.Any(x => x.Func.Equals(uncalled, StringComparison.InvariantCultureIgnoreCase)))
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
             }
 

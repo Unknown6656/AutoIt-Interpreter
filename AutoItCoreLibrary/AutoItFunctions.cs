@@ -970,6 +970,72 @@ namespace AutoItCoreLibrary
         public static var SerialWrite(var port, var data) => Try(() => port.UseGCHandledData<SerialPort>(p => p.Write(data)));
         [BuiltinFunction, CompatibleOS(OS.Windows)]
         public static var SerialFlush(var port) => Try(() => port.UseGCHandledData<SerialPort>(p => p.BaseStream.Flush()));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialRead(var port)
+        {
+            var res = "";
+
+            try
+            {
+                port.UseGCHandledData<SerialPort>(p => res = p.ReadExisting());
+            }
+            catch
+            {
+                SetError(1);
+            }
+
+            return res;
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialReadLine(var port)
+        {
+            var res = "";
+
+            try
+            {
+                port.UseGCHandledData<SerialPort>(p => res = p.ReadLine());
+            }
+            catch
+            {
+                SetError(1);
+            }
+
+            return res;
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialWriteByte(var port, var b) => Try(() => port.UseGCHandledData<SerialPort>(p => p.Write(new byte[] { b.ToByte() }, 0, 1)));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialReadByte(var port)
+        {
+            var res = -1;
+
+            try
+            {
+                port.UseGCHandledData<SerialPort>(p => res = var.FromInt(p.ReadByte()));
+            }
+            catch
+            {
+            }
+
+            return res;
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialReadTo(var port, var val)
+        {
+            var res = "";
+
+            try
+            {
+                port.UseGCHandledData<SerialPort>(p => res = p.ReadTo(val));
+            }
+            catch
+            {
+                SetError(-1);
+            }
+
+            return res;
+        }
+
 
         //TODO
 
