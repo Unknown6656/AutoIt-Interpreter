@@ -914,11 +914,64 @@ namespace AutoItCoreLibrary
             return var.Default;
         }
 
-        [BuiltinFunction]
-        public static var SerialOpen()
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialCreate(var name, var? baud = null, var? parity = null, var? databits = null, var? stopbits = null)
         {
-            Serial
+            try
+            {
+                int rate = (baud ?? "9600").ToInt();
+                int bdata = (databits ?? "8").ToInt();
+                StopBits bstop = StopBits.One;
+                Parity par = Parity.None;
+
+                switch ((parity ?? "N").ToUpper())
+                {
+                    case "O":
+                        par = Parity.Odd;
+                        break;
+                    case "E":
+                        par = Parity.Even;
+                        break;
+                    case "M":
+                        par = Parity.Mark;
+                        break;
+                    case "S":
+                        par = Parity.Space;
+                        break;
+                }
+
+                switch (stopbits ?? "1")
+                {
+                    case "0":
+                        bstop = StopBits.None;
+                        break;
+                    case "1.5":
+                        bstop = StopBits.OnePointFive;
+                        break;
+                    case "2":
+                        bstop = StopBits.Two;
+                        break;
+                }
+
+                return var.NewGCHandledData(new SerialPort(name, rate, par, bdata, bstop));
+            }
+            catch
+            {
+                return var.Null;
+            }
         }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialOpen(var port) => Try(() => port.UseGCHandledData<SerialPort>(p => p.Open()));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialClose(var port) => Try(() => port.UseGCHandledData<SerialPort>(p => p.Close()));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialDestroy(var port) => Try(() => port.UseDisposeGCHandledData<SerialPort>(p => p.Close()));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialWrite(var port, var data) => Try(() => port.UseGCHandledData<SerialPort>(p => p.Write(data)));
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var SerialFlush(var port) => Try(() => port.UseGCHandledData<SerialPort>(p => p.BaseStream.Flush()));
+
+        //TODO
 
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)

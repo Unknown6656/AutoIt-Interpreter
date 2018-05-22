@@ -2442,7 +2442,7 @@ namespace AutoItCoreLibrary
         Even = 2,
         Mark = 3,
         Space = 4
-    };
+    }
 
     public enum StopBits
     {
@@ -2450,8 +2450,7 @@ namespace AutoItCoreLibrary
         One = 1,
         Two = 2,
         OnePointFive = 3
-
-    };
+    }
 
     public enum Handshake
     {
@@ -2459,5 +2458,5 @@ namespace AutoItCoreLibrary
         XOnXOff,
         RequestToSend,
         RequestToSendXOnXOff
-    };
+    }
 }
