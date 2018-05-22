@@ -17,8 +17,8 @@
     [-] syntax reference (differences betw. AU++ and AU3)
     [-] official syntax tree of AU++
     [ ] examples
-[-] start functions
-[-] exit functions
+[x] start functions
+[x] exit functions
 [x] const variables : assignment
 [x] -Wall compiler flag
 [x] BSOD/KPanic-function
