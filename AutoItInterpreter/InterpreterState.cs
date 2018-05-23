@@ -30,21 +30,27 @@ namespace AutoItInterpreter
 
         private static readonly OS[] ALL_OS = new[] { OS.Windows, OS.MacOS, OS.Linux };
         private static readonly CompilerIntrinsicMessage[] NO_MSG = new CompilerIntrinsicMessage[0];
-        public static readonly (string Name, int MandatoryArgumentCount, int OptionalArgumentCount, OS[] Systems, bool IsUnsafe, CompilerIntrinsicMessage[] msgattrs)[] BUILT_IN_FUNCTIONS = new[]
-        {
-            ("eval", 1, 0, ALL_OS, false, NO_MSG),
-            ("assign", 2, 1, ALL_OS, false, NO_MSG),
-            ("isdeclared", 1, 0, ALL_OS, false, NO_MSG)
-        }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
-                 let attrs = m.GetCustomAttributes(true)
-                 where attrs.Any(attr => attr is BuiltinFunctionAttribute)
-                 let us = attrs.Any(attr => attr is RequiresUnsafeAttribute)
-                 let os = attrs.Filter<object, CompatibleOSAttribute>().FirstOrDefault()?.Systems ?? ALL_OS
-                 let msgs = attrs.Filter<object, CompilerIntrinsicMessage>().ToArray()
-                 let pars = m.GetParameters()
-                 let opars = pars.Where(p => p.IsOptional).ToArray()
-                 select (m.Name.ToLower(), pars.Length - opars.Length, opars.Length, os, us, msgs)).ToArray();
+        public static readonly BuiltinFunctionInformation[] BUILT_IN_FUNCTIONS;
 
+
+        static InterpreterConstants()
+        {
+            BUILT_IN_FUNCTIONS = new BuiltinFunctionInformation[]
+            {
+                ("eval", 1, 0, false, ALL_OS, false, NO_MSG),
+                ("assign", 2, 1, false, ALL_OS, false, NO_MSG),
+                ("isdeclared", 1, 0, false, ALL_OS, false, NO_MSG)
+            }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
+                     let attrs = m.GetCustomAttributes(true)
+                     where attrs.Any(attr => attr is BuiltinFunctionAttribute)
+                     let us = attrs.Any(attr => attr is RequiresUnsafeAttribute)
+                     let os = attrs.Filter<object, CompatibleOSAttribute>().FirstOrDefault()?.Systems ?? ALL_OS
+                     let msgs = attrs.Filter<object, CompilerIntrinsicMessage>().ToArray()
+                     let pars = m.GetParameters()
+                     let opars = pars.Where(p => p.IsOptional).ToArray()
+                     let varargs = (pars.Length > 0) && pars[pars.Length - 1].GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0
+                     select new BuiltinFunctionInformation(m.Name.ToLower(), pars.Length - opars.Length, opars.Length, varargs, os, us, msgs)).ToArray();
+        }
 
         public static bool IsReservedCall(string name)
         {
@@ -299,6 +305,32 @@ namespace AutoItInterpreter
         {
             Source = err.ErrorContext.FilePath.FullName
         };
+    }
+
+    public readonly struct BuiltinFunctionInformation
+    {
+        public CompilerIntrinsicMessage[] IntrinsicMessages { get; }
+        public int MandatoryArgumentCount { get; }
+        public int OptionalArgumentCount { get; }
+        public bool HasParamsArguments { get; }
+        public bool IsUnsafe { get; }
+        public OS[] Systems { get; }
+        public string Name { get; }
+
+
+        public BuiltinFunctionInformation(string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs)
+        {
+            Name = name;
+            MandatoryArgumentCount = m_argc;
+            OptionalArgumentCount = o_argc;
+            HasParamsArguments = @params;
+            IsUnsafe = @unsafe;
+            Systems = sys;
+            IntrinsicMessages = attrs;
+        }
+
+        public static implicit operator BuiltinFunctionInformation((string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs) t) =>
+            new BuiltinFunctionInformation(t.name, t.m_argc, t.o_argc, t.@params, t.sys, t.@unsafe, t.attrs);
     }
 
     public struct DefinitionContext

@@ -30,18 +30,16 @@
 [x] implement main return
 [x] implement non-string main arguments
 [x] implement local macros
-[x] fix ternary inline if
 [ ] COM-interop
-[ ] more unit tests
 [x] serial API
 [x] ifn't
-[ ] fix params calls
+[x] fix params calls
 [-] fix expression parser
     [x] fix single equals mis-interpreted as assignment
     [x] fix array indices
     [ ] fix @|.. and @.. operators
     [x] fix ?: operator
-[x] fix loops : exitloop / breakloop / continueloop
+[x] fix loops : exitloop / continueloop
 [ ] unit tests
     [ ] IMPL boolean optimization
     [ ] λ-functionality

@@ -1996,21 +1996,27 @@ namespace AutoItInterpreter
 
                     if (BUILT_IN_FUNCTIONS.Any(x => x.Name == lfunc))
                     {
-                        (string f, int mac, int oac, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.First(x => x.Name == lfunc);
+                        BuiltinFunctionInformation bif = BUILT_IN_FUNCTIONS.First(x => x.Name == lfunc);
 
-                        if (!os.Contains(target))
-                            err("errors.astproc.invalid_system", target, string.Join(",", os));
+                        if (!bif.Systems.Contains(target))
+                            err("errors.astproc.invalid_system", target, string.Join(",", bif.Systems));
 
-                        if (us && !options.AllowUnsafeCode)
-                            err("errors.astproc.unsafe_func", f);
+                        if (bif.IsUnsafe && !options.AllowUnsafeCode)
+                            err("errors.astproc.unsafe_func", bif.Name);
 
-                        if (f != "dllcall")
-                            if (args.Length < mac)
-                                err("errors.astproc.not_enough_args", f, mac, args.Length);
-                            else if (args.Length > mac + oac)
-                                err("errors.astproc.too_many_args", f, mac + oac);
+                        if (bif.Name != "dllcall")
+                            if (bif.HasParamsArguments)
+                            {
+                                if (args.Length - 1 < bif.MandatoryArgumentCount)
+                                    err("errors.astproc.not_enough_args", bif.Name, bif.MandatoryArgumentCount, args.Length);
+                            }
+                            else
+                                if (args.Length < bif.MandatoryArgumentCount)
+                                    err("errors.astproc.not_enough_args", bif.Name, bif.MandatoryArgumentCount, args.Length);
+                                else if (args.Length > bif.MandatoryArgumentCount + bif.OptionalArgumentCount)
+                                    err("errors.astproc.too_many_args", bif.Name, bif.MandatoryArgumentCount + bif.OptionalArgumentCount);
 
-                        foreach (CompilerIntrinsicMessage msg in msgs)
+                        foreach (CompilerIntrinsicMessage msg in bif.IntrinsicMessages)
                             if (msg is WarningAttribute w)
                                 state.ReportKnownWarning(w.MessageName, context, w.Arguments);
                             else if (msg is NoteAttribute n)
@@ -2055,19 +2061,22 @@ namespace AutoItInterpreter
                         pcnt = state.ASTFunctions[lfunc].Parameters.Count(x => !(x is AST_FUNCTION_PARAMETER_OPT));
                     else
                     {
-                        (string Name, int mcnt, _, OS[] os, bool us, CompilerIntrinsicMessage[] msgs) = BUILT_IN_FUNCTIONS.FirstOrDefault(x => x.Name.ToLower() == lfunc);
+                        BuiltinFunctionInformation bif = BUILT_IN_FUNCTIONS.FirstOrDefault(x => x.Name.ToLower() == lfunc);
 
-                        if (Name != null)
+                        if (bif.Name != null)
                         {
-                            pcnt = mcnt;
+                            pcnt = bif.MandatoryArgumentCount;
 
-                            if (!os.Contains(target))
-                                err("errors.astproc.invalid_system", target, string.Join(",", os));
+                            if (bif.HasParamsArguments && (pcnt == 0))
+                                pcnt = int.MinValue;
 
-                            if (us && !options.AllowUnsafeCode)
+                            if (!bif.Systems.Contains(target))
+                                err("errors.astproc.invalid_system", target, string.Join(",", bif.Systems));
+
+                            if (bif.IsUnsafe && !options.AllowUnsafeCode)
                                 err("errors.astproc.unsafe_func", func);
 
-                            foreach (CompilerIntrinsicMessage msg in msgs)
+                            foreach (CompilerIntrinsicMessage msg in bif.IntrinsicMessages)
                                 if (msg is WarningAttribute w)
                                     state.ReportKnownWarning(w.MessageName, context, w.Arguments);
                                 else if (msg is NoteAttribute n)
@@ -2075,7 +2084,7 @@ namespace AutoItInterpreter
                         }
                     }
 
-                    if (pcnt < 0)
+                    if ((pcnt < 0) && (pcnt != int.MinValue))
                         err("errors.astproc.func_not_declared", func);
                     else if (pcnt > 0)
                         if (start)
