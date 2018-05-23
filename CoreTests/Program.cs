@@ -1,4 +1,5 @@
-﻿using AutoItCoreLibrary;
+﻿using System.IO.MemoryMappedFiles;
+using AutoItCoreLibrary;
 
 namespace CoreTests
 {
@@ -22,7 +23,11 @@ namespace CoreTests
 
             void* ptr = mat[1, 1, 1];
             byte val = *((byte*)ptr);
-            
+
+            v xx = AutoItFunctions.CallAutoItProgram(@"L:\Projects.VisualStudio\AutoItInterpreter\bin\test\.autoit++-compiler\program1\bin\win-x64\autoitapplication.exe", "");
+
+            AutoItFunctions.Debug(xx);
+
             AutoItFunctions.Debug(mat);
         }
 

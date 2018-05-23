@@ -443,7 +443,7 @@ using System.Reflection;
                 StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = dir.FullName,
-                    Arguments = $"new console -n \"{name}\" --force",
+                    Arguments = $"new console -n \"{name}\" -l \"C#\" --force",
                     FileName = "dotnet",
                     CreateNoWindow = true,
                 }

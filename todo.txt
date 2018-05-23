@@ -28,7 +28,8 @@
 [-] implement all macros
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
-[-] implement main return
+[x] implement main return
+[-] implement non-string main arguments
 [x] implement local macros
 [x] fix ternary inline if
 [ ] COM-interop
