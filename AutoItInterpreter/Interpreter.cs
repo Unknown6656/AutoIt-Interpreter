@@ -97,7 +97,7 @@ namespace AutoItInterpreter
                 ASTProcessor.ParseExpressionAST(state, Options);
 
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
-                int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName);
+                int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName, out string log);
                 void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null, 0), args);
 
                 if (ret != 0)
@@ -329,10 +329,15 @@ namespace AutoItInterpreter
                         ls &= ~LineState.Comment;
                     else if (ls == LineState.Regular)
                     {
-                        if (tline.Match(@"\;[^\""]*$", out Match m))
-                            tline = tline.Remove(m.Index).Trim();
-                        else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
-                            tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+                        Match m;
+
+                        if (tline.Contains(';'))
+                            if (tline.Match(@"\;[^\""\']*$", out m))
+                                tline = tline.Remove(m.Index).Trim();
+                            else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
+                                tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+                            else if (tline.Match(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", out m))
+                                tline = tline.Remove(m.Groups["cmt"].Index).Trim();
 
                         if (tline.Match(@"\s+_\s*$", out m))
                         {
@@ -617,7 +622,7 @@ namespace AutoItInterpreter
                             (@"^while\s+(?<cond>.+)$", new[] { Switch, Select }, m => OpenBlock(While, new WHILE(curr, m.Get("cond")))),
                             (@"^exitloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                             {
-                                int cnt = AnyParentCount (For, Do, While);
+                                int cnt = AnyParentCount(For, Do, While);
 
                                 if (cnt == 0)
                                     err("errors.preproc.misplaced_exitloop", true);
@@ -632,12 +637,14 @@ namespace AutoItInterpreter
 
                                     Append(new BREAK(curr, levels));
                                 }
-                                else
+                                else if (m.Get("levels").Trim().Length > 0)
                                     err("warnings.preproc.exit_level_invalid", false, m.Get("levels"));
+                                else
+                                    Append(new BREAK(curr, 0));
                             }),
                             (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                             {
-                                int cnt = AnyParentCount (For, Do, While);
+                                int cnt = AnyParentCount(For, Do, While);
 
                                 if (cnt == 0)
                                     err("errors.preproc.misplaced_continueloop", true);
@@ -652,8 +659,10 @@ namespace AutoItInterpreter
 
                                     Append(new CONTINUE(curr, levels));
                                 }
-                                else
+                                else if (m.Get("levels").Trim().Length > 0)
                                     err("warnings.preproc.continue_level_invalid", false, m.Get("levels"));
+                                else
+                                    Append(new CONTINUE(curr, 0));
                             }),
                             ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
                             ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
@@ -990,6 +999,20 @@ namespace AutoItInterpreter
 
         private static class ASTProcessor
         {
+            private static string TrimBoxingParentheseses(string expr)
+            {
+                if (expr.Match(@"^(?<pre>\(+)[^\(](.*[^\)])?(?<post>\)+)$", out Match m))
+                {
+                    int pre = m.Get("pre").Length;
+                    int post = m.Get("post").Length;
+                    int tlen = Math.Min(pre, post);
+
+                    return expr.Substring(tlen, expr.Length - (2 * tlen));
+                }
+
+                return expr;
+            }
+
             internal static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
             {
                 List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
@@ -1035,7 +1058,7 @@ namespace AutoItInterpreter
 
                         try
                         {
-                            MULTI_EXPRESSION[] mes = p.Parse(expr);
+                            MULTI_EXPRESSION[] mes = p.Parse(TrimBoxingParentheseses(expr));
 
                             funccalls.AddRange(from exp in mes.SelectMany(me =>
                                                {

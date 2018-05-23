@@ -394,12 +394,29 @@ namespace UnitTests
         public static void AssertEqualExpressions(string e1, string e2, bool assign) => Assert.IsTrue(AreEqual(ParseExpression(e1, assign), ParseExpression(e2, assign)));
 
         public static void AssertEqualProcessedExpressions(string e1, string e2, bool assign) => Assert.IsTrue(AreEqual(ProcessExpression(ParseExpression(e1, assign)), ProcessExpression(ParseExpression(e2, assign))));
+
+        public static U AssertIs<T, U>(T t)
+            where U : T
+        {
+            if (t is U u)
+                return u;
+            else
+            {
+                Assert.Fail($"\"{t}\" is not of the type {typeof(U)}.");
+
+                return default;
+            }
+        }
     }
+
+#pragma warning disable RCS1194
 
     public sealed class SkippedException
         : Exception
     {
     }
+
+#pragma warning restore
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class SkipAttribute

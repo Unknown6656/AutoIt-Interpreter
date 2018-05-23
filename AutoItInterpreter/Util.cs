@@ -18,7 +18,7 @@ namespace AutoItInterpreter
     {
         public static string[] SplitIntoLines(this string s) => (s ?? "").Replace("\r\n", "\n").Split('\n');
 
-        public static bool Match(this string s, string p, out Match m, RegexOptions o = RegexOptions.IgnoreCase | RegexOptions.Compiled) => (m = Regex.Match(s, p, o)).Success;
+        public static bool Match(this string s, string p, out Match m, RegexOptions o = RegexOptions.IgnoreCase | RegexOptions.Compiled) => (m = new Regex(p, o, TimeSpan.FromSeconds(5)).Match(s)).Success;
 
         public static bool Match(this string s, params (string, Action<Match>)[] p)
         {
@@ -214,7 +214,7 @@ namespace AutoItInterpreter
                 else
                 {
                     string tline = line.TrimStart();
-                    string pad = line.Remove(line.Length - tline.Length);
+                    string pad = (line + ' ').Remove(line.Length - tline.Length);
                     int left = Console.CursorLeft;
 
                     Console.Write(pad);

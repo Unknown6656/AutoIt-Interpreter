@@ -4,7 +4,6 @@
     [x] λ currying
 [x] one-liner function declarations
 [x] substrings
-[ ] fix @|.. and @.. operators
 [x] arrays
     [x] declaration
     [x] redim
@@ -29,10 +28,16 @@
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
 [x] implement main return
-[-] implement non-string main arguments
+[x] implement non-string main arguments
 [x] implement local macros
 [x] fix ternary inline if
 [ ] COM-interop
 [ ] more unit tests
 [x] serial API
 [x] ifn't
+[-] fix expression parser
+    [-] fix single equals mis-interpreted as assignment
+    [x] fix array indices
+    [ ] fix @|.. and @.. operators
+    [ ] fix ?: operator
+[ ] fix loops : exitloop / breakloop / continueloop

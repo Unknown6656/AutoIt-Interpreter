@@ -322,10 +322,10 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduce4 !@43 !@43 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
         reduce3 !@43 !@43 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
         reduce0 !@43 !@44
-        //reduce2 !@44 !@45 nt_array_indexers (fun e i -> let rec acc e = function
-        //                                                                | i::is -> acc (ArrayAccess(e, i)) is
-        //                                                                | [] -> e
-        //                                                acc e i)
+        reduce2 !@44 !@45 nt_array_indexers (fun e i -> let rec acc e = function
+                                                                        | i::is -> acc (ArrayAccess(e, i)) is
+                                                                        | [] -> e
+                                                        acc e i)
         reduce0 !@44 !@45
         reduce1 !@45 nt_funccall FunctionCall
         reduce0 !@45 !@46

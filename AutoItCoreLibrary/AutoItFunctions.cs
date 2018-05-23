@@ -24,7 +24,8 @@ namespace AutoItCoreLibrary
     {
         public const string FUNC_PREFIX = "__userfunc_";
         public const string PINVOKE_PREFIX = "__pinvoke_";
-        public const string MMF_CMDARG = "____shared_memory_mapped_file____";
+        public const string MMF_CMDRARG = "____input_shared_memory_mapped_file____";
+        public const string MMF_CMDPARG = "____output_shared_memory_mapped_file____";
 
         private static var __error;
         private static var __extended;
@@ -1125,35 +1126,48 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                string mmfname = $"__unique{DateTime.Now.Ticks:x16}";
+                string mmfname1 = $"__input{DateTime.Now.Ticks:x16}";
+                string mmfname2 = $"__output{DateTime.Now.Ticks:x16}";
+                byte[] ser = args.Serialize();
+                const int cap = 1024 * 1024 * 64;
 
-                args &= $"{MMF_CMDARG}={mmfname}";
-
-                MemoryMappedFile mmf = MemoryMappedFile.CreateOrOpen(mmfname, 1024 * 1024 * 64);
-                MemoryMappedViewAccessor acc = mmf.CreateViewAccessor();
-
-                using (Process proc = new Process
+                using (MemoryStream ms = new MemoryStream(ser))
+                using (MemoryMappedFile mmf1 = MemoryMappedFile.CreateOrOpen(mmfname1, ser.Length + 4))
+                using (MemoryMappedFile mmf2 = MemoryMappedFile.CreateOrOpen(mmfname2, cap))
+                using (MemoryMappedViewAccessor acc2 = mmf2.CreateViewAccessor())
                 {
-                    StartInfo = new ProcessStartInfo
+                    using (MemoryMappedViewAccessor acc1 = mmf1.CreateViewAccessor())
                     {
-                        FileName = path,
-                        Arguments = args,
-                        UseShellExecute = true,
+                        acc1.Write(0, ser.Length);
+                        acc1.WriteArray(4, ser, 0, ser.Length);
+                        acc1.Flush();
                     }
-                })
-                {
-                    proc.Start();
-                    proc.WaitForExit();
+
+                    using (Process proc = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = path,
+                            Arguments = $"{MMF_CMDPARG}={mmfname1} {MMF_CMDRARG}={mmfname2}",
+                            UseShellExecute = true,
+                        }
+                    })
+                    {
+                        proc.Start();
+                        proc.WaitForExit();
+                    }
+
+                    int blen = acc2.ReadInt32(0);
+
+                    if (blen > cap - 4)
+                        throw new InvalidOperationException($"The return value is greater than {(cap - 4) / 1024f:F1} KB.");
+
+                    byte[] dser = new byte[blen];
+
+                    acc2.ReadArray(4, dser, 0, blen);
+
+                    return var.Deserialize(dser);
                 }
-
-                int blen = acc.ReadInt32(0);
-                byte[] arr = new byte[blen];
-
-                acc.ReadArray(4, arr, 0, blen);
-                acc.Dispose();
-                mmf.Dispose();
-
-                return var.Deserialize(arr);
             }
             catch (Exception ex)
             {

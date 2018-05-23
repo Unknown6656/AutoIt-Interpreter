@@ -2,7 +2,7 @@
   "profiles": {
     "CSAutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-i=test/program1.au3 -v -g -k -c -u"
+      "commandLineArgs": "-i=c:\\Users\\unknown6656\\Documents\\auotit\\dnsclient -v -g -k -c -u"
     }
   }
 }

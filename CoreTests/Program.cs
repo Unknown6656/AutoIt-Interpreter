@@ -1,4 +1,5 @@
-﻿using System.IO.MemoryMappedFiles;
+﻿using System;
+using System.IO.MemoryMappedFiles;
 using AutoItCoreLibrary;
 
 namespace CoreTests
@@ -17,16 +18,10 @@ namespace CoreTests
                     for (int x = 0; x < 3; ++x)
                         mat[z, y, x] = $"({z}|{y}|{x})";
 
-            AutoItFunctions.Debug(mat);
-
             mat[1, 1, 1] = v.NewDelegate<AutoItDelegate4Opt1>(TOP_KEK);
 
             void* ptr = mat[1, 1, 1];
             byte val = *((byte*)ptr);
-
-            v xx = AutoItFunctions.CallAutoItProgram(@"L:\Projects.VisualStudio\AutoItInterpreter\bin\test\.autoit++-compiler\program1\bin\win-x64\autoitapplication.exe", "");
-
-            AutoItFunctions.Debug(xx);
 
             AutoItFunctions.Debug(mat);
         }
