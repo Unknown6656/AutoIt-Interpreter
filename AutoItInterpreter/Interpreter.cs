@@ -1842,10 +1842,17 @@ namespace AutoItInterpreter
                         return null;
                     }
 
-                    dynamic res = __inner();
+                    dynamic res = null;
 
-                    if (res is AST_STATEMENT s)
-                        s.Context = e.DefinitionContext;
+                    try
+                    {
+                        if ((res = __inner()) is AST_STATEMENT s)
+                            s.Context = e.DefinitionContext;
+                    }
+                    catch (Exception ex)
+                    {
+                        state.ReportKnownError("errors.astproc.ast_error", e.DefinitionContext, ex.Print());
+                    }
 
                     constants.Pop();
 

@@ -64,7 +64,8 @@
             "init_dimension_mismatch": 1226,
             "variable_is_const": 1227,
             "start_func_args": 1228,
-            "exit_func_args": 1229
+            "exit_func_args": 1229,
+            "ast_error": 1230
         },
         "generator": {
             "cannot_create": 1301,

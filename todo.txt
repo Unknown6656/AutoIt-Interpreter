@@ -35,9 +35,27 @@
 [ ] more unit tests
 [x] serial API
 [x] ifn't
+[ ] fix params calls
 [-] fix expression parser
-    [-] fix single equals mis-interpreted as assignment
+    [x] fix single equals mis-interpreted as assignment
     [x] fix array indices
     [ ] fix @|.. and @.. operators
-    [ ] fix ?: operator
-[ ] fix loops : exitloop / breakloop / continueloop
+    [x] fix ?: operator
+[x] fix loops : exitloop / breakloop / continueloop
+[ ] unit tests
+    [ ] IMPL boolean optimization
+    [ ] λ-functionality
+    [ ] arrays / matrices
+    [ ] optimization
+    [ ] object expressions
+    [ ] for-loops
+    [ ] while-loops
+    [ ] foreach-loops
+    [ ] switch..case
+    [ ] select..case
+    [ ] P/Invoke
+    [ ] byref calls
+    [ ] globals and parameter scoping
+    [ ] UDP / TCP API
+    [ ] Serial API
+    [ ] Compiler robustness

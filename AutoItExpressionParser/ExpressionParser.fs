@@ -283,10 +283,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reducebe 10 BinaryLeft t_operator_comp_gte GreaterEqual
         reducebe 11 BinaryLeft t_operator_comp_gt Greater
         reducebe 12 BinaryLeft t_operator_comp_neq Unequal
-        ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
-        // reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
-        // reduce3 !@13 !@14 t_symbol_equal !@14 (fun x _ y -> BinaryExpression(EqualCaseInsensitive, x, y))
-        reduce0 !@13 !@14
+        reducebe 13 BinaryLeft t_symbol_equal EqualCaseInsensitive
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
         reducebe 15 BinaryLeft t_symbol_ampersand StringConcat
         ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////

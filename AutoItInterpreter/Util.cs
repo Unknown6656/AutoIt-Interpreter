@@ -11,6 +11,7 @@ using Microsoft.FSharp.Core;
 using Newtonsoft.Json.Linq;
 
 using AutoItCoreLibrary;
+using System.Text;
 
 namespace AutoItInterpreter
 {
@@ -89,7 +90,7 @@ namespace AutoItInterpreter
 
         public static bool ArePathsEqual(string path1, string path2) => string.Equals(Path.GetFullPath(path1), Path.GetFullPath(path2), StringComparison.InvariantCultureIgnoreCase);
 
-        public static bool ArePathsEqual(FileInfo nfo1, FileInfo nfo2) => ArePathsEqual(nfo1.FullName, nfo2.FullName);
+        public static bool ArePathsEqual(FileInfo nfo1, FileInfo nfo2) => nfo1 == nfo2 || ArePathsEqual(nfo1?.FullName, nfo2?.FullName);
 
         public static OS GetOperatingSystem(this Compatibility comp)
         {
@@ -168,6 +169,23 @@ namespace AutoItInterpreter
                 val = default;
 
             return false;
+        }
+
+        public static string Print(this Exception ex)
+        {
+            if (ex is null)
+                return "[unknown]  An unknown exception occured.";
+
+            StringBuilder sb = new StringBuilder();
+
+            while (ex != null)
+            {
+                sb.Insert(0, $"[{ex.GetType()}]  {ex.Message}:\n{ex.StackTrace}");
+
+                ex = ex.InnerException;
+            }
+
+            return sb.ToString();
         }
     }
 

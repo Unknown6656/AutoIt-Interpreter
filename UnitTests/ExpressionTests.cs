@@ -109,6 +109,27 @@ namespace UnitTests
         public void Test_26() => AssertValidExpression("$a = $b = $c == $d <> $e", false);
 
         [TestMethod]
-        public void Test_27() => AssertValidExpression("$a = $b == $c = $a", true);
+        public void Test_27() => AssertEqualExpressions("$a ? $b : $c ? $d : $e", "$a ? $b : ($c ? $d : $e)", false);
+
+        [TestMethod]
+        public void Test_28() => AssertEqualExpressions("$a impl $b impl $c", "!$a or (!$b or $c)", false);
+
+        [TestMethod]
+        public void Test_29() => AssertEqualExpressions("1 impl $a", "$a", false);
+
+        [TestMethod]
+        public void Test_30() => AssertEqualExpressions("0 impl $a", "1", false);
+
+        [TestMethod]
+        public void Test_31() => AssertValidExpression("$a[$b = $c] = $e", true);
+
+        [TestMethod]
+        public void Test_32() => AssertValidExpression("$a[$b = $c] = $e", false);
+
+        [TestMethod]
+        public void Test_33() => AssertInvalidExpression("$a[$b = $c]", true);
+
+        [TestMethod]
+        public void Test_34() => AssertValidExpression("$a[$b = $c]", false);
     }
 }
