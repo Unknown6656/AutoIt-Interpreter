@@ -400,7 +400,7 @@ namespace {NAMESPACE}
                 }
             }
 
-            return Regex.Replace(sb.ToString(), @"\s*«\s*(?<msg>.*)\s*»\s*", m => $"__critical(\"{m.Get("msg").Trim()}\")");
+            return Regex.Replace(sb.ToString(), @"\s*«\s*(?<msg>.*)\s*»\s*", m => $"(__critical(\"{m.Get("msg").Trim()}\"))");
         }
 
         public static string GenerateCSharpAssemblyInfo(InterpreterState state) => $@"
