@@ -1,3 +1,5 @@
+![AutoIt++ icon](images/icon-1024.png)
+
 # A rough AutoIt3 custom-flavored language reference
 [go back](../readme.md)
 

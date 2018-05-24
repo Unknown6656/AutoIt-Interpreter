@@ -1,3 +1,5 @@
+![AutoIt++ icon](images/icon-1024.png)
+
 # Usage
 [go back](../readme.md)
 
