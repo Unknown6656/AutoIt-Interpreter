@@ -1,4 +1,4 @@
-![AutoIt++ icon](images/icon-1024.png)
+<img alt="AutoIt++ icon" src="images/icon-1024.png" height="200"/>
 
 # Usage
 [go back](../readme.md)

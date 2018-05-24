@@ -1,4 +1,4 @@
-﻿![AutoIt++ icon](images/icon-1024.png)
+﻿<img alt="AutoIt++ icon" src="images/icon-1024.png" height="200"/>
 
 # A rough AutoIt3 custom-flavored syntax reference
 [go back](../readme.md)
