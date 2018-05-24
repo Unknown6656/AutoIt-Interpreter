@@ -1001,6 +1001,7 @@ namespace AutoItInterpreter
                     ("^notrayicon$", _ => st.UseTrayIcon = false),
                     ("^requireadmin$", _ => st.RequireAdmin = true),
                     ("^include-once$", _ => st.IsIncludeOnce = true),
+                    (@"")
                     (@"^include(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
                     {
                         string path = new[] { "glob", "loc1", "loc2" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0);

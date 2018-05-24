@@ -18,9 +18,8 @@ namespace AutoItCoreLibrary
     using var = AutoItVariantType;
 
 
-#pragma warning disable RCS1047
-#pragma warning disable RCS1057
-#pragma warning disable IDE1006
+#pragma warning disable RCS1047, RCS1057, IDE1006
+
     public static unsafe class AutoItFunctions
     {
         public const string FUNC_PREFIX = "__userfunc_";
@@ -1190,9 +1189,8 @@ namespace AutoItCoreLibrary
 
         // TODO : add all other functions from https://www.autoitscript.com/autoit3/docs/functions/
     }
-#pragma warning restore RCS1047
-#pragma warning restore RCS1057
-#pragma warning restore IDE1006
+
+#pragma warning restore RCS1047, RCS1057, IDE1006
 
     public static class Shell
     {
@@ -1248,6 +1246,7 @@ namespace AutoItCoreLibrary
     }
 
 #pragma warning disable RCS1203
+
     public abstract class CompilerIntrinsicMessage
         : Attribute
     {
@@ -1258,6 +1257,7 @@ namespace AutoItCoreLibrary
         internal CompilerIntrinsicMessage(string name, params object[] args) =>
             (MessageName, Arguments) = (name, args);
     }
+
 #pragma warning restore RCS1203
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
