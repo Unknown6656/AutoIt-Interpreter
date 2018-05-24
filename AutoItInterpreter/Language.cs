@@ -28,6 +28,9 @@ namespace AutoItInterpreter
             {
                 try
                 {
+                    if (name is null)
+                        throw null;
+
                     dynamic val = _langobj;
 
                     foreach (string path in name.Split('/', '.', '\\'))

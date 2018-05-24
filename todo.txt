@@ -57,3 +57,6 @@
     [ ] UDP / TCP API
     [ ] Serial API
     [ ] Compiler robustness
+[x] Support web-compilation
+[x] Support web-includes
+[ ] SciTE support for AutoIt++

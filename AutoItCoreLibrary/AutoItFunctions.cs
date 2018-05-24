@@ -18,6 +18,7 @@ namespace AutoItCoreLibrary
     using var = AutoItVariantType;
 
 
+#pragma warning disable RCS1047
 #pragma warning disable RCS1057
 #pragma warning disable IDE1006
     public static unsafe class AutoItFunctions
@@ -884,6 +885,70 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var ATan2(var v1, var v2) => (var)Math.Atan2((double)v1, (double)v2);
         [BuiltinFunction]
+        public static var CallAutoItProgram(var path, var args)
+        {
+            try
+            {
+                string mmfname1 = $"__input{DateTime.Now.Ticks:x16}";
+                string mmfname2 = $"__output{DateTime.Now.Ticks:x16}";
+                byte[] ser = args.Serialize();
+                const int cap = 1024 * 1024 * 64;
+
+                using (MemoryStream ms = new MemoryStream(ser))
+                using (MemoryMappedFile mmf1 = MemoryMappedFile.CreateOrOpen(mmfname1, ser.Length + 4))
+                using (MemoryMappedFile mmf2 = MemoryMappedFile.CreateOrOpen(mmfname2, cap))
+                using (MemoryMappedViewAccessor acc2 = mmf2.CreateViewAccessor())
+                {
+                    using (MemoryMappedViewAccessor acc1 = mmf1.CreateViewAccessor())
+                    {
+                        acc1.Write(0, ser.Length);
+                        acc1.WriteArray(4, ser, 0, ser.Length);
+                        acc1.Flush();
+                    }
+
+                    using (Process proc = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = path,
+                            Arguments = $"{MMF_CMDPARG}={mmfname1} {MMF_CMDRARG}={mmfname2}",
+                            UseShellExecute = true,
+                        }
+                    })
+                    {
+                        proc.Start();
+                        proc.WaitForExit();
+                    }
+
+                    int blen = acc2.ReadInt32(0);
+
+                    if (blen > cap - 4)
+                        throw new InvalidOperationException($"The return value is greater than {(cap - 4) / 1024f:F1} KB.");
+
+                    byte[] dser = new byte[blen];
+
+                    acc2.ReadArray(4, dser, 0, blen);
+
+                    return var.Deserialize(dser);
+                }
+            }
+            catch (Exception ex)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                while (ex != null)
+                {
+                    sb.AppendLine($"An {ex.GetType()} occured:  {ex.Message}\n{ex.StackTrace}");
+
+                    ex = ex.InnerException;
+                }
+
+                SetError(1, sb.ToString());
+
+                return var.Default;
+            }
+        }
+        [BuiltinFunction]
         public static var ConsoleWriteLine(var v) => __(() => Console.WriteLine(v.ToString()));
         [BuiltinFunction]
         public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
@@ -916,7 +981,10 @@ namespace AutoItCoreLibrary
 
             return var.Default;
         }
-
+        [BuiltinFunction]
+        public static var PlayWAVFileSync(var path) => PlaySound(path, null, 0);
+        [BuiltinFunction]
+        public static var PlayWAVFileAsync(var path) => PlaySound(path, null, 1);
         [BuiltinFunction, CompatibleOS(OS.Windows)]
         public static var SerialCreate(var name, var? baud = null, var? parity = null, var? databits = null, var? stopbits = null)
         {
@@ -1038,10 +1106,6 @@ namespace AutoItCoreLibrary
 
             return res;
         }
-
-
-        //TODO
-
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
@@ -1121,75 +1185,12 @@ namespace AutoItCoreLibrary
             else
                 throw new NotImplementedException($"Cannot convert the type '{tstr}' to a variant (yet).");
         }
-        [BuiltinFunction]
-        public static var CallAutoItProgram(var path, var args)
-        {
-            try
-            {
-                string mmfname1 = $"__input{DateTime.Now.Ticks:x16}";
-                string mmfname2 = $"__output{DateTime.Now.Ticks:x16}";
-                byte[] ser = args.Serialize();
-                const int cap = 1024 * 1024 * 64;
-
-                using (MemoryStream ms = new MemoryStream(ser))
-                using (MemoryMappedFile mmf1 = MemoryMappedFile.CreateOrOpen(mmfname1, ser.Length + 4))
-                using (MemoryMappedFile mmf2 = MemoryMappedFile.CreateOrOpen(mmfname2, cap))
-                using (MemoryMappedViewAccessor acc2 = mmf2.CreateViewAccessor())
-                {
-                    using (MemoryMappedViewAccessor acc1 = mmf1.CreateViewAccessor())
-                    {
-                        acc1.Write(0, ser.Length);
-                        acc1.WriteArray(4, ser, 0, ser.Length);
-                        acc1.Flush();
-                    }
-
-                    using (Process proc = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = path,
-                            Arguments = $"{MMF_CMDPARG}={mmfname1} {MMF_CMDRARG}={mmfname2}",
-                            UseShellExecute = true,
-                        }
-                    })
-                    {
-                        proc.Start();
-                        proc.WaitForExit();
-                    }
-
-                    int blen = acc2.ReadInt32(0);
-
-                    if (blen > cap - 4)
-                        throw new InvalidOperationException($"The return value is greater than {(cap - 4) / 1024f:F1} KB.");
-
-                    byte[] dser = new byte[blen];
-
-                    acc2.ReadArray(4, dser, 0, blen);
-
-                    return var.Deserialize(dser);
-                }
-            }
-            catch (Exception ex)
-            {
-                StringBuilder sb = new StringBuilder();
-
-                while (ex != null)
-                {
-                    sb.AppendLine($"An {ex.GetType()} occured:  {ex.Message}\n{ex.StackTrace}");
-
-                    ex = ex.InnerException;
-                }
-
-                SetError(1, sb.ToString());
-
-                return var.Default;
-            }
-        }
 
         #endregion
 
         // TODO : add all other functions from https://www.autoitscript.com/autoit3/docs/functions/
     }
+#pragma warning restore RCS1047
 #pragma warning restore RCS1057
 #pragma warning restore IDE1006
 

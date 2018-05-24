@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Net;
 using System.IO;
 using System;
 
@@ -27,6 +28,118 @@ namespace AutoItInterpreter
 
 
     public delegate void ErrorReporter(string name, params object[] args);
+
+    public sealed class FileResolver
+    {
+        private static readonly List<string> TEMP_FILES = new List<string>();
+
+        public FileInfo LastResolvedPath { get; private set; }
+        public string RawPath { get; }
+
+
+        public FileResolver(string path)
+        {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
+            else
+                RawPath = path;
+        }
+
+        public FileInfo Resolve()
+        {
+            Func<string>[] actions = new Func<string>[]
+            {
+                () => RawPath,
+                () => RawPath + ".au3",
+                () => RawPath + ".au2",
+                () => RawPath + ".au",
+                () =>
+                {
+                    string path = Path.GetTempFileName();
+                    FtpWebRequest req;
+                    byte[] content;
+
+                    if (RawPath.Match(@"^ftp:\/\/(?<uname>[^:]+)(:(?<passw>[^@]+))?@(?<url>.+)$", out Match m))
+                    {
+                        req = (FtpWebRequest)WebRequest.Create($"ftp://{m.Get("url")}");
+                        req.Method = WebRequestMethods.Ftp.DownloadFile;
+                        req.Credentials = new NetworkCredential(m.Get("url"), m.Get("passw"));
+                    }
+                    else
+                    {
+                        req = (FtpWebRequest)WebRequest.Create(RawPath);
+                        req.Method = WebRequestMethods.Ftp.DownloadFile;
+                    }
+
+                    using (FtpWebResponse resp = req.GetResponse() as FtpWebResponse)
+                    using (Stream s = resp.GetResponseStream())
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        s.CopyTo(ms);
+
+                        content = ms.ToArray();
+                    }
+
+                    File.WriteAllBytes(path, content);
+
+                    return path;
+                },
+                () =>
+                {
+                    string path = Path.GetTempFileName();
+
+                    using (WebClient wc = new WebClient())
+                    {
+                        byte[] data = wc.DownloadData(RawPath);
+
+                        File.WriteAllBytes(path, data);
+                    }
+
+                    return path;
+                }
+            };
+
+            FileInfo nfo = null;
+            int i = 0;
+
+            do
+                try
+                {
+                    if (actions[i]() is string path)
+                    {
+                        TEMP_FILES.Add(path);
+
+                        nfo = new FileInfo(path);
+                    }
+                }
+                catch
+                {
+                }
+            while ((++i < actions.Length) && !(nfo?.Exists ?? false));
+
+            if (nfo is null)
+                throw new ArgumentException($"The path '{RawPath}' could not be resolved to a file.");
+            else
+                return LastResolvedPath = nfo;
+        }
+
+        public static void CleanUp()
+        {
+            foreach (string s in TEMP_FILES)
+                if (s != null)
+                    try
+                    {
+                        File.Delete(s);
+                    }
+                    catch
+                    {
+                    }
+        }
+
+        public static FileInfo Resolve(string path) => new FileResolver(path).Resolve();
+
+        public static implicit operator FileInfo(FileResolver resv) => resv.Resolve();
+    }
 
     public sealed class Interpreter
     {
@@ -50,17 +163,18 @@ namespace AutoItInterpreter
 
         public Interpreter(string path, InterpreterOptions options)
         {
-            RootContext = new InterpreterContext(path);
             Options = options;
-            Options. Settings.IncludeDirectories = Options.Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
+            Options.Settings.IncludeDirectories = Options.Settings.IncludeDirectories.Select(x => x.Trim().Replace('\\', '/')).Distinct().ToArray();
 
-            if (RootContext.Content is null)
-                RootContext = new InterpreterContext(path + ".au3");
-
-            if (RootContext.Content is null)
+            try
+            {
+                RootContext = new InterpreterContext(new FileResolver(path));
+                path = RootContext.SourcePath.FullName;
+            }
+            catch
+            {
                 throw new FileNotFoundException(Options.Language["errors.general.file_nopen"], path);
-            else
-                path += ".au3";
+            }
 
             string projectname = RootContext.SourcePath.Name;
             string ext = RootContext.SourcePath.Extension;
@@ -250,7 +364,7 @@ namespace AutoItInterpreter
 
                         try
                         {
-                            FileInfo inclpath = path.Length > 0 ? new FileInfo(path) : default;
+                            FileInfo inclpath = new FileResolver(path);
 
                             if (inclpath?.Exists ?? false)
                                 using (StreamReader rd = inclpath.OpenText())
@@ -1007,8 +1121,11 @@ namespace AutoItInterpreter
                     int post = m.Get("post").Length;
                     int tlen = Math.Min(pre, post);
 
-                    return expr.Substring(tlen, expr.Length - (2 * tlen));
+                    expr = expr.Substring(tlen, expr.Length - (2 * tlen));
                 }
+
+                if (expr.Match(@"^\s*new\s*\{", out m))
+                    expr = $"({expr})";
 
                 return expr;
             }
@@ -1369,7 +1486,7 @@ namespace AutoItInterpreter
                             case RETURN i:
                                 {
                                     if (_currfunc.Name == GLOBAL_FUNC_NAME)
-                                        warn("warnings.astproc.global_return");
+                                        warn("notes.global_return");
 
                                     return new AST_RETURN_STATEMENT
                                     {

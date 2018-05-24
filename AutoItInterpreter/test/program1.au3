@@ -11,4 +11,4 @@ Func OnShutdown()
 EndFunc
 
 
-return (new {{1,0,"lel"},{@arguments,1,0},{0,0,1}})
+return new { { 1, 0, "lel" }, { @arguments, 1, 0 }, { 0, 0, 1 } }

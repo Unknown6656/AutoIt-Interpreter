@@ -214,6 +214,9 @@ namespace AutoItCoreLibrary
 
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern int WriteFile(SafeFileHandle handle, byte* bytes, int numBytesToWrite, out int numBytesWritten, void* lpOverlapped);
+
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool PlaySound(string szSound, void* hMod, int flags);
     }
 
     public enum OS

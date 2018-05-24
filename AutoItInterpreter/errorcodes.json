@@ -85,8 +85,7 @@
         },
         "astproc": {
             "expression_result_discarded": 2101,
-            "global_return": 2102,
-            "pinvoke_already_declared": 2103
+            "pinvoke_already_declared": 2102
         },
         "generator": {
             "failed_clean_output": 2201,
@@ -102,6 +101,7 @@
         "unsafe_autoit3": 3004,
         "empty_function": 3005,
         "unnecessary_function_comp": 3006,
-        "init_0_dim": 3007
+        "init_0_dim": 3007,
+        "global_return": 3008
     }
 }
