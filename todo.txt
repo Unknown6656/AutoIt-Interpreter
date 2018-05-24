@@ -32,6 +32,9 @@
 [x] implement local macros
 [ ] COM-interop
 [x] serial API
+[ ] http API
+[ ] ftp API
+[ ] ssh/sftp API
 [x] ifn't
 [x] fix params calls
 [-] fix expression parser

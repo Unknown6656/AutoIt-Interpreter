@@ -4,6 +4,7 @@
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Text;
 using System.Linq;
 using System.Net;
@@ -13,6 +14,8 @@ using System;
 using Microsoft.FSharp.Collections;
 
 using Piglet.Parser.Configuration;
+
+using Renci.SshNet;
 
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
@@ -37,33 +40,43 @@ namespace AutoItInterpreter
         public string RawPath { get; }
 
 
-        public FileResolver(string path)
-        {
-            if (path is null)
-                throw new ArgumentNullException(nameof(path));
-            else
-                RawPath = path;
-        }
+        public FileResolver(string path) =>
+            RawPath = path is string s ? s : throw new ArgumentNullException(nameof(path));
 
-        public FileInfo Resolve()
+        public FileInfo Resolve() => Resolve(true);
+
+        public FileInfo Resolve(bool allowWebCrawls)
         {
+            string r(string p)
+            {
+                p = p.Replace('\\', '/');
+
+                if (p.ToLower().StartsWith("file:///"))
+                    p = p.Substring(8);
+
+                return p;
+            }
+
             Func<string>[] actions = new Func<string>[]
             {
-                () => RawPath,
-                () => RawPath + ".au3",
-                () => RawPath + ".au2",
-                () => RawPath + ".au",
+                () => r(RawPath),
+                () => r(RawPath) + ".au3",
+                () => r(RawPath) + ".au2",
+                () => r(RawPath) + ".au",
                 () =>
                 {
+                    if (!allowWebCrawls)
+                        return null;
+
                     string path = Path.GetTempFileName();
                     FtpWebRequest req;
                     byte[] content;
 
                     if (RawPath.Match(@"^ftp:\/\/(?<uname>[^:]+)(:(?<passw>[^@]+))?@(?<url>.+)$", out Match m))
                     {
-                        req = (FtpWebRequest)WebRequest.Create($"ftp://{m.Get("url")}");
+                        req = (FtpWebRequest)WebRequest.Create($"ftp://{r(m.Get("url"))}");
                         req.Method = WebRequestMethods.Ftp.DownloadFile;
-                        req.Credentials = new NetworkCredential(m.Get("url"), m.Get("passw"));
+                        req.Credentials = new NetworkCredential(m.Get("uname"), m.Get("passw"));
                     }
                     else
                     {
@@ -86,16 +99,55 @@ namespace AutoItInterpreter
                 },
                 () =>
                 {
+                    if (!allowWebCrawls)
+                        return null;
+
                     string path = Path.GetTempFileName();
+                    byte[] data;
 
-                    using (WebClient wc = new WebClient())
+                    using(HttpClient hc = new HttpClient
                     {
-                        byte[] data = wc.DownloadData(RawPath);
+                        Timeout = new TimeSpan(0, 0, 15)
+                    })
+                        data = hc.GetByteArrayAsync(RawPath)
+                                 .ConfigureAwait(false)
+                                 .GetAwaiter()
+                                 .GetResult();
 
-                        File.WriteAllBytes(path, data);
-                    }
+                    File.WriteAllBytes(path, data);
 
                     return path;
+                },
+                () =>
+                {
+                    if (!allowWebCrawls)
+                        return null;
+
+                    if (RawPath.Match(@"^(sftp|ssh):\/\/(?<uname>[^:]+)(:(?<passw>[^@]+))?@(?<host>[^:\/]+|\[[0-9a-f\:]+\])(:(?<port>[0-9]{1,6}))?(\/|\\)(?<path>.+)$", out Match m))
+                    {
+                        string host = m.Get("host");
+                        string uname = m.Get("uname");
+                        string passw = m.Get("passw");
+                        string rpath = m.Get("path");
+                        string lpath = Path.GetTempFileName();
+
+                        if (!int.TryParse(m.Get("port"), out int port))
+                            port = 22;
+
+                        using (SftpClient sftp = new SftpClient(host, port, uname, passw))
+                        {
+                            sftp.Connect();
+
+                            using (FileStream fs = File.Create(lpath))
+                                sftp.DownloadFile('/' + r(rpath), fs);
+
+                            sftp.Disconnect();
+                        }
+
+                        return lpath;
+                    }
+                    else
+                        return null;
                 }
             };
 
@@ -137,6 +189,8 @@ namespace AutoItInterpreter
         }
 
         public static FileInfo Resolve(string path) => new FileResolver(path).Resolve();
+
+        public static FileInfo Resolve(string path, bool allowWebCrawls) => new FileResolver(path).Resolve(allowWebCrawls);
 
         public static implicit operator FileInfo(FileResolver resv) => resv.Resolve();
     }
@@ -947,47 +1001,42 @@ namespace AutoItInterpreter
                     ("^notrayicon$", _ => st.UseTrayIcon = false),
                     ("^requireadmin$", _ => st.RequireAdmin = true),
                     ("^include-once$", _ => st.IsIncludeOnce = true),
-                    (@"^include(\s|\b)\s*(\<(?<rel>.*)\>|\""(?<abs1>.*)\""|\'(?<abs2>.*)\')$", m => {
-                        string path = m.Get("abs1");
+                    (@"^include(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
+                    {
+                        string path = new[] { "glob", "loc1", "loc2" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0);
+                        FileInfo nfo = null;
 
-                        if (path.Length == 0)
-                            path = m.Get("abs2");
+                        try
+                        {
+                            if ((nfo = FileResolver.Resolve(path)).Exists)
+                            {
+                                include();
 
-                        path = path.Replace('\\', '/');
-
-                        FileInfo nfo = new FileInfo($"{st.CurrentContext.SourcePath.FullName}/../{path}");
-
-                        if (path.Length > 0)
-                            if (!nfo.Exists)
-                                nfo = new FileInfo(path);
+                                return;
+                            }
                             else
+                                nfo = null;
+                        }
+                        catch
+                        {
+                        }
+
+                        if (nfo is null)
+                            foreach (string prefix in new[] { $"{st.CurrentContext.SourcePath.FullName}/.." }.Concat(settings.IncludeDirectories))
                                 try
                                 {
-                                    include();
+                                    nfo = FileResolver.Resolve((prefix + '/' + path).Replace('\\', '/'), false);
 
-                                    return;
+                                    if (nfo?.Exists ?? false)
+                                    {
+                                        include();
+
+                                        return;
+                                    }
                                 }
                                 catch
                                 {
                                 }
-                        else
-                            path = m.Get("rel").Replace('\\', '/');
-
-                        foreach (string dir in settings.IncludeDirectories)
-                            try
-                            {
-                                string ipath = $"{dir}/{path}";
-
-                                if ((nfo = new FileInfo(ipath)).Exists && !Directory.Exists(ipath))
-                                {
-                                    include();
-
-                                    return;
-                                }
-                            }
-                            catch
-                            {
-                            }
 
                         err("errors.preproc.include_nfound", path);
 

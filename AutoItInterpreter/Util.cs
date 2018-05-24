@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using System.Text;
 using System.IO;
 using System;
 
@@ -11,7 +12,6 @@ using Microsoft.FSharp.Core;
 using Newtonsoft.Json.Linq;
 
 using AutoItCoreLibrary;
-using System.Text;
 
 namespace AutoItInterpreter
 {
@@ -536,7 +536,7 @@ namespace AutoItInterpreter
                     case FinalResult.OK_Warnings:
                         return ConsoleColor.Green;
                     case FinalResult.Errors_Compiled:
-                        return ConsoleColor.Yellow;
+                        return ConsoleColor.DarkYellow;
                     default:
                         return ConsoleColor.Red;
                 }

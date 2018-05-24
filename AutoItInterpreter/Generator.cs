@@ -104,6 +104,7 @@ using System;
 using {nameof(AutoItCoreLibrary)};
 
 #pragma warning disable CS0162
+#pragma warning disable CS0164
 #pragma warning disable CS1522
 
 namespace {NAMESPACE}
