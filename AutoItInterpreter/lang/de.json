@@ -40,7 +40,8 @@
             "fatal_internal_funcparsing_error": "Ein gravierender interner Fehler ist während der Funktionsanalyse aufgetreten.",
             "start_func_args": "The start function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
             "exit_func_args": "The exit function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
-            "unknown_directive": "The preprocessor directive '#{0}' is unknown or could not be parsed."
+            "unknown_directive": "The preprocessor directive '#{0}' is unknown or could not be parsed.",
+            "no_path_provided": "No path has been provided."
         },
         "astproc": {
             "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",

@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		readme.md = readme.md
 		todo.txt = todo.txt
+		Unknown6656.pfx = Unknown6656.pfx
+		unknown6656.snk = unknown6656.snk
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PigletParser", "PigletParser\PigletParser.csproj", "{C08309F8-B0A3-4F02-BB0E-3BD30A9E50F2}"
@@ -31,6 +33,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "artwork", "artwork", "{0C841933-866E-450D-AEED-D1E610D25868}"
+	ProjectSection(SolutionItems) = preProject
+		Artwork\AutoIt.aep = Artwork\AutoIt.aep
+		Artwork\banner.png = Artwork\banner.png
+		Artwork\favicon.ico = Artwork\favicon.ico
+		Artwork\icon.png = Artwork\icon.png
+		Artwork\icon_shadow.png = Artwork\icon_shadow.png
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

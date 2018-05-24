@@ -33,7 +33,8 @@
             "pinvoke_no_sig": 1125,
             "missing_endfunc": 1126,
             "fatal_internal_funcparsing_error": 1127,
-            "unknown_directive": 1128
+            "unknown_directive": 1128,
+            "no_path_provided": 1129
         },
         "astproc": {
             "unknown_entity": 1201,

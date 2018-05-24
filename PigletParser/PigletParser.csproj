@@ -10,5 +10,6 @@
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <ApplicationIcon></ApplicationIcon>
     </PropertyGroup>
 </Project>

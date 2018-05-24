@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <ApplicationIcon />
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
     <OutputType>Exe</OutputType>
     <StartupObject>AutoItInterpreter.Program</StartupObject>
     <AssemblyName>autoitipt</AssemblyName>
@@ -9,6 +9,9 @@
     <OutputPath>../bin</OutputPath>
     <LangVersion>latest</LangVersion>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+      <SignAssembly>true</SignAssembly>
+      <AssemblyOriginatorKeyFile>../Unknown6656.pfx</AssemblyOriginatorKeyFile>
+      <DelaySign>false</DelaySign>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="errorcodes.json" />

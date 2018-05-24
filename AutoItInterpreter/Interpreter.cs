@@ -1001,11 +1001,30 @@ namespace AutoItInterpreter
                     ("^notrayicon$", _ => st.UseTrayIcon = false),
                     ("^requireadmin$", _ => st.RequireAdmin = true),
                     ("^include-once$", _ => st.IsIncludeOnce = true),
-                    (@"")
+                    (@"^using(\s|\b)\s*\""(?<asm>.*)\""$", m =>
+                    {
+                        string path = m.Get("asm").Trim();
+
+                        if (path.Length == 0)
+                            err("errors.preproc.no_path_provided");
+                        else
+                        {
+
+                            // TODO
+
+                        }
+                    }),
                     (@"^include(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
                     {
                         string path = new[] { "glob", "loc1", "loc2" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0);
                         FileInfo nfo = null;
+
+                        if ((path?.Length ?? 0) == 0)
+                        {
+                            err("errors.preproc.no_path_provided");
+
+                            return;
+                        }
 
                         try
                         {

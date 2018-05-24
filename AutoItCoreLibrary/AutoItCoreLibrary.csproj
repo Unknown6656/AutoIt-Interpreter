@@ -9,6 +9,10 @@
         <LangVersion>latest</LangVersion>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AssemblyName>autoitcorlib</AssemblyName>
+        <ApplicationIcon>favicon.ico</ApplicationIcon>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>../Unknown6656.pfx</AssemblyOriginatorKeyFile>
+        <DelaySign>false</DelaySign>
     </PropertyGroup>
     <ItemGroup>
       <None Include="AutoItCurryingDelegate.cs">

@@ -467,7 +467,7 @@ TODO
 
 # `#include`-directive
 
-The `#include` directive now supports paths passed in double quotes (`"`), single quotes (`'`) and angled brackets (`<` and `>`).
+The `#include` directive now supports paths passed in single quotes, double quotes and angled brackets (`<` and `>`).
 <br/>
 The AutoIt++ include path resolver has multiple improvements compared to its AutoIt3-counterpart:
 
