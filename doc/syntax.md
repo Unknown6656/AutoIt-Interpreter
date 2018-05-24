@@ -13,7 +13,8 @@ This article highlights the most important differences between AutoIt3's and Aut
 6) [`new`-exprssions](#new-expressions)
 7) [Inline C#-code](#inline-c-code)
 8) [`ifn't`](#ifnt)
-9) [`#OnAutoItExitRegister`-Directive](#onautoitexitregister-directive)
+9) [`#OnAutoItExitRegister`-directive](#onautoitexitregister-directive)
+10) [`#include`-directive](#include-directive)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -456,9 +457,54 @@ TODO
 <img src="images/ifnt.jpg" height="200"/><br/>
 [@Zedly](https://github.com/Zedly)
 
-# `#OnAutoItExitRegister`-Directive
+# `#OnAutoItExitRegister`-directive
 
 Complementary to the directive `#OnAutoItStartRegister "..."`, AutoIt++ introduces the directive `#OnAutoItExitRegister "..."`.
 
 TODO
 
+# `#include`-directive
+
+The `#include` directive now supports paths passed in double quotes (`"`), single quotes (`'`) and angled brackets (`<` and `>`).
+<br/>
+The AutoIt++ include path resolver has multiple improvements compared to its AutoIt3-counterpart:
+
+ - It autocompletes the file extension `.au3`, `.au2` or `.au`, if it has been omitted on local paths (not web-paths)
+ - It prefers completely valid paths to those with an supplemented file extension
+ - It does not differentiate between backslashes (`\`) and forward slashes (`/`) in a path.
+ - It does support all major URI formats:<br/>
+   `file://`, `http://`, `https://`, `ftp://`, `ftps://`, `sftp://` and `ssh://`
+ - `smb://` or `smbd://` paths are currently only supported through mounting points or their UNC-notation
+ - Relative web-paths are (partly) supported
+ - It prefers same-named files in the source folder compared to the include directories
+
+If any authentification has to be passed to an `ftp`, `ftps`, `sftp` or `ssh` url, the convention is the following:
+```
+protocol://username@host/path
+protocol://username@host:port/path
+protocol://username:password@host/path
+protocol://username:password@host:port/path
+```
+
+The include resolver operates according to the following path resolvement preference table (The top-most line has the highest preference):
+
+| Protocol(s)           | Description / Notes                                                                               |
+|-----------------------|---------------------------------------------------------------------------------------------------|
+| `file://`, (`smb://`) | Absolute path or relative path from the current working directory                                 |
+| `file://`, (`smb://`) | Absolute path or relative path from the current working directory with the file extension `.au3`  |
+| `file://`, (`smb://`) | Absolute path or relative path from the current working directory with the file extension `.au2`  |
+| `file://`, (`smb://`) | Absolute path or relative path from the current working directory with the file extension `.au`   |
+| `http://`, `https://` | Absolute HTTP or HTTPS web URI                                                                    |
+| `ftp://`, `ftps://`   | Absolute FTP or FTPS web URI                                                                      |
+| `sftp://`, `ssh://`   | Absolute SFTP or SSH web URI                                                                      |
+| `file://`, (`smb://`) | Relative path from the _source_ directory                                                         |
+| `file://`, (`smb://`) | Relative path from any include directory specified in the file `settings.json`                    |
+| `file://`, (`smb://`) | Relative path from the compiler's root directory                                                  |
+
+
+Examples:
+```
+#include <../my_header.au3>
+#include '\\192.168.178.22\Public\Documents\program1'   ; <-- '.au3' extension will be added automatically
+#include "ssh://root:password@my-server.domain.com:22/home/script.au3"
+```

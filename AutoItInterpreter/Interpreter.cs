@@ -69,12 +69,33 @@ namespace AutoItInterpreter
                         return null;
 
                     string path = Path.GetTempFileName();
+                    byte[] data;
+
+                    using(HttpClient hc = new HttpClient
+                    {
+                        Timeout = new TimeSpan(0, 0, 15)
+                    })
+                        data = hc.GetByteArrayAsync(RawPath)
+                                 .ConfigureAwait(false)
+                                 .GetAwaiter()
+                                 .GetResult();
+
+                    File.WriteAllBytes(path, data);
+
+                    return path;
+                },
+                () =>
+                {
+                    if (!allowWebCrawls)
+                        return null;
+
+                    string path = Path.GetTempFileName();
                     FtpWebRequest req;
                     byte[] content;
 
-                    if (RawPath.Match(@"^ftp:\/\/(?<uname>[^:]+)(:(?<passw>[^@]+))?@(?<url>.+)$", out Match m))
+                    if (RawPath.Match(@"^(?<protocol>ftps?):\/\/(?<uname>[^:]+)(:(?<passw>[^@]+))?@(?<url>.+)$", out Match m))
                     {
-                        req = (FtpWebRequest)WebRequest.Create($"ftp://{r(m.Get("url"))}");
+                        req = (FtpWebRequest)WebRequest.Create($"{m.Get("protocol")}://{r(m.Get("url"))}");
                         req.Method = WebRequestMethods.Ftp.DownloadFile;
                         req.Credentials = new NetworkCredential(m.Get("uname"), m.Get("passw"));
                     }
@@ -94,27 +115,6 @@ namespace AutoItInterpreter
                     }
 
                     File.WriteAllBytes(path, content);
-
-                    return path;
-                },
-                () =>
-                {
-                    if (!allowWebCrawls)
-                        return null;
-
-                    string path = Path.GetTempFileName();
-                    byte[] data;
-
-                    using(HttpClient hc = new HttpClient
-                    {
-                        Timeout = new TimeSpan(0, 0, 15)
-                    })
-                        data = hc.GetByteArrayAsync(RawPath)
-                                 .ConfigureAwait(false)
-                                 .GetAwaiter()
-                                 .GetResult();
-
-                    File.WriteAllBytes(path, data);
 
                     return path;
                 },
