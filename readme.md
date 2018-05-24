@@ -1,3 +1,5 @@
+![Banner image](Artwork/banner.png)
+
 # Preamble
 
 One should call this project _"AutoIt++ **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
@@ -7,13 +9,6 @@ It kind of interprets everything and transforms it into C# code, which then gets
 So we call it an **Interpiler** for now...
 
 # The AutoIt++ ~Interpreter~ Interpiler
-_or 'Autoit--' - depends on how you see it_
-
-<img alt="Works on my machine" src="doc/images/works-on-my-machine.jpg" height="120"/>
-
-_just kidding_
-
------------------
 
 This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing to do with C++).
 
