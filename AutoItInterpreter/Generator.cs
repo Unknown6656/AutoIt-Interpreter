@@ -27,6 +27,7 @@ namespace AutoItInterpreter
         private const string APPLICATION_MODULE = "Program";
         private const string TYPE_VAR_RPOVIDER = nameof(AutoItVariableDictionary);
         private const string TYPE_MAC_RPOVIDER = nameof(AutoItMacroDictionary);
+        private const string REFTYPE = nameof(AutoItVariantTypeReference);
         private const string TYPE = nameof(AutoItVariantType);
         private const string FUNC_MODULE = nameof(AutoItFunctions);
         private const string FUNC_PREFIX = AutoItFunctions.FUNC_PREFIX;
@@ -66,7 +67,6 @@ namespace AutoItInterpreter
                 string lfunc = func.ToLower();
                 string rname;
 
-
                 if (state.ASTFunctions.ContainsKey(lfunc))
                 {
                     rname = FUNC_PREFIX + lfunc;
@@ -100,8 +100,6 @@ namespace AutoItInterpreter
 
                     rname = $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
                 }
-
-
 
                 return new ResolvedFunction(
                     rname,
@@ -146,7 +144,7 @@ namespace {NAMESPACE}
                 {
                     bool opt = par is AST_FUNCTION_PARAMETER_OPT;
 
-                    return $"{(par.ByRef ? "ref " : "")}{TYPE}{(opt ? "?" : "")} {PARAM_PREFIX}{par.Name.Name}{(opt ? " = null" : "")}";
+                    return $"{(par.ByRef ? REFTYPE : TYPE)}{(opt && !par.ByRef ? "?" : "")} {PARAM_PREFIX}{par.Name.Name}{(opt ? " = null" : "")}";
                 });
 
                 if (fn == GLOBAL_FUNC_NAME)
@@ -276,19 +274,15 @@ namespace {NAMESPACE}
                         sb.AppendLine($@"            {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
 
                     foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
-                    {
-                        sb.Append($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name}{(par is AST_FUNCTION_PARAMETER_OPT o ? $" ?? {tstr(o.InitExpression)}" : "")})");
-
-                        if (!par.ByRef)
-                            sb.Append($".{nameof(AutoItVariantType.Clone)}()");
-
-                        sb.AppendLine(";");
-                    }
+                        if (par is AST_FUNCTION_PARAMETER_OPT optpar)
+                            sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name} ?? {tstr(optpar.InitExpression)});");
+                        else
+                            sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = {PARAM_PREFIX}{par.Name.Name};");
 
                     sb.AppendLine($"            {TYPE} result = inner();");
 
                     foreach (VARIABLE par in function.Parameters.Where(x => x.ByRef).Select(x => x.Name))
-                        sb.AppendLine($@"            {PARAM_PREFIX}{par.Name} = {VARS}[""{par.Name}""];");
+                        sb.AppendLine($@"            {PARAM_PREFIX}{par.Name}.{nameof(AutoItVariantTypeReference.WriteBack)}({VARS}[""{par.Name}""]);");
 
                     sb.AppendLine($@"            {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();
             return result;

@@ -5,8 +5,8 @@ using System.Collections;
 using System.Reflection;
 using System.Linq;
 using System.Text;
-using System;
 using System.IO;
+using System;
 
 namespace AutoItCoreLibrary
 {
@@ -368,6 +368,8 @@ namespace AutoItCoreLibrary
         public GCHandle ToGCHandle() => this;
 
         public StringBuilder ToStringBuilder() => new StringBuilder(this);
+
+        public AutoItVariantTypeReference MakeReference() => new AutoItVariantTypeReference(this);
 
         public void UseGCHandledData(Action<object> func)
         {

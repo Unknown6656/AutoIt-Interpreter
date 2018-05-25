@@ -101,11 +101,12 @@ type Serializer (settings : SerializerSettings) =
                      |> Array.toList
                      |> List.zip ps
                      |> List.map (fun (e, rp) ->
-                                    printexpr e
-                                    |> (if rp.IsByRef then
-                                            sprintf "%s"
-                                        else
-                                            sprintf "(%s).Clone()")
+                                      if rp.IsByRef then
+                                          match e with
+                                          | VariableExpression v -> sprintf "%s.ByReference[\"%s\"]" (x.Settings.VariableDictionary) v.Name
+                                          | _ -> sprintf "((%s)%s).MakeReference()" (x.Settings.VariableTypeName) (printexpr e)
+                                      else
+                                          sprintf "(%s).Clone()" (printexpr e)
                                  )
             String.Join(", ", rf)
         and printexpr e =

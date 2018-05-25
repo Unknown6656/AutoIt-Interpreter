@@ -82,19 +82,37 @@ namespace AutoItCoreLibrary
     public sealed class AutoItVariantTypeReference
     {
         private readonly AutoItVariableDictionary _dic;
+        private AutoItVariantType _optvar;
         private readonly string _name;
+
 
         public AutoItVariantType Variable
         {
-            set => _dic[_name] = value;
-            get => _dic[_name];
+            set
+            {
+                if (_dic is null || _name is null)
+                    _optvar = value;
+                else
+                    _dic[_name] = value;
+            }
+            get
+            {
+                if (_dic is null || _name is null)
+                    return _optvar;
+                else
+                    return _dic[_name];
+            }
         }
 
+
+        internal AutoItVariantTypeReference(AutoItVariantType var) => _optvar = var;
 
         internal AutoItVariantTypeReference(AutoItVariableDictionary dic, string name) => (_dic, _name) = (dic, name);
 
         public void WriteBack(AutoItVariantType value) => Variable = value;
 
         public static implicit operator AutoItVariantType(AutoItVariantTypeReference varref) => varref.Variable;
+
+        public static explicit operator AutoItVariantTypeReference(AutoItVariantType var) => new AutoItVariantTypeReference(var);
     }
 }
