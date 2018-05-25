@@ -2188,19 +2188,19 @@ namespace AutoItInterpreter
                             err("errors.astproc.invalid_system", target, string.Join(",", bif.Systems));
 
                         if (bif.IsUnsafe && !options.AllowUnsafeCode)
-                            err("errors.astproc.unsafe_func", bif.Name);
+                            err("errors.astproc.unsafe_func", bif.RealName);
 
                         if (bif.Name != "dllcall")
                             if (bif.HasParamsArguments)
                             {
                                 if (args.Length - 1 < bif.MandatoryArgumentCount)
-                                    err("errors.astproc.not_enough_args", bif.Name, bif.MandatoryArgumentCount, args.Length);
+                                    err("errors.astproc.not_enough_args", bif.RealName, bif.MandatoryArgumentCount, args.Length);
                             }
                             else
                                 if (args.Length < bif.MandatoryArgumentCount)
-                                    err("errors.astproc.not_enough_args", bif.Name, bif.MandatoryArgumentCount, args.Length);
+                                    err("errors.astproc.not_enough_args", bif.RealName, bif.MandatoryArgumentCount, args.Length);
                                 else if (args.Length > bif.MandatoryArgumentCount + bif.OptionalArgumentCount)
-                                    err("errors.astproc.too_many_args", bif.Name, bif.MandatoryArgumentCount + bif.OptionalArgumentCount);
+                                    err("errors.astproc.too_many_args", bif.RealName, bif.MandatoryArgumentCount + bif.OptionalArgumentCount);
 
                         foreach (CompilerIntrinsicMessage msg in bif.IntrinsicMessages)
                             if (msg is WarningAttribute w)

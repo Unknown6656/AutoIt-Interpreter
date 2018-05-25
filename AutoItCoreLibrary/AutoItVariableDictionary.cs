@@ -15,6 +15,12 @@ namespace AutoItCoreLibrary
             get => (_locals.Count > 0 && _locals.Peek().TryGetValue(name, out AutoItVariantType v)) || _globals.TryGetValue(name, out v) ? v : AutoItVariantType.Default;
         }
 
+        public ReadOnlyIndexer<string, AutoItVariantTypeReference> ByReference { get; }
+
+
+        public AutoItVariableDictionary() =>
+            ByReference = new ReadOnlyIndexer<string, AutoItVariantTypeReference>(name => new AutoItVariantTypeReference(this, name));
+
         public void InitLocalScope() => _locals.Push(new Dictionary<string, AutoItVariantType>());
 
         public void DestroyLocalScope()
@@ -71,5 +77,24 @@ namespace AutoItCoreLibrary
 
         public AutoItMacroDictionary(AutoItMacroDictionary parent, Func<string, AutoItVariantType?> prov) =>
             (_parent, _func) = (parent, prov ?? new Func<string, AutoItVariantType?>(_ => null));
+    }
+
+    public sealed class AutoItVariantTypeReference
+    {
+        private readonly AutoItVariableDictionary _dic;
+        private readonly string _name;
+
+        public AutoItVariantType Variable
+        {
+            set => _dic[_name] = value;
+            get => _dic[_name];
+        }
+
+
+        internal AutoItVariantTypeReference(AutoItVariableDictionary dic, string name) => (_dic, _name) = (dic, name);
+
+        public void WriteBack(AutoItVariantType value) => Variable = value;
+
+        public static implicit operator AutoItVariantType(AutoItVariantTypeReference varref) => varref.Variable;
     }
 }

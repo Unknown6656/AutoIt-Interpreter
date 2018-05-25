@@ -37,9 +37,9 @@ namespace AutoItInterpreter
         {
             BUILT_IN_FUNCTIONS = new BuiltinFunctionInformation[]
             {
-                ("eval", 1, 0, false, ALL_OS, false, NO_MSG),
-                ("assign", 2, 1, false, ALL_OS, false, NO_MSG),
-                ("isdeclared", 1, 0, false, ALL_OS, false, NO_MSG)
+                ("eval", "", 1, 0, false, ALL_OS, false, NO_MSG),
+                ("assign", "", 2, 1, false, ALL_OS, false, NO_MSG),
+                ("isdeclared", "", 1, 0, false, ALL_OS, false, NO_MSG)
             }.Concat(from m in typeof(AutoItFunctions).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)
                      let attrs = m.GetCustomAttributes(true)
                      where attrs.Any(attr => attr is BuiltinFunctionAttribute)
@@ -49,7 +49,7 @@ namespace AutoItInterpreter
                      let pars = m.GetParameters()
                      let opars = pars.Where(p => p.IsOptional).ToArray()
                      let varargs = (pars.Length > 0) && pars[pars.Length - 1].GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0
-                     select new BuiltinFunctionInformation(m.Name.ToLower(), pars.Length - opars.Length, opars.Length, varargs, os, us, msgs)).ToArray();
+                     select new BuiltinFunctionInformation(m.Name.ToLower(), m.Name, pars.Length - opars.Length, opars.Length, varargs, os, us, msgs)).ToArray();
         }
 
         public static bool IsReservedCall(string name)
@@ -313,14 +313,16 @@ namespace AutoItInterpreter
         public int MandatoryArgumentCount { get; }
         public int OptionalArgumentCount { get; }
         public bool HasParamsArguments { get; }
+        public string RealName { get; }
         public bool IsUnsafe { get; }
         public OS[] Systems { get; }
         public string Name { get; }
 
 
-        public BuiltinFunctionInformation(string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs)
+        internal BuiltinFunctionInformation(string lname, string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs)
         {
-            Name = name;
+            Name = lname;
+            RealName = name;
             MandatoryArgumentCount = m_argc;
             OptionalArgumentCount = o_argc;
             HasParamsArguments = @params;
@@ -329,8 +331,15 @@ namespace AutoItInterpreter
             IntrinsicMessages = attrs;
         }
 
-        public static implicit operator BuiltinFunctionInformation((string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs) t) =>
-            new BuiltinFunctionInformation(t.name, t.m_argc, t.o_argc, t.@params, t.sys, t.@unsafe, t.attrs);
+        public override string ToString()
+        {
+            IEnumerable<string> args = Enumerable.Range(0, MandatoryArgumentCount).Select(_ => "v").Concat(Enumerable.Range(0, MandatoryArgumentCount).Select(_ => "v?"));
+
+            return $"{(IsUnsafe ? "unsafe " : "")}{Name}({string.Join(", ", args)}{(HasParamsArguments ? ", v..." : "")})";
+        }
+
+        public static implicit operator BuiltinFunctionInformation((string lname, string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs) t) =>
+            new BuiltinFunctionInformation(t.lname, t.name, t.m_argc, t.o_argc, t.@params, t.sys, t.@unsafe, t.attrs);
     }
 
     public struct DefinitionContext

@@ -59,31 +59,54 @@ namespace AutoItInterpreter
             }
 
             string[] glob = { GLOBAL_FUNC_NAME };
-            IEnumerable<string> pins = state.PInvokeSignatures.Select(x => AutoItFunctions.GeneratePInvokeWrapperName(x.Item1, x.Item2.Name));
-            Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, FUNC_PREFIX, func =>
+            var pins = state.PInvokeSignatures.Select(x => (Name: AutoItFunctions.GeneratePInvokeWrapperName(x.Item1, x.Item2.Name), x));
+            Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, (func, pars) =>
             {
-                if (state.ASTFunctions.ContainsKey(func.ToLower()))
-                    return null;
-                else if ((from p in pins
-                          where p.Equals(func, StringComparison.InvariantCultureIgnoreCase)
-                          select p).FirstOrDefault() is string fn)
-                    return fn;
-                else
-                    try
-                    {
-                        return $"{FUNC_MODULE}.{typeof(AutoItFunctions).GetMethod(func, BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase).Name}";
-                    }
-                    catch
-                    {
-                        if (Array.Find(BUILT_IN_FUNCTIONS, bif => bif.Name.Equals(func, StringComparison.InvariantCultureIgnoreCase)).Name is string fun)
-                            return $"{FUNC_MODULE}.{fun}";
-                        else
-                        {
-                            state.ReportKnownError("errors.astproc.func_not_declared", default, func);
+                ResolvedFunctionParamter[] rparams = new ResolvedFunctionParamter[pars.Length];
+                string lfunc = func.ToLower();
+                string rname;
 
-                            return $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
-                        }
-                    }
+
+                if (state.ASTFunctions.ContainsKey(lfunc))
+                {
+                    rname = FUNC_PREFIX + lfunc;
+                    rparams = state.ASTFunctions[lfunc].Parameters.Select(p => new ResolvedFunctionParamter(p is AST_FUNCTION_PARAMETER_OPT, p.ByRef)).ToArray();
+                }
+                else if (pins.Any(p => p.Name.ToLower() == lfunc))
+                {
+                    (string name, var sig) = pins.First(p => p.Name.ToLower() == lfunc);
+
+                    rname = name;
+                    rparams = sig.Item2.Paramters.Select(_ => new ResolvedFunctionParamter(false, false)).ToArray();
+                }
+                else if (BUILT_IN_FUNCTIONS.Any(bif => bif.Name.ToLower() == lfunc))
+                {
+                    BuiltinFunctionInformation method = BUILT_IN_FUNCTIONS.First(bif => bif.Name.ToLower() == lfunc);
+                    int argc = method.OptionalArgumentCount + method.MandatoryArgumentCount;
+
+                    if (argc > 0 && method.HasParamsArguments)
+                        --argc;
+
+                    argc = Math.Max(argc, pars.Length);
+                    rname = $"{FUNC_MODULE}.{method.RealName}";
+                    rparams = new ResolvedFunctionParamter[argc];
+
+                    for (int i = 0; i < argc; ++i)
+                        rparams[i] = i < method.MandatoryArgumentCount ? new ResolvedFunctionParamter(false, false) : new ResolvedFunctionParamter(true, false);
+                }
+                else
+                {
+                    state.ReportKnownError("errors.astproc.func_not_declared", default, func);
+
+                    rname = $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
+                }
+
+
+
+                return new ResolvedFunction(
+                    rname,
+                    rparams
+                );
             }));
             string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
