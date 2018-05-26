@@ -505,7 +505,7 @@ The include resolver operates according to the following path resolvement prefer
 
 
 Examples:
-```
+```autoit
 #include <../my_header.au3>
 #include '\\192.168.178.22\Public\Documents\program1'   ; <-- '.au3' extension will be added automatically
 #include "ssh://root:password@my-server.domain.com:22/home/script.au3"

@@ -153,6 +153,8 @@ namespace AutoItInterpreter
         public (string, PINVOKE_SIGNATURE)[] PInvokeSignatures { get; set; }
         public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
         public Dictionary<string, FUNCTION> Functions { get; }
+        internal DebugPrintUtil.FinalResult Result { get; set; }
+        public FileInfo OutputFile { get; set; }
 
 
         public InterpreterState()

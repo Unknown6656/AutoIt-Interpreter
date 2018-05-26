@@ -584,6 +584,25 @@ using System.Reflection;
                 return proc.ExitCode;
             }
         }
+
+        public static int RunApplication(FileInfo path)
+        {
+            using (Process proc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    WorkingDirectory = path.FullName,
+                    Arguments = $"\"{path.FullName}\"",
+                    FileName = "dotnet",
+                }
+            })
+            {
+                proc.Start();
+                proc.WaitForExit();
+
+                return proc.ExitCode;
+            }
+        }
     }
 
     public sealed class TargetSystem

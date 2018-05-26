@@ -7,7 +7,8 @@ This article is divided into the following sections:
 
  1) [How to build the interpiler](#building-the-interpiler)
  2) [How to use the interpiler to compile `.au3`-files](#using-the-interpiler)
- 3) [How to run the compiled applications](#running-compiled-applications)
+ 3) [Using the `settings.json`-file](#settings-json-file)
+ 4) [How to run the compiled applications](#running-compiled-applications)
 
 ------
 
@@ -149,24 +150,23 @@ The following basic rules apply:
 
 ### Command line option reference
 
-| Option (short) | Option (long)           | Effect                                                            |
-|----------------|-------------------------|-------------------------------------------------------------------|
-| `-i=...`       | `--input=...`           | The input .au3 AutoIt Script file. _[required]_ |
-| `-o=...`       | `--output=...`          | The output directory, to which the application will be written. If no output directory is given, the directory will be created in the same directory as the input source file and named accordingly.|
-| `-c`           | `--clean-output`        | Cleans-up the output folder before compiling. _[recommended]_ |
-| `-u`           | `--unsafe`              | Allows unsafe code blocks, such as inline-C# etc. |
-| `-wall`        | `--warnings-as-erros`   | Treats all warnings as errors (and all notes as warnings). |
-| `-s=...`       | `--settings=...`        | The path to the .json settings file. |
-| `-rs`          | `--reset-settings`      | Resets the .json settings file to its defaults. |
-| `-l=....`      | `--lang=...`            | Sets the language for the current session using the given language code. |
-| `-ll`          | `--list-languages`      | Displays a list of all available display languages. |
-| `-v`           | `--verbose`             | Displays verbose compilation output (instead of only the compiler errors and warnings). |
-| `-q`           | `--quiet`               | Displays no output (Returns only the exit code). |
-| `-mef`, `-ms`  | `--msbuild-error-format`| Displays the errors, notes and warnings using the MSBuild error string format. |
-| `-k`           | `--keep-temp`           | Keeps temporary generated code files. |
-| `-g`           | `--generate-always`     | Generates always temporary code files. (Even if some fatal errors have occured) |
-| `-t=...`       | `--target-system=...`   | Compiles the application against the given target system. |
-| `-a=...`       | `--architecture=...`    | Compiles the application against the given target architecture. |
+ - `-i=...` or `--input=...`: The input .au3 AutoIt Script file. The file resolver [described here](syntax.md#include-directive) also applies to the input path. _[required]_
+ - `-o=...` or `--output=...`: The output directory, to which the application will be written. If no output directory is given, the directory will be created in the same directory as the input source file and named accordingly.
+ - `-c` or `--clean-output`: Cleans-up the output folder before compiling. _[recommended]_
+ - `-u` or `--unsafe`: Allows unsafe code blocks, such as inline-C# etc.
+ - `-wall` or `--warnings-as-errors`: Treats all warnings as errors (and all notes as warnings).
+ - `-s=...` or `--settings=...`: The path to the .json settings file.
+ - `-rs` or `--reset-settings`: Resets the .json settings file to its defaults.
+ - `-l=....` or `--lang=...`: Sets the language for the current session using the given language code.
+ - `-ll` or `--list-languages`: Displays a list of all available display languages.
+ - `-v` or `--verbose`: Displays verbose compilation output (instead of only the compiler errors and warnings).
+ - `-q` or `--quiet`: Displays no output (Returns only the exit code).
+ - `-mef`, `-ms` or `--msbuild-error-format`: Displays the errors, notes and warnings using the MSBuild error string format.
+ - `-r` or `--run`: Runs the compiled appliction after a successful build process.
+ - `-k` or `--keep-temp`: Keeps temporary generated code files.
+ - `-g` or `--generate-always`: Generates always temporary code files. (Even if some fatal errors have occured)
+ - `-t=...` or `--target-system=...`: Compiles the application against the given target system.
+ - `-a=...` or `--architecture=...`: Compiles the application against the given target architecture.
 
 #### The target system and architecture
 
@@ -222,7 +222,19 @@ This is usually handled automatically by the Roslyn compiler engine, however, so
 
 TODO
 
+# `settings.json`-file
+
+TODO
+
 # Running compiled applications
+
+TODO
+
+All compiled applications (independent from their target platform) can also be executed using the following command:
+```bash
+$ dotnet <path>/<name>.dll
+```
+where `name` is usually `AutoItApplication`. It can vary, if the corresponding `#pragma option ...`-lines have been specified in the input code.
 
 TODO
 

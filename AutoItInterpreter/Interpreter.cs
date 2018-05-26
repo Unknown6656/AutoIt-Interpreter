@@ -321,6 +321,8 @@ namespace AutoItInterpreter
                         if (!targetdir.Exists)
                             targetdir.Create();
 
+                        state.OutputFile = new FileInfo($"{targetdir.FullName}/{ApplicationGenerator.GetAssemblyName(state, ProjectName)}");
+
                         FileInfo[] ovf = targetdir.EnumerateFiles().ToArray();
 
                         if ((ovf.Length > 0) && (!Options.CleanTargetFolder))
@@ -374,6 +376,8 @@ namespace AutoItInterpreter
                         }
                 }
             }
+
+            state.Result = fr;
 
             return state;
         }

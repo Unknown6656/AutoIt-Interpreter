@@ -36,6 +36,7 @@
 [ ] ftp API
 [ ] ssh/sftp API
 [x] ifn't
+[x] fix byref calls
 [x] fix params calls
 [-] fix expression parser
     [x] fix single equals mis-interpreted as assignment
@@ -43,7 +44,7 @@
     [ ] fix @|.. and @.. operators
     [x] fix ?: operator
 [x] fix loops : exitloop / continueloop
-[ ] unit tests
+[-] unit tests
     [ ] IMPL boolean optimization
     [ ] λ-functionality
     [ ] arrays / matrices
@@ -55,7 +56,7 @@
     [ ] switch..case
     [ ] select..case
     [ ] P/Invoke
-    [ ] byref calls
+    [-] byref calls
     [ ] globals and parameter scoping
     [ ] UDP / TCP API
     [ ] Serial API
@@ -63,3 +64,4 @@
 [x] Support web-compilation
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
+[ ] Add 'Run after compilation' compiler switch

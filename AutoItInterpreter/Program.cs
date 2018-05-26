@@ -48,7 +48,8 @@ namespace AutoItInterpreter
                     ("g", "generate-always"),
                     ("t", "target-system"),
                     ("a", "architecture"),
-                    ("wall", "warnings-as-erros")
+                    ("wall", "warnings-as-errors"),
+                    ("r", "run")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -121,7 +122,7 @@ namespace AutoItInterpreter
                     RawCommandLine = Environment.CommandLine,
                     TargetDirectory = GetF("output", null),
                     CleanTargetFolder = Cont("clean-output"),
-                    TreatWarningsAsErrors = Cont("warnings-as-erros")
+                    TreatWarningsAsErrors = Cont("warnings-as-errors")
                 };
 
                 if (Cont("target-system"))
@@ -162,7 +163,12 @@ namespace AutoItInterpreter
 
                 #endregion
 
-                return result.Errors.Count(x => x.Type == ErrorType.Fatal);
+                if (result.Result > DebugPrintUtil.FinalResult.OK_Warnings)
+                    return result.Errors.Count(x => x.Type == ErrorType.Fatal);
+                else if (Cont("run"))
+                    return ApplicationGenerator.RunApplication(result.OutputFile);
+                else
+                    return 0;
             }
             void resetstdout()
             {
@@ -242,6 +248,8 @@ namespace AutoItInterpreter
 +------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
 |                             AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                         |
 |                          Piglet Parser Library : Copyright (c) Dervall, 2012                                  |
+|                                                                                                               |
+|  Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/readme.md for an expande documentation.  |
 {(open ? "" : "+---------------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
 
         private static void PrintUsage()
@@ -263,20 +271,19 @@ namespace AutoItInterpreter
 |                   |                       | the same directory as the input source file and named accordingly.|
 | -c                | --clean-output        | Cleans-up the output folder before compiling.       [recommended] |
 | -u                | --unsafe              | Allows unsafe code blocks, such as inline-C# etc.                 |
-| -wall             | --warnings-as-erros   | Treats all warnings as errors (and all notes as warnings).        |
+| -wall             | --warnings-as-errors  | Treats all warnings as errors (and all notes as warnings).        |
 | -s=...            | --settings=...        | The path to the .json settings file.                              |
 | -rs               | --reset-settings      | Resets the .json settings file to its defaults.                   |
-| -l=....           | --lang=...            | Sets the language for the current session using the given language|
-|                   |                       | code. (Doesn't affect the stored settings)                        |
-| -ll               | --list-languages      | Displays a list of all available display languages.               |
 | -v                | --verbose             | Displays verbose compilation output (instead of only the compiler |
 |                   |                       | errors and warnings).                                             |
 | -q                | --quiet               | Displays no output (Returns only the exit code).                  |
-| -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild error   |
-|                   |                       | string format.                                                    |
+| -l=....           | --lang=...            | Sets the language for the current session using the given language|
+|                   |                       | code. (Doesn't affect the stored settings)                        |
+| -ll               | --list-languages      | Displays a list of all available display languages.               |
 | -k                | --keep-temp           | Keeps temporary generated code files.                             |
 | -g                | --generate-always     | Generates always temporary code files. (Even if some fatal errors |
 |                   |                       | have occured)                                                     |
+| -r                | --run                 | Runs the compiled application after a successful build process.   |
 | -t=...            | --target-system=...   | Compiles the application against the given target system.         |
 |                   |                       | Possible values are:                                              |
 |                   |                       |   win7, win8, win81, win10, win, linux, osx, android, centos, ol, |
@@ -286,6 +293,8 @@ namespace AutoItInterpreter
 |                   |                       | Possible values are:                                              |
 |                   |                       |   x86, x64, arm, arm64                                            |
 |                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.                     |
+| -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild error   |
+|                   |                       | string format.                                                    |
 +-------------------+-----------------------+-------------------------------------------------------------------+
 |                                                                                                               |
 | Most options can be used as follows:                                                                          |
