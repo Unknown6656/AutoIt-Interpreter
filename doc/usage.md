@@ -150,23 +150,40 @@ The following basic rules apply:
 
 ### Command line option reference
 
- - `-i=...` or `--input=...`: The input .au3 AutoIt Script file. The file resolver [described here](syntax.md#include-directive) also applies to the input path. _[required]_
- - `-o=...` or `--output=...`: The output directory, to which the application will be written. If no output directory is given, the directory will be created in the same directory as the input source file and named accordingly.
- - `-c` or `--clean-output`: Cleans-up the output folder before compiling. _[recommended]_
- - `-u` or `--unsafe`: Allows unsafe code blocks, such as inline-C# etc.
- - `-wall` or `--warnings-as-errors`: Treats all warnings as errors (and all notes as warnings).
- - `-s=...` or `--settings=...`: The path to the .json settings file.
- - `-rs` or `--reset-settings`: Resets the .json settings file to its defaults.
- - `-l=....` or `--lang=...`: Sets the language for the current session using the given language code.
- - `-ll` or `--list-languages`: Displays a list of all available display languages.
- - `-v` or `--verbose`: Displays verbose compilation output (instead of only the compiler errors and warnings).
- - `-q` or `--quiet`: Displays no output (Returns only the exit code).
- - `-mef`, `-ms` or `--msbuild-error-format`: Displays the errors, notes and warnings using the MSBuild error string format.
- - `-r` or `--run`: Runs the compiled appliction after a successful build process.
- - `-k` or `--keep-temp`: Keeps temporary generated code files.
- - `-g` or `--generate-always`: Generates always temporary code files. (Even if some fatal errors have occured)
- - `-t=...` or `--target-system=...`: Compiles the application against the given target system.
- - `-a=...` or `--architecture=...`: Compiles the application against the given target architecture.
+ - **`-i=...` or `--input=...`:**
+   <br/>The input .au3 AutoIt Script file. The file resolver [described here](syntax.md#include-directive) also applies to the input path. _[required]_
+ - **`-o=...` or `--output=...`:**
+   <br/>The output directory, to which the application will be written. If no output directory is given, the directory will be created in the same directory as the input source file and named accordingly.
+ - **`-c` or `--clean-output`:**
+   <br/>Cleans-up the output folder before compiling. _[recommended]_
+ - **`-u` or `--unsafe`:**
+   <br/>Allows unsafe code blocks, such as inline-C# etc.
+ - **`-wall` or `--warnings-as-errors`:**
+   <br/>Treats all warnings as errors (and all notes as warnings).
+ - **`-s=...` or `--settings=...`:**
+   <br/>The path to the .json settings file.
+ - **`-rs` or `--reset-settings`:**
+   <br/>Resets the .json settings file to its defaults.
+ - **`-l=....` or `--lang=...`:**
+   <br/>Sets the language for the current session using the given language code.
+ - **`-ll` or `--list-languages`:**
+   <br/>Displays a list of all available display languages.
+ - **`-v` or `--verbose`:**
+   <br/>Displays verbose compilation output (instead of only the compiler errors and warnings).
+ - **`-q` or `--quiet`:**
+   <br/>Displays no output (Returns only the exit code).
+ - **`-mef`, `-ms` or `--msbuild-error-format`:**
+   <br/>Displays the errors, notes and warnings using the MSBuild error string format.
+ - **`-r` or `--run`:**
+   <br/>Runs the compiled appliction after a successful build process.
+ - **`-k` or `--keep-temp`:**
+   <br/>Keeps temporary generated code files.
+ - **`-g` or `--generate-always`:**
+   <br/>Generates always temporary code files. (Even if some fatal errors have occured)
+ - **`-t=...` or `--target-system=...`:**
+   <br/>Compiles the application against the given target system.
+ - **`-a=...` or `--architecture=...`:**
+   <br/>Compiles the application against the given target architecture.
 
 #### The target system and architecture
 
