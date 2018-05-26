@@ -5,7 +5,7 @@ using AutoItInterpreter;
 
 namespace UnitTests
 {
-   // [TestClass]
+    [TestClass, Skip]
     public sealed class CompilerTests
         : TestCommons
     {

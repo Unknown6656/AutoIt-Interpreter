@@ -94,7 +94,8 @@ namespace UnitTests
                 sw.Restart();
                 swc = swi = swm = 0;
 
-                dynamic container = Activator.CreateInstance(t);
+                bool skipclass = t.GetCustomAttributes<SkipAttribute>(true).FirstOrDefault() != null;
+                dynamic container = skipclass ? null : Activator.CreateInstance(t);
                 MethodInfo init = t.GetMethod(nameof(TestCommons.Test_Init));
                 MethodInfo cleanup = t.GetMethod(nameof(TestCommons.Test_Cleanup));
                 int tp = 0, tf = 0, ts = 0, pleft = 0;
@@ -112,7 +113,7 @@ namespace UnitTests
 
                         try
                         {
-                            if (nfo.GetCustomAttributes<SkipAttribute>().FirstOrDefault() != null)
+                            if ((nfo.GetCustomAttributes<SkipAttribute>().FirstOrDefault() != null) || skipclass)
                                 TestCommons.Skip();
 
                             init.Invoke(container, new object[0]);
@@ -418,7 +419,7 @@ namespace UnitTests
 
 #pragma warning restore
 
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
     public sealed class SkipAttribute
         : Attribute
     {
