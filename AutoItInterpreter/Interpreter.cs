@@ -846,6 +846,17 @@ namespace AutoItInterpreter
                             }),
                             (@"^with\s+(?<expr>.+)$", new[] { Switch, Select }, m => OpenBlock(With, new WITH(curr, m.Get("expr")))),
                             ("^endwith$", new[] { Switch, Select }, _ => TryCloseBlock(Do)),
+                            (@"^((?<scope>local|global|dim)\s+)?enum(\s+step\s*(?<step>[+\-\*\/][^\s]+))?\s+(?<expr>\$.+)$", new[] { Switch, Select }, m =>
+                            {
+                                string scope = m.Get("scope").ToLower();
+
+                                if (scope == "local" && global)
+                                    err("warnings.preproc.invalid_local", false);
+                                else if (scope == "global" && !global)
+                                    err("errors.preproc.invalid_global", true);
+
+                                Append(new ENUM_DECLARATION(curr, m.Get("step"), m.Get("expr"), scope == "dim" ? global : scope == "global"));
+                            }),
                             (@"^(?<modifier>(static|const)\s+(local|global|dim)?|(global|local|dim)\s+(const|static)?)\s*(?<expr>.+)\s*$", new[] { Switch, Select }, m =>
                             {
                                 string[] modf = m.Get("modifier").ToLower().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1331,6 +1342,7 @@ namespace AutoItInterpreter
 
                     constants.Push(new List<string>());
 
+                    dynamic res = null;
                     dynamic __inner()
                     {
                         switch (e)
@@ -1974,6 +1986,106 @@ namespace AutoItInterpreter
 
                                     break;
                                 }
+                            case ENUM_DECLARATION i:
+                                {
+                                    AST_FUNCTION targetfunc = i.IsGlobal ? state.ASTFunctions[GLOBAL_FUNC_NAME] : _currfunc;
+                                    List<AST_STATEMENT> statements = new List<AST_STATEMENT>();
+                                    string step = "1";
+                                    char op = '+';
+
+                                    if (i.StepExpression.Length > 0)
+                                    {
+                                        step = i.StepExpression.Substring(1).Trim();
+                                        op = i.StepExpression[0];
+                                    }
+
+                                    if (parse_multi_expressions(i.Expression, p_delcaration) is MULTI_EXPRESSION[] expressions)
+                                    {
+                                        int counter = 0;
+                                        EXPRESSION stepexpr = parse_expression(step, false);
+                                        EXPRESSION valexpr() => EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Multiply, EXPRESSION.NewLiteral(LITERAL.NewNumber(counter)), stepexpr);
+                                        OPERATOR_BINARY incrop = OPERATOR_BINARY.Add;
+                                        EXPRESSION lastexpr = EXPRESSION.NewLiteral(LITERAL.False);
+
+                                        if (op == '-')
+                                            incrop = OPERATOR_BINARY.Subtract;
+                                        else if (op == '*')
+                                            incrop = OPERATOR_BINARY.Multiply;
+                                        else if (op == '/')
+                                            incrop = OPERATOR_BINARY.Divide;
+                                        else if (op != '+')
+                                            err("errors.astproc.enum_inval_stepop", op);
+
+                                        if (Analyzer.GetConstantValue(stepexpr).IsSome(out AutoItVariantType stepval))
+                                        {
+                                            err("errors.astproc.enum_inval_stepval", stepexpr);
+
+                                            stepval = 1m;
+                                        }
+                                        else if ((stepval == 0m) && (op == '/'))
+                                            err("errors.astproc.enum_div_zero");
+
+                                        foreach (MULTI_EXPRESSION multiexpr in expressions)
+                                            if (multiexpr.IsValueRange)
+                                                err("errors.astproc.no_range_as_init");
+                                            else if ((multiexpr as MULTI_EXPRESSION.SingleValue)?.Item is EXPRESSION elemexpr)
+                                            {
+                                                EXPRESSION value = EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Add, lastexpr, valexpr());
+                                                VARIABLE variable;
+
+                                                if ((elemexpr as EXPRESSION.AssignmentExpression)?.Item is ASSIGNMENT_EXPRESSION.ScalarAssignment aexpr)
+                                                    if (!aexpr.Item1.IsAssign)
+                                                    {
+                                                        err("errors.astproc.init_invalid_operator", aexpr.Item1);
+
+                                                        continue;
+                                                    }
+                                                    else
+                                                    {
+                                                        value = aexpr.Item3;
+                                                        variable = aexpr.Item2;
+                                                    }
+                                                else if (elemexpr is EXPRESSION.VariableExpression vexpr)
+                                                    variable = vexpr.Item;
+                                                else
+                                                {
+                                                    err("errors.astproc.enum_inval_expr", elemexpr.Print());
+
+                                                    continue;
+                                                }
+
+                                                targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
+                                                {
+                                                    Context = i.DefinitionContext,
+                                                    Variable = variable,
+                                                    Constant = true,
+                                                });
+                                                statements.Add(new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                {
+                                                    Context = i.DefinitionContext,
+                                                    Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                                        OPERATOR_ASSIGNMENT.Assign,
+                                                        variable,
+                                                        value
+                                                    )
+                                                });
+
+                                                lastexpr = EXPRESSION.NewVariableExpression(variable);
+                                                ++counter;
+                                            }
+                                            else
+                                                err("errors.astproc.enum_inval_expr", i.Expression);
+
+                                        return new AST_SCOPE
+                                        {
+                                            Statements = statements.ToArray(),
+                                        };
+                                    }
+                                    else if (i.Expression.Trim().EndsWith(','))
+                                        err("errors.astproc.trailing_comma");
+
+                                    break;
+                                }
                             case REDIM i:
                                 if (isconstant(i.VariableName))
                                     err("errors.astproc.variable_is_const", i.VariableName);
@@ -2031,8 +2143,6 @@ namespace AutoItInterpreter
 
                         return null;
                     }
-
-                    dynamic res = null;
 
                     try
                     {

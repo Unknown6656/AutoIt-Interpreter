@@ -8,7 +8,7 @@
     [x] declaration
     [x] redim
     [x] element assignment
-[ ] enum constants
+[-] enum constants
 [x] pinvoke
 [-] documentation
     [-] usage
@@ -23,18 +23,20 @@
 [x] BSOD/KPanic-function
 [ ] 'execute'-function
     [ ] reflection ?
-[-] implement all funcitions
-[-] implement all macros
+[-] implement macros
+    [-] AutoIt3-specific
+[-] implement funcitions
+    [-] AutoIt3-specific
+    [x] serial API
+    [ ] http API
+    [ ] ftp API
+    [ ] ssh/sftp API
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
 [x] implement main return
 [x] implement non-string main arguments
 [x] implement local macros
 [ ] COM-interop
-[x] serial API
-[ ] http API
-[ ] ftp API
-[ ] ssh/sftp API
 [x] ifn't
 [x] fix byref calls
 [x] fix params calls

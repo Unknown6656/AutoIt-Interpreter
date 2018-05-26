@@ -318,6 +318,20 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => string.Concat(Modifiers.Select(x => x + ' ')) + Expression;
     }
 
+    public sealed class ENUM_DECLARATION
+        : Entity
+    {
+        public string StepExpression { get; }
+        public string Expression { get; }
+        public bool IsGlobal { get; }
+
+
+        public ENUM_DECLARATION(Entity parent, string step, string expr, bool global)
+            : base(parent) => (StepExpression, Expression, IsGlobal) = (step, expr, global);
+
+        public override string ToString() => $"{(IsGlobal ? "global " : "")} enum {StepExpression} {Expression}";
+    }
+
     public sealed class REDIM
         : Entity
     {

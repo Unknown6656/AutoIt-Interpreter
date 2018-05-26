@@ -72,7 +72,11 @@
             "variable_is_const": "The value cannot be assigned to the variable or parameter '{0}', as it has been marked as constant.",
             "start_func_args": "The start function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
             "exit_func_args": "The exit function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
-            "ast_error": "The following critial error occured during the parsing of the interal partial abstract syntax tree:\n{0}"
+            "ast_error": "The following critial error occured during the parsing of the interal partial abstract syntax tree:\n{0}",
+            "enum_inval_stepop": "The step operator '{0}' is invalid for an enum declaration.",
+            "enum_inval_stepval": "The step value '{0}' could not be parsed.",
+            "enum_div_zero": "The step operator-value-combination is invalid due to a division by zero.",
+            "enum_inval_expr": "The expression '{0}' is invalid for an enum declararion or could not be parsed."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",

@@ -66,7 +66,11 @@
             "variable_is_const": 1227,
             "start_func_args": 1228,
             "exit_func_args": 1229,
-            "ast_error": 1230
+            "ast_error": 1230,
+            "enum_inval_stepop": 1231,
+            "enum_inval_stepval": 1232,
+            "enum_div_zero": 1234,
+            "enum_inval_expr": 1235
         },
         "generator": {
             "cannot_create": 1301,
