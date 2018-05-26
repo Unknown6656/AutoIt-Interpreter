@@ -2,10 +2,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using AutoItInterpreter;
 
-
 namespace UnitTests
 {
-    [TestClass, Skip]
+    [TestClass, TestingPriority(100), Skip]
     public sealed class CompilerTests
         : TestCommons
     {

@@ -89,6 +89,7 @@ namespace UnitTests
                                let attr = t.GetCustomAttributes<TestClassAttribute>(true).FirstOrDefault()
                                where attr != null
                                orderby t.Name ascending
+                               orderby t.GetCustomAttributes<PriorityAttribute>(true).FirstOrDefault()?.Priority ?? 0 descending
                                select t)
             {
                 sw.Restart();
@@ -201,12 +202,12 @@ namespace UnitTests
                                    (sr, ConsoleColor.Yellow),
                                    (1 - pr - sr, ConsoleColor.Red));
             Print($@"
-    MODULES: {partial_results.Count}
-    TOTAL:   {passed + failed + skipped}
-    PASSED:  {passed} ({pr * 100:F3} %)
-    SKIPPED: {skipped} ({sr * 100:F3} %)
-    FAILED:  {failed} ({(1 - pr - sr) * 100:F3} %)
-    TIME:    {time * 1000d / Stopwatch.Frequency:F3} ms
+    MODULES: {partial_results.Count,3}
+    TOTAL:   {passed + failed + skipped,3}
+    PASSED:  {passed,3} ({pr * 100,7:F3} %)
+    SKIPPED: {skipped,3} ({sr * 100,7:F3} %)
+    FAILED:  {failed,3} ({(1 - pr - sr) * 100,7:F3} %)
+    TIME:    {time * 1000d / Stopwatch.Frequency,9:F3} ms
     DETAILS:", ConsoleColor.White);
 
             foreach (var res in partial_results)
@@ -224,13 +225,13 @@ namespace UnitTests
 
                 WriteLine($@"
         MODULE:  {res.Name}
-        PASSED:  {res.Passed} ({pr * 100:F3} %)
-        SKIPPED: {res.Failed} ({sr * 100:F3} %)
-        FAILED:  {res.Skipped} ({(1 - pr - sr) * 100:F3} %)
-        TIME:    {mtime * 1000d / Stopwatch.Frequency:F3} ms ({tr * 100d:F3} %)
-            CONSTRUCTORS AND DESTRUCTORS: {res.TimeCtor * 1000d / Stopwatch.Frequency:F3} ms ({tdt_ct * 100d:F3} %)
-            INITIALIZATION AND CLEANUP:   {res.TimeInit * 1000d / Stopwatch.Frequency:F3} ms ({tdt_in * 100d:F3} %)
-            METHOD TEST RUNS:             {res.TimeMethod * 1000d / Stopwatch.Frequency:F3} ms ({tdt_tt * 100d:F3} %)");
+        PASSED:  {res.Passed,3} ({pr * 100,7:F3} %)
+        SKIPPED: {res.Failed,3} ({sr * 100,7:F3} %)
+        FAILED:  {res.Skipped,3} ({(1 - pr - sr) * 100,7:F3} %)
+        TIME:    {mtime * 1000d / Stopwatch.Frequency,9:F3} ms ({tr * 100d,7:F3} %)
+            CONSTRUCTORS AND DESTRUCTORS: {res.TimeCtor * 1000d / Stopwatch.Frequency,9:F3} ms ({tdt_ct * 100d,7:F3} %)
+            INITIALIZATION AND CLEANUP:   {res.TimeInit * 1000d / Stopwatch.Frequency,9:F3} ms ({tdt_in * 100d,7:F3} %)
+            METHOD TEST RUNS:             {res.TimeMethod * 1000d / Stopwatch.Frequency,9:F3} ms ({tdt_tt * 100d,7:F3} %)");
                 PrintGraph(8, i_wdh, "TIME/TOTAL", (tr, ConsoleColor.Magenta),
                                                    (1 - tr, ConsoleColor.Black));
                 PrintGraph(8, i_wdh, "TIME DISTR", (tdt_ct, ConsoleColor.DarkBlue),
@@ -434,5 +435,15 @@ namespace UnitTests
     public sealed class SkipAttribute
         : Attribute
     {
+    }
+
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    public sealed class TestingPriorityAttribute
+        : Attribute
+    {
+        public uint Priority { get; }
+
+
+        public TestingPriorityAttribute(uint p = 0) => Priority = p;
     }
 }

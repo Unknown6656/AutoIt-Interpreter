@@ -11,7 +11,7 @@ namespace UnitTests
     using static ExpressionAST;
 
 
-    [TestClass]
+    [TestClass, TestingPriority(1000)]
     public sealed class ExpressionTests
         : TestCommons
     {

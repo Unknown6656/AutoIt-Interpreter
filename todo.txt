@@ -65,4 +65,4 @@
 [x] Support web-compilation
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
-[ ] Add 'Run after compilation' compiler switch
+[x] Add 'Run after compilation' compiler switch
