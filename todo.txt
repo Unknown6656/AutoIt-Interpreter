@@ -8,7 +8,7 @@
     [x] declaration
     [x] redim
     [x] element assignment
-[-] enum constants
+[x] enum constants
 [x] pinvoke
 [-] documentation
     [-] usage
@@ -68,3 +68,4 @@
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
 [x] Add 'Run after compilation' compiler switch
+[ ] enums: detect 'default'-assignments

@@ -5,7 +5,7 @@
 
 The AutoIt3-syntax is fully compatible with the AutoIt++ dialect, meaning that the [official syntax reference](https://www.autoitscript.com/autoit3/docs/) applies to AutoIt++.
 <br/>
-This article highlights the most important differences between AutoIt3's and AutoIt++'s syntaxes. It is therefore divided in the following sections:
+This article highlights the most important **differences** between AutoIt3's and AutoIt++'s syntaxes. It is therefore divided in the following sections:
 
 1) [AutoIt++ operators](#autoit-operators)
 2) [AutoIt++ string interpolation](#autoit-string-interpolation)
@@ -15,8 +15,9 @@ This article highlights the most important differences between AutoIt3's and Aut
 6) [`new`-exprssions](#new-expressions)
 7) [Inline C#-code](#inline-c-code)
 8) [`ifn't`](#ifnt)
-9) [`#OnAutoItExitRegister`-directive](#onautoitexitregister-directive)
-10) [`#include`-directive](#include-directive)
+9) [The `#OnAutoItExitRegister` directive](#onautoitexitregister-directive)
+10) [The `#include` directive](#include-directive)
+11) [`enum` declarations](#enum-declarations)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -510,3 +511,14 @@ Examples:
 #include '\\192.168.178.22\Public\Documents\program1'   ; <-- '.au3' extension will be added automatically
 #include "ssh://root:password@my-server.domain.com:22/home/script.au3"
 ```
+
+# `enum` declarations
+
+Enumeration declarations in AutoIt++ accept the operators `+`, `-`, `*` and `/` as optional "stepper operators".
+
+**IMPORTANT: Due to internal restrictions, a `default`-assignment to an enum value will be treated as if no explicit assignment was present**, e.g.:
+```autoit
+Enum Step +2 $A = 5, $B, $C, $D = Default, $E
+```
+will result in the values `5`, `7`, `9`, `11`, `13` for the variables `$A` to `$E`, respectively.<br/>
+They will **not** have the values `5`, `7`, `9`, `Default`, `1`. _(This does not make sense semantically, anyways, but AutoIt3 does that...)_

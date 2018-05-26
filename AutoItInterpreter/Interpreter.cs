@@ -1197,23 +1197,6 @@ namespace AutoItInterpreter
 
         private static class ASTProcessor
         {
-            private static string TrimBoxingParentheseses(string expr)
-            {
-                if (expr.Match(@"^(?<pre>\(+)[^\(](.*[^\)])?(?<post>\)+)$", out Match m))
-                {
-                    int pre = m.Get("pre").Length;
-                    int post = m.Get("post").Length;
-                    int tlen = Math.Min(pre, post);
-
-                    expr = expr.Substring(tlen, expr.Length - (2 * tlen));
-                }
-
-                if (expr.Match(@"^\s*new\s*\{", out m))
-                    expr = $"({expr})";
-
-                return expr;
-            }
-
             internal static void ParseExpressionAST(InterpreterState state, InterpreterOptions options)
             {
                 List<(DefinitionContext, string, EXPRESSION[])> funccalls = new List<(DefinitionContext, string, EXPRESSION[])>();
@@ -2016,9 +1999,9 @@ namespace AutoItInterpreter
                                         else if (op != '+')
                                             err("errors.astproc.enum_inval_stepop", op);
 
-                                        if (Analyzer.GetConstantValue(stepexpr).IsSome(out AutoItVariantType stepval))
+                                        if (!Analyzer.GetConstantValue(stepexpr).IsSome(out AutoItVariantType stepval))
                                         {
-                                            err("errors.astproc.enum_inval_stepval", stepexpr);
+                                            err("errors.astproc.enum_inval_stepval", step);
 
                                             stepval = 1m;
                                         }
@@ -2030,7 +2013,7 @@ namespace AutoItInterpreter
                                                 err("errors.astproc.no_range_as_init");
                                             else if ((multiexpr as MULTI_EXPRESSION.SingleValue)?.Item is EXPRESSION elemexpr)
                                             {
-                                                EXPRESSION value = EXPRESSION.NewBinaryExpression(OPERATOR_BINARY.Add, lastexpr, valexpr());
+                                                EXPRESSION value = EXPRESSION.NewBinaryExpression(incrop, lastexpr, valexpr());
                                                 VARIABLE variable;
 
                                                 if ((elemexpr as EXPRESSION.AssignmentExpression)?.Item is ASSIGNMENT_EXPRESSION.ScalarAssignment aexpr)
@@ -2042,7 +2025,12 @@ namespace AutoItInterpreter
                                                     }
                                                     else
                                                     {
-                                                        value = aexpr.Item3;
+                                                        if (!Analyzer.EvaluatesTo(aexpr.Item3, EXPRESSION.NewLiteral(LITERAL.Default)))
+                                                        {
+                                                            counter = 0;
+                                                            value = aexpr.Item3;
+                                                        }
+
                                                         variable = aexpr.Item2;
                                                     }
                                                 else if (elemexpr is EXPRESSION.VariableExpression vexpr)
@@ -2158,6 +2146,23 @@ namespace AutoItInterpreter
 
                     return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
                 }
+            }
+
+            private static string TrimBoxingParentheseses(string expr)
+            {
+                if (expr.Match(@"^(?<pre>\(+)[^\(](.*[^\)])?(?<post>\)+)$", out Match m))
+                {
+                    int pre = m.Get("pre").Length;
+                    int post = m.Get("post").Length;
+                    int tlen = Math.Min(pre, post);
+
+                    expr = expr.Substring(tlen, expr.Length - (2 * tlen));
+                }
+
+                if (expr.Match(@"^\s*new\s*\{", out m))
+                    expr = $"({expr})";
+
+                return expr;
             }
 
             private static (string, PINVOKE_SIGNATURE)[] ParsePinvokeFunctions(InterpreterState state, (DefinitionContext, string, EXPRESSION[])[] dllcalls)
