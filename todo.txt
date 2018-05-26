@@ -45,7 +45,7 @@
     [x] fix ?: operator
 [x] fix loops : exitloop / continueloop
 [-] unit tests
-    [-] improve test framework
+    [x] improve test framework
     [ ] IMPL boolean optimization
     [ ] λ-functionality
     [ ] arrays / matrices

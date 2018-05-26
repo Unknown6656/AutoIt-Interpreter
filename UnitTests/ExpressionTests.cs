@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using AutoItExpressionParser;
@@ -13,6 +15,21 @@ namespace UnitTests
     public sealed class ExpressionTests
         : TestCommons
     {
+        public ExpressionTests()
+        {
+            try
+            {
+                _parser.Initialize();
+                _aparser.Initialize();
+            }
+            catch
+            {
+            }
+
+            foreach (System.Reflection.MethodInfo m in typeof(TestCommons).GetMethods())
+                RuntimeHelpers.PrepareMethod(m.MethodHandle);
+        }
+
         [TestMethod]
         public void Test_01() => AssertValidExpression("func($p1, @macro, false and ($test < 5)) + 88", false);
 

@@ -98,7 +98,7 @@ namespace UnitTests
                 dynamic container = skipclass ? null : Activator.CreateInstance(t);
                 MethodInfo init = t.GetMethod(nameof(TestCommons.Test_Init));
                 MethodInfo cleanup = t.GetMethod(nameof(TestCommons.Test_Cleanup));
-                int tp = 0, tf = 0, ts = 0, pleft = 0;
+                int tp = 0, tf = 0, ts = 0, pleft = 0, ptop = 0;
 
                 WriteLine($"Testing class '{t.FullName}'");
 
@@ -108,8 +108,23 @@ namespace UnitTests
                     if (nfo.GetCustomAttributes<TestMethodAttribute>().FirstOrDefault() != null)
                     {
                         Write("\t[");
+                        ptop = CursorTop;
                         pleft = CursorLeft;
                         Write($"    ] Testing '{t.FullName}.{nfo.Name}'");
+
+                        void WriteResult(ConsoleColor clr, string text)
+                        {
+                            int ttop = CursorTop;
+
+                            ForegroundColor = clr;
+                            CursorLeft = pleft;
+                            CursorTop = ptop;
+
+                            WriteLine(text);
+
+                            ForegroundColor = ConsoleColor.White;
+                            CursorTop = ttop + 1;
+                        }
 
                         try
                         {
@@ -128,12 +143,7 @@ namespace UnitTests
 
                             AddTime(ref swi, sw);
 
-                            ForegroundColor = ConsoleColor.Green;
-
-                            CursorLeft = pleft;
-
-                            WriteLine("PASS");
-                            ForegroundColor = ConsoleColor.White;
+                            WriteResult(ConsoleColor.Green, "PASS");
 
                             ++passed;
                             ++tp;
@@ -141,25 +151,19 @@ namespace UnitTests
                         catch (Exception ex)
                         when ((ex is SkippedException) || (ex?.InnerException is SkippedException))
                         {
+                            WriteResult(ConsoleColor.Yellow, "SKIP");
+
                             ++skipped;
                             ++ts;
-
-                            ForegroundColor = ConsoleColor.Yellow;
-                            CursorLeft = pleft;
-
-                            WriteLine("SKIP");
-
-                            ForegroundColor = ConsoleColor.White;
                         }
                         catch (Exception ex)
                         {
+                            WriteResult(ConsoleColor.Red, "FAIL");
+
                             ++failed;
                             ++tf;
 
                             ForegroundColor = ConsoleColor.Red;
-                            CursorLeft = pleft;
-
-                            WriteLine("FAIL");
 
                             while (ex?.InnerException != null)
                             {
@@ -214,17 +218,24 @@ namespace UnitTests
                 sr = res.Failed / tot;
                 tr = mtime / time;
 
+                double tdt_ct = res.TimeCtor / mtime;
+                double tdt_in = res.TimeInit / mtime;
+                double tdt_tt = res.TimeMethod / mtime;
+
                 WriteLine($@"
         MODULE:  {res.Name}
         PASSED:  {res.Passed} ({pr * 100:F3} %)
         SKIPPED: {res.Failed} ({sr * 100:F3} %)
         FAILED:  {res.Skipped} ({(1 - pr - sr) * 100:F3} %)
-        TIME:    {mtime * 1000d / Stopwatch.Frequency:F3} ms ({tr * 100d:F3} %)");
+        TIME:    {mtime * 1000d / Stopwatch.Frequency:F3} ms ({tr * 100d:F3} %)
+            CONSTRUCTORS AND DESTRUCTORS: {res.TimeCtor * 1000d / Stopwatch.Frequency:F3} ms ({tdt_ct * 100d:F3} %)
+            INITIALIZATION AND CLEANUP:   {res.TimeInit * 1000d / Stopwatch.Frequency:F3} ms ({tdt_in * 100d:F3} %)
+            METHOD TEST RUNS:             {res.TimeMethod * 1000d / Stopwatch.Frequency:F3} ms ({tdt_tt * 100d:F3} %)");
                 PrintGraph(8, i_wdh, "TIME/TOTAL", (tr, ConsoleColor.Magenta),
-                                                   (1 - tr, ConsoleColor.DarkMagenta));
-                PrintGraph(8, i_wdh, "TIME DISTR", (res.TimeCtor, ConsoleColor.DarkBlue),
-                                                   (res.TimeInit, ConsoleColor.Blue),
-                                                   (res.TimeMethod, ConsoleColor.Cyan));
+                                                   (1 - tr, ConsoleColor.Black));
+                PrintGraph(8, i_wdh, "TIME DISTR", (tdt_ct, ConsoleColor.DarkBlue),
+                                                   (tdt_in, ConsoleColor.Blue),
+                                                   (tdt_tt, ConsoleColor.Cyan));
                 PrintGraph(8, i_wdh, "PASS/SKIP/FAIL", (res.Passed, ConsoleColor.Green),
                                                        (res.Failed, ConsoleColor.Yellow),
                                                        (res.Skipped, ConsoleColor.Red));
@@ -263,8 +274,8 @@ namespace UnitTests
             UseMSBuildErrorOutput = false,
             UseVerboseOutput = false
         };
-        private static readonly ExpressionParser _aparser = new ExpressionParser(ExpressionParserMode.Assignment);
-        private static readonly ExpressionParser _parser = new ExpressionParser(ExpressionParserMode.Regular);
+        internal static readonly ExpressionParser _aparser = new ExpressionParser(ExpressionParserMode.Assignment);
+        internal static readonly ExpressionParser _parser = new ExpressionParser(ExpressionParserMode.Regular);
         private static readonly DirectoryInfo _testdir;
 
 
