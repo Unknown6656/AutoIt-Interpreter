@@ -38,7 +38,6 @@ let rec ProcessConstants e =
             | Number d -> num d
             | False
             | Null -> num 0m
-            | Default -> num -1m
             | True -> num 1m
             | _ -> None
         | UnaryExpression (o, Constant x) ->

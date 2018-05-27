@@ -138,8 +138,8 @@ type ExpressionParser(mode : ExpressionParserMode) =
                                                                                     )
         let t_variable                  = x.tf @"$[a-z_]\w*"                        (fun s -> VARIABLE(s.Substring 1))
         let t_macro                     = x.tf @"@[a-z_]\w*"                        (fun s -> MACRO(s.Substring 1))
-        let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""   (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("\"\"", "\"")))
-        let t_string_2                  = x.tf @"'(([^']*''[^']*)*|[^']+)'"         (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Trim().Replace("''", "'")))
+        let t_string_1                  = x.tf "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""   (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
+        let t_string_2                  = x.tf @"'(([^']*''[^']*)*|[^']+)'"         (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
         let t_string_3                  = x.tf @"$""(([^""]*\\""[^""]*)*|[^""]+)""" (fun s -> 
                                                                                          let mutable s = s.Remove(s.Length - 1)
                                                                                                           .Remove(0, 2)
