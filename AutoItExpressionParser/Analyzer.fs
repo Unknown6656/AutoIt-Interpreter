@@ -37,8 +37,8 @@ let rec ProcessConstants e =
             match l with
             | Number d -> num d
             | False
-            | Null
-            | Default -> num 0m
+            | Null -> num 0m
+            | Default -> num -1m
             | True -> num 1m
             | _ -> None
         | UnaryExpression (o, Constant x) ->

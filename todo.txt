@@ -68,4 +68,4 @@
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
 [x] Add 'Run after compilation' compiler switch
-[ ] enums: detect 'default'-assignments
+[ ] FIX 'Default'

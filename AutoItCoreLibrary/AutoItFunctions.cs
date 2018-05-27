@@ -296,7 +296,7 @@ namespace AutoItCoreLibrary
         {
             f?.Invoke();
 
-            return var.Default;
+            return var.Empty;
         }
 
         public static var __InvalidFunction__(params var[] _) =>
@@ -518,7 +518,7 @@ namespace AutoItCoreLibrary
             {
                 SetError(0xDEAD, 0xBEEF);
 
-                return var.Default;
+                return var.Empty;
             }
         }
         [BuiltinFunction, CompatibleOS(OS.Windows)]
@@ -944,7 +944,7 @@ namespace AutoItCoreLibrary
 
                 SetError(1, sb.ToString());
 
-                return var.Default;
+                return var.Empty;
             }
         }
         [BuiltinFunction]
@@ -978,7 +978,7 @@ namespace AutoItCoreLibrary
 
             Console.WriteLine("PS: Bush did it.");
 
-            return var.Default;
+            return var.Empty;
         }
         [BuiltinFunction]
         public static var PlayWAVFileSync(var path) => PlaySound(path, null, 0);

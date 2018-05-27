@@ -71,6 +71,8 @@ namespace AutoItCoreLibrary
 
         public bool IsString => _data.IsString;
 
+        public bool IsDefault => _data.IsDefault;
+
         public long BinaryLength => BinaryData.LongLength;
 
         public long Length => IsString ? ToString().Length : _data.Sizes[0];
@@ -80,13 +82,19 @@ namespace AutoItCoreLibrary
         #endregion
         #region STATIC PROPERTIES
 
+        public static AutoItVariantType One { get; } = 1m;
+
+        public static AutoItVariantType Zero { get; } = 0m;
+
         public static AutoItVariantType False { get; } = false;
 
         public static AutoItVariantType True { get; } = true;
 
-        public static AutoItVariantType Default { get; } = "";
+        public static AutoItVariantType Default { get; } = new AutoItVariantType(AutoItVariantData.Default);
 
         public static AutoItVariantType Null { get; } = (void*)null;
+
+        public static AutoItVariantType Empty { get; } = "";
 
         #endregion
         #region CONSTRUCTORS
@@ -147,7 +155,7 @@ namespace AutoItCoreLibrary
 
         object ICloneable.Clone() => Clone();
 
-        public override string ToString() => IsString ? _data.StringData : "";
+        public override string ToString() => IsDefault ? "Default" : IsString ? _data.StringData : "";
 
         public override int GetHashCode()
         {
@@ -488,9 +496,9 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(bool b) => b.ToString();
         public static implicit operator string(AutoItVariantType v) => v.ToString();
         public static implicit operator AutoItVariantType(string s) => new AutoItVariantType(s);
-        public static implicit operator decimal(AutoItVariantType v) => decimal.TryParse(v, out decimal d) ? d : (long)v;
+        public static implicit operator decimal(AutoItVariantType v) => v.IsDefault ? -1m : decimal.TryParse(v, out decimal d) ? d : (long)v;
         public static implicit operator AutoItVariantType(decimal d) => d.ToString();
-        public static explicit operator long(AutoItVariantType v) => long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : 0L;
+        public static explicit operator long(AutoItVariantType v) => v.IsDefault ? -1L : long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : 0L;
         public static implicit operator AutoItVariantType(long l) => l.ToString();
         public static implicit operator void* (AutoItVariantType v) => (void*)(long)v;
         public static implicit operator AutoItVariantType(void* l) => (long)l;
@@ -526,9 +534,20 @@ namespace AutoItCoreLibrary
             public bool IsString { get; }
             public string StringData { get; }
             public long[] Sizes { get; }
-            public long Dimensions => Sizes.LongLength;
+            public bool IsDefault => (Sizes.LongLength == 1) && (Sizes[0] == -1);
+            public long Dimensions => Sizes.Count(l => l >= 0);
             public AutoItVariantType[] VariantData { get; }
 
+            public static AutoItVariantData Default => new AutoItVariantData();
+
+
+            public AutoItVariantData()
+            {
+                IsString = true;
+                StringData = "-1";
+                Sizes = new long[] { -1 };
+                VariantData = new AutoItVariantType[0];
+            }
 
             public AutoItVariantData(string s)
             {

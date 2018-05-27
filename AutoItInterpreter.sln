@@ -26,6 +26,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118B-4538-8A35-36D3A68DB14C}"
 	ProjectSection(SolutionItems) = preProject
 		doc\language.md = doc\language.md
+		runtime.md = runtime.md
 		doc\syntax-tree.md = doc\syntax-tree.md
 		doc\syntax.md = doc\syntax.md
 		doc\usage.md = doc\usage.md

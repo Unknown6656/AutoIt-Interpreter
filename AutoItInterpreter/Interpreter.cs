@@ -1558,7 +1558,7 @@ namespace AutoItInterpreter
 
                                     return new AST_RETURN_STATEMENT
                                     {
-                                        Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.Default) : parse_expression(i.Expression, false)
+                                        Expression = i.Expression is null ? EXPRESSION.NewLiteral(LITERAL.NewString("")) : parse_expression(i.Expression, false)
                                     };
                                 }
                             case CONTINUECASE _:
@@ -2025,7 +2025,7 @@ namespace AutoItInterpreter
                                                     }
                                                     else
                                                     {
-                                                        if (!Analyzer.EvaluatesTo(aexpr.Item3, EXPRESSION.NewLiteral(LITERAL.Default)))
+                                                        if (!Analyzer.EvaluatesTo(aexpr.Item3, EXPRESSION.NewLiteral(LITERAL.NewString(""))))
                                                         {
                                                             counter = 0;
                                                             value = aexpr.Item3;

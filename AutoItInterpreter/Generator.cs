@@ -165,7 +165,7 @@ namespace {NAMESPACE}
                 return Assembly.Load(rm.GetObject(dll) as byte[]);
             }};
 
-            {TYPE} arguments = {TYPE}.Default;
+            {TYPE} arguments = {TYPE}.Empty;
 
             if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDPARG}=.+"")) is string mmfinarg)
                 try
@@ -195,7 +195,7 @@ namespace {NAMESPACE}
                 return null;
             }});
             {VARS} = new {TYPE_VAR_RPOVIDER}();
-            {DISCARD} = {TYPE}.Default;
+            {DISCARD} = {TYPE}.Empty;
             {TYPE} result = ___globalentrypoint();
 
             if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDRARG}=.+"")) is string mmfoutarg)
@@ -232,12 +232,12 @@ namespace {NAMESPACE}
 ".TrimEnd());
 
                     foreach (AST_LOCAL_VARIABLE v in function.ExplicitLocalVariables)
-                        sb.AppendLine($@"            {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e) : TYPE + ".Default")};");
+                        sb.AppendLine($@"            {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e) : TYPE + ".Empty")};");
 
                     _print(function, 4);
 
                     sb.AppendLine($@"
-            return {TYPE}.Default;
+            return {TYPE}.Empty;
         }}
 ".TrimEnd());
                 }
@@ -266,7 +266,7 @@ namespace {NAMESPACE}
                     _print(function, 5);
 
                     sb.AppendLine($@"
-                return {TYPE}.Default;
+                return {TYPE}.Empty;
             }}
             {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
 

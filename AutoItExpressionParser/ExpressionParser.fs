@@ -127,6 +127,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_literal_false             = x.tf @"false"                             (fun _ -> False)
         let t_literal_null              = x.tf @"null"                              (fun _ -> Null)
         let t_literal_default           = x.tf @"default"                           (fun _ -> Default)
+        let t_literal_empty             = x.tf @"empty"                             (fun _ -> String "")
         let t_hex                       = x.tf @"(\+|-)?(0x[\da-f]+|[\da-f]h)"      (lparse "0x" (fun s -> long.Parse(s.TrimEnd 'h', NumberStyles.HexNumber)))
         let t_bin                       = x.tf @"(\+|-)?0b[01]+"                    (lparse "0b" (fun s -> System.Convert.ToInt64(s, 2)))
         let t_oct                       = x.tf @"(\+|-)?0o[0-7]+"                   (lparse "0o" (fun s -> System.Convert.ToInt64(s, 8)))
@@ -258,8 +259,8 @@ type ExpressionParser(mode : ExpressionParserMode) =
             reduce4 nt_expression_ext t_variable nt_array_indexers t_symbol_equal nt_array_init_expression (fun v i _ e -> asg v (ArrayInitExpression(i, e)))
             reduce2 nt_expression_ext t_variable nt_array_indexers (fun v i -> asg v (ArrayInitExpression(i, [])))
             reduce3 nt_expression_ext t_variable t_symbol_equal nt_expression (fun v _ e -> asg v e)
-            reduce1 nt_expression_ext t_variable (fun v -> asg v (Literal Default))
-            
+            reduce1 nt_expression_ext t_variable (fun v -> asg v (Literal (String "")))
+
             reduce3 nt_array_init_wrapper nt_array_init_wrapper t_symbol_comma nt_array_init_expression (fun es _ e -> es@[Multiple e])
             reduce1 nt_array_init_wrapper nt_array_init_expression (fun e -> [Multiple e])
 
@@ -364,6 +365,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduce0 nt_literal t_literal_false
         reduce0 nt_literal t_literal_null
         reduce0 nt_literal t_literal_default
+        reduce0 nt_literal t_literal_empty
         reduce0 nt_literal t_string_1
         reduce0 nt_literal t_string_2
         reduce0 nt_literal t_hex

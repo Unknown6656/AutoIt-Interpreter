@@ -12,7 +12,7 @@ namespace AutoItCoreLibrary
         public AutoItVariantType this[string name]
         {
             set => (_locals.Count > 0 && _locals.Peek().ContainsKey(name) ? _locals.Peek() : _globals)[name] = value;
-            get => (_locals.Count > 0 && _locals.Peek().TryGetValue(name, out AutoItVariantType v)) || _globals.TryGetValue(name, out v) ? v : AutoItVariantType.Default;
+            get => (_locals.Count > 0 && _locals.Peek().TryGetValue(name, out AutoItVariantType v)) || _globals.TryGetValue(name, out v) ? v : AutoItVariantType.Empty;
         }
 
         public ReadOnlyIndexer<string, AutoItVariantTypeReference> ByReference { get; }
@@ -39,7 +39,7 @@ namespace AutoItCoreLibrary
             Dictionary<string, AutoItVariantType> dic = _locals.Peek();
 
             if (!dic.ContainsKey(name))
-                dic[name] = AutoItVariantType.Default;
+                dic[name] = AutoItVariantType.Empty;
         }
 
         public override string ToString()
@@ -68,7 +68,7 @@ namespace AutoItCoreLibrary
         private readonly AutoItMacroDictionary _parent;
 
 
-        public AutoItVariantType this[string name] => _func(name) ?? _parent?[name] ?? AutoItVariantType.Default;
+        public AutoItVariantType this[string name] => _func(name) ?? _parent?[name] ?? AutoItVariantType.Empty;
 
         public AutoItMacroDictionary(Func<string, AutoItVariantType?> prov)
             : this(null, prov)

@@ -21,6 +21,8 @@ This article highlights the most important **differences** between AutoIt3's and
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
+<br/>
+You can also refer to the [AutoIt++ runtime behaviour description](runtime.md) and the [AutoIt++ language reference](language.md).
 
 ------
 
@@ -447,9 +449,8 @@ $arr2 = new { { 1 }, { 2, 3 }, { 4, 5, 6 } }
 ```
 
 This could result in some semantic data loss when using the `ReDim`-statement on arrays created with the `new`-expression.
-
-
-**NOTE: Due to unresolved parser issues, it is recommended to wrap any** `new { ... }`**-epxression in parentheses.**
+<br/>
+Please refer to [the runime behaviour reference](runtime.md) for mor information.
 
 # Inline C#-Code
 
@@ -512,13 +513,11 @@ Examples:
 #include "ssh://root:password@my-server.domain.com:22/home/script.au3"
 ```
 
+Please refer to the [AutoIt++ runtime behaviour description](runtime.md) for more information about the `#include` file path resoltion.
+
 # `enum` declarations
 
 Enumeration declarations in AutoIt++ accept the operators `+`, `-`, `*` and `/` as optional "stepper operators".
 
-**IMPORTANT: Due to internal restrictions, a `default`-assignment to an enum value will be treated as if no explicit assignment was present**, e.g.:
-```autoit
-Enum Step +2 $A = 5, $B, $C, $D = Default, $E
-```
-will result in the values `5`, `7`, `9`, `11`, `13` for the variables `$A` to `$E`, respectively.<br/>
-They will **not** have the values `5`, `7`, `9`, `Default`, `1`. _(This does not make sense semantically, anyways, but AutoIt3 does that...)_
+_In an older iteration of AutoIt++, an assignment of the value `Default` to any enum element resulted in the assignment to be ignored. This has been resolved._
+_Please refer to the [AutoIt++ runtime behaviour description](runtime.md) for more information about the behaviour of `Default`._
