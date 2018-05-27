@@ -70,7 +70,9 @@
             "enum_inval_stepop": 1231,
             "enum_inval_stepval": 1232,
             "enum_div_zero": 1234,
-            "enum_inval_expr": 1235
+            "enum_inval_expr": 1235,
+            "fatal_codegen": 1236,
+            "mismatch_parcount": 1237
         },
         "generator": {
             "cannot_create": 1301,

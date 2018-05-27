@@ -78,7 +78,9 @@
             "enum_inval_stepop": "The step operator '{0}' is invalid for an enum declaration.",
             "enum_inval_stepval": "The step value '{0}' could not be parsed.",
             "enum_div_zero": "The step operator-value-combination is invalid due to a division by zero.",
-            "enum_inval_expr": "The expression '{0}' is invalid for an enum declararion or could not be parsed."
+            "enum_inval_expr": "The expression '{0}' is invalid for an enum declararion or could not be parsed.",
+            "fatal_codegen": "A fatal internal error occured duing code generation.",
+            "mismatch_parcount": "The parameter count for the call of the function '{0}' is {1}, however {2} parameter(s) are required."
         },
         "generator": {
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",

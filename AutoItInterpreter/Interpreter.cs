@@ -169,10 +169,14 @@ namespace AutoItInterpreter
                 }
             while ((++i < actions.Length) && !(nfo?.Exists ?? false));
 
-            if (nfo is null)
-                throw new ArgumentException($"The path '{RawPath}' could not be resolved to a file.");
-            else
+            if (nfo?.Exists ?? false)
                 return LastResolvedPath = nfo;
+            else
+            {
+                LastResolvedPath = null;
+
+                throw new ArgumentException($"The path '{RawPath}' could not be resolved to a file.");
+            }
         }
 
         public static void CleanUp()
@@ -444,7 +448,8 @@ namespace AutoItInterpreter
                     ++locindx;
                 }
 
-                DefinitionContext eofctx = new DefinitionContext(lines.Last().File, lines.Last().OriginalLineNumbers[0], null);
+                DefinitionContext eofctx = lines.Count > 0 ? new DefinitionContext(lines.Last().File, lines.Last().OriginalLineNumbers[0], null)
+                                                           : new DefinitionContext(context.SourcePath, 0, null);
 
                 if (stack.Count > 1)
                     pstate.ReportKnownError("errors.preproc.missing_endfunc", eofctx, stack.Count);

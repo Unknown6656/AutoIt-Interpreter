@@ -103,6 +103,32 @@ On Windows systems, you can alternatively use the `MSBuild` build engine as foll
 
 Congratulations, you have downloaded and build the interpiler!
 
+### Important Note: Strong name signing of the interpiler
+
+Some parts of the interpiler have been strongly signed with a public/private-keypair belonging to [@Unknown6656](https://github.com/Unknown6656).
+
+Sometimes, the initial build process might fail due to the missing certificate on your host machine. In order to resolve this issue you can either delete all
+references to the signing certificate in the project files or sign the interpiler with your own certificate.
+
+Follow these steps to remove or change the signing certificate:
+
+ 1) Open the following project files in the text editor of your choise:<br/>
+    ```
+    AutoItCoreLibrary/AutoItCoreLibrary.csproj
+    AutoItInterpreter/AutoItInterpreter.csproj
+    AutoItExpressionParser/AutoItExpressionParser.fsproj
+    ```
+ 2) For each of the files, scroll to the following lines:<br/>
+    ```xml:
+        ...
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>../Unknown6656.pfx</AssemblyOriginatorKeyFile>
+        <DelaySign>false</DelaySign>
+        ...
+    ```
+ 3) Comment these three lines out using the tags `<!--` and `-->` or delete them
+ 4) If you want to use your custom certificate, replace the path `../Unknown6656.pfx` with the one of your personal certificate.
+
 # Using the interpiler
 
 After having built the interpiler from source (via command-line or Visual Studio), use the following command to execute it as follows:

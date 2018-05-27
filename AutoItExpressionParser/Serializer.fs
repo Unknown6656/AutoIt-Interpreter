@@ -24,6 +24,12 @@ type SerializerSettings =
         FunctionResolver : Func<string, EXPRESSION[], ResolvedFunction>
     }
 
+type FunctionParameterCountMismatchException(name, expected, got) =
+    inherit Exception()
+    member x.FunctionName = name
+    member x.ExpectedArgumentCount = expected
+    member x.RecievedArgumentCount = got
+
 type Serializer (settings : SerializerSettings) =
     let adict = dict [
                          AssignAdd, Add
@@ -94,10 +100,12 @@ type Serializer (settings : SerializerSettings) =
             sprintf "%s%s = (%s)%s" v (match i with
                                        | [] -> ""
                                        | i -> "[" + (String.Join(", ", List.map printexpr i)) + "]") varn e
-        and printparams (ps : EXPRESSION list) rf =
+        and printparams name (ps : EXPRESSION list) (rf : ResolvedFunctionParamter[]) =
             let rf = match rf with
                      | null -> Array.create (ps.Length) ({ IsOptional = false; IsByRef = false })
-                     | _ -> rf
+                     | _ -> if rf.Length = ps.Length then rf
+                            else FunctionParameterCountMismatchException(name, rf.Length, ps.Length)
+                                 |> raise
                      |> Array.toList
                      |> List.zip ps
                      |> List.map (fun (e, rp) ->
@@ -144,8 +152,8 @@ type Serializer (settings : SerializerSettings) =
                             | "assign" -> sprintf "%s[%s] = %s" (x.Settings.VariableDictionary) (printexpr es.[0]) (printexpr es.[1])
                             | "isdeclared" -> sprintf "%s.ContainsVariable(%s)" (x.Settings.VariableDictionary) (printexpr es.[0])
                             | f -> let rf = x.Settings.FunctionResolver.Invoke(f, List.toArray es)
-                                   sprintf "%s(%s)" (rf.Name) (printparams es (rf.Parameters))
-                      | ΛFunctionCall (e, es) -> sprintf "(%s).Call(%s)" (printexpr e) (printparams es null)
+                                   sprintf "%s(%s)" (rf.Name) (printparams (rf.Name) es (rf.Parameters))
+                      | ΛFunctionCall (e, es) -> sprintf "(%s).Call(%s)" (printexpr e) (printparams "<anonymous>" es null)
                       | ArrayAccess (e, i) -> sprintf "%s[%s]" (printexpr e) (printexpr i)
                       | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) (m
                                                                           |> List.map (fun m -> "." + match m with

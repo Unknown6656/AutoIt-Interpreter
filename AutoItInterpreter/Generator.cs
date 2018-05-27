@@ -106,8 +106,23 @@ namespace AutoItInterpreter
                     rparams
                 );
             }));
-            string tstr(EXPRESSION ex) => ex is null ? "«« error »»" : ser.Serialize(ex);
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
+            string tstr(EXPRESSION ex, DefinitionContext ctx)
+            {
+                if (ex is null)
+                    state.ReportKnownError("errors.astproc.fatal_codegen", ctx);
+                else
+                    try
+                    {
+                        return ser.Serialize(ex);
+                    }
+                    catch (FunctionParameterCountMismatchException e)
+                    {
+                        state.ReportKnownError("errors.astproc.mismatch_parcount", ctx, e.FunctionName, e.RecievedArgumentCount, e.ExpectedArgumentCount);
+                    }
+
+                return "«« error »»";
+            }
 
             sb.AppendLine($@"
 using System.Text.RegularExpressions;
@@ -232,12 +247,12 @@ namespace {NAMESPACE}
 ".TrimEnd());
 
                     foreach (AST_LOCAL_VARIABLE v in function.ExplicitLocalVariables)
-                        sb.AppendLine($@"            {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e) : TYPE + ".Empty")};");
+                        sb.AppendLine($@"            {VARS}[""{v.Variable.Name}""] = {(v.InitExpression is EXPRESSION e ? tstr(e, v.Context ?? function.Context) : TYPE + ".Empty")};");
 
                     _print(function, 4);
 
                     sb.AppendLine($@"
-            return {TYPE}.Empty;
+            return {TYPE}.Zero;
         }}
 ".TrimEnd());
                 }
@@ -266,7 +281,7 @@ namespace {NAMESPACE}
                     _print(function, 5);
 
                     sb.AppendLine($@"
-                return {TYPE}.Empty;
+                return {TYPE}.Zero;
             }}
             {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
 
@@ -275,7 +290,7 @@ namespace {NAMESPACE}
 
                     foreach (AST_FUNCTION_PARAMETER par in function.Parameters)
                         if (par is AST_FUNCTION_PARAMETER_OPT optpar)
-                            sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name} ?? {tstr(optpar.InitExpression)});");
+                            sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = ({TYPE})({PARAM_PREFIX}{par.Name.Name} ?? {tstr(optpar.InitExpression, function.Context)});");
                         else
                             sb.AppendLine($@"            {VARS}[""{par.Name.Name}""] = {PARAM_PREFIX}{par.Name.Name};");
 
@@ -339,17 +354,17 @@ namespace {NAMESPACE}
                 switch (e)
                 {
                     case AST_IF_STATEMENT s:
-                        printblock(s.If.Statements, $"if ({tstr(s.If.Condition)})");
+                        printblock(s.If.Statements, $"if ({tstr(s.If.Condition, s.If.Context)})");
 
                         foreach (AST_CONDITIONAL_BLOCK elif in s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
-                            printblock(elif.Statements, $"else if ({tstr(elif.Condition)})");
+                            printblock(elif.Statements, $"else if ({tstr(elif.Condition, elif.Context)})");
 
                         if (s.OptionalElse is AST_STATEMENT[] b)
                             printblock(b, "else");
 
                         return;
                     case AST_WHILE_STATEMENT s:
-                        printblock(s.WhileBlock.Statements, $"while ({tstr(s.WhileBlock.Condition)})");
+                        printblock(s.WhileBlock.Statements, $"while ({tstr(s.WhileBlock.Condition, s.WhileBlock.Context)})");
 
                         return;
                     case AST_SCOPE s:
@@ -377,11 +392,11 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_ASSIGNMENT_EXPRESSION_STATEMENT s:
-                        println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression)) + ';');
+                        println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression), s.Context) + ';');
 
                         return;
                     case AST_EXPRESSION_STATEMENT s:
-                        println($"{DISCARD} = {tstr(s.Expression)};");
+                        println($"{DISCARD} = {tstr(s.Expression, s.Context)};");
 
                         return;
                     case AST_INLINE_CSHARP s:
@@ -389,7 +404,7 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_RETURN_STATEMENT s:
-                        println($"return {tstr(s.Expression)};");
+                        println($"return {tstr(s.Expression, s.Context)};");
 
                         return;
                     case AST_Λ_ASSIGNMENT_STATEMENT s:
@@ -401,12 +416,12 @@ namespace {NAMESPACE}
                         else
                             del = $"typeof({FUNC_MODULE}).GetMethod(\"{fname}\", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.IgnoreCase)";
 
-                        println($"{tstr(s.VariableExpression)} = {TYPE}.{nameof(AutoItVariantType.NewDelegate)}({del});");
+                        println($"{tstr(s.VariableExpression, s.Context)} = {TYPE}.{nameof(AutoItVariantType.NewDelegate)}({del});");
 
                         return;
                     case AST_REDIM_STATEMENT s:
-                        string varexpr = tstr(EXPRESSION.NewVariableExpression(s.Variable));
-                        string dimexpr = string.Concat(s.DimensionExpressions.Select(dim => $", ({tstr(dim)}).{nameof(AutoItVariantType.ToLong)}()"));
+                        string varexpr = tstr(EXPRESSION.NewVariableExpression(s.Variable), s.Context);
+                        string dimexpr = string.Concat(s.DimensionExpressions.Select(dim => $", ({tstr(dim, s.Context)}).{nameof(AutoItVariantType.ToLong)}()"));
 
                         println($"{varexpr} = {TYPE}.{nameof(AutoItVariantType.RedimMatrix)}({varexpr}{dimexpr});");
 
