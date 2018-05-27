@@ -166,7 +166,13 @@ namespace AutoItInterpreter
                 if (result.Result > DebugPrintUtil.FinalResult.OK_Warnings)
                     return result.Errors.Count(x => x.Type == ErrorType.Fatal);
                 else if (Cont("run"))
+                {
+                    Console.WriteLine();
+                    DebugPrintUtil.PrintSeperator("EXECUTION RESULT");
+                    Console.WriteLine();
+
                     return ApplicationGenerator.RunApplication(result.OutputFile);
+                }
                 else
                     return 0;
             }

@@ -20,8 +20,7 @@ type VARIABLE (name : string) =
     static member NewTemporary =
         _tmp <- _tmp + 1L
         VARIABLE(sprintf "__tmp<>%04x" _tmp)
-        
-// https://www.autoitscript.com/autoit3/docs/macros.htm
+
 type MACRO (name : string) =
     member x.Name = if name.StartsWith('@') then name.Substring 1 else name
     override x.ToString() = "@" + x.Name

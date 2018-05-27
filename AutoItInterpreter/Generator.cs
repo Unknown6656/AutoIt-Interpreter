@@ -17,7 +17,8 @@ namespace AutoItInterpreter
 {
     using static InterpreterConstants;
     using static ExpressionAST;
-
+    using Microsoft.FSharp.Collections;
+    using Microsoft.FSharp.Core;
 
     public static class ApplicationGenerator
     {
@@ -392,7 +393,17 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_ASSIGNMENT_EXPRESSION_STATEMENT s:
-                        println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression), s.Context) + ';');
+                        if (s.Expression is ASSIGNMENT_EXPRESSION.ArrayAssignment arrassg)
+                        {
+                            DefinitionContext ctx = s.Context;
+                            string varexpr = tstr(EXPRESSION.NewVariableExpression(arrassg.Item2), ctx);
+
+                            println($"{DISCARD} = {varexpr};");
+                            println($"{DISCARD}[{string.Join(", ", arrassg.Item3.Select(x => tstr(x, ctx)))}] = {tstr(arrassg.Item4, ctx)};");
+                            println($"{varexpr} = {DISCARD};");
+                        }
+                        else
+                            println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression), s.Context) + ';');
 
                         return;
                     case AST_EXPRESSION_STATEMENT s:
@@ -420,12 +431,14 @@ namespace {NAMESPACE}
 
                         return;
                     case AST_REDIM_STATEMENT s:
-                        string varexpr = tstr(EXPRESSION.NewVariableExpression(s.Variable), s.Context);
-                        string dimexpr = string.Concat(s.DimensionExpressions.Select(dim => $", ({tstr(dim, s.Context)}).{nameof(AutoItVariantType.ToLong)}()"));
+                        {
+                            string varexpr = tstr(EXPRESSION.NewVariableExpression(s.Variable), s.Context);
+                            string dimexpr = string.Concat(s.DimensionExpressions.Select(dim => $", ({tstr(dim, s.Context)}).{nameof(AutoItVariantType.ToLong)}()"));
 
-                        println($"{varexpr} = {TYPE}.{nameof(AutoItVariantType.RedimMatrix)}({varexpr}{dimexpr});");
+                            println($"{varexpr} = {TYPE}.{nameof(AutoItVariantType.RedimMatrix)}({varexpr}{dimexpr});");
 
-                        return;
+                            return;
+                        }
                     default:
                         println($"// TODO: {e}"); // TODO
 
@@ -606,7 +619,7 @@ using System.Reflection;
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    WorkingDirectory = path.FullName,
+                    WorkingDirectory = path.Directory.FullName,
                     Arguments = $"\"{path.FullName}\"",
                     FileName = "dotnet",
                 }

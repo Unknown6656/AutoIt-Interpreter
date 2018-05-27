@@ -325,7 +325,7 @@ namespace AutoItInterpreter
                         if (!targetdir.Exists)
                             targetdir.Create();
 
-                        state.OutputFile = new FileInfo($"{targetdir.FullName}/{ApplicationGenerator.GetAssemblyName(state, ProjectName)}");
+                        state.OutputFile = new FileInfo($"{targetdir.FullName}/{ApplicationGenerator.GetAssemblyName(state, ProjectName)}.dll");
 
                         FileInfo[] ovf = targetdir.EnumerateFiles().ToArray();
 
