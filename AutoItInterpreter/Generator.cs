@@ -100,6 +100,9 @@ namespace AutoItInterpreter
                     state.ReportKnownError("errors.astproc.func_not_declared", default, func);
 
                     rname = $"{FUNC_MODULE}.{nameof(AutoItFunctions.__InvalidFunction__)}";
+
+                    for (int i = 0; i < rparams.Length; ++i)
+                        rparams[i] = new ResolvedFunctionParamter(false, false);
                 }
 
                 return new ResolvedFunction(
@@ -371,8 +374,22 @@ namespace {NAMESPACE}
                     case AST_SCOPE s:
                         println("{");
 
+                        if (s.UseExplicitLocalScoping)
+                        {
+                            println($"    {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
+
+                            foreach (VARIABLE v in s.ExplicitLocalVariables.Select(x => x.Variable))
+                                println($@"    {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
+                        }
+
+                        foreach (AST_LOCAL_VARIABLE v in s.ExplicitLocalVariables)
+                            println($@"    {VARS}[""{v.Variable.Name}""] = {tstr(v.InitExpression ?? EXPRESSION.NewLiteral(LITERAL.NewString("")), v.Context ?? s.Context)};");
+
                         foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
                             print(ls);
+
+                        if (s.UseExplicitLocalScoping)
+                            println($"    {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();");
 
                         println("}");
 

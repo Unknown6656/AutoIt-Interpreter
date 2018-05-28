@@ -1514,7 +1514,7 @@ namespace AutoItInterpreter
 
                                         return cblock;
                                     });
-                                    AST_SCOPE scope = new AST_SCOPE();
+                                    AST_SCOPE scope = new AST_SCOPE { UseExplicitLocalScoping = true };
 
                                     if (condcases.Any())
                                         scope.Statements = new AST_STATEMENT[]
@@ -1599,7 +1599,7 @@ namespace AutoItInterpreter
                                         break;
                                 }
                             case FOR i:
-                                { // TODO : fix this thing!!
+                                {
                                     DefinitionContext defctx = i.DefinitionContext;
                                     EXPRESSION start = parse_expression(i.StartExpression, false);
                                     EXPRESSION stop = parse_expression(i.StopExpression, false);

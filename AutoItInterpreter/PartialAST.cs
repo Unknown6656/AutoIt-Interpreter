@@ -31,6 +31,7 @@ namespace AutoItInterpreter.PartialAST
     {
         public List<AST_LOCAL_VARIABLE> ExplicitLocalVariables { get; } = new List<AST_LOCAL_VARIABLE>();
         public override bool IsEmpty => Statements.Length == 0;
+        public bool UseExplicitLocalScoping { set; get; }
         public AST_STATEMENT[] Statements { set; get; }
 
         public AST_LOCAL_VARIABLE this[string name] => ExplicitLocalVariables.Find(lv => lv.Variable.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
@@ -40,7 +41,15 @@ namespace AutoItInterpreter.PartialAST
         : AST_SCOPE
     {
         public AST_FUNCTION_PARAMETER[] Parameters { set; get; }
+        public new bool UseExplicitLocalScoping { get; }
         public string Name { set; get; }
+
+
+        public AST_FUNCTION()
+        {
+            UseExplicitLocalScoping = true;
+            base.UseExplicitLocalScoping = true;
+        }
     }
 
     public class AST_FUNCTION_PARAMETER
@@ -94,6 +103,8 @@ namespace AutoItInterpreter.PartialAST
         public override bool IsEmpty => base.IsEmpty && Analyzer.IsStatic(Condition);
         public EXPRESSION Condition { set; get; }
 
+
+        public AST_CONDITIONAL_BLOCK() => UseExplicitLocalScoping = true;
 
         public override string ToString() => $"condition ({Condition.Print()}) {{ ... }}";
     }
