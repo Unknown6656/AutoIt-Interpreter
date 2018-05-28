@@ -55,4 +55,7 @@ All credits go to him for the wonderful LR-Parser-Library!!
 -----------------
 
 _An historic image:_<br/>
-![Exception Screenshot](doc/images/wtf.png)
+![Exception Screenshot](doc/images/wtf-1.png)
+
+_A not-so-historic image:_<br/>
+![Exception Screenshot](doc/images/wtf-2.png)

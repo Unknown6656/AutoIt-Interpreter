@@ -67,6 +67,8 @@ namespace AutoItCoreLibrary
             get => this[indices.Select(x => x.ToLong()).ToArray()];
         }
 
+        public bool IsNull => this == 0L;
+
         public bool IsArray => !IsString;
 
         public bool IsString => _data.IsString;
@@ -382,17 +384,22 @@ namespace AutoItCoreLibrary
         public void UseGCHandledData(Action<object> func)
         {
             if (func != null)
-            {
-                GCHandle gch = this;
+                if (IsNull)
+                    func(null);
+                else
+                {
+                    GCHandle gch = this;
 
-                func(gch.Target);
-            }
+                    func(gch.Target);
+                }
         }
 
         public void UseDisposeGCHandledData(Action<object> func)
         {
             UseGCHandledData(func);
-            ToGCHandle().Free();
+
+            if (!IsNull)
+                ToGCHandle().Free();
         }
 
         public void UseGCHandledData<T>(Action<T> func) where T : class => UseGCHandledData(o => func(o as T));
@@ -504,7 +511,7 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(void* l) => (long)l;
         public static implicit operator IntPtr(AutoItVariantType v) => (IntPtr)(void*)v;
         public static implicit operator AutoItVariantType(IntPtr p) => (void*)p;
-        public static implicit operator GCHandle(AutoItVariantType v) => GCHandle.FromIntPtr(v);
+        public static implicit operator GCHandle(AutoItVariantType v) => v.IsNull ? GCHandle.Alloc(null) : GCHandle.FromIntPtr(v);
         public static implicit operator AutoItVariantType(GCHandle h) => (IntPtr)h;
         public static bool operator true(AutoItVariantType v) => v == true;
         public static bool operator false(AutoItVariantType v) => v == false;

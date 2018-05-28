@@ -90,9 +90,12 @@ namespace AutoItInterpreter
 
                     argc = Math.Max(argc, pars.Length);
                     rname = $"{FUNC_MODULE}.{method.RealName}";
-                    rparams = new ResolvedFunctionParamter[argc];
 
-                    for (int i = 0; i < argc; ++i)
+                    // TODO : dunno, is the following line correct??
+                    if (!((pars.Length >= method.MandatoryArgumentCount) && (pars.Length < argc)))
+                        rparams = new ResolvedFunctionParamter[argc];
+
+                    for (int i = 0; i < rparams.Length; ++i)
                         rparams[i] = i < method.MandatoryArgumentCount ? new ResolvedFunctionParamter(false, false) : new ResolvedFunctionParamter(true, false);
                 }
                 else
@@ -171,69 +174,84 @@ namespace {NAMESPACE}
                     sb.AppendLine($@"
         public static void Main(string[] argv)
         {{
-            Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
-            AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
+            try
             {{
-                string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");
+                Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
+                AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
+                {{
+                    string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");
 
-                if (dll.EndsWith(""_resources""))
+                    if (dll.EndsWith(""_resources""))
+                        return null;
+
+                    ResourceManager rm = new ResourceManager(""{NAMESPACE}.Properties.Resources"", Assembly.GetExecutingAssembly());
+
+                    return Assembly.Load(rm.GetObject(dll) as byte[]);
+                }};
+
+                {TYPE} arguments = {TYPE}.Empty;
+
+                if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDPARG}=.+"")) is string mmfinarg)
+                    try
+                    {{
+                        using (MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(mmfinarg.Replace(""{AutoItFunctions.MMF_CMDPARG}="", """").Trim()))
+                        using (MemoryMappedViewAccessor acc = mmf.CreateViewAccessor())
+                        {{
+                            int len = acc.ReadInt32(0);
+                            byte[] ser = new byte[len];
+
+                            acc.ReadArray(4, ser, 0, ser.Length);
+
+                            arguments = {TYPE}.{nameof(AutoItVariantType.Deserialize)}(ser);
+                        }}
+                    }}
+                    catch
+                    {{
+                    }}
+
+                {MACROS_GLOBAL} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, s =>
+                {{
+                    switch (s.ToLower())
+                    {{
+                        case ""arguments"": return arguments;
+                        // TODO
+                    }}
                     return null;
+                }});
+                {VARS} = new {TYPE_VAR_RPOVIDER}();
+                {DISCARD} = {TYPE}.Empty;
+                {TYPE} result = ___globalentrypoint();
 
-                ResourceManager rm = new ResourceManager(""{NAMESPACE}.Properties.Resources"", Assembly.GetExecutingAssembly());
-
-                return Assembly.Load(rm.GetObject(dll) as byte[]);
-            }};
-
-            {TYPE} arguments = {TYPE}.Empty;
-
-            if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDPARG}=.+"")) is string mmfinarg)
-                try
-                {{
-                    using (MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(mmfinarg.Replace(""{AutoItFunctions.MMF_CMDPARG}="", """").Trim()))
-                    using (MemoryMappedViewAccessor acc = mmf.CreateViewAccessor())
+                if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDRARG}=.+"")) is string mmfoutarg)
+                    try
                     {{
-                        int len = acc.ReadInt32(0);
-                        byte[] ser = new byte[len];
-
-                        acc.ReadArray(4, ser, 0, ser.Length);
-
-                        arguments = {TYPE}.{nameof(AutoItVariantType.Deserialize)}(ser);
-                    }}
-                }}
-                catch
-                {{
-                }}
-
-            {MACROS_GLOBAL} = new {TYPE_MAC_RPOVIDER}({FUNC_MODULE}.{nameof(AutoItFunctions.StaticMacros)}, s =>
-            {{
-                switch (s.ToLower())
-                {{
-                    case ""arguments"": return arguments;
-                    // TODO
-                }}
-                return null;
-            }});
-            {VARS} = new {TYPE_VAR_RPOVIDER}();
-            {DISCARD} = {TYPE}.Empty;
-            {TYPE} result = ___globalentrypoint();
-
-            if (argv.FirstOrDefault(arg => Regex.IsMatch(arg, ""{AutoItFunctions.MMF_CMDRARG}=.+"")) is string mmfoutarg)
-                try
-                {{
-                    MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(mmfoutarg.Replace(""{AutoItFunctions.MMF_CMDRARG}="", """").Trim());
+                        MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(mmfoutarg.Replace(""{AutoItFunctions.MMF_CMDRARG}="", """").Trim());
                     
-                    using (MemoryMappedViewAccessor acc = mmf.CreateViewAccessor())
-                    {{
-                        byte[] ser = result.Serialize();
+                        using (MemoryMappedViewAccessor acc = mmf.CreateViewAccessor())
+                        {{
+                            byte[] ser = result.Serialize();
 
-                        acc.Write(0, ser.Length);
-                        acc.WriteArray(4, ser, 0, ser.Length);
-                        acc.Flush();
+                            acc.Write(0, ser.Length);
+                            acc.WriteArray(4, ser, 0, ser.Length);
+                            acc.Flush();
+                        }}
                     }}
-                }}
-                catch
+                    catch
+                    {{
+                    }}
+            }}
+            catch (Exception e)
+            {{
+                string msg = """";
+
+                while (e != null)
                 {{
+                    msg = $""[{{e.GetType()}}] {{e.Message}}:\n{{e.StackTrace}}\n{{msg}}"";
+                    e = e.InnerException;
                 }}
+
+                Console.Error.Write($""~~~~~~~~~~ FATAL ERROR ~~~~~~~~~~\n\n{{msg}}"");
+            }}
         }}
 
         private static {TYPE} ___globalentrypoint()
@@ -463,7 +481,7 @@ namespace {NAMESPACE}
                 }
             }
 
-            return Regex.Replace(sb.ToString(), @"\s*«\s*(?<msg>.*)\s*»\s*", m => $"(__critical(\"{m.Get("msg").Trim()}\"))");
+            return Regex.Replace(sb.ToString(), @"\s*«\s*(?<msg>.*)\s*»\s*", m => $"__critical(\"{m.Get("msg").Trim()}\")");
         }
 
         public static string GenerateCSharpAssemblyInfo(InterpreterState state) => $@"

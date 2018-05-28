@@ -716,7 +716,16 @@ namespace AutoItCoreLibrary
             {
                 TcpClient client = null;
 
-                socket.UseGCHandledData<TcpListener>(listener => client = listener.AcceptTcpClient());
+                socket.UseGCHandledData<TcpListener>(listener =>
+                {
+                    while (true)
+                        if (listener.Pending())
+                            break;
+                        else
+                            Thread.Sleep(0);
+
+                    client = listener.AcceptTcpClient();
+                });
 
                 return var.NewGCHandledData(client);
             }
@@ -782,7 +791,11 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                return var.NewGCHandledData(new TcpListener(IPAddress.Parse(addr), port.ToInt()));
+                TcpListener listener = new TcpListener(IPAddress.Parse(addr), port.ToInt());
+
+                listener.Start();
+
+                return var.NewGCHandledData(listener);
             }
             catch (Exception ex)
             {
