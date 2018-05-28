@@ -283,8 +283,8 @@ let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     | Literal _
     | Macro _
     | VariableExpression _ -> []
-    | FunctionCall f -> [[f]]
-    | ΛFunctionCall (_, e) -> [[null, e]]
+    | FunctionCall f -> [[f]] @ List.map GetFunctionCallExpressions (snd f)
+    | ΛFunctionCall (_, e) -> [[null, e]] @ List.map GetFunctionCallExpressions e
     | ArrayAccess (_, e)
     | UnaryExpression (_, e) 
     | AssignmentExpression (ScalarAssignment (_, _, e)) -> [GetFunctionCallExpressions e]
