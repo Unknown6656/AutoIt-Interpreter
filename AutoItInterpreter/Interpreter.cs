@@ -1599,7 +1599,7 @@ namespace AutoItInterpreter
                                         break;
                                 }
                             case FOR i:
-                                {
+                                { // TODO : fix this thing!!
                                     DefinitionContext defctx = i.DefinitionContext;
                                     EXPRESSION start = parse_expression(i.StartExpression, false);
                                     EXPRESSION stop = parse_expression(i.StopExpression, false);
@@ -1662,6 +1662,15 @@ namespace AutoItInterpreter
                                         Context = defctx,
                                         Statements = new AST_STATEMENT[]
                                         {
+                                            //new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                            //{
+                                            //    Context = defctx,
+                                            //    Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                            //        OPERATOR_ASSIGNMENT.Assign,
+                                            //        cntvar.Variable,
+                                            //        start
+                                            //    )
+                                            //},
                                             new AST_WHILE_STATEMENT
                                             {
                                                 Context = defctx,
@@ -1686,7 +1695,7 @@ namespace AutoItInterpreter
                                                                         Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
                                                                             OPERATOR_ASSIGNMENT.AssignAdd,
                                                                             cntvar.Variable,
-                                                                            EXPRESSION.NewLiteral(LITERAL.NewNumber(1))
+                                                                            step
                                                                         )
                                                                     }
                                                                 }).ToArray()

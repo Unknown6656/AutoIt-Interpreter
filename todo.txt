@@ -45,7 +45,9 @@
     [x] fix array indices
     [ ] fix @|.. and @.. operators
     [x] fix ?: operator
-[x] fix loops : exitloop / continueloop
+[-] fix loops
+    [x] exitloop / continueloop
+    [-] for loops going in wrong direction
 [-] unit tests
     [x] improve test framework
     [ ] IMPL boolean optimization

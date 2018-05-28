@@ -36,9 +36,9 @@ let rec ProcessConstants e =
         | Literal l ->
             match l with
             | Number d -> num d
-            | False
-            | Null -> num 0m
-            | True -> num 1m
+            | False -> Some variant.False
+            | Null -> Some variant.Null
+            | True -> Some variant.True
             | _ -> None
         | UnaryExpression (o, Constant x) ->
             match o with

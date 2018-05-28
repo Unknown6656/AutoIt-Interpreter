@@ -498,7 +498,7 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(string s) => new AutoItVariantType(s);
         public static implicit operator decimal(AutoItVariantType v) => v.IsDefault ? -1m : decimal.TryParse(v, out decimal d) ? d : (long)v;
         public static implicit operator AutoItVariantType(decimal d) => d.ToString();
-        public static explicit operator long(AutoItVariantType v) => v.IsDefault ? -1L : long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : 0L;
+        public static explicit operator long(AutoItVariantType v) => v.IsDefault ? -1L : long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : bool.TryParse(v, out bool b) && b ? 1L : 0L;
         public static implicit operator AutoItVariantType(long l) => l.ToString();
         public static implicit operator void* (AutoItVariantType v) => (void*)(long)v;
         public static implicit operator AutoItVariantType(void* l) => (long)l;
