@@ -13,6 +13,7 @@ using System;
 
 namespace AutoItCoreLibrary
 {
+    using System.Text.RegularExpressions;
     using static Win32;
 
     using var = AutoItVariantType;
@@ -378,9 +379,9 @@ namespace AutoItCoreLibrary
         [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var AutoItSetOption(var o, var? p = null) => throw new NotImplementedException(); // TODO
         [BuiltinFunction]
-        public static var AutoItWinGetTitle() => throw new NotImplementedException(); // TODO
+        public static var AutoItWinGetTitle() => Console.Title;
         [BuiltinFunction]
-        public static var AutoItWinSetTitle(var v) => throw new NotImplementedException(); // TODO
+        public static var AutoItWinSetTitle(var v) => Try(() => Console.Title = v); // TODO
         [BuiltinFunction]
         public static var Beep(var? f = null, var? dur = null) => __(() => Console.Beep((int)(f ?? 500), (int)(dur ?? 1000)));
         [BuiltinFunction]
@@ -708,7 +709,132 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
 
+        [BuiltinFunction]
+        public static var StringFormat(var fmt, params var[] args)
+        {
 
+
+
+
+        }
+
+        [BuiltinFunction]
+        public static var StringLeft(var v, var cnt)
+        {
+            int i = cnt.ToInt();
+            string s = v;
+
+            if (i < 1)
+                return "";
+            else if (i >= s.Length)
+                return s;
+            else
+                return s.Remove(i);
+        }
+        [BuiltinFunction]
+        public static var StringLen(var v) => v.ToString().Length;
+        [BuiltinFunction]
+        public static var StringLower(var v) => v.ToLower();
+        [BuiltinFunction]
+        public static var StringMid(var s, var start, var? count = null)
+        {
+            int c = (count ?? -1).ToInt();
+            string str = s;
+
+            --start;
+
+            if (start < 0)
+                return "";
+            else if (start > str.Length)
+                return "";
+            else if (c == -1)
+                return str.Substring(start.ToInt());
+            else
+                return str.Substring(start.ToInt(), Math.Min(c, str.Length - start.ToInt()));
+        }
+        [BuiltinFunction]
+        public static var StringRegExp(var s, var pat, var? flag = null, var? offs = null)
+        {
+            int o = (offs ?? 1).ToInt();
+        }
+        [BuiltinFunction]
+        public static var StringRegExpReplace(var s, var pat, var repl, var? count = null)
+        {
+            int cnt = (count ?? 0).ToInt();
+        }
+        [BuiltinFunction]
+        public static var StringReplace(var s, var find, var repl, var? occ = null, var? casesense = null)
+        {
+            int o = (occ ?? 0).ToInt();
+
+
+
+        }
+        [BuiltinFunction, Note("notes.unnecessary_function_param", 2, nameof(StringReverse))]
+        public static var StringReverse(var s, var? _ = null) => new string(s.ToString().Reverse().ToArray());
+        [BuiltinFunction]
+        public static var StringRight(var v, var cnt)
+        {
+            int i = cnt.ToInt();
+            string s = v;
+
+            if (i < 1)
+                return "";
+            else if (i >= s.Length)
+                return s;
+            else
+                return s.Substring(s.Length - i);
+        }
+        [BuiltinFunction]
+        public static var StringSplit(var s, var del, var? flag = null)
+        {
+            long f = (long)(flag ?? 0L);
+            string str = s;
+            string[] frags;
+
+            if ((f & 1) != 0)
+                frags = str.Split(del, StringSplitOptions.None);
+            else
+                frags = str.Split(del.ToString().ToArray());
+
+            if ((f & 2) != 0)
+                return var.NewArray(frags.Select(v => new var(v)).ToArray());
+            else
+                return var.NewArray(new var[] { frags.Length }.Concat(frags.Select(v => new var(v))).ToArray());
+        }
+        [BuiltinFunction]
+        public static var StringStripCR(var s) => s.ToString().Replace("\r", "");
+        [BuiltinFunction]
+        public static var StringStripWS(var s, var? flag = null)
+        {
+            long f = (long)(flag ?? 0);
+            string res = s;
+
+            if ((f & 1) != 0)
+                res = res.TrimStart();
+            if ((f & 2) != 0)
+                res = res.TrimEnd();
+            if ((f & 4) != 0)
+                res = Regex.Replace(res, @"\s+", " ");
+            if ((f & 8) != 0)
+                res = Regex.Replace(res, @"\s+", "");
+
+            return res;
+        }
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var StringToASCIIArray(var v) => throw new NotImplementedException();
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var StringToBinary(var v) => throw new NotImplementedException();
+        [BuiltinFunction]
+        public static var StringTrimLeft(var v, var cnt) => StringRight(v, StringLen(v) - cnt);
+        [BuiltinFunction]
+        public static var StringTrimRight(var v, var cnt) => StringLeft(v, StringLen(v) - cnt);
+        [BuiltinFunction]
+        public static var StringUpper(var v) => v.ToUpper();
+
+
+        [BuiltinFunction]
+        public static var Tan(var v) => (var)Math.Tan((double)v);
         [BuiltinFunction]
         public static var TCPAccept(var socket)
         {
@@ -838,7 +964,7 @@ namespace AutoItCoreLibrary
             }
             catch (Exception ex)
             {
-                SetError(ex.HResult, resp.Count == 0);
+                SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult), resp.Count == 0);
             }
 
             return "";
@@ -865,7 +991,7 @@ namespace AutoItCoreLibrary
             }
             catch (Exception ex)
             {
-                SetError(ex.HResult);
+                SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult));
             }
 
             return cnt;
@@ -882,13 +1008,146 @@ namespace AutoItCoreLibrary
 
 
 
+        [Note("notes.alias_function", nameof(UDPBind), nameof(UDPListen))]
+        public static var UDPBind(var addr, var port) => UDPListen(addr, port);
+        [BuiltinFunction]
+        public static var UDPListen(var addr, var port)
+        {
+            try
+            {
+                UdpClient client = new UdpClient(addr, port.ToInt());
 
+                return var.NewArray(
+                    var.Null,
+                    var.NewGCHandledData(client),
+                    addr,
+                    port
+                );
+            }
+            catch (Exception ex)
+            {
+                SetError(ex is ArgumentOutOfRangeException ? 2 : 1);
+
+                return 0;
+            }
+        }
+        [BuiltinFunction]
+        public static var UDPCloseSocket(var sockarray)
+        {
+            try
+            {
+                sockarray[1].UseDisposeGCHandledData<UdpClient>(cl => cl.Close());
+
+                return 1;
+            }
+            catch (Exception ex)
+            {
+                if (ex is InvalidArrayAccessExcpetion)
+                    SetError(-3);
+                else
+                    SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult));
+
+                return 0;
+            }
+        }
+        [BuiltinFunction]
+        public static var UDPOpen(var addr, var port, var? flag = null)
+        {
+            try
+            {
+                UdpClient client = new UdpClient();
+
+                client.EnableBroadcast = (flag ?? 0L) == 1L;
+                client.Connect(addr, port.ToInt());
+
+                return var.NewArray(
+                    var.Null,
+                    var.NewGCHandledData(client),
+                    addr,
+                    port
+                );
+            }
+            catch (Exception ex)
+            {
+                if (ex is InvalidArrayAccessExcpetion)
+                    SetError(-3);
+                else
+                    SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult));
+
+                return var.NewArray(
+                    var.Null,
+                    var.Null,
+                    addr,
+                    port
+                );
+            }
+        }
+        [BuiltinFunction]
+        public static var UDPRecv(var socketarr, var? maxlen = null, var? flag = null)
+        {
+            List<byte> resp = new List<byte>();
+
+            try
+            {
+                IPEndPoint from = new IPEndPoint(IPAddress.Parse(socketarr[2]), socketarr[3].ToInt());
+                bool bin = flag?.ToBool() ?? false;
+                byte[] bytes;
+
+                socketarr[1].UseDisposeGCHandledData<UdpClient>(client => bytes = client.Receive(ref from));
+
+                bytes = resp.Take(maxlen?.ToInt() ?? int.MaxValue).ToArray();
+
+                var respstr = bin ? BinaryToString($"0x{string.Concat(bytes.Select(x => x.ToString("x2")))}") : (var)Encoding.Default.GetString(bytes);
+
+                if ((flag ?? 0) == 3)
+                    var.NewArray(
+                        respstr,
+                        from.Address.ToString(),
+                        from.Port
+                    );
+                else
+                    return respstr;
+            }
+            catch (Exception ex)
+            {
+                SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult), resp.Count == 0);
+            }
+
+            return "";
+        }
+        [BuiltinFunction]
+        public static var UDPSend(var socketarr, var data)
+        {
+            int cnt = 0;
+
+            try
+            {
+                socketarr[1].UseGCHandledData<UdpClient>(client =>
+                {
+                    byte[] bytes = data.BinaryData;
+
+                    if (bytes.Length == 0)
+                        bytes = Encoding.Default.GetBytes(data);
+
+                    client.Send(bytes, cnt = bytes.Length);
+                });
+            }
+            catch (Exception ex)
+            {
+                if (ex is InvalidArrayAccessExcpetion)
+                    SetError(-3);
+                else
+                    SetError(GetPlatformSpecific(WSAGetLastError, () => ex.HResult));
+            }
+
+            return cnt;
+        }
         [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(UDPStartup))]
         public static var UDPStartup() => 1;
         [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(UDPShutdown))]
         public static var UDPShutdown() => 1;
 
-
+        
         
 
         #endregion

@@ -41,6 +41,7 @@ namespace AutoItInterpreter
                     ("l", "lang"),
                     ("q", "quiet"),
                     ("ll", "list-languages"),
+                    ("kp", "key-pair"),
                     ("s", "settings"),
                     ("rs", "reset-settings"),
                     ("v", "verbose"),
@@ -120,6 +121,7 @@ namespace AutoItInterpreter
                     UseMSBuildErrorOutput = Cont("msbuild-error-format"),
                     DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
                     GenerateCodeEvenWithErrors = Cont("generate-always"),
+                    KeyPairPath = GetF("key-pair", null),
                     AllowUnsafeCode = Cont("unsafe"),
                     RawCommandLine = Environment.CommandLine,
                     TargetDirectory = GetF("output", null),
@@ -301,6 +303,8 @@ namespace AutoItInterpreter
 |                   |                       | Possible values are:                                              |
 |                   |                       |   x86, x64, arm, arm64                                            |
 |                   |                       | The default value for this system is '{new InterpreterOptions(null).TargetArchitecture,5}'.                     |
+| -kp=...           | --key-pair=...        | Signs the generated application with the given public/private key-|
+|                   |                       | pair. Web paths are also accepted as source paths.                |
 | -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild error   |
 |                   |                       | string format.                                                    |
 +-------------------+-----------------------+-------------------------------------------------------------------+
@@ -441,6 +445,7 @@ namespace AutoItInterpreter
         public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }
         public string TargetDirectory { set; get; }
+        public string KeyPairPath { get; set; }
         public bool AllowUnsafeCode { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }
         public bool DeleteTempFilesAfterSuccess { set; get; } = true;

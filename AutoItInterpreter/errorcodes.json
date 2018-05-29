@@ -78,7 +78,8 @@
             "cannot_create": 1301,
             "cannot_create_dotnet": 1302,
             "build_failed": 1303,
-            "target_deprecated": 1304
+            "target_deprecated": 1304,
+            "key_not_found": 1305
         }
     },
     "warnings": {
@@ -109,6 +110,7 @@
         "empty_function": 3005,
         "unnecessary_function_comp": 3006,
         "init_0_dim": 3007,
-        "global_return": 3008
+        "global_return": 3008,
+        "unnecessary_function_param": 3009
     }
 }

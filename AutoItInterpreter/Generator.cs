@@ -564,7 +564,7 @@ using System.Reflection;
             }
         }
 
-        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, string name)
+        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, string name, string keypath)
         {
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
@@ -594,6 +594,11 @@ using System.Reflection;
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
         <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+        {(keypath is null ? "<!--" : "")}
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>{keypath}</AssemblyOriginatorKeyFile>
+        <DelaySign>false</DelaySign>
+        {(keypath is null ? "-->" : "")}
     </PropertyGroup>
     <ItemGroup>
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">

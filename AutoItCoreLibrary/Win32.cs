@@ -217,6 +217,9 @@ namespace AutoItCoreLibrary
 
         [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool PlaySound(string szSound, void* hMod, int flags);
+
+        [DllImport("ws2_32.dll", SetLastError = true)]
+        internal static extern int WSAGetLastError();
     }
 
     public enum OS

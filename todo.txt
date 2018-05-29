@@ -70,4 +70,6 @@
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
 [x] Add 'Run after compilation' compiler switch
-[ ] FIX 'Default'
+[x] fix 'Default'
+[-] PFX/SNK signing of AutoIt++ applications
+    [ ] add compiler directive

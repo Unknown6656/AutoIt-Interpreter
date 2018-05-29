@@ -14,6 +14,7 @@ TODO
  - multi-dim jagged arrays
  - implicitly initialized variables
  - λ execution and restrictions
+ - TCP and UDP accept IPv6
 
 
 Some aspects of this article explain the behaviour of certain language feautures, so do please refer to [the according document](language.md) for more information.

@@ -1,6 +1,6 @@
 ﻿<img alt="AutoIt++ icon" src="images/icon-1024.png" height="200"/>
 
-# A rough AutoIt3 custom-flavored syntax reference
+# A rough AutoIt++ custom-flavored syntax reference
 [go back](../readme.md)
 
 The AutoIt3-syntax is fully compatible with the AutoIt++ dialect, meaning that the [official syntax reference](https://www.autoitscript.com/autoit3/docs/) applies to AutoIt++.

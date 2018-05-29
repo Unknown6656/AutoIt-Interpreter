@@ -281,11 +281,29 @@ namespace AutoItInterpreter
                 else
                 {
                     TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
+                    string sigkey = null;
 
                     if (target.Compatibility == Compatibility.android)
                         target = new TargetSystem(Compatibility.android, null);
 
-                    ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName);
+                    if (Options.KeyPairPath is string keypath)
+                        try
+                        {
+                            using (FileStream fs = new FileResolver(keypath).Resolve().OpenRead())
+                            {
+                                byte[] data = new byte[fs.Length];
+
+                                fs.Read(data, 0, data.Length);
+
+                                File.WriteAllBytes(sigkey = Path.Combine(subdir.FullName, "keypair.key"), data);
+                            }
+                        }
+                        catch
+                        {
+                            cmperr("errors.generator.key_not_found", keypath);
+                        }
+
+                    ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName, sigkey);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
                         cmperr("errors.generator.target_deprecated", target.Compatibility);

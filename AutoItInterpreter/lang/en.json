@@ -84,7 +84,8 @@
             "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
             "cannot_create_dotnet": "The engine could not create the .NET project system. Exit code {0} (0x{0:x8})",
             "build_failed": "The .NET project system build failed. Exit code {0} (0x{0:x8})",
-            "target_deprecated": "The target system '{0}' is deprecated and therefore no longer supported."
+            "target_deprecated": "The target system '{0}' is deprecated and therefore no longer supported.",
+            "key_not_found": "The private/public key pair '{0}' could not be found."
         }
     },
     "warnings": {
@@ -115,6 +116,8 @@
         "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics.",
         "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
         "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored.",
-        "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call."
+        "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call.",
+        "alias_function": "The function '{0}' is an alias of the function '{1}' in order to maintain compatibility with AutoIt3. It is advised to use '{1}' instead.",
+        "unnecessary_function_param": "The function parameter № {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations."
     }
 }
