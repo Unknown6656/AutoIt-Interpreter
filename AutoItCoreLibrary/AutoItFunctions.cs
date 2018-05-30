@@ -1,4 +1,5 @@
-﻿using System.IO.MemoryMappedFiles;
+﻿using System.Text.RegularExpressions;
+using System.IO.MemoryMappedFiles;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics;
@@ -13,7 +14,6 @@ using System;
 
 namespace AutoItCoreLibrary
 {
-    using System.Text.RegularExpressions;
     using static Win32;
 
     using var = AutoItVariantType;
@@ -1460,6 +1460,78 @@ namespace AutoItCoreLibrary
         #endregion
 
         // TODO : add all other functions from https://www.autoitscript.com/autoit3/docs/functions/
+    }
+
+    public struct Received
+    {
+        public IPEndPoint Sender { get; }
+        public string Message { get; }
+
+
+        public Received(string msg, IPEndPoint from) =>
+            (Message, Sender) = (msg, from);
+    }
+
+    public abstract class UDPBase
+    {
+        protected UdpClient _client = new UdpClient();
+
+
+        protected UDPBase()
+        {
+        }
+
+        public Received Receive()
+        {
+            UdpReceiveResult result = AsyncHelper.RunSync(_client.ReceiveAsync);
+
+            return new Received(Encoding.Default.GetString(result.Buffer, 0, result.Buffer.Length), result.RemoteEndPoint);
+        }
+    }
+
+    public sealed class UDPListener
+        : UDPBase
+    {
+        private readonly IPEndPoint _listenon;
+
+
+        public UDPListener()
+            : this(new IPEndPoint(IPAddress.Any, 31488))
+        {
+        }
+
+        public UDPListener(IPEndPoint endpoint) => _client = new UdpClient(_listenon = endpoint);
+
+        public void Reply(string message, IPEndPoint endpoint)
+        {
+            byte[] data = Encoding.Default.GetBytes(message);
+
+            _client.Send(data, data.Length, endpoint);
+        }
+    }
+
+    public sealed class UDPUser
+        : UDPBase
+    {
+        private UDPUser()
+        {
+        }
+
+        public void Send(string message)
+        {
+            byte[] data = Encoding.Default.GetBytes(message);
+
+            _client.Send(data, data.Length);
+        }
+
+        public static UDPUser ConnectTo(string hostname, int port)
+        {
+            UDPUser connection = new UDPUser();
+
+            connection._client.Connect(hostname, port);
+
+            return connection;
+        }
     }
 
 #pragma warning restore RCS1047, RCS1057, IDE1006

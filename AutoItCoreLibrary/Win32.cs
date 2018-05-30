@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System;
@@ -220,6 +221,24 @@ namespace AutoItCoreLibrary
 
         [DllImport("ws2_32.dll", SetLastError = true)]
         internal static extern int WSAGetLastError();
+    }
+
+    public static class AsyncHelper
+    {
+        private static readonly TaskFactory _tf = new TaskFactory(CancellationToken.None, TaskCreationOptions.None, TaskContinuationOptions.None, TaskScheduler.Default);
+
+
+        public static T RunSync<T>(Func<Task<T>> func) => _tf
+            .StartNew(func)
+            .Unwrap()
+            .GetAwaiter()
+            .GetResult();
+
+        public static void RunSync(Func<Task> func) => _tf
+            .StartNew(func)
+            .Unwrap()
+            .GetAwaiter()
+            .GetResult();
     }
 
     public enum OS

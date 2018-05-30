@@ -17,8 +17,7 @@ namespace AutoItInterpreter
 {
     using static InterpreterConstants;
     using static ExpressionAST;
-    using Microsoft.FSharp.Collections;
-    using Microsoft.FSharp.Core;
+
 
     public static class ApplicationGenerator
     {
