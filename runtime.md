@@ -15,6 +15,7 @@ TODO
  - implicitly initialized variables
  - λ execution and restrictions
  - TCP and UDP accept IPv6
+ - regex engine
 
 
 Some aspects of this article explain the behaviour of certain language feautures, so do please refer to [the according document](language.md) for more information.

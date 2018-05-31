@@ -710,13 +710,7 @@ namespace AutoItCoreLibrary
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
 
         [BuiltinFunction]
-        public static var StringFormat(var fmt, params var[] args)
-        {
-
-
-
-
-        }
+        public static var StringFormat(var fmt, params var[] args) => new FormatStringEngine(fmt).Format(args.Select(x => x as object).ToArray());
 
         [BuiltinFunction]
         public static var StringLeft(var v, var cnt)
@@ -752,23 +746,55 @@ namespace AutoItCoreLibrary
             else
                 return str.Substring(start.ToInt(), Math.Min(c, str.Length - start.ToInt()));
         }
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var StringRegExp(var s, var pat, var? flag = null, var? offs = null)
         {
             int o = (offs ?? 1).ToInt();
+
+
+
+            throw new NotImplementedException();
         }
-        [BuiltinFunction]
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var StringRegExpReplace(var s, var pat, var repl, var? count = null)
         {
             int cnt = (count ?? 0).ToInt();
+
+
+
+            throw new NotImplementedException();
         }
         [BuiltinFunction]
         public static var StringReplace(var s, var find, var repl, var? occ = null, var? casesense = null)
         {
+            string str = s;
             int o = (occ ?? 0).ToInt();
+            int c = (casesense ?? 0).ToInt();
+            StringComparison sc = c == 1 ? StringComparison.CurrentCulture :
+                                  c == 2 ? StringComparison.InvariantCultureIgnoreCase :
+                                           StringComparison.CurrentCultureIgnoreCase;
 
+            if (o < 0)
+                return "";
 
+            string fnd = find;
+            int cnt = 0;
 
+            while ((cnt < c) || (c == 0))
+            {
+                int ind = str.IndexOf(fnd, sc);
+
+                if (ind == -1)
+                    break;
+                else
+                {
+                    str = str.Remove(ind) + repl + str.Substring(ind + fnd.Length);
+
+                    ++cnt;
+                }
+            }
+
+            return str;
         }
         [BuiltinFunction, Note("notes.unnecessary_function_param", 2, nameof(StringReverse))]
         public static var StringReverse(var s, var? _ = null) => new string(s.ToString().Reverse().ToArray());
@@ -1006,6 +1032,13 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var Sin(var v) => (var)Math.Sin((double)v);
 
+        [BuiltinFunction]
+        public static var Sleep(var? len = null) => __(() =>
+        {
+            int dur = Math.Max(0, (len ?? 0).ToInt());
+
+            Thread.Sleep(dur);
+        });
 
 
         [Note("notes.alias_function", nameof(UDPBind), nameof(UDPListen))]
@@ -1015,11 +1048,12 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                UdpClient client = new UdpClient(addr, port.ToInt());
+                IPEndPoint iep = new IPEndPoint(IPAddress.Parse(addr), port.ToInt());
+                UDPListener server = new UDPListener(iep);
 
                 return var.NewArray(
                     var.Null,
-                    var.NewGCHandledData(client),
+                    var.NewGCHandledData(server),
                     addr,
                     port
                 );
@@ -1036,7 +1070,7 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                sockarray[1].UseDisposeGCHandledData<UdpClient>(cl => cl.Close());
+                sockarray[1].UseDisposeGCHandledData<UDPBase>(b => b.Close());
 
                 return 1;
             }
@@ -1055,10 +1089,7 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                UdpClient client = new UdpClient();
-
-                client.EnableBroadcast = (flag ?? 0L) == 1L;
-                client.Connect(addr, port.ToInt());
+                UDPUser client = UDPUser.ConnectTo(addr, port.ToInt(), (flag ?? 0L) == 1L);
 
                 return var.NewArray(
                     var.Null,
@@ -1089,21 +1120,20 @@ namespace AutoItCoreLibrary
 
             try
             {
-                IPEndPoint from = new IPEndPoint(IPAddress.Parse(socketarr[2]), socketarr[3].ToInt());
                 bool bin = flag?.ToBool() ?? false;
-                byte[] bytes;
+                Received msg = default;
 
-                socketarr[1].UseDisposeGCHandledData<UdpClient>(client => bytes = client.Receive(ref from));
+                socketarr[1].UseGCHandledData<UDPUser>(client => msg = client.Receive());
 
-                bytes = resp.Take(maxlen?.ToInt() ?? int.MaxValue).ToArray();
+                byte[] bytes = msg.RawBytes.Take(maxlen?.ToInt() ?? int.MaxValue).ToArray();
 
                 var respstr = bin ? BinaryToString($"0x{string.Concat(bytes.Select(x => x.ToString("x2")))}") : (var)Encoding.Default.GetString(bytes);
 
                 if ((flag ?? 0) == 3)
                     var.NewArray(
                         respstr,
-                        from.Address.ToString(),
-                        from.Port
+                        msg.Sender.Address.ToString(),
+                        msg.Sender.Port
                     );
                 else
                     return respstr;
@@ -1122,14 +1152,19 @@ namespace AutoItCoreLibrary
 
             try
             {
-                socketarr[1].UseGCHandledData<UdpClient>(client =>
+                socketarr[1].UseGCHandledData<UDPBase>(b =>
                 {
                     byte[] bytes = data.BinaryData;
 
                     if (bytes.Length == 0)
                         bytes = Encoding.Default.GetBytes(data);
 
-                    client.Send(bytes, cnt = bytes.Length);
+                    cnt = bytes.Length;
+
+                    if (b is UDPListener server)
+                        server.Send(bytes);
+                    else if (b is UDPUser client)
+                        client.Send(bytes);
                 });
             }
             catch (Exception ex)
@@ -1223,6 +1258,8 @@ namespace AutoItCoreLibrary
         public static var ConsoleWriteLine(var v) => __(() => Console.WriteLine(v.ToString()));
         [BuiltinFunction]
         public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
+        [BuiltinFunction]
+        public static var CSStringFormat(var fmt, params var[] args) => string.Format(fmt.ToString(), args.Select(x => x as object).ToArray());
         [BuiltinFunction]
         public static var Debug(var v) => __(() => Console.WriteLine(v.ToDebugString()));
         [BuiltinFunction]
@@ -1465,19 +1502,21 @@ namespace AutoItCoreLibrary
     public struct Received
     {
         public IPEndPoint Sender { get; }
+        public byte[] RawBytes { get; }
         public string Message { get; }
 
 
-        public Received(string msg, IPEndPoint from) =>
-            (Message, Sender) = (msg, from);
+        public Received(byte[] bytes, IPEndPoint from) =>
+            (RawBytes, Message, Sender) = (bytes, Encoding.Default.GetString(bytes), from);
     }
 
     public abstract class UDPBase
+        : IDisposable
     {
         protected UdpClient _client = new UdpClient();
 
 
-        protected UDPBase()
+        protected internal UDPBase()
         {
         }
 
@@ -1485,8 +1524,12 @@ namespace AutoItCoreLibrary
         {
             UdpReceiveResult result = AsyncHelper.RunSync(_client.ReceiveAsync);
 
-            return new Received(Encoding.Default.GetString(result.Buffer, 0, result.Buffer.Length), result.RemoteEndPoint);
+            return new Received(result.Buffer, result.RemoteEndPoint);
         }
+
+        public void Close() => _client.Close();
+
+        public void Dispose() => _client.Dispose();
     }
 
     public sealed class UDPListener
@@ -1500,14 +1543,11 @@ namespace AutoItCoreLibrary
         {
         }
 
-        public UDPListener(IPEndPoint endpoint) => _client = new UdpClient(_listenon = endpoint);
+        public UDPListener(IPEndPoint endpoint) => _client = new UdpClient(_listenon = endpoint) { EnableBroadcast = true };
 
-        public void Reply(string message, IPEndPoint endpoint)
-        {
-            byte[] data = Encoding.Default.GetBytes(message);
+        public void Reply(string message, IPEndPoint endpoint) => Reply(Encoding.Default.GetBytes(message), endpoint);
 
-            _client.Send(data, data.Length, endpoint);
-        }
+        public void Reply(byte[] bytes, IPEndPoint endpoint) => _client.Send(bytes, bytes.Length, endpoint);
     }
 
     public sealed class UDPUser
@@ -1517,17 +1557,15 @@ namespace AutoItCoreLibrary
         {
         }
 
-        public void Send(string message)
-        {
-            byte[] data = Encoding.Default.GetBytes(message);
+        public void Send(string message) => Send(Encoding.Default.GetBytes(message));
 
-            _client.Send(data, data.Length);
-        }
+        public void Send(byte[] data) => _client.Send(data, data.Length);
 
-        public static UDPUser ConnectTo(string hostname, int port)
+        public static UDPUser ConnectTo(string hostname, int port, bool enable_broadcast)
         {
             UDPUser connection = new UDPUser();
 
+            connection._client.EnableBroadcast = enable_broadcast;
             connection._client.Connect(hostname, port);
 
             return connection;
