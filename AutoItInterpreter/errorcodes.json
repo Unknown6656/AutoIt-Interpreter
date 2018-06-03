@@ -34,7 +34,8 @@
             "missing_endfunc": 1126,
             "fatal_internal_funcparsing_error": 1127,
             "unknown_directive": 1128,
-            "no_path_provided": 1129
+            "no_path_provided": 1129,
+            "certificate_nfound": 1130
         },
         "astproc": {
             "unknown_entity": 1201,

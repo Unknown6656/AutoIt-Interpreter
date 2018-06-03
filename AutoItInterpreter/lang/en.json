@@ -40,7 +40,8 @@
             "missing_endfunc": "There are at least {0} missing 'EndFunc'-statement(s) to close the open function(s).",
             "fatal_internal_funcparsing_error": "A mayor fatal function parsing error occured. It is not your fault.",
             "unknown_directive": "The preprocessor directive '#{0}' is unknown or could not be parsed.",
-            "no_path_provided": "No path has been provided."
+            "no_path_provided": "No path has been provided.",
+            "certificate_nfound": "The SNK/PFX certificate file '{0}' could not be found or is inaccessible."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",

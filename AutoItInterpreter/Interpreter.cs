@@ -451,7 +451,7 @@ namespace AutoItInterpreter
 
                     if (Line.StartsWith('#'))
                     {
-                        string path = ProcessDirective(Line.Substring(1), pstate, options.Settings, err, defcntx);
+                        string path = ProcessDirective(Line.Substring(1), pstate, options, err, defcntx);
 
                         try
                         {
@@ -1042,8 +1042,9 @@ namespace AutoItInterpreter
                 return false;
             }
 
-            private static string ProcessDirective(string line, PreInterpreterState st, InterpreterSettings settings, ErrorReporter err, DefinitionContext defcntx)
+            private static string ProcessDirective(string line, PreInterpreterState st, InterpreterOptions options, ErrorReporter err, DefinitionContext defcntx)
             {
+                InterpreterSettings settings = options.Settings;
                 string inclpath = "";
 
                 line.Match(
@@ -1117,6 +1118,45 @@ namespace AutoItInterpreter
                             if (inclpath.Match(@"^#include\-once$", out _, RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.IgnoreCase))
                                 st.IncludeOncePaths.Add(nfo.FullName);
                         }
+                    }),
+                    (@"^sign(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
+                    {
+                        string path = new[] { "glob", "loc1", "loc2", options.KeyPairPath ?? "" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0);
+                        FileInfo nfo = null;
+
+                        if ((path?.Length ?? 0) == 0)
+                        {
+                            err("errors.preproc.no_path_provided");
+
+                            return;
+                        }
+
+                        try
+                        {
+                            if (!(nfo = FileResolver.Resolve(path)).Exists)
+                                nfo = null;
+                        }
+                        catch
+                        {
+                        }
+
+                        if (nfo is null)
+                            foreach (string prefix in new[] { $"{st.CurrentContext.SourcePath.FullName}/.." }.Concat(settings.IncludeDirectories))
+                                try
+                                {
+                                    nfo = FileResolver.Resolve((prefix + '/' + path).Replace('\\', '/'), false);
+
+                                    if (nfo?.Exists ?? false)
+                                        break;
+                                }
+                                catch
+                                {
+                                }
+
+                        if (nfo is null)
+                            err("errors.preproc.certificate_nfound", path);
+                        else if (string.IsNullOrEmpty(options.KeyPairPath))
+                            options.KeyPairPath = nfo.FullName;
                     }),
                     (@"^onautoitstartregister\b\s*\""(?<func>.*)\""$", m => st.StartFunctions.Add((m.Groups["func"].ToString().Trim(), defcntx))),
                     (@"^onautoitexitregister\b\s*\""(?<func>.*)\""$", m => st.ExitFunctions.Add((m.Groups["func"].ToString().Trim(), defcntx))),

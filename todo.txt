@@ -51,25 +51,42 @@
 [-] unit tests
     [x] improve test framework
     [ ] IMPL boolean optimization
-    [ ] λ-functionality
-    [ ] arrays / matrices
-    [ ] optimization
-    [ ] object expressions
-    [ ] for-loops
-    [ ] while-loops
-    [ ] foreach-loops
-    [ ] switch..case
-    [ ] select..case
-    [ ] P/Invoke
-    [-] byref calls
-    [ ] globals and parameter scoping
-    [ ] UDP / TCP API
-    [ ] Serial API
-    [ ] Compiler robustness
+    [-] informal tests
+        [ ] λ-functionality
+        [ ] arrays / matrices
+        [ ] optimization
+        [ ] object expressions
+        [x] for-loops
+        [ ] while-loops
+        [ ] foreach-loops
+        [ ] switch..case
+        [ ] select..case
+        [ ] P/Invoke
+        [x] byref calls
+        [ ] globals and parameter scoping
+        [x] UDP / TCP API
+        [-] Serial API
+        [ ] Compiler robustness
+    [ ] official tests
+        [ ] λ-functionality
+        [ ] arrays / matrices
+        [ ] optimization
+        [ ] object expressions
+        [ ] for-loops
+        [ ] while-loops
+        [ ] foreach-loops
+        [ ] switch..case
+        [ ] select..case
+        [ ] P/Invoke
+        [ ] byref calls
+        [ ] globals and parameter scoping
+        [ ] UDP / TCP API
+        [ ] Serial API
+        [ ] Compiler robustness
 [x] Support web-compilation
 [x] Support web-includes
 [ ] SciTE support for AutoIt++
 [x] Add 'Run after compilation' compiler switch
 [x] fix 'Default'
-[-] PFX/SNK signing of AutoIt++ applications
-    [ ] add compiler directive
+[x] PFX/SNK signing of AutoIt++ applications
+    [x] add compiler directive

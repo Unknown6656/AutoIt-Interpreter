@@ -41,7 +41,8 @@
             "start_func_args": "The start function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
             "exit_func_args": "The exit function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
             "unknown_directive": "The preprocessor directive '#{0}' is unknown or could not be parsed.",
-            "no_path_provided": "No path has been provided."
+            "no_path_provided": "No path has been provided.",
+            "certificate_nfound": "The SNK/PFX certificate file '{0}' could not be found or is inaccessible."
         },
         "astproc": {
             "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",
