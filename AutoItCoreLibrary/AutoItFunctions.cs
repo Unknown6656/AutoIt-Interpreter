@@ -379,6 +379,8 @@ namespace AutoItCoreLibrary
             return sb.ToString();
         }
 
+        private static void SSHCommand(var conn, string cmd) => conn.UseGCHandledData<SshClient>(c => c.RunCommand(cmd).Dispose());
+
         #endregion
         #region AutoIt3 compatible
 
@@ -1535,9 +1537,58 @@ namespace AutoItCoreLibrary
         public static var SSHIsConnected(var conn) => conn.UseGCHandledData((SshClient client) => client.IsConnected);
         [BuiltinFunction]
         public static var SSHRunCommand(var conn, var cmd) => var.NewGCHandledData(conn.UseGCHandledData((SshClient client) => client.RunCommand(cmd)));
+        [BuiltinFunction]
+        public static var SSHRun(var conn, var cmd)
+        {
+            using (SshCommand sh = conn.UseGCHandledData((SshClient client) => client.RunCommand(cmd)))
+                return sh.Result;
+        }
+        [BuiltinFunction]
+        public static var SSHListDirectory(var conn, var dir)
+        {
+            SshCommand cmd = conn.UseGCHandledData((SshClient client) => client.RunCommand($"ls -AbC -w 1 \"{dir}\""));
+            string[] files = cmd.Result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-        // TODO: ssh upload / ssh download
+            cmd.Dispose();
 
+            return var.NewArray(files.Select(x => (var)x).ToArray());
+        }
+        [BuiltinFunction]
+        public static var SSHUploadFile(var conn, var local, var remote) => Try(() =>
+        {
+            string b64 = Convert.ToBase64String(File.ReadAllBytes(local));
+
+            SSHRun(conn, $"echo \"{b64}\" | base64 -d > \"{remote}\"");
+        });
+        [BuiltinFunction]
+        public static var SSHDownloadFile(var conn, var local, var remote) => Try(() =>
+        {
+            var b64 = SSHRun(conn, $"cat \"{remote}\" | base64");
+
+            File.WriteAllBytes(local, Convert.FromBase64String(b64));
+        });
+        [BuiltinFunction]
+        public static var SSHDelete(var conn, var path) => Try(() => SSHCommand(conn, $"rm -rf \"{path}\""));
+        [BuiltinFunction]
+        public static var SSHCreateDirectory(var conn, var path) => Try(() => SSHCommand(conn, $"mkdir \"{path}\""));
+        [BuiltinFunction]
+        public static var SSHCreateFile(var conn, var path) => Try(() => SSHCommand(conn, $"touch \"{path}\""));
+        [BuiltinFunction]
+        public static var SSHReadFile(var conn, var path, var? codepage = null)
+        {
+            Encoding enc = Encoding.GetEncoding((codepage ?? Encoding.Default.CodePage).ToInt());
+            var b64 = SSHRun(conn, $"cat \"{path}\" | base64");
+
+            return enc.GetString(Convert.FromBase64String(b64));
+        }
+        [BuiltinFunction]
+        public static var SSHWriteFile(var conn, var path, var content, var? codepage = null) => Try(() =>
+        {
+            Encoding enc = Encoding.GetEncoding((codepage ?? Encoding.Default.CodePage).ToInt());
+            string b64 = Convert.ToBase64String(enc.GetBytes(content));
+
+            SSHRun(conn, $"echo \"{b64}\" | base64 -d > \"{path}\"");
+        });
         [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
@@ -1617,8 +1668,6 @@ namespace AutoItCoreLibrary
             else
                 throw new NotImplementedException($"Cannot convert the type '{tstr}' to a variant (yet).");
         }
-
-
 
 
 
