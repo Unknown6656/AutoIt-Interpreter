@@ -30,7 +30,7 @@
     [x] serial API
     [x] http API
     [ ] ftp API
-    [-] ssh/sftp API
+    [x] ssh/sftp API
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
 [x] implement main return
