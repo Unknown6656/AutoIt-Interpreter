@@ -406,6 +406,26 @@ namespace AutoItCoreLibrary
 
         public void UseDisposeGCHandledData<T>(Action<T> func) where T : class => UseDisposeGCHandledData(o => func(o as T));
 
+        public U UseGCHandledData<T, U>(Func<T, U> func)
+            where T : class
+        {
+            U res = default;
+
+            UseGCHandledData(o => res = func(o as T));
+
+            return res;
+        }
+
+        public U UseDisposeGCHandledData<T, U>(Func<T, U> func)
+            where T : class
+        {
+            U res = default;
+
+            UseDisposeGCHandledData(o => res = func(o as T));
+
+            return res;
+        }
+
         #endregion
         #region STATIC FUNCTIONS
 

@@ -87,7 +87,8 @@
             "cannot_create_dotnet": "The engine could not create the .NET project system. Exit code {0} (0x{0:x8})",
             "build_failed": "The .NET project system build failed. Exit code {0} (0x{0:x8})",
             "target_deprecated": "The target system '{0}' is deprecated and therefore no longer supported.",
-            "key_not_found": "The private/public key pair '{0}' could not be found."
+            "key_not_found": "The private/public key pair '{0}' could not be found.",
+            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead."
         }
     },
     "warnings": {
@@ -105,7 +106,8 @@
         },
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",
-            "kpanic": "This function call will invoke a kernel panic on UNIX systems and a blue screen on WINDOWS systems. Be warned."
+            "kpanic": "This function call will invoke a kernel panic on UNIX systems and a blue screen on WINDOWS systems. Be warned.",
+            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead."
         },
         "func_not_impl": "This function is currently not yet implemented.",
         "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
@@ -119,6 +121,7 @@
         "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
         "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored.",
         "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call.",
-        "unnecessary_function_param": "The function parameter № {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations."
+        "unnecessary_function_param": "The function parameter № {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
+        "net_regex": "This expression depends upon RegEx evaluation. The results can vary from the official AutoIt3-specification, as RegEx functions are implemeneted using the .NET RegEx engine."
     }
 }

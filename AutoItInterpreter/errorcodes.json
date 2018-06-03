@@ -79,7 +79,8 @@
             "cannot_create_dotnet": 1302,
             "build_failed": 1303,
             "target_deprecated": 1304,
-            "key_not_found": 1305
+            "key_not_found": 1305,
+            "obsolete_func": 1306
         }
     },
     "warnings": {
@@ -97,7 +98,8 @@
         },
         "generator": {
             "failed_clean_output": 2201,
-            "kpanic": 2202
+            "kpanic": 2202,
+            "obsolete_func": 2203
         },
         "func_not_impl": 2998,
         "not_impl": 2999
@@ -111,6 +113,7 @@
         "unnecessary_function_comp": 3006,
         "init_0_dim": 3007,
         "global_return": 3008,
-        "unnecessary_function_param": 3009
+        "unnecessary_function_param": 3009,
+        "net_regex": 3010
     }
 }

@@ -746,23 +746,32 @@ namespace AutoItCoreLibrary
             else
                 return str.Substring(start.ToInt(), Math.Min(c, str.Length - start.ToInt()));
         }
-        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        [BuiltinFunction, Note("notes.net_regex"), ObsoleteFunction(true, nameof(StringRegExp), nameof(RegexCreate), nameof(RegexIsMatch), nameof(RegexMatches), nameof(RegexFirstMatch))]
         public static var StringRegExp(var s, var pat, var? flag = null, var? offs = null)
         {
             int o = (offs ?? 1).ToInt();
+            int f = (flag ?? 0).ToInt();
 
-
-
-            throw new NotImplementedException();
+            return f == 0 ? (Regex.IsMatch(s, pat) ? 1 : 0) : throw new InvalidOperationException();
         }
-        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        [BuiltinFunction, Note("notes.net_regex")]
         public static var StringRegExpReplace(var s, var pat, var repl, var? count = null)
         {
             int cnt = (count ?? 0).ToInt();
+            int ind = 0;
 
+            if (cnt == 0)
+                cnt = int.MaxValue;
 
+            return Regex.Replace(s, pat, m =>
+            {
+                ++ind;
 
-            throw new NotImplementedException();
+                if (ind <= cnt)
+                    return repl;
+                else
+                    return m.ToString();
+            });
         }
         [BuiltinFunction]
         public static var StringReplace(var s, var find, var repl, var? occ = null, var? casesense = null)
@@ -1293,6 +1302,38 @@ namespace AutoItCoreLibrary
         public static var PlayWAVFileSync(var path) => PlaySound(path, null, 0);
         [BuiltinFunction]
         public static var PlayWAVFileAsync(var path) => PlaySound(path, null, 1);
+        [BuiltinFunction]
+        public static var RegexCreate(var pat, var? opt = null) => var.NewGCHandledData(new Regex(pat, (RegexOptions)(opt ?? 0).ToInt()));
+        [BuiltinFunction]
+        public static var RegexIsMatch(var regex, var input) => regex.UseGCHandledData((Regex r) => r.IsMatch(input));
+        [BuiltinFunction]
+        public static var RegexFirstMatch(var regex, var input) => regex.UseGCHandledData((Regex r) => r.Match(input).ToString());
+        [BuiltinFunction]
+        public static var RegexMatches(var regex, var input) => var.NewArray(regex.UseGCHandledData((Regex r) => r.Matches(input).Select(m => (var)m.ToString()).ToArray()));
+        [BuiltinFunction]
+        public static var RegexReplaceCount(var regex, var input, var repl) => regex.UseGCHandledData((Regex r) => r.Replace(input, repl));
+        [BuiltinFunction]
+        public static var RegexReplaceCount(var regex, var input, var repl, var? count = null)
+        {
+            int c = (count ?? 0).ToInt();
+            int i = 0;
+
+            if (c == 0)
+                c = int.MaxValue;
+
+            return regex.UseGCHandledData((Regex r) => r.Replace(input, m =>
+            {
+                ++i;
+
+                if (i <= c)
+                    return repl;
+                else
+                    return m.ToString();
+            }));
+        }
+        [BuiltinFunction]
+        public static var RegexSplit(var regex, var input, var? count = null) =>
+            var.NewArray(regex.UseGCHandledData((Regex r) => count is var c ? r.Split(input, c.ToInt()) : r.Split(input)).Select(m => (var)m).ToArray());
         [BuiltinFunction, CompatibleOS(OS.Windows)]
         public static var SerialCreate(var name, var? baud = null, var? parity = null, var? databits = null, var? stopbits = null)
         {
@@ -1494,6 +1535,21 @@ namespace AutoItCoreLibrary
                 throw new NotImplementedException($"Cannot convert the type '{tstr}' to a variant (yet).");
         }
 
+
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var SSHConnect(var host, var port, var user, var pass) => throw new NotImplementedException(); // TODO
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var SSHDisconnect(var conn) => throw new NotImplementedException(); // TODO
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var FTPDownloadString(var host, var port, var user, var pass, var path) => throw new NotImplementedException(); // TODO
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var FTPDownloadFile(var host, var port, var user, var pass, var path, var target) => throw new NotImplementedException(); // TODO
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var FTPUploadString(var host, var port, var user, var pass, var path, var data) => throw new NotImplementedException(); // TODO
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var FTPUploadFile(var host, var port, var user, var pass, var path, var source) => throw new NotImplementedException(); // TODO
+
+
         #endregion
 
         // TODO : add all other functions from https://www.autoitscript.com/autoit3/docs/functions/
@@ -1658,6 +1714,16 @@ namespace AutoItCoreLibrary
     {
         public NoteAttribute(string name, params object[] args)
             : base(name, args)
+        {
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public sealed class ObsoleteFunctionAttribute
+        : CompilerIntrinsicMessage
+    {
+        public ObsoleteFunctionAttribute(bool crit, string func, params string[] repl)
+            : base((crit ? "errors" : "warnings") + ".generator.obsolete_func", func, string.Join("', '", repl))
         {
         }
     }
