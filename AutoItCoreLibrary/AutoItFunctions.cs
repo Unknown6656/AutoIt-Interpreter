@@ -265,6 +265,26 @@ namespace AutoItCoreLibrary
                     return 1.618033988749894848204586834m;
                 case "pi":
                     return (var)Math.PI;
+                case "rgx_none":
+                    return (int)RegexOptions.None;
+                case "rgx_ignorecase":
+                    return (int)RegexOptions.IgnoreCase;
+                case "rgx_multiline":
+                    return (int)RegexOptions.Multiline;
+                case "rgx_explicit":
+                    return (int)RegexOptions.ExplicitCapture;
+                case "rgx_compiled":
+                    return (int)RegexOptions.Compiled;
+                case "rgx_singleline":
+                    return (int)RegexOptions.Singleline;
+                case "rgx_ignorepatternws":
+                    return (int)RegexOptions.IgnorePatternWhitespace;
+                case "rgx_rtl":
+                    return (int)RegexOptions.RightToLeft;
+                case "rgx_ecma":
+                    return (int)RegexOptions.ECMAScript;
+                case "rgx_invariantculture":
+                    return (int)RegexOptions.CultureInvariant;
                 case "time":
                     return DateTime.Now.ToString("HH:mm:ss");
                 case "time_l":
@@ -1191,8 +1211,6 @@ namespace AutoItCoreLibrary
         [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(UDPShutdown))]
         public static var UDPShutdown() => 1;
 
-        
-        
 
         #endregion
         #region AutoIt++ functions
@@ -1277,6 +1295,34 @@ namespace AutoItCoreLibrary
         public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
         [BuiltinFunction]
         public static var Fail(var s) => throw new InvalidOperationException(s);
+        [BuiltinFunction]
+        public static var HTTPDownloadString(var url)
+        {
+            using (WebClient wc = new WebClient())
+                return wc.DownloadString(url);
+        }
+        [BuiltinFunction]
+        public static var HTTPDownloadFile(var url, var target) => __(() =>
+        {
+            using (WebClient wc = new WebClient())
+                wc.DownloadFile(url, target);
+        });
+        [BuiltinFunction]
+        public static var HTTPUploadString(var url, var data)
+        {
+            using (WebClient wc = new WebClient())
+                return wc.UploadString(url, data);
+        }
+        [BuiltinFunction]
+        public static var HTTPUploadFile(var url, var source)
+        {
+            using (WebClient wc = new WebClient())
+            {
+                byte[] res = wc.UploadFile(url, source);
+
+                return Encoding.UTF8.GetString(res);
+            }
+        }
         [BuiltinFunction]
         public static var Identity(var v) => v;
         [RequiresUnsafe, BuiltinFunction, Warning("warnings.generator.kpanic")]

@@ -28,7 +28,7 @@
 [-] implement funcitions
     [-] AutoIt3-specific
     [x] serial API
-    [ ] http API
+    [x] http API
     [ ] ftp API
     [ ] ssh/sftp API
 [ ] implement "continuecase"
