@@ -12,6 +12,8 @@ using System.Net;
 using System.IO;
 using System;
 
+using Renci.SshNet;
+
 namespace AutoItCoreLibrary
 {
     using static Win32;
@@ -1191,7 +1193,7 @@ namespace AutoItCoreLibrary
                     cnt = bytes.Length;
 
                     if (b is UDPListener server)
-                        server.Send(bytes);
+                        server.Reply(bytes, new IPEndPoint(IPAddress.Parse(socketarr[2]), socketarr[3].ToInt()));
                     else if (b is UDPUser client)
                         client.Send(bytes);
                 });
@@ -1502,6 +1504,41 @@ namespace AutoItCoreLibrary
             return res;
         }
         [BuiltinFunction]
+        public static var SSHConnect(var host, var port, var user, var pass)
+        {
+            try
+            {
+                SshClient cl = new SshClient(host, port.ToInt(), user, pass);
+
+                cl.Connect();
+
+                return var.NewGCHandledData(cl);
+            }
+            catch
+            {
+                SetError(-1);
+
+                return var.Null;
+            }
+        }
+        [BuiltinFunction]
+        public static var SSHClose(var conn) => Try(() => conn.UseDisposeGCHandledData<SshClient>(client => client.Disconnect()));
+        [BuiltinFunction]
+        public static var SSHCommandExitCode(var cmddata) => cmddata.UseGCHandledData((SshCommand cmd) => cmd.ExitStatus);
+        [BuiltinFunction]
+        public static var SSHCommandResult(var cmddata) => cmddata.UseGCHandledData((SshCommand cmd) => cmd.Result);
+        [BuiltinFunction]
+        public static var SSHCommandError(var cmddata) => cmddata.UseGCHandledData((SshCommand cmd) => cmd.Error);
+        [BuiltinFunction]
+        public static var SSHCommandDestroy(var cmddata) => Try(() => cmddata.UseGCHandledData((SshCommand cmd) => cmd.Dispose()));
+        [BuiltinFunction]
+        public static var SSHIsConnected(var conn) => conn.UseGCHandledData((SshClient client) => client.IsConnected);
+        [BuiltinFunction]
+        public static var SSHRunCommand(var conn, var cmd) => var.NewGCHandledData(conn.UseGCHandledData((SshClient client) => client.RunCommand(cmd)));
+
+        // TODO: ssh upload / ssh download
+
+        [BuiltinFunction]
         public static var StringExtract(var s, var s1, var s2, var? offs = null)
         {
             string inp = (s.ToString()).Substring((int)(offs ?? 0L));
@@ -1582,10 +1619,9 @@ namespace AutoItCoreLibrary
         }
 
 
-        [BuiltinFunction, Warning("warnings.func_not_impl")]
-        public static var SSHConnect(var host, var port, var user, var pass) => throw new NotImplementedException(); // TODO
-        [BuiltinFunction, Warning("warnings.func_not_impl")]
-        public static var SSHDisconnect(var conn) => throw new NotImplementedException(); // TODO
+
+
+
         [BuiltinFunction, Warning("warnings.func_not_impl")]
         public static var FTPDownloadString(var host, var port, var user, var pass, var path) => throw new NotImplementedException(); // TODO
         [BuiltinFunction, Warning("warnings.func_not_impl")]

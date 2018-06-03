@@ -15,6 +15,9 @@
         <DelaySign>false</DelaySign>
     </PropertyGroup>
     <ItemGroup>
+        <PackageReference Include="SSH.NET" Version="2016.1.0" />
+    </ItemGroup>
+    <ItemGroup>
       <None Include="AutoItCurryingDelegate.cs">
         <DesignTime>True</DesignTime>
         <AutoGen>True</AutoGen>

@@ -201,6 +201,7 @@ namespace AutoItInterpreter
 
     public sealed class Interpreter
     {
+        private static readonly Type[] DEPENDENCY_TYPES = new[] { typeof(SshClient) /* TODO */ };
         private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
         {
             [__NONE__] = "EndFunc",
@@ -281,6 +282,8 @@ namespace AutoItInterpreter
                 else
                 {
                     TargetSystem target = new TargetSystem(state.CompileInfo.Compatibility, state.CompileInfo.TargetArchitecture);
+                    IEnumerable<FileInfo> deps = DEPENDENCY_TYPES.Select(t => new FileInfo(t.Assembly.Location));
+                    List<FileInfo> tmpdeps = new List<FileInfo>();
                     string sigkey = null;
 
                     if (target.Compatibility == Compatibility.android)
@@ -303,7 +306,15 @@ namespace AutoItInterpreter
                             cmperr("errors.generator.key_not_found", keypath);
                         }
 
-                    ApplicationGenerator.EditDotnetProject(state, target, subdir, ProjectName, sigkey);
+                    foreach (FileInfo dep in deps)
+                    {
+                        FileInfo tmp = new FileInfo(Path.Combine(subdir.FullName, dep.Name));
+
+                        dep.CopyTo(tmp.FullName, true);
+                        tmpdeps.Add(tmp);
+                    }
+
+                    ApplicationGenerator.EditDotnetProject(state, target, subdir, tmpdeps.ToArray(), ProjectName, sigkey);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
                         cmperr("errors.generator.target_deprecated", target.Compatibility);
@@ -353,7 +364,7 @@ namespace AutoItInterpreter
                             foreach (FileInfo file in ovf)
                                 file.Delete();
 
-                        foreach (FileInfo file in bindir.EnumerateFiles())
+                        foreach (FileInfo file in bindir.EnumerateFiles().Concat(tmpdeps))
                             file.CopyTo($"{targetdir.FullName}/{file.Name}", true);
 
                         fr = state.Errors.Any(err => err.Type == ErrorType.Fatal) ? DebugPrintUtil.FinalResult.Errors_Compiled :
@@ -2586,3 +2597,55 @@ namespace AutoItInterpreter
         }
     }
 }
+
+
+
+
+
+
+/* continuecase:
+ 
+
+    switch $var
+        case 1, 2
+            f1()
+            continuecase
+        case 5 to 9
+            f2()
+        case else
+            f3()
+    endswitch
+
+  -->
+
+    {
+        $continuecase = false;
+
+cond_1:
+        if (continuecase || (($var == 1) || ($var == 2)))
+        {
+            continuecase = false;
+            f1();
+            continuecase = true;
+            goto cond_2;
+            goto end;
+        }
+cond_2:
+        if (continuecase || (($var >= 5) && ($var <= 9)))
+        {
+            continuecase = false;
+            f2();
+            goto end;
+        }
+cond_3:
+        if (continuecase || true)
+        {
+            continuecase = false;
+            f3();
+            goto end;
+        }
+end:
+    }
+
+
+*/

@@ -1,8 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -563,13 +561,17 @@ using System.Reflection;
             }
         }
 
-        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, string name, string keypath)
+        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, FileInfo[] dependencies, string name, string keypath)
         {
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
 
             string dllpath = $"{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll";
             string respath = $"{dir.FullName}/resources.resx";
+            string depsstr = string.Concat(dependencies.Concat(new[] { new FileInfo(dllpath) }).Select(x => $@"
+    <ItemGroup>
+        <EmbeddedResource Include=""{x.FullName}""/>
+    </ItemGroup>"));
 
             File.WriteAllBytes(dllpath, Resources.autoitcorlib);
             File.WriteAllText($"{dir.FullName}/{name}.csproj", $@"
@@ -603,10 +605,7 @@ using System.Reflection;
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">
             <HintPath>{dllpath}</HintPath>
         </Reference>
-    </ItemGroup>
-    <ItemGroup>
-        <EmbeddedResource Include=""{dllpath}""/>
-    </ItemGroup>
+    </ItemGroup>{depsstr}
     <ItemGroup>
         <Compile Include=""{name}.cs""/>
     </ItemGroup>
