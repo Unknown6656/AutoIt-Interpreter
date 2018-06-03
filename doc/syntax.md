@@ -454,7 +454,26 @@ Please refer to [the runime behaviour reference](runtime.md) for mor information
 
 # Inline C#-Code
 
-TODO
+AutoIt++ allows the usage of C# code inside AutoIt++ code. The C# code must start and end with the following tags:
+```autoit
+; AutoIt++ code
+
+#cs[csharp]
+
+// C# code
+
+#ce[csharp]
+
+; AutoIt++ code
+```
+Do please note, that AutoIt comments (`; ...`) are invalid in C#. Comments start with `// ...` or are inclosed in `/* ... */`.<br/>
+To access variables and macros from C#, use the following notation:
+```csharp
+__vars["name"]      // represents $name
+__macros["name"]    // represents @name
+```
+
+**NOTE: The usage of inline-C#-code is considered unsafe, and therefore needs the compiler switch `-u` or `--unsafe` to compile.**
 
 # `ifn't`
 
