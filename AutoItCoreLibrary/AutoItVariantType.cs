@@ -357,6 +357,8 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantType OneBasedSubstring(AutoItVariantType start, AutoItVariantType count) => ToString().Substring(start.ToInt() - 1, count.ToInt());
 
+        public byte DereferenceByte() => *((byte*)ToVoidPtr());
+
         public bool ToBool() => this;
 
         public decimal ToDecimal() => this;

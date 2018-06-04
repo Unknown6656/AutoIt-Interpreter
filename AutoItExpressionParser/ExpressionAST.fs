@@ -96,6 +96,7 @@ type OPERATOR_UNARY =
     | Negate
     | Not
     | BitwiseNot
+    | Dereference
 and MEMBER =
     | Field of string
     | Method of FUNCCALL

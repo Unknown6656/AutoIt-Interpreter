@@ -46,7 +46,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let nt_array_init_expression    = x.nt<INIT_EXPRESSION list>    "array-init-expression"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
-        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..51 |]
+        let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
         let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
         let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
         let nt_literal                  = x.nt<LITERAL>                 "literal"
@@ -93,6 +93,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_operator_at1              = x.t @"@\|"
         let t_operator_at0              = x.t @"@"
         let t_operator_dotrange         = x.t @"\.?\.\." // TODO
+        let t_operator_dereference      = x.t @"°"
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
         let t_symbol_questionmark       = x.t @"\?"
@@ -315,29 +316,31 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduceue 39 UnaryPrefix t_symbol_minus Negate
         reduceue 40 UnaryPrefix t_symbol_plus Identity
         reduceue 41 UnaryPrefix t_operator_bit_not BitwiseNot
-        reduce2 !@42 !@43 nt_dot_members (fun e m -> DotAccess(e, m))
-        reduce0 !@42 !@43
-        reduce4 !@43 !@43 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
-        reduce3 !@43 !@43 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reduceue 42 UnaryPrefix t_operator_dereference Dereference
+
+        reduce2 !@43 !@44 nt_dot_members (fun e m -> DotAccess(e, m))
         reduce0 !@43 !@44
-        reduce2 !@44 !@45 nt_array_indexers (fun e i -> let rec acc e = function
+        reduce4 !@44 !@44 t_symbol_oparen nt_funcparams t_symbol_cparen (fun e _ p _ -> ΛFunctionCall(e, p))
+        reduce3 !@44 !@44 t_symbol_oparen t_symbol_cparen (fun e _ _ -> ΛFunctionCall(e, []))
+        reduce0 !@44 !@45
+        reduce2 !@45 !@46 nt_array_indexers (fun e i -> let rec acc e = function
                                                                         | i::is -> acc (ArrayAccess(e, i)) is
                                                                         | [] -> e
                                                         acc e i)
-        reduce0 !@44 !@45
-        reduce1 !@45 nt_funccall FunctionCall
         reduce0 !@45 !@46
-        reduce1 !@46 t_macro Macro
+        reduce1 !@46 nt_funccall FunctionCall
         reduce0 !@46 !@47
-        reduce1 !@47 t_variable VariableExpression
+        reduce1 !@47 t_macro Macro
         reduce0 !@47 !@48
-        reduce4 !@48 t_symbol_oparen t_keyword_new nt_inline_array_expression t_symbol_cparen (fun _ _ i _ -> ArrayInitExpression([], i))
+        reduce1 !@48 t_variable VariableExpression
         reduce0 !@48 !@49
-        reduce0 !@49 t_string_3
+        reduce4 !@49 t_symbol_oparen t_keyword_new nt_inline_array_expression t_symbol_cparen (fun _ _ i _ -> ArrayInitExpression([], i))
         reduce0 !@49 !@50
-        reduce1 !@50 nt_literal Literal
+        reduce0 !@50 t_string_3
         reduce0 !@50 !@51
-        reduce3 !@51 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
+        reduce1 !@51 nt_literal Literal
+        reduce0 !@51 !@52
+        reduce3 !@52 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
 
         reduce3 nt_inline_array_wrapper nt_inline_array_wrapper t_symbol_comma nt_inline_array_expression (fun es _ e -> es@[Multiple e])
         reduce1 nt_inline_array_wrapper nt_inline_array_expression (fun e -> [Multiple e])

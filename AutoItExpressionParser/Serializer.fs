@@ -144,6 +144,7 @@ type Serializer (settings : SerializerSettings) =
                             | BitwiseNot -> !/"~"
                             | String1Index (s, l) -> sprintf "(%s).OneBasedSubstring(%s, %s)" (printexpr e) (printexpr s) (printexpr l)
                             | StringLength -> "(" + printexpr e + ").Length"
+                            | Dereference -> sprintf "(%s)(%s).DereferenceByte()" (x.Settings.VariableTypeName) (printexpr e)
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->

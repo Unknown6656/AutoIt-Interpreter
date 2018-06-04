@@ -15,7 +15,7 @@ let rec IsStatic =
     | ToExpression _
     | ArrayInitExpression _
     | AssignmentExpression _ -> false
-    | UnaryExpression (_, e) -> IsStatic e
+    | UnaryExpression (o, e) -> match o with Dereference -> false | _ -> IsStatic e
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> IsStatic x && IsStatic y
     | TernaryExpression (x, y, z) -> [x; y; z]

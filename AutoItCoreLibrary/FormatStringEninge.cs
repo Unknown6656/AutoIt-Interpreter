@@ -272,6 +272,7 @@ namespace AutoItCoreLibrary
                                 case 'E':
                                 case 'g':
                                 case 'G':
+#warning TODO
                                     goto default; // TODO
                                 case 's':
                                     _0pad = false;

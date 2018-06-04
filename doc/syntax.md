@@ -139,6 +139,26 @@ As partly mentioned in previous paragraphs, AutoIt++ introduces the following un
 
 The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do also exist and work as is being expected by the AutoIt3 specification and mathematical standards.
 
+## Unary Byte Dereferencing Operator `°`
+
+To dereference a pointer variable to its containing value, use the unary prefix operator `°`:
+```autoit
+Func Malloc As "void* malloc(int)" From "glibc.so"
+Func Free As "int free(void*)" From "glibc.so"
+
+
+$region = Malloc(1024)          ; allocate 1024 bytes and get a pointer to the memory region
+$first_byte = °$region          ; get the first byte in the region
+$second_byte = °($region + 1)   ; get the second byte in the region
+
+ConsoleWrite($"The first two bytes in the region '$region' are:\n")
+ConsoleWrite($"\t$first_byte and $second_byte\n")
+
+Free($region)                   ; Free the memory region
+```
+
+**NOTE: The syntax does currently not yet allow bytewise pointer value assignments**
+
 ## Ternary 'inline-if' operator `... ? ... : ...`
 
 TODO
@@ -158,7 +178,10 @@ The following displays a list of operator precendence groups in AutoIt++. The to
 | `[]` array access                                                 | (Left)               |
 | `()` λ function call                                              | (Left)               |
 | `.` "dot" member access                                           | (Left)               |
-| `!`, `-`, `+`, `~`                                                | (Right) Unary prefix |
+| `°`                                                               | (Right) Unary prefix |
+| `~`                                                               | (Right) Unary prefix |
+| `-`, `+`                                                          | (Right) Unary prefix |
+| `!`                                                               | (Right) Unary prefix |
 | `#`                                                               | (Left) Unary postfix |
 | `^`                                                               | Right                |
 | `%`, `/`, `\`, `*`                                                | Left                 |
