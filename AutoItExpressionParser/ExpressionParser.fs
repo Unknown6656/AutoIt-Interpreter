@@ -230,6 +230,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
             reduce0 nt_expression_ext nt_expression
             reduce3 nt_multi_expression nt_expression_ext t_keyword_to nt_expression_ext (fun a _ b -> ValueRange(a, b))
         | ExpressionParserMode.Assignment ->
+            reduce4 nt_expression_ext t_operator_dereference nt_expression nt_operator_binary_ass nt_expression (fun _ t o e -> AssignmentExpression(ReferenceAssignment(o, t, e)))
             reduce4 nt_expression_ext t_variable nt_array_indexers nt_operator_binary_ass nt_expression (fun v i o e -> AssignmentExpression(ArrayAssignment(o, v, i, e)))
             reduce3 nt_expression_ext t_variable nt_operator_binary_ass nt_expression (fun v o e -> AssignmentExpression(ScalarAssignment(o, v, e)))
 

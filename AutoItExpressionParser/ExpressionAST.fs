@@ -121,6 +121,7 @@ and EXPRESSION =
 and ASSIGNMENT_EXPRESSION =
     | ScalarAssignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION
     | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE  * EXPRESSION list * EXPRESSION // op, var, indices, expr
+    | ReferenceAssignment of OPERATOR_ASSIGNMENT * EXPRESSION * EXPRESSION
 type MULTI_EXPRESSION =
     | SingleValue of EXPRESSION
     | ValueRange of EXPRESSION * EXPRESSION
@@ -220,11 +221,13 @@ let rec private ToAString =
         | BitwiseNot -> sprintf "~%s" (ToAString e)
         | StringLength -> sprintf "%s#" (ToAString e)
         | String1Index (s, l) -> sprintf "(%s @ (%s .. %s))" (ToAString e) (ToAString s) (ToAString l)
+        | Dereference -> sprintf "°%s" (ToAString e)
     | BinaryExpression (o, x, y) -> BinToAString o (ToAString x) (ToAString y)
     | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (ToAString x) (ToAString y) (ToAString z)
     | ToExpression (f, t) -> sprintf "%s to %s" (ToAString f) (ToAString t)
     | AssignmentExpression (ScalarAssignment (o, v, e)) -> sprintf "%s %s %s" (v.ToString()) (AssToAString o) (ToAString e)
     | AssignmentExpression (ArrayAssignment (o, v, i, e)) -> sprintf "%s[%s] %s %s" (v.ToString()) (String.Join (", ", (List.map ToAString i))) (AssToAString o) (ToAString e)
+    | AssignmentExpression (ReferenceAssignment (o, v, e)) -> sprintf "°%s %s %s" (v.ToString()) (AssToAString o) (ToAString e)
     | ArrayInitExpression (_, e) ->
         let rec tstr = function
                        | Single e -> ToAString e

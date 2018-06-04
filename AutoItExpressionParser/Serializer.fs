@@ -21,6 +21,7 @@ type SerializerSettings =
         MacroDictionary : string
         VariableDictionary : string
         VariableTypeName : string
+        DiscardName : string
         FunctionResolver : Func<string, EXPRESSION[], ResolvedFunction>
     }
 
@@ -144,7 +145,7 @@ type Serializer (settings : SerializerSettings) =
                             | BitwiseNot -> !/"~"
                             | String1Index (s, l) -> sprintf "(%s).OneBasedSubstring(%s, %s)" (printexpr e) (printexpr s) (printexpr l)
                             | StringLength -> "(" + printexpr e + ").Length"
-                            | Dereference -> sprintf "(%s)(%s).DereferenceByte()" (x.Settings.VariableTypeName) (printexpr e)
+                            | Dereference -> sprintf "(%s)(%s).Dereference()" varn (printexpr e)
                       | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
@@ -164,6 +165,13 @@ type Serializer (settings : SerializerSettings) =
                       | AssignmentExpression ae -> match ae with
                                                    | ScalarAssignment (o, v, e) -> printass (printvar v) [] o e
                                                    | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
+                                                   | ReferenceAssignment (o, v, e) ->
+                                                        match o with
+                                                        | Assign -> sprintf "(%s).Dereference((%s)%s)" (printexpr v) varn (printexpr e)
+                                                        | _ -> let disc = x.Settings.DiscardName
+                                                               let v' = UnaryExpression(Dereference, v)
+                                                               sprintf "%s = %s; (%s).Dereference(((%s)%s).ToByte())" disc (printexpr v) disc varn (printbin (printexpr v') (adict.[o]) (printexpr e))
+                                                               + (if Analyzer.IsStatic v then sprintf "; %s = %s" (printexpr v) disc else "")
                       | ArrayInitExpression (is, es) ->
                             match es with
                             | [] -> match is with
@@ -181,6 +189,6 @@ type Serializer (settings : SerializerSettings) =
                                 parr false (Multiple es)
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
-            | Literal _ -> sprintf "(%s)(%s)" (x.Settings.VariableTypeName) (str e)
+            | Literal _ -> sprintf "(%s)(%s)" varn (str e)
             | _ -> str e
         printexpr e

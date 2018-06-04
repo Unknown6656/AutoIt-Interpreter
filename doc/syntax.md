@@ -157,6 +157,26 @@ ConsoleWrite($"\t$first_byte and $second_byte\n")
 Free($region)                   ; Free the memory region
 ```
 
+A function's assembler code can also be read via the `°` operator:
+```autoit
+Func f($a, $b)
+    Return 2 * $a + $b
+EndFunc
+
+$pointer = f
+$asm = °$pointer
+```
+The variable `asm` in the example above would contain the first assembler instruction byte of the function `f`.
+
+It is also possible to dereference constant pointers, e.g:
+```autoit
+$some_value = °0x140a835f
+$null_deref = °0
+$null_deref = °Null
+```
+It shall be noted, that a `null` or `0` dereferentiation results always in a fatal exception and programm termination.
+So does any other invalid pointer-operation.
+
 **NOTE: The syntax does currently not yet allow bytewise pointer value assignments**
 
 ## Ternary 'inline-if' operator `... ? ... : ...`

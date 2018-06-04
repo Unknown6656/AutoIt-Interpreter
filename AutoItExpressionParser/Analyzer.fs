@@ -217,6 +217,7 @@ let rec ProcessConstants e =
         | AssignmentExpression ae -> match ae with
                                      | ScalarAssignment (o, v, e) -> ScalarAssignment(o, v, ProcessConstants e)
                                      | ArrayAssignment (o, v, i, e) -> ArrayAssignment(o, v, List.map ProcessConstants i, ProcessConstants e)
+                                     | ReferenceAssignment (o, v, e) -> ReferenceAssignment(o, ProcessConstants v, ProcessConstants e)
                                      |> AssignmentExpression
         | _ -> e
 
@@ -289,6 +290,7 @@ let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     | UnaryExpression (_, e) 
     | AssignmentExpression (ScalarAssignment (_, _, e)) -> [GetFunctionCallExpressions e]
     | AssignmentExpression (ArrayAssignment (_, _, x, y)) -> GetFunctionCallExpressions y::List.map GetFunctionCallExpressions x
+    | AssignmentExpression (ReferenceAssignment (_, x, y))
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y]
     | TernaryExpression (x, y, z) -> [GetFunctionCallExpressions x; GetFunctionCallExpressions y; GetFunctionCallExpressions z]
@@ -315,6 +317,7 @@ let rec GetVariables (e : EXPRESSION) : VARIABLE list =
     | AssignmentExpression (ArrayAssignment (_, v, i, e)) -> (v::GetVariables e)::List.map GetVariables i
     | DotAccess (e, _)
     | UnaryExpression (_, e) -> [GetVariables e]
+    | AssignmentExpression (ReferenceAssignment (_, x, y))
     | ArrayAccess (x, y)
     | ToExpression (x, y)
     | BinaryExpression (_, x, y) -> [GetVariables x; GetVariables y]

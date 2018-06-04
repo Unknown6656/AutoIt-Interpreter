@@ -59,7 +59,7 @@ namespace AutoItInterpreter
 
             string[] glob = { GLOBAL_FUNC_NAME };
             var pins = state.PInvokeSignatures.Select(x => (Name: AutoItFunctions.GeneratePInvokeWrapperName(x.Item1, x.Item2.Name), x));
-            Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, (func, pars) =>
+            Serializer ser = new Serializer(new SerializerSettings(MACROS, VARS, TYPE, DISCARD, (func, pars) =>
             {
                 ResolvedFunctionParamter[] rparams = new ResolvedFunctionParamter[pars.Length];
                 string lfunc = func.ToLower();

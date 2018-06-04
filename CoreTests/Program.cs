@@ -29,7 +29,6 @@ namespace CoreTests
             v server = AutoItFunctions.TCPListen("[::]", 41488);
             v client = AutoItFunctions.TCPAccept(server);
             v txt = AutoItFunctions.TCPRecv(client);
-
         }
 
         public static v TOP_KEK(v v1, v v2, v v3, v? v4 = null) => $"v1={v1}, v2={v2}, v3={v3}, v4={v4 ?? v.Null}";
