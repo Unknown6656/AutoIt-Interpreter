@@ -271,7 +271,7 @@ namespace {NAMESPACE}
                     _print(function, 4);
 
                     sb.AppendLine($@"
-            return {TYPE}.Zero;
+            return {TYPE}.Empty;
         }}
 ".TrimEnd());
                 }
@@ -300,7 +300,7 @@ namespace {NAMESPACE}
                     _print(function, 5);
 
                     sb.AppendLine($@"
-                return {TYPE}.Zero;
+                return {TYPE}.Empty;
             }}
             {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
 

@@ -32,7 +32,7 @@
     [ ] ftp API
     [x] ssh/sftp API
     [ ] graphics API
-[-] pointer assignments
+[x] pointer assignments
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements
 [x] implement main return

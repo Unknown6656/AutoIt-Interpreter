@@ -241,8 +241,7 @@ namespace AutoItInterpreter
             SourcePath = path;
 
             if (SourcePath.Exists)
-                using (StreamReader rd = SourcePath.OpenText())
-                    Content = rd.ReadToEnd();
+                Content = File.ReadAllText(SourcePath.FullName);
         }
     }
 

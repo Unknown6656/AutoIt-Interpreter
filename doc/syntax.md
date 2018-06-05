@@ -141,7 +141,7 @@ The arithmetic unary operators `+` (Identity) and `-` (Negation) naturally do al
 
 ## Unary Byte Dereferencing Operator `°`
 
-To dereference a pointer variable to its containing value, use the unary prefix operator `°`:
+To dereference a pointer variable to its containing 1-byte value, use the unary prefix operator `°`:
 ```autoit
 Func Malloc As "void* malloc(int)" From "glibc.so"
 Func Free As "int free(void*)" From "glibc.so"
@@ -177,7 +177,16 @@ $null_deref = °Null
 It shall be noted, that a `null` or `0` dereferentiation results always in a fatal exception and programm termination.
 So does any other invalid pointer-operation.
 
-**NOTE: The syntax does currently not yet allow bytewise pointer value assignments**
+The dereferencing operator can also be used for pointer assignments:
+```autoit
+°$pointer = 0xff
+```
+The value will be truncated to its least significant byte if the value is greater than `0xff` (255).
+
+AutoIt++ also permits the assignment of a value to a pointer returned from a function:
+```autoit
+°func() = 42
+```
 
 ## Ternary 'inline-if' operator `... ? ... : ...`
 

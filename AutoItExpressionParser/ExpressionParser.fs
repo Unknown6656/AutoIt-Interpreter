@@ -44,6 +44,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let nt_array_indexer            = x.nt<EXPRESSION>              "array-indexer"
         let nt_array_init_wrapper       = x.nt<INIT_EXPRESSION list>    "array-init-wrapper"
         let nt_array_init_expression    = x.nt<INIT_EXPRESSION list>    "array-init-expression"
+        let nt_deref_target_expressions = x.nt<EXPRESSION>              "dereferencing-targets"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
         let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
@@ -93,7 +94,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_operator_at1              = x.t @"@\|"
         let t_operator_at0              = x.t @"@"
         let t_operator_dotrange         = x.t @"\.?\.\." // TODO
-        let t_operator_dereference      = x.t @"°"
+        let t_operator_dereference      = x.t @"[°�]"
         let t_symbol_equal              = x.t @"="
         let t_symbol_numbersign         = x.t @"#"
         let t_symbol_questionmark       = x.t @"\?"
@@ -230,9 +231,9 @@ type ExpressionParser(mode : ExpressionParserMode) =
             reduce0 nt_expression_ext nt_expression
             reduce3 nt_multi_expression nt_expression_ext t_keyword_to nt_expression_ext (fun a _ b -> ValueRange(a, b))
         | ExpressionParserMode.Assignment ->
-            reduce4 nt_expression_ext t_operator_dereference nt_expression nt_operator_binary_ass nt_expression (fun _ t o e -> AssignmentExpression(ReferenceAssignment(o, t, e)))
             reduce4 nt_expression_ext t_variable nt_array_indexers nt_operator_binary_ass nt_expression (fun v i o e -> AssignmentExpression(ArrayAssignment(o, v, i, e)))
             reduce3 nt_expression_ext t_variable nt_operator_binary_ass nt_expression (fun v o e -> AssignmentExpression(ScalarAssignment(o, v, e)))
+            reduce4 nt_expression_ext t_operator_dereference nt_deref_target_expressions nt_operator_binary_ass nt_expression (fun _ t o e -> AssignmentExpression(ReferenceAssignment(o, t, e)))
 
             reduce1 nt_operator_binary_ass t_operator_assign_sub (fun _ -> AssignSubtract)
             reduce1 nt_operator_binary_ass t_operator_assign_add (fun _ -> AssignAdd)
@@ -342,6 +343,9 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduce1 !@51 nt_literal Literal
         reduce0 !@51 !@52
         reduce3 !@52 t_symbol_oparen !@0 t_symbol_cparen (fun _ e _ -> e)
+
+        if x.ParserMode = ExpressionParserMode.Assignment then
+            reduce0 nt_deref_target_expressions !@43
 
         reduce3 nt_inline_array_wrapper nt_inline_array_wrapper t_symbol_comma nt_inline_array_expression (fun es _ e -> es@[Multiple e])
         reduce1 nt_inline_array_wrapper nt_inline_array_expression (fun e -> [Multiple e])

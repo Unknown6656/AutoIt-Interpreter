@@ -172,5 +172,17 @@ namespace UnitTests
 
         [TestMethod]
         public void Test_42() => AssertValidExpression("func(°($a + 42))", false);
+
+        [TestMethod]
+        public void Test_43() => AssertInvalidExpression("°$a", true);
+
+        [TestMethod]
+        public void Test_44() => AssertValidExpression("°$a = 42", true);
+
+        [TestMethod]
+        public void Test_45() => AssertValidExpression("°$a += °°func()", true);
+
+        [TestMethod]
+        public void Test_46() => AssertValidExpression("°func() = °0", true);
     }
 }
