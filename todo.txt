@@ -31,7 +31,7 @@
     [x] http API
     [ ] ftp API
     [x] ssh/sftp API
-    [ ] graphics API
+    [-] graphics API
 [x] pointer assignments
 [ ] implement "continuecase"
 [ ] implement "with ..."-statements

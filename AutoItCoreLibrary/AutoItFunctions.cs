@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.IO.MemoryMappedFiles;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Globalization;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -14,11 +15,15 @@ using System;
 
 using Renci.SshNet;
 
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp;
+
 namespace AutoItCoreLibrary
 {
     using static Win32;
 
     using var = AutoItVariantType;
+    using Bitmap = Image<Argb32>;
 
 
 #pragma warning disable RCS1047, RCS1057, IDE1006
@@ -1221,6 +1226,104 @@ namespace AutoItCoreLibrary
 
         [BuiltinFunction]
         public static var ATan2(var v1, var v2) => (var)Math.Atan2((double)v1, (double)v2);
+
+        [BuiltinFunction]
+        public static var BitmapCreate(var width, var height) => var.NewGCHandledData(new Bitmap(width.ToInt(), height.ToInt()));
+        [BuiltinFunction]
+        public static var BitmapLoad(var path) => var.NewGCHandledData(Image.Load(path).CloneAs<Argb32>());
+        [BuiltinFunction]
+        public static var BitmapSave(var bmp, var path) => Try(() => bmp.UseGCHandledData<Bitmap>(b => b.Save(path)));
+        [BuiltinFunction]
+        public static var BitmapDestroy(var bmp) => Try(() => bmp.DisposeGCHandledData<Bitmap>());
+        [BuiltinFunction]
+        public static var BitmapClear(var bmp, var color) => Try(() => bmp.UseGCHandledData<Bitmap>(b =>
+        {
+            Argb32 c = new Argb32((uint)color.ToLong());
+
+            for (int y = 0, h = b.Height; y < h; ++h)
+                Parallel.For(0, b.Width, x => b[x, y] = c);
+        }));
+        [BuiltinFunction]
+        public static var BitmapSetPixel(var bmp, var x, var y, var color)
+        {
+            bool res = false;
+
+            bmp.UseGCHandledData<Bitmap>(b =>
+            {
+                int _x = x.ToInt();
+                int _y = y.ToInt();
+                long _c = (long)color;
+
+                if ((_x >= 0) && (_y >= 0) && (_x < b.Width) && (_y < b.Height) && (_c >= 0) && (_c <= 0xffffffff))
+                {
+                    b[_x, _y] = new Argb32((uint)_c);
+                    res = true;
+                }
+                else
+                    SetError(-1);
+            });
+
+            return res;
+        }
+        [BuiltinFunction]
+        public static var BitmapGetPixel(var bmp, var x, var y)
+        {
+            uint _c = default;
+
+            bmp.UseGCHandledData<Bitmap>(b =>
+            {
+                int _x = x.ToInt();
+                int _y = y.ToInt();
+
+                if ((_x >= 0) && (_y >= 0) && (_x < b.Width) && (_y < b.Height))
+                    _c = b[_x, _y].Argb;
+                else
+                    SetError(-1);
+            });
+
+            return _c;
+        }
+        [BuiltinFunction]
+        public static var BitmapGetWidth(var bmp)
+        {
+            int w = -1;
+
+            bmp.UseGCHandledData<Bitmap>(b => w = b.Width);
+
+            if (w < 0)
+                SetError(-1);
+
+            return w;
+        }
+        [BuiltinFunction]
+        public static var BitmapGetHeight(var bmp)
+        {
+            int h = -1;
+
+            bmp.UseGCHandledData<Bitmap>(b => h = b.Height);
+
+            if (h < 0)
+                SetError(-1);
+
+            return h;
+        }
+        //[BuiltinFunction]
+        //public static var BitmapGetPointer(var bmp)
+        //{
+        //    var res = var.Null;
+
+        //    bmp.UseGCHandledData<Bitmap>(b =>
+        //    {
+        //        Span<Argb32> span = b.PixelSpan;
+                
+
+        //        span.
+
+        //    });
+
+        //    return res;
+        //}
+
         [BuiltinFunction]
         public static var CallAutoItProgram(var path, var args)
         {

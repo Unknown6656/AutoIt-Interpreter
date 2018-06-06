@@ -410,6 +410,14 @@ namespace AutoItCoreLibrary
 
         public void UseDisposeGCHandledData<T>(Action<T> func) where T : class => UseDisposeGCHandledData(o => func(o as T));
 
+        public void DisposeGCHandledData<T>() where T : class, IDisposable => UseDisposeGCHandledData<T>(t => t.Dispose());
+
+        public void DisposeGCHandle()
+        {
+            if (!IsNull)
+                ToGCHandle().Free();
+        }
+
         public U UseGCHandledData<T, U>(Func<T, U> func)
             where T : class
         {
