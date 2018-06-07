@@ -32,6 +32,7 @@ namespace AutoItInterpreter
                     Console.BufferWidth = Math.Max(201, Console.BufferWidth);
 
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
+                    ("d", "debug"),
                     ("o", "output"),
                     ("u", "unsafe"),
                     ("c", "clean-output"),
@@ -118,6 +119,7 @@ namespace AutoItInterpreter
                 {
                     Language = lang,
                     UseVerboseOutput = Cont("verbose"),
+                    IncludeDebugSymbols = Cont("debug"),
                     UseMSBuildErrorOutput = Cont("msbuild-error-format"),
                     DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
                     GenerateCodeEvenWithErrors = Cont("generate-always"),
@@ -293,6 +295,7 @@ namespace AutoItInterpreter
 | -k                | --keep-temp           | Keeps temporary generated code files.                             |
 | -g                | --generate-always     | Generates always temporary code files. (Even if some fatal errors |
 |                   |                       | have occured)                                                     |
+| -d                | --debug               | Includes the debugging symbols into the resulting application.    |
 | -r                | --run                 | Runs the compiled application after a successful build process.   |
 | -t=...            | --target-system=...   | Compiles the application against the given target system.         |
 |                   |                       | Possible values are:                                              |
@@ -441,6 +444,7 @@ namespace AutoItInterpreter
         public Compatibility Compatibility { set; get; } = Win32.System == OS.Windows ? Compatibility.win
                                                          : Win32.System == OS.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
+        public bool IncludeDebugSymbols { get; set; }
         public bool TreatWarningsAsErrors { get; set; }
         public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }

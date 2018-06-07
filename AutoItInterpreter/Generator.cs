@@ -174,17 +174,17 @@ namespace {NAMESPACE}
             try
             {{
                 Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
-                AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
-                {{
-                    string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");
-
-                    if (dll.EndsWith(""_resources""))
-                        return null;
-
-                    ResourceManager rm = new ResourceManager(""{NAMESPACE}.Properties.Resources"", Assembly.GetExecutingAssembly());
-
-                    return Assembly.Load(rm.GetObject(dll) as byte[]);
-                }};
+                //AppDomain.CurrentDomain.AssemblyResolve += (_, a) =>
+                //{{
+                //    string dll = (a.Name.Contains("","") ? a.Name.Substring(0, a.Name.IndexOf(',')) : a.Name.Replace("".dll"", """")).Replace(""."", ""_"");
+                //
+                //    if (dll.EndsWith(""_resources""))
+                //        return null;
+                //
+                //    ResourceManager rm = new ResourceManager(""{NAMESPACE}.Properties.Resources"", Assembly.GetExecutingAssembly());
+                //
+                //    return Assembly.Load(rm.GetObject(dll) as byte[]);
+                //}};
 
                 {TYPE} arguments = {TYPE}.Empty;
 
@@ -561,11 +561,12 @@ using System.Reflection;
             }
         }
 
-        public static void EditDotnetProject(InterpreterState state, TargetSystem target, DirectoryInfo dir, FileInfo[] dependencies, string name, string keypath)
+        public static void EditDotnetProject(InterpreterState state, InterpreterOptions options, TargetSystem target, DirectoryInfo dir, FileInfo[] dependencies, string name, string keypath)
         {
             if (File.Exists($"{dir.FullName}/Program.cs"))
                 File.Delete($"{dir.FullName}/Program.cs");
 
+            string bstr(bool v) => v.ToString().ToLower();
             string dllpath = $"{dir.FullName}/../{nameof(Resources.autoitcorlib)}.dll";
             string respath = $"{dir.FullName}/resources.resx";
             string depsstr = string.Concat(dependencies.Concat(new[] { new FileInfo(dllpath) }).Select(x => $@"
@@ -581,9 +582,9 @@ using System.Reflection;
         <AssemblyName>{GetAssemblyName(state, name)}</AssemblyName>
         <ApplicationIcon>{state.CompileInfo.IconPath ?? ""}</ApplicationIcon>
         <StartupObject>{NAMESPACE}.{APPLICATION_MODULE}</StartupObject>
-        <TargetFramework>netcoreapp2.0</TargetFramework>
+        <TargetFramework>netcoreapp2.1</TargetFramework>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Optimize>true</Optimize>
+        <Optimize>{bstr(!options.IncludeDebugSymbols)}</Optimize>
         <LangVersion>latest</LangVersion>
         <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -592,9 +593,9 @@ using System.Reflection;
         <SelfContained>true</SelfContained>
         <RuntimeIdentifier>{target.Identifier}</RuntimeIdentifier>
         <Prefer32Bit>{(!target.Is64Bit).ToString().ToLower()}</Prefer32Bit>
-        <DebugType>None</DebugType>
-        <DebugSymbols>false</DebugSymbols>
-        <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+        <DebugType>{(options.IncludeDebugSymbols ? "Full" : "None")}</DebugType>
+        <DebugSymbols>{bstr(options.IncludeDebugSymbols)}</DebugSymbols>
+        <CopyOutputSymbolsToPublishDirectory>{bstr(options.IncludeDebugSymbols)}</CopyOutputSymbolsToPublishDirectory>
         {(keypath is null ? "<!--" : "")}
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>{keypath}</AssemblyOriginatorKeyFile>
@@ -605,7 +606,8 @@ using System.Reflection;
         <Reference Include=""{nameof(Resources.autoitcorlib)}"">
             <HintPath>{dllpath}</HintPath>
         </Reference>
-    </ItemGroup>{depsstr}
+    </ItemGroup>
+    <!-- {depsstr} -->
     <ItemGroup>
         <Compile Include=""{name}.cs""/>
     </ItemGroup>

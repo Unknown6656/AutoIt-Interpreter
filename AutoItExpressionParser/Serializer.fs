@@ -167,7 +167,7 @@ type Serializer (settings : SerializerSettings) =
                                                    | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
                                                    | ReferenceAssignment (o, v, e) ->
                                                         match o with
-                                                        | Assign -> sprintf "(%s)(%s).Dereference((%s)%s)" varn (printexpr v) varn (printexpr e)
+                                                        | Assign -> sprintf "(%s).Dereference(((%s)%s).ToByte())" (printexpr v) varn (printexpr e)
                                                         | _ -> let disc = x.Settings.DiscardName
                                                                let v' = UnaryExpression(Dereference, v)
                                                                sprintf "%s = %s; (%s).Dereference(((%s)%s).ToByte())" disc (printexpr v) disc varn (printbin (printexpr v') (adict.[o]) (printexpr e))

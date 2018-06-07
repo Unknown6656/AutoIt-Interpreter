@@ -39,6 +39,7 @@ namespace AutoItCoreLibrary
         private static var __error;
         private static var __extended;
 
+        public static bool LittleEndian { get; }
         public static Assembly ScriptAssembly { get; }
         public static AutoItMacroDictionary StaticMacros { get; } = new AutoItMacroDictionary(s =>
         {
@@ -308,6 +309,10 @@ namespace AutoItCoreLibrary
 
         static AutoItFunctions()
         {
+            uint _ = 0xffdead00;
+
+            LittleEndian = *((byte*)&_) == 0x00;
+
             Assembly casm = typeof(AutoItFunctions).Assembly;
 
             ScriptAssembly = (from frame in new StackTrace(1).GetFrames()
@@ -348,6 +353,11 @@ namespace AutoItCoreLibrary
                     Console.WriteLine($"    ${var} = \"{topframe[var]}\"");
             }
         });
+
+        public static uint ReverseEndianess(uint v) => (v & 0x000000ffu) << 24
+                                                     | (v & 0x0000ff00u) << 8
+                                                     | (v & 0x00ff0000u) >> 8
+                                                     | (v & 0xff000000u) >> 24;
 
         private static void SetError(var err, var? ext = null) => (__error, __extended) = (err, ext ?? __extended);
 
@@ -1239,7 +1249,8 @@ namespace AutoItCoreLibrary
         [BuiltinFunction]
         public static var BitmapClear(var bmp, var color) => Try(() => bmp.UseGCHandledData<Bitmap>(b =>
         {
-            Argb32 c = new Argb32((uint)color.ToLong());
+            uint clr = (uint)color.ToLong();
+            Argb32 c = new Argb32(LittleEndian ? ReverseEndianess(clr) : clr);
 
             for (int y = 0, h = b.Height; y < h; ++h)
                 Parallel.For(0, b.Width, x => b[x, y] = c);
@@ -1253,11 +1264,11 @@ namespace AutoItCoreLibrary
             {
                 int _x = x.ToInt();
                 int _y = y.ToInt();
-                long _c = (long)color;
+                uint clr = (uint)color.ToLong();
 
-                if ((_x >= 0) && (_y >= 0) && (_x < b.Width) && (_y < b.Height) && (_c >= 0) && (_c <= 0xffffffff))
+                if ((_x >= 0) && (_y >= 0) && (_x < b.Width) && (_y < b.Height))
                 {
-                    b[_x, _y] = new Argb32((uint)_c);
+                    b[_x, _y] = new Argb32(LittleEndian ? ReverseEndianess(clr) : clr);
                     res = true;
                 }
                 else
@@ -1282,7 +1293,7 @@ namespace AutoItCoreLibrary
                     SetError(-1);
             });
 
-            return _c;
+            return LittleEndian ? ReverseEndianess(_c) : _c;
         }
         [BuiltinFunction]
         public static var BitmapGetWidth(var bmp)
@@ -1456,6 +1467,10 @@ namespace AutoItCoreLibrary
         }
         [BuiltinFunction]
         public static var Identity(var v) => v;
+        [BuiltinFunction]
+        public static var IsBigEndian() => !LittleEndian;
+        [BuiltinFunction]
+        public static var IsLittleEndian() => LittleEndian;
         [RequiresUnsafe, BuiltinFunction, Warning("warnings.generator.kpanic")]
         public static var Panic()
         {

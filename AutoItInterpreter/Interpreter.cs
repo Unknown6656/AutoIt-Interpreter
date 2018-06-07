@@ -317,7 +317,7 @@ namespace AutoItInterpreter
                         tmpdeps.Add(tmp);
                     }
 
-                    ApplicationGenerator.EditDotnetProject(state, target, subdir, tmpdeps.ToArray(), ProjectName, sigkey);
+                    ApplicationGenerator.EditDotnetProject(state, Options, target, subdir, tmpdeps.ToArray(), ProjectName, sigkey);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
                         cmperr("errors.generator.target_deprecated", target.Compatibility);
@@ -351,8 +351,9 @@ namespace AutoItInterpreter
 #endif
                         DirectoryInfo targetdir = Options.TargetDirectory is string s ? new DirectoryInfo(s) : RootContext.SourcePath.Directory.CreateSubdirectory(ProjectName + "-compiled");
 
-                        foreach (FileInfo file in bindir.GetFiles("*.pdb"))
-                            file.Delete();
+                        if (!Options.IncludeDebugSymbols)
+                            foreach (FileInfo file in bindir.GetFiles("*.pdb"))
+                                file.Delete();
 
                         if (!targetdir.Exists)
                             targetdir.Create();

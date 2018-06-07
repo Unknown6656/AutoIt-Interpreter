@@ -127,30 +127,26 @@ namespace AutoItInterpreter
 
         public static void PreJIT(this Assembly assembly)
         {
-            foreach (MethodBase method in assembly.GetTypes().SelectMany(t => t.GetConstructors(BindingFlags.NonPublic
-                                                                                              | BindingFlags.Public
-                                                                                              | BindingFlags.NonPublic
-                                                                                              | BindingFlags.Instance
-                                                                                              | BindingFlags.Static).Select(c => c as MethodBase)
-                                                                      .Concat(t.GetMethods(BindingFlags.DeclaredOnly
+            foreach (MethodBase method in assembly.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.DeclaredOnly
                                                                                          | BindingFlags.NonPublic
                                                                                          | BindingFlags.Public
                                                                                          | BindingFlags.Instance
-                                                                                         | BindingFlags.Static))))
-                if (method is MethodInfo nfo && (nfo.IsGenericMethodDefinition || nfo.IsGenericMethod))
-                    try
+                                                                                         | BindingFlags.Static)))
+                try
+                {
+                    if (method is MethodInfo nfo && (nfo.IsGenericMethodDefinition || nfo.IsGenericMethod))
                     {
                         Type[] gentypeargs = nfo.GetGenericArguments().Select(_ => typeof(object)).ToArray();
                         MethodInfo genins = nfo.MakeGenericMethod(gentypeargs);
 
                         RuntimeHelpers.PrepareMethod(genins.MethodHandle);
                     }
-                    catch
-                    {
+                    else if (!method.Name.Contains("<>") && !method.DeclaringType.FullName.Contains("<>"))
                         RuntimeHelpers.PrepareMethod(method.MethodHandle);
-                    }
-                else
-                    RuntimeHelpers.PrepareMethod(method.MethodHandle);
+                }
+                catch
+                {
+                }
         }
 
         public static bool IsSome<T>(this FSharpOption<T> opt) => FSharpOption<T>.get_IsSome(opt);
