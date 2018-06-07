@@ -1,8 +1,9 @@
 ﻿// #define PRE_BUILD
 // #define USE_PUBLISHER
 
-using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -16,6 +17,8 @@ using Microsoft.FSharp.Collections;
 using Piglet.Parser.Configuration;
 
 using Renci.SshNet;
+
+using SixLabors.ImageSharp;
 
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
@@ -201,7 +204,7 @@ namespace AutoItInterpreter
 
     public sealed class Interpreter
     {
-        private static readonly Type[] DEPENDENCY_TYPES = new[] { typeof(SshClient) /* TODO */ };
+        private static readonly Type[] DEPENDENCY_TYPES = new[] { typeof(SshClient), typeof(Unsafe), typeof(Image) };
         private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
         {
             [__NONE__] = "EndFunc",

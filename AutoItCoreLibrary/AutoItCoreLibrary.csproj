@@ -4,7 +4,7 @@
   </PropertyGroup>
     <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Optimize>true</Optimize>
+        <Optimize>false</Optimize>
         <OutputPath>../bin</OutputPath>
         <LangVersion>latest</LangVersion>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -16,6 +16,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="SSH.NET" Version="2016.1.0" />
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.0" />
     </ItemGroup>
     <ItemGroup>
       <None Include="AutoItCurryingDelegate.cs">

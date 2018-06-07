@@ -30,15 +30,6 @@ namespace CoreTests
             //v server = AutoItFunctions.TCPListen("[::]", 41488);
             //v client = AutoItFunctions.TCPAccept(server);
             //v txt = AutoItFunctions.TCPRecv(client);
-
-            Span<byte> s1 = new byte[315];
-            Span<byte> s2 = stackalloc byte[42];
-
-            fixed (byte* p1 = &s1.GetPinnableReference())
-            fixed (byte* p2 = &s2.GetPinnableReference())
-                ;
-
-            // var x = typeof(Span<>).GetField("_pointer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(ds1);
         }
 
         public static v TOP_KEK(v v1, v v2, v v3, v? v4 = null) => $"v1={v1}, v2={v2}, v3={v3}, v4={v4 ?? v.Null}";

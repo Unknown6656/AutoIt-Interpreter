@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.IO.MemoryMappedFiles;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -1307,22 +1308,45 @@ namespace AutoItCoreLibrary
 
             return h;
         }
-        //[BuiltinFunction]
-        //public static var BitmapGetPointer(var bmp)
-        //{
-        //    var res = var.Null;
+        [BuiltinFunction, RequiresUnsafe]
+        public static var BitmapGetPointer(var bmp)
+        {
+            var res = var.Null;
 
-        //    bmp.UseGCHandledData<Bitmap>(b =>
-        //    {
-        //        Span<Argb32> span = b.PixelSpan;
-                
+            bmp.UseGCHandledData<Bitmap>(b =>
+            {
+                Span<Argb32> span = b.PixelSpan;
+                uint* region = (uint*)Marshal.AllocHGlobal((span.Length + 1) * 4);
 
-        //        span.
+                region[0] = (uint)span.Length;
 
-        //    });
+                for (int i = 0; i < span.Length; ++i)
+                    region[i + 1] = span[i].Argb;
 
-        //    return res;
-        //}
+                res = region + 1;
+            });
+
+            return res;
+        }
+        [BuiltinFunction, RequiresUnsafe]
+        public static var BitmapUpdateChanges(var bmp, var ptr) => Try(() => bmp.UseGCHandledData<Bitmap>(b =>
+        {
+            Span<Argb32> span = b.PixelSpan;
+            uint* region = (uint*)ptr - 1;
+
+            for (int i = 0, l = Math.Min(span.Length, (int)region[0]); i < l; ++i)
+                span[i] = new Argb32(region[i + 1]);
+        }));
+        [BuiltinFunction, RequiresUnsafe]
+        public static var BitmapDestroyPointer(var ptr) => Try(() =>
+        {
+            if (!ptr.IsNull)
+            {
+                uint* region = (uint*)ptr - 1;
+
+                Marshal.FreeHGlobal((IntPtr)region);
+            }
+        });
 
         [BuiltinFunction]
         public static var CallAutoItProgram(var path, var args)

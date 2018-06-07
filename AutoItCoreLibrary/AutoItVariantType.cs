@@ -67,7 +67,7 @@ namespace AutoItCoreLibrary
             get => this[indices.Select(x => x.ToLong()).ToArray()];
         }
 
-        public bool IsNull => this == 0L;
+        public bool IsNull => this == Null;
 
         public bool IsArray => !IsString;
 
@@ -177,23 +177,18 @@ namespace AutoItCoreLibrary
         public string ToDebugString()
         {
             if (IsString)
-            {
-                void* ptr = this;
-
                 try
                 {
-                    // do some silly action to assert reading permissions (without the assertion being optimized away)
-                    if (((decimal)*((int*)ptr) + this).GetHashCode() != 0)
-                    {
-                        GCHandle gch = GCHandle.FromIntPtr((IntPtr)ptr);
+                    GCHandle gch = GCHandle.FromIntPtr((IntPtr)this);
 
-                        return $"{gch.AddrOfPinnedObject():16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
-                    }
+                    if (gch.IsAllocated)
+                        return $"{gch.AddrOfPinnedObject():x16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
+                    else
+                        return $"{(long)this:x16}h";
                 }
                 catch
                 {
                 }
-            }
             else
                 return $"[ {string.Join(", ", _data.VariantData.Select(x => x.ToDebugString()))} ]";
 
@@ -558,7 +553,16 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType operator /(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 / (decimal)v2;
         public static AutoItVariantType operator %(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 % (decimal)v2;
         public static AutoItVariantType operator ^(AutoItVariantType v1, AutoItVariantType v2) => (decimal)Math.Pow((double)(decimal)v1, (double)(decimal)v2);
-        public static bool operator ==(AutoItVariantType v1, AutoItVariantType v2) => v1.ToDebugString() == v2.ToDebugString();
+        public static bool operator ==(AutoItVariantType v1, AutoItVariantType v2)
+        {
+            string s1 = v1.ToString();
+            string s2 = v2.ToString();
+
+            if ((s1.Length + s2.Length) == 0)
+                return v1.ToDebugString() == v2.ToDebugString();
+            else
+                return (s1 == s2) && ((decimal)v1 == (decimal)v2);
+        }
         public static bool operator !=(AutoItVariantType v1, AutoItVariantType v2) => !(v1 == v2);
         public static bool operator <(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 < (decimal)v2;
         public static bool operator >(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 > (decimal)v2;
