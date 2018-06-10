@@ -436,8 +436,9 @@ namespace AutoItCoreLibrary
         #endregion
         #region STATIC FUNCTIONS
 
-        public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
+        public static bool Equals(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, false);
         public static bool Equals(AutoItVariantType v1, AutoItVariantType v2, bool ignorecase) => ignorecase ? string.Equals(v1, v2, StringComparison.InvariantCultureIgnoreCase) : v1 == v2;
+        public static bool EqualsCaseInsensitive(AutoItVariantType v1, AutoItVariantType v2) => Equals(v1, v2, true);
         public static bool Unequals(AutoItVariantType v1, AutoItVariantType v2) => v1 != v2;
         public static bool Lower(AutoItVariantType v1, AutoItVariantType v2) => v1 < v2;
         public static bool LowerEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 <= v2;

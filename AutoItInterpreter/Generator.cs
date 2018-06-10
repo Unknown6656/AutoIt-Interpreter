@@ -380,7 +380,7 @@ namespace {NAMESPACE}
                         foreach (AST_CONDITIONAL_BLOCK elif in s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
                             printblock(elif.Statements, $"else if ({tstr(elif.Condition, elif.Context)})");
 
-                        if (s.OptionalElse is AST_STATEMENT[] b)
+                        if (s.OptionalElse is AST_STATEMENT[] b && b.Length > 0)
                             printblock(b, "else");
 
                         return;

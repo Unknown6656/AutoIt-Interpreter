@@ -63,7 +63,7 @@ type Serializer (settings : SerializerSettings) =
             let f = match o with
                     | StringConcat -> !!"&"
                     | EqualCaseSensitive -> !!"=="
-                    | EqualCaseInsensitive
+                    | EqualCaseInsensitive -> !<"EqualsCaseInsensitive"
                     | Unequal -> !!"!="
                     | Greater -> !!">"
                     | GreaterEqual -> !!">="
