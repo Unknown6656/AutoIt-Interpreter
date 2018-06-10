@@ -16,7 +16,12 @@ using System;
 
 using Renci.SshNet;
 
+using SixLabors.ImageSharp.Processing.Transforms;
+using SixLabors.ImageSharp.Processing.Filters;
+using SixLabors.ImageSharp.Processing.Effects;
+using SixLabors.ImageSharp.Processing.Drawing;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 
 namespace AutoItCoreLibrary
@@ -397,6 +402,10 @@ namespace AutoItCoreLibrary
 
         private static void SSHCommand(var conn, string cmd) => conn.UseGCHandledData<SshClient>(c => c.RunCommand(cmd).Dispose());
 
+        private static var bitmap_use(this var bmp, Action<Bitmap> f) => Try(() => bmp.UseGCHandledData<Bitmap>(b => f(b)));
+
+        private static var bitmap_mutate(this var bmp, Func<IImageProcessingContext<Argb32>, IImageProcessingContext<Argb32>> f) => bmp.bitmap_use(b => b.Mutate(x => f(x)));
+
         #endregion
         #region AutoIt3 compatible
 
@@ -738,6 +747,8 @@ namespace AutoItCoreLibrary
         [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(EnvUpdate))]
         public static var EnvUpdate() => 1;
 
+        [BuiltinFunction, Note("notes.alias_function", nameof(FileChangeDir), nameof(FileChangeDir))]
+        public static var FileChangeDir(var v) => FileChangeDir(v);
 
         [BuiltinFunction]
         public static var Floor(var v) => Math.Floor(v);
@@ -1089,8 +1100,10 @@ namespace AutoItCoreLibrary
             Thread.Sleep(dur);
         });
 
+        [BuiltinFunction]
+        public static var UBound(var arr) => arr.IsArray ? arr.Length : 0;
 
-        [Note("notes.alias_function", nameof(UDPBind), nameof(UDPListen))]
+        [BuiltinFunction, Note("notes.alias_function", nameof(UDPBind), nameof(UDPListen))]
         public static var UDPBind(var addr, var port) => UDPListen(addr, port);
         [BuiltinFunction]
         public static var UDPListen(var addr, var port)
@@ -1358,6 +1371,57 @@ namespace AutoItCoreLibrary
                 Marshal.FreeHGlobal((IntPtr)region);
             }
         });
+        [BuiltinFunction]
+        public static var BitmapEffectOilpaint(var bmp) => bmp.bitmap_mutate(OilPaintExtensions.OilPaint);
+        [BuiltinFunction]
+        public static var BitmapEffectKodachrome(var bmp) => bmp.bitmap_mutate(KodachromeExtensions.Kodachrome);
+        [BuiltinFunction]
+        public static var BitmapEffectLomograph(var bmp) => bmp.bitmap_mutate(LomographExtensions.Lomograph);
+        [BuiltinFunction]
+        public static var BitmapEffectPixelate(var bmp, var? size = null) => bmp.bitmap_mutate(x => x.Pixelate((size ?? 5).ToInt()));
+        [BuiltinFunction]
+        public static var BitmapEffectPolaroid(var bmp) => bmp.bitmap_mutate(PolaroidExtensions.Polaroid);
+        [BuiltinFunction]
+        public static var BitmapEffectSepia(var bmp, var? amount = null) => bmp.bitmap_mutate(x => x.Sepia((float)(amount ?? 1m)));
+        [BuiltinFunction]
+        public static var BitmapEffectBlackWhite(var bmp) => bmp.bitmap_mutate(BlackWhiteExtensions.BlackWhite);
+        [BuiltinFunction]
+        public static var BitmapGrayscale(var bmp) => bmp.bitmap_mutate(GrayscaleExtensions.Grayscale);
+        [BuiltinFunction]
+        public static var BitmapInvert(var bmp) => bmp.bitmap_mutate(InvertExtensions.Invert);
+        [BuiltinFunction]
+        public static var BitmapPad(var bmp, var width, var height) => bmp.bitmap_mutate(x => x.Pad(width.ToInt(), height.ToInt()));
+        [BuiltinFunction]
+        public static var BitmapAutoOrient(var bmp) => bmp.bitmap_mutate(AutoOrientExtensions.AutoOrient);
+        [BuiltinFunction]
+        public static var Bitmap(var bmp) => bmp.bitmap_mutate(x => x.Resize(new ResizeOptions()));
+        [BuiltinFunction]
+        public static var BitmapRotate(var bmp, var angle) => bmp.bitmap_mutate(x => x.Rotate((float)angle));
+        [BuiltinFunction]
+        public static var BitmapFlipHorizontal(var bmp) => bmp.bitmap_mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Horizontal));
+        [BuiltinFunction]
+        public static var BitmapFlipVertical(var bmp) => bmp.bitmap_mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
+        [BuiltinFunction]
+        public static var BitmapSkew(var bmp, var x, var y) => bmp.bitmap_mutate(b => b.Skew((float)x, (float)y));
+        [BuiltinFunction]
+        public static var BitmapSaturate(var bmp, var v) => bmp.bitmap_mutate(x => x.Saturate((float)v));
+        [BuiltinFunction]
+        public static var BitmapRotateHue(var bmp, var v) => bmp.bitmap_mutate(x => x.Hue((float)v));
+        [BuiltinFunction]
+        public static var BitmapBrightness(var bmp, var v) => bmp.bitmap_mutate(x => x.Brightness((float)v));
+        [BuiltinFunction]
+        public static var BitmapContrast(var bmp, var v) => bmp.bitmap_mutate(x => x.Contrast((float)v));
+        [BuiltinFunction]
+        public static var BitmapCrop(var bmp, var width, var height) => bmp.bitmap_mutate(x => x.Crop(width.ToInt(), height.ToInt()));
+        [BuiltinFunction]
+        public static var BitmapEntropyCrop(var bmp, var v) => bmp.bitmap_mutate(x => x.EntropyCrop((float)v));
+
+        //  TODO
+        //
+        //[BuiltinFunction]
+        //public static var Bitmap(var bmp) => bmp.bitmap_mutate(x => x.Draw*);
+        //[BuiltinFunction]
+        //public static var Bitmap(var bmp) => bmp.bitmap_mutate(x => x.Fill*);
 
         [BuiltinFunction]
         public static var CallAutoItProgram(var path, var args)
@@ -1437,6 +1501,10 @@ namespace AutoItCoreLibrary
         public static var DnsGetName(var v) => Dns.GetHostEntry(v).HostName;
         [BuiltinFunction]
         public static var Fail(var s) => throw new InvalidOperationException(s);
+        [BuiltinFunction]
+        public static var FileGetWorkingDir() => Directory.GetCurrentDirectory();
+        [BuiltinFunction]
+        public static var FileSetWorkingDir(var v) => Try(() => Directory.SetCurrentDirectory(v));
         [BuiltinFunction]
         public static var HTTPDownloadString(var url)
         {

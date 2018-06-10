@@ -26,8 +26,14 @@
       </None>
     </ItemGroup>
     <ItemGroup>
+      <Reference Include="SixLabors.Core">
+        <HintPath>..\deps\SixLabors.Core.dll</HintPath>
+      </Reference>
       <Reference Include="SixLabors.ImageSharp">
         <HintPath>..\deps\SixLabors.ImageSharp.dll</HintPath>
+      </Reference>
+      <Reference Include="SixLabors.ImageSharp.Drawing">
+        <HintPath>..\deps\SixLabors.ImageSharp.Drawing.dll</HintPath>
       </Reference>
     </ItemGroup>
     <ItemGroup>

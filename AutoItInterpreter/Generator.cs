@@ -40,6 +40,7 @@ namespace AutoItInterpreter
         {
             StringBuilder sb = new StringBuilder();
             string nl = Environment.NewLine;
+            int csvaridx = 0;
 
             sb.AppendLine($@"
 /*
@@ -342,6 +343,7 @@ namespace {NAMESPACE}
 
             void _print(AST_STATEMENT e, int indent)
             {
+                string tmpcsvar() => $"__tmp_cs_{++csvaridx:x8}";
                 void println(string s, int i = -1) => sb.Append(new string(' ', 4 * ((i < 1 ? indent : i) - 1))).AppendLine(s);
                 void print(AST_STATEMENT s) => _print(s, indent + 1);
                 void printblock(AST_STATEMENT[] xs, string p = "", string s = "")
@@ -386,25 +388,17 @@ namespace {NAMESPACE}
                         printblock(s.WhileBlock.Statements, $"while ({tstr(s.WhileBlock.Condition, s.WhileBlock.Context)})");
 
                         return;
-                    case AST_SCOPE s:
+                    case AST_FOREACH s:
+                        string tmpcs = tmpcsvar();
+                        EXPRESSION collexpr = EXPRESSION.NewVariableExpression(s.CollectionVariable.Variable);
+
+                        println($"{tstr(collexpr, s.Context)} = {tstr(s.CollectionVariable.InitExpression, s.Context)};");
+                        println($"foreach ({TYPE} {tmpcs} in {tstr(collexpr, s.Context)})");
                         println("{");
+                        println($"{tstr(EXPRESSION.NewVariableExpression(s.ElementVariable.Variable), s.Context)} = {tmpcs};", indent + 1);
 
-                        if (s.UseExplicitLocalScoping)
-                        {
-                            println($"    {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
-
-                            foreach (VARIABLE v in s.ExplicitLocalVariables.Select(x => x.Variable))
-                                println($@"    {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
-                        }
-
-                        foreach (AST_LOCAL_VARIABLE v in s.ExplicitLocalVariables)
-                            println($@"    {VARS}[""{v.Variable.Name}""] = {tstr(v.InitExpression ?? EXPRESSION.NewLiteral(LITERAL.NewString("")), v.Context ?? s.Context)};");
-
-                        foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
-                            print(ls);
-
-                        if (s.UseExplicitLocalScoping)
-                            println($"    {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();");
+                        foreach (AST_STATEMENT st in s.Statements)
+                            _print(st, indent + 1);
 
                         println("}");
 
@@ -471,6 +465,29 @@ namespace {NAMESPACE}
 
                             return;
                         }
+                    case AST_SCOPE s:
+                        println("{");
+
+                        if (s.UseExplicitLocalScoping)
+                        {
+                            println($"    {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
+
+                            foreach (VARIABLE v in s.ExplicitLocalVariables.Select(x => x.Variable))
+                                println($@"    {VARS}.{nameof(AutoItVariableDictionary.PushLocalVariable)}(""{v.Name}"");");
+                        }
+
+                        foreach (AST_LOCAL_VARIABLE v in s.ExplicitLocalVariables)
+                            println($@"    {VARS}[""{v.Variable.Name}""] = {tstr(v.InitExpression ?? EXPRESSION.NewLiteral(LITERAL.NewString("")), v.Context ?? s.Context)};");
+
+                        foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
+                            print(ls);
+
+                        if (s.UseExplicitLocalScoping)
+                            println($"    {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();");
+
+                        println("}");
+
+                        return;
                     default:
                         println($"// TODO: {e}"); // TODO
 

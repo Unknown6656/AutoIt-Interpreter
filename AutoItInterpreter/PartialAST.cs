@@ -9,6 +9,12 @@ namespace AutoItInterpreter.PartialAST
     using static ExpressionAST;
 
 
+    public interface AST_BREAKABLE_SKIPPABLE
+    {
+        AST_LABEL ContinueLabel { set; get; }
+        AST_LABEL ExitLabel { set; get; }
+    }
+
     public sealed class AST_LOCAL_VARIABLE
     {
         public bool Constant { set; get; }
@@ -111,6 +117,7 @@ namespace AutoItInterpreter.PartialAST
 
     public sealed class AST_WHILE_STATEMENT
         : AST_STATEMENT
+        , AST_BREAKABLE_SKIPPABLE
     {
         public override bool IsEmpty => WhileBlock.IsEmpty;
         public AST_CONDITIONAL_BLOCK WhileBlock { set; get; }
@@ -266,5 +273,16 @@ namespace AutoItInterpreter.PartialAST
         public EXPRESSION VariableExpression { get; set; }
         public string Function { get; set; }
         public override bool IsEmpty => false;
+    }
+
+    public sealed class AST_FOREACH
+        : AST_SCOPE
+        , AST_BREAKABLE_SKIPPABLE
+    {
+        public override bool IsEmpty => Analyzer.IsStatic(CollectionVariable.InitExpression) && base.IsEmpty;
+        public AST_LOCAL_VARIABLE CollectionVariable { set; get; }
+        public AST_LOCAL_VARIABLE ElementVariable { set; get; }
+        public AST_LABEL ContinueLabel { set; get; }
+        public AST_LABEL ExitLabel { set; get; }
     }
 }

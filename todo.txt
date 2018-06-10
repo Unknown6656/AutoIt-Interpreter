@@ -55,9 +55,9 @@
     [ ] IMPL boolean optimization
     [-] informal tests
         [ ] λ-functionality
-        [ ] arrays / matrices
-        [ ] optimization
-        [ ] object expressions
+        [-] arrays / matrices
+        [-] optimization
+        [-] object expressions
         [x] for-loops
         [ ] while-loops
         [ ] foreach-loops

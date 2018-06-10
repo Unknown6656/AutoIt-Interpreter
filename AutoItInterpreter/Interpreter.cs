@@ -19,6 +19,7 @@ using Piglet.Parser.Configuration;
 using Renci.SshNet;
 
 using SixLabors.ImageSharp;
+using SixLabors.Primitives;
 
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
@@ -204,7 +205,7 @@ namespace AutoItInterpreter
 
     public sealed class Interpreter
     {
-        private static readonly Type[] DEPENDENCY_TYPES = new[] { typeof(SshClient), typeof(Unsafe), typeof(Image) };
+        private static readonly Type[] DEPENDENCY_TYPES = new[] { typeof(SshClient), typeof(Unsafe), typeof(Image), typeof(Matrix3x2Extensions) };
         private static Dictionary<ControlBlock, string> ClosingInstruction { get; } = new Dictionary<ControlBlock, string>
         {
             [__NONE__] = "EndFunc",
@@ -1804,87 +1805,28 @@ namespace AutoItInterpreter
                                             Variable = VARIABLE.NewTemporary,
                                             InitExpression = collexpr
                                         };
-                                        AST_LOCAL_VARIABLE cntvar = new AST_LOCAL_VARIABLE
-                                        {
-                                            Variable = VARIABLE.NewTemporary,
-                                            InitExpression = EXPRESSION.NewLiteral(LITERAL.NewNumber(0))
-                                        };
+                                        AST_LABEL lb_continue = AST_LABEL.NewLabel;
+                                        AST_LABEL lb_break = AST_LABEL.NewLabel;
 
-                                        addconstants(new[] { cntvar.Variable.Name, elemvar.Variable.Name, collvar.Variable.Name });
+                                        addconstants(new[] { elemvar.Variable.Name, collvar.Variable.Name });
 
                                         AST_SCOPE scope = new AST_SCOPE
                                         {
                                             Context = defctx,
                                             Statements = new AST_STATEMENT[]
                                             {
-                                                new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                new AST_FOREACH
                                                 {
                                                     Context = defctx,
-                                                    Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
-                                                        OPERATOR_ASSIGNMENT.Assign,
-                                                        elemvar.Variable,
-                                                        EXPRESSION.NewArrayAccess(
-                                                            EXPRESSION.NewVariableExpression(
-                                                                collvar.Variable
-                                                            ),
-                                                            EXPRESSION.NewVariableExpression(
-                                                                cntvar.Variable
-                                                            )
-                                                        )
-                                                    )
+                                                    ElementVariable = elemvar,
+                                                    CollectionVariable = collvar,
+                                                    Statements = process_lines().Concat(new AST_STATEMENT[] { lb_continue }).ToArray()
                                                 },
+                                                lb_break
                                             }
-                                            .Concat(process_lines())
-                                            .Concat(new AST_STATEMENT[]
-                                            {
-                                                new AST_IF_STATEMENT
-                                                {
-                                                    Context = defctx,
-                                                    If = new AST_CONDITIONAL_BLOCK
-                                                    {
-                                                        Context = defctx,
-                                                        Condition = EXPRESSION.NewBinaryExpression(
-                                                            OPERATOR_BINARY.GreaterEqual,
-                                                            EXPRESSION.NewVariableExpression(
-                                                                cntvar.Variable
-                                                            ),
-                                                            EXPRESSION.NewFunctionCall(
-                                                                new Tuple<string, FSharpList<EXPRESSION>>(
-                                                                    "ubound",
-                                                                    new FSharpList<EXPRESSION>(
-                                                                        EXPRESSION.NewVariableExpression(
-                                                                            collvar.Variable
-                                                                        ),
-                                                                        FSharpList<EXPRESSION>.Empty
-                                                                    )
-                                                                )
-                                                            )
-                                                        ),
-                                                        Statements = new AST_STATEMENT[]
-                                                        {
-                                                            new AST_BREAK_STATEMENT { Level = 1 }
-                                                        }
-                                                    },
-                                                    OptionalElse = new AST_STATEMENT[]
-                                                    {
-                                                        new AST_ASSIGNMENT_EXPRESSION_STATEMENT
-                                                        {
-                                                            Context = defctx,
-                                                            Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
-                                                                OPERATOR_ASSIGNMENT.AssignAdd,
-                                                                cntvar.Variable,
-                                                                EXPRESSION.NewLiteral(
-                                                                    LITERAL.NewNumber(1)
-                                                                )
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            })
-                                            .ToArray()
                                         };
 
-                                        scope.ExplicitLocalVariables.AddRange(new[] { cntvar, elemvar, collvar });
+                                        scope.ExplicitLocalVariables.AddRange(new[] { elemvar, collvar });
 
                                         return scope;
                                     }

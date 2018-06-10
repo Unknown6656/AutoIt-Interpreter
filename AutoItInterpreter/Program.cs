@@ -260,6 +260,8 @@ namespace AutoItInterpreter
 +------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
 |                             AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                         |
 |                          Piglet Parser Library : Copyright (c) Dervall, 2012                                  |
+|            ImageSharp Image Processing Library : Copyright (c) SixLabors, 2014-2018                           |
+|                                SSH.NET Library : Copyright (c) NDepend, 2016                                  |
 |                                                                                                               |
 |  Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/readme.md for an expande documentation.  |
 {(open ? "" : "+---------------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
