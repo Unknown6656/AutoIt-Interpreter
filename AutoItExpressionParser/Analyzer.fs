@@ -7,7 +7,27 @@ open System
 
 type variant = AutoItCoreLibrary.AutoItVariantType
 
-    
+
+let rec IsCompiletimeStatic =
+    function
+    | Macro _
+    | DotAccess _
+    | ArrayAccess _
+    | FunctionCall _
+    | ΛFunctionCall _
+    | ToExpression _
+    | VariableExpression _
+    | ArrayInitExpression _
+    | AssignmentExpression _
+    | UnaryExpression (Dereference, _) -> false
+    | Literal _ -> true
+    | UnaryExpression (_, e) -> IsCompiletimeStatic e
+    | ToExpression (x, y)
+    | BinaryExpression (_, x, y) -> IsCompiletimeStatic x && IsCompiletimeStatic y
+    | TernaryExpression (x, y, z) -> [x; y; z]
+                                     |> List.map IsCompiletimeStatic
+                                     |> List.fold (&&) true
+
 let rec IsStatic =
     function
     | FunctionCall _
@@ -152,7 +172,6 @@ let rec ProcessConstants e =
             | Power, _, Constant c when c = d 0m -> num 1m
             | Power, e, Constant c when c = d 1m -> ProcessConstants e
             | _ ->
-                let stat = IsStatic e
                 let proc() =
                     let px = ProcessConstants x
                     let py = ProcessConstants y
@@ -160,7 +179,7 @@ let rec ProcessConstants e =
                         ProcessConstants <| BinaryExpression(o, px, py)
                     else
                         e
-                if stat then
+                if IsStatic e then
                     if x = y then
                         match o with
                         | Nxor
@@ -186,12 +205,14 @@ let rec ProcessConstants e =
                         | BitwiseNor
                         | BitwiseNand -> UnaryExpression(BitwiseNot, x)
                         | _ -> proc()
-                    else
+                    elif IsCompiletimeStatic e then
                         match o with
                         | Unequal -> num 1m
                         | EqualCaseSensitive
                         | EqualCaseInsensitive -> num 0m
                         | _ -> proc()
+                    else
+                        proc()
                 else
                     proc()
         | TernaryExpression (x, y, z) ->
@@ -281,8 +302,8 @@ let GetConstantValue e =
 
 let rec GetFunctionCallExpressions (e : EXPRESSION) : FUNCCALL list =
     match e with
-    | Literal _
     | Macro _
+    | Literal _
     | VariableExpression _ -> []
     | FunctionCall f -> [[f]] @ List.map GetFunctionCallExpressions (snd f)
     | ΛFunctionCall (_, e) -> [[null, e]] @ List.map GetFunctionCallExpressions e
