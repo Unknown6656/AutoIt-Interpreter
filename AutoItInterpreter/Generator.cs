@@ -413,7 +413,11 @@ namespace {NAMESPACE}
                         return;
                     case AST_GOTO_STATEMENT s:
                         if (s.Label is null)
+                        {
+                            state.ReportKnownError("errors.generator.invalid_jump", s.Context);
+
                             println("// called `goto´ on non-existent label ----> possible error?");
+                        }
                         else
                             println($"goto {s.Label.Name.Replace("<>", "")};");
 

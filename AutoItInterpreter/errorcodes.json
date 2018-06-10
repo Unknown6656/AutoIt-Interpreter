@@ -81,7 +81,8 @@
             "build_failed": 1303,
             "target_deprecated": 1304,
             "key_not_found": 1305,
-            "obsolete_func": 1306
+            "obsolete_func": 1306,
+            "invalid_jump": 1307
         }
     },
     "warnings": {

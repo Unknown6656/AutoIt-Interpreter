@@ -25,9 +25,6 @@ namespace UnitTests
             catch
             {
             }
-
-            foreach (System.Reflection.MethodInfo m in typeof(TestCommons).GetMethods())
-                RuntimeHelpers.PrepareMethod(m.MethodHandle);
         }
 
         [TestMethod]

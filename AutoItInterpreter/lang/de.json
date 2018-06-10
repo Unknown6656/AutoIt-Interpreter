@@ -89,7 +89,8 @@
             "build_failed": "The .NET project system build failed. Exit code {0} (0x{0:x8})",
             "target_deprecated": "The target system '{0}' is deprecated and therefore no longer supported.",
             "key_not_found": "The private/public key pair '{0}' could not be found.",
-            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead."
+            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead.",
+            "invalid_jump": "The code around this line has been compiled down to a set of invalid 'jump'-instructions. This is usually a sign of a misplaced 'ExitLoop'- or 'ContinueLoop'-Statement."
         }
     },
     "warnings": {

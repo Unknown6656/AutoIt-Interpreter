@@ -854,7 +854,7 @@ namespace AutoItInterpreter
                                 else if (m.Get("levels").Trim().Length > 0)
                                     err("warnings.preproc.exit_level_invalid", false, m.Get("levels"));
                                 else
-                                    Append(new BREAK(curr, 0));
+                                    Append(new BREAK(curr, 1));
                             }),
                             (@"^continueloop(\s+(?<levels>\-?[0-9]+))?$", new[] { Switch, Select }, m =>
                             {
@@ -876,7 +876,7 @@ namespace AutoItInterpreter
                                 else if (m.Get("levels").Trim().Length > 0)
                                     err("warnings.preproc.continue_level_invalid", false, m.Get("levels"));
                                 else
-                                    Append(new CONTINUE(curr, 0));
+                                    Append(new CONTINUE(curr, 1));
                             }),
                             ("^wend$", new[] { Switch, Select }, _ => TryCloseBlock(While)),
                             ("^do$", new[] { Switch, Select }, _ => OpenBlock(Do, new DO_UNTIL(null))),
@@ -1823,7 +1823,9 @@ namespace AutoItInterpreter
                                                     Context = defctx,
                                                     ElementVariable = elemvar,
                                                     CollectionVariable = collvar,
-                                                    Statements = process_lines().Concat(new AST_STATEMENT[] { lb_continue }).ToArray()
+                                                    Statements = process_lines().Concat(new AST_STATEMENT[] { lb_continue }).ToArray(),
+                                                    ContinueLabel = lb_continue,
+                                                    ExitLabel = lb_break
                                                 },
                                                 lb_break
                                             }
@@ -2499,6 +2501,27 @@ namespace AutoItInterpreter
 
                                     return sc;
                                 }
+                            case AST_FOREACH s:
+                                {
+                                    ls_cont.Push(s.ContinueLabel);
+                                    ls_exit.Push(s.ExitLabel);
+
+                                    AST_FOREACH sc = new AST_FOREACH
+                                    {
+                                        Context = s.Context,
+                                        CollectionVariable = s.CollectionVariable,
+                                        ElementVariable = s.ElementVariable,
+                                        ContinueLabel = s.ContinueLabel,
+                                        ExitLabel = s.ExitLabel,
+                                        UseExplicitLocalScoping = false,
+                                        Statements = procas(s.Statements)
+                                    };
+
+                                    ls_cont.Pop();
+                                    ls_exit.Pop();
+
+                                    return s;
+                                }
                             case AST_SCOPE s:
                                 s.Statements = procas(s.Statements);
 
@@ -2512,15 +2535,15 @@ namespace AutoItInterpreter
                                     AST_CONDITIONAL_BLOCK[] conditions =
                                         new[] { s.If }
                                         .Concat(s.ElseIf ?? new AST_CONDITIONAL_BLOCK[0])
-                                        .Concat(new[]
+                                        .Concat(s.OptionalElse is AST_STATEMENT[] optelse ? new[]
                                         {
                                             new AST_CONDITIONAL_BLOCK
                                             {
-                                                Context = s.OptionalElse?.FirstOrDefault()?.Context ?? default,
+                                                Context = optelse.FirstOrDefault()?.Context ?? default,
                                                 Condition = EXPRESSION.NewLiteral(LITERAL.True),
-                                                Statements = s.OptionalElse ?? new AST_STATEMENT[0]
+                                                Statements = optelse
                                             }
-                                        })
+                                        } : new AST_CONDITIONAL_BLOCK[0])
                                         .Where(b =>
                                         {
                                             if (b.Context.FilePath is null)
