@@ -259,14 +259,17 @@ namespace AutoItInterpreter
             {
                 subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
 
-                if (Options.UseVerboseOutput)
-                    Console.WriteLine($"Pre-compiling internal methods for {Win32.System} ({Environment.OSVersion}, {RuntimeInformation.OSArchitecture})");
+                if (Options.UseJITWarmup)
+                {
+                    if (Options.UseVerboseOutput)
+                        Console.WriteLine($"Pre-compiling internal methods for {Win32.System} ({Environment.OSVersion}, {RuntimeInformation.OSArchitecture})");
 
-                foreach (Type t in new[] { typeof(ISymbol<>), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(Interpreter) })
-                    t.Assembly.PreJIT();
+                    foreach (Type t in new[] { typeof(ISymbol<>), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(Interpreter) })
+                        t.Assembly.PreJIT();
 
-                if (Options.UseVerboseOutput)
-                    Console.WriteLine("Finished pre-compiling.");
+                    if (Options.UseVerboseOutput)
+                        Console.WriteLine("Finished pre-compiling.");
+                }
 
                 state = LinePreprocessor.PreprocessLines(RootContext, Options);
                 state.RootDocument = RootContext.SourcePath;

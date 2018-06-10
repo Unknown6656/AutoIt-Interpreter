@@ -53,7 +53,9 @@ namespace AutoItInterpreter
                     ("t", "target-system"),
                     ("a", "architecture"),
                     ("wall", "warnings-as-errors"),
-                    ("r", "run")
+                    ("r", "run"),
+                    ("w", "warm-up"),
+                    ("wup", "warm-up")
                 );
                 bool Cont(string arg) => dic.ContainsKey(arg);
                 List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
@@ -128,7 +130,8 @@ namespace AutoItInterpreter
                     RawCommandLine = Environment.CommandLine,
                     TargetDirectory = GetF("output", null),
                     CleanTargetFolder = Cont("clean-output"),
-                    TreatWarningsAsErrors = Cont("warnings-as-errors")
+                    TreatWarningsAsErrors = Cont("warnings-as-errors"),
+                    UseJITWarmup = Cont("warm-up"),
                 };
 
                 if (Cont("target-system"))
@@ -263,7 +266,8 @@ namespace AutoItInterpreter
 |            ImageSharp Image Processing Library : Copyright (c) SixLabors, 2014-2018                           |
 |                                SSH.NET Library : Copyright (c) NDepend, 2016                                  |
 |                                                                                                               |
-|  Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/readme.md for an expande documentation.  |
+| Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/readme.md for an expanded documentation.  |
+| Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/doc/usage.md for an usage reference.      |
 {(open ? "" : "+---------------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
 
         private static void PrintUsage()
@@ -312,6 +316,7 @@ namespace AutoItInterpreter
 |                   |                       | pair. Web paths are also accepted as source paths.                |
 | -mef, -ms         | --msbuild-error-format| Displays the errors, notes and warnings using the MSBuild error   |
 |                   |                       | string format.                                                    |
+| -wup, -w          | --warm-up             | Warm-Up internal methods in the JIT before firing up the compiler.|
 +-------------------+-----------------------+-------------------------------------------------------------------+
 |                                                                                                               |
 | Most options can be used as follows:                                                                          |
@@ -457,6 +462,7 @@ namespace AutoItInterpreter
         public bool DeleteTempFilesAfterSuccess { set; get; } = true;
         public bool GenerateCodeEvenWithErrors { set; get; }
         public bool UseVerboseOutput { set; get; }
+        public bool UseJITWarmup { set; get; }
         public Language Language { set; get; }
 
         public InterpreterOptions(InterpreterSettings settings) => Settings = settings;

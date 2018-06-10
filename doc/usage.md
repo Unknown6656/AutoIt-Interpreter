@@ -190,6 +190,8 @@ The following basic rules apply:
    <br/>The path to the .json settings file.
  - **`-rs` or `--reset-settings`:**
    <br/>Resets the .json settings file to its defaults.
+ - **`-w`, `-wup` or `--warm-up`:**
+   <br/>Warms up all internal methods using JIT-compilation before firing up the internal compiler module.
  - **`-l=....` or `--lang=...`:**
    <br/>Sets the language for the current session using the given language code.
  - **`-ll` or `--list-languages`:**
