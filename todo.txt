@@ -57,10 +57,10 @@
         [ ] λ-functionality
         [-] arrays / matrices
         [-] optimization
-        [-] object expressions
+        [ ] object expressions
         [x] for-loops
-        [ ] while-loops
-        [ ] foreach-loops
+        [x] while-loops
+        [x] foreach-loops
         [ ] switch..case
         [ ] select..case
         [ ] P/Invoke

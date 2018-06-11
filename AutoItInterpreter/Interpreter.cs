@@ -321,6 +321,7 @@ namespace AutoItInterpreter
                         tmpdeps.Add(tmp);
                     }
 
+                    ApplicationGenerator.GenerateAppConfig(subdir);
                     ApplicationGenerator.EditDotnetProject(state, Options, target, subdir, tmpdeps.ToArray(), ProjectName, sigkey);
 
                     if (target.Compatibility == Compatibility.winxp || target.Compatibility == Compatibility.vista)
@@ -330,7 +331,11 @@ namespace AutoItInterpreter
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
 
                     if (Options.UseVerboseOutput && (!state.Fatal || Options.GenerateCodeEvenWithErrors))
+                    {
+                        cs_code = Regex.Replace(cs_code, $@"/\*{ApplicationGenerator.DISP_SKIP_S}\*/.*/\*{ApplicationGenerator.DISP_SKIP_E}\*/", "        public static int Main(string[] argv) { ... }", RegexOptions.Singleline);
+
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
+                    }
 
                     DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
 #if PRE_BUILD || !USE_PUBLISHER

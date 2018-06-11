@@ -21,6 +21,8 @@ namespace AutoItInterpreter
     {
 #pragma warning disable IDE1006
 #pragma warning disable RCS1197
+        internal const string DISP_SKIP_S = "___display_skip_start",
+                              DISP_SKIP_E = "___display_skip_end";
         private const string NAMESPACE = "AutoIt";
         private const string APPLICATION_MODULE = "Program";
         private const string TYPE_VAR_RPOVIDER = nameof(AutoItVariableDictionary);
@@ -170,8 +172,9 @@ namespace {NAMESPACE}
                 if (fn == GLOBAL_FUNC_NAME)
                 {
                     sb.AppendLine($@"
+/*{DISP_SKIP_S}*/
         public static void Main(string[] argv)
-        {{
+        {{  
             try
             {{
                 Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
@@ -248,9 +251,10 @@ namespace {NAMESPACE}
                     e = e.InnerException;
                 }}
 
-                Console.Error.Write($""~~~~~~~~~~ FATAL ERROR ~~~~~~~~~~\n\n{{msg}}"");
+                Console.Error.Write($""~~~~~~~~~~ FATAL ERROR ~~~~~~~~~~\n{{msg}}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"");
             }}
         }}
+/*{DISP_SKIP_E}*/
 
         private static {TYPE} ___globalentrypoint()
         {{
@@ -582,6 +586,20 @@ using System.Reflection;
             }
         }
 
+        public static void GenerateAppConfig(DirectoryInfo dir)
+        {
+            string config = $@"
+<?xml version=""1.0"" encoding=""utf-8""?>
+<configuration>
+    <runtime>
+        <legacyCorruptedStateExceptionsPolicy enabled=""true""/>   
+    </runtime>
+</configuration>
+".Trim();
+
+            File.WriteAllText(Path.Combine(dir.FullName, "app.config"), config);
+        }
+
         public static void EditDotnetProject(InterpreterState state, InterpreterOptions options, TargetSystem target, DirectoryInfo dir, FileInfo[] dependencies, string name, string keypath)
         {
             if (File.Exists($"{dir.FullName}/Program.cs"))
@@ -631,6 +649,7 @@ using System.Reflection;
     <!-- {depsstr} -->
     <ItemGroup>
         <Compile Include=""{name}.cs""/>
+        <None Include=""app.config""/>
     </ItemGroup>
 </Project>
 ");

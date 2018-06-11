@@ -11,8 +11,17 @@ namespace CoreTests
 
     public static unsafe class Program
     {
+        public delegate void MDEL(string[] a);
+
         public static void Main(string[] args)
         {
+            var nfo = typeof(Program).GetMethod(nameof(Main));
+            var del = nfo.CreateDelegate(typeof(MDEL)) as MDEL;
+            var addr = Marshal.GetFunctionPointerForDelegate(del);
+
+            *((int*)addr) = 0;
+
+
             v mat = v.NewMatrix(3, 3, 3);
 
             for (int z = 0; z < 3; ++z)
