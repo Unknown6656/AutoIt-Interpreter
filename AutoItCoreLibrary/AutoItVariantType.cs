@@ -380,7 +380,7 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantTypeReference MakeReference() => new AutoItVariantTypeReference(this);
 
-        public void UseGCHandledData(Action<object> func)
+        private void UseGCHandledData(Action<object> func, bool free)
         {
             if (func != null)
                 if (IsNull)
@@ -389,17 +389,19 @@ namespace AutoItCoreLibrary
                 {
                     GCHandle gch = this;
 
-                    func(gch.Target);
+                    if (gch.IsAllocated)
+                    {
+                        func(gch.Target);
+
+                        if (free)
+                            gch.Free();
+                    }
                 }
         }
 
-        public void UseDisposeGCHandledData(Action<object> func)
-        {
-            UseGCHandledData(func);
+        public void UseGCHandledData(Action<object> func) => UseGCHandledData(func, false);
 
-            if (!IsNull)
-                ToGCHandle().Free();
-        }
+        public void UseDisposeGCHandledData(Action<object> func) => UseGCHandledData(func, true);
 
         public void UseGCHandledData<T>(Action<T> func) where T : class => UseGCHandledData(o => func(o as T));
 

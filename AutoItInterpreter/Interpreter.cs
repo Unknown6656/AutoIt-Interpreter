@@ -332,7 +332,7 @@ namespace AutoItInterpreter
 
                     if (Options.UseVerboseOutput && (!state.Fatal || Options.GenerateCodeEvenWithErrors))
                     {
-                        cs_code = Regex.Replace(cs_code, $@"/\*{ApplicationGenerator.DISP_SKIP_S}\*/.*/\*{ApplicationGenerator.DISP_SKIP_E}\*/", "        public static int Main(string[] argv) { ... }", RegexOptions.Singleline);
+                        cs_code = Regex.Replace(cs_code, $@"\/\*{ApplicationGenerator.DISP_SKIP_S}\*\/.*\/\*{ApplicationGenerator.DISP_SKIP_E}\*\/", "        public static int Main(string[] argv) { ... }", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
                     }
