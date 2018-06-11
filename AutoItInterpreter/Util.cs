@@ -187,19 +187,25 @@ namespace AutoItInterpreter
 
     internal static class DebugPrintUtil
     {
-        public static void PrintSeperator(string title, int width = 200)
+        public static void PrintSeperator(string title = null, int width = -1)
         {
             Console.ForegroundColor = ConsoleColor.Gray;
 
+            if (width < 0)
+                width = Console.WindowWidth - 2;
+
             if (title is null)
-                Console.WriteLine(new string('=', 200));
+                Console.WriteLine(new string('=', width));
             else
             {
                 title = title.Trim();
 
                 int w = (width - title.Length - 1) / 2;
 
-                Console.WriteLine($"{new string('=', w)} {title} {new string('=', w)}");
+                if (w > 0)
+                    Console.WriteLine($"{new string('=', w)} {title} {new string('=', w)}");
+                else
+                    Console.WriteLine(title);
             }
         }
 

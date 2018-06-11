@@ -265,6 +265,38 @@ namespace AutoItCoreLibrary
                 #endregion
                 #region Additional
 
+                case "ccl_black":
+                    return (int)ConsoleColor.Black;
+                case "ccl_darkblue":
+                    return (int)ConsoleColor.DarkBlue;
+                case "ccl_darkgreen":
+                    return (int)ConsoleColor.DarkGreen;
+                case "ccl_darkcyan":
+                    return (int)ConsoleColor.DarkCyan;
+                case "ccl_darkred":
+                    return (int)ConsoleColor.DarkRed;
+                case "ccl_darkmagenta":
+                    return (int)ConsoleColor.DarkMagenta;
+                case "ccl_darkyellow":
+                    return (int)ConsoleColor.DarkYellow;
+                case "ccl_gray":
+                    return (int)ConsoleColor.Gray;
+                case "ccl_darkgray":
+                    return (int)ConsoleColor.DarkGray;
+                case "ccl_blue":
+                    return (int)ConsoleColor.Blue;
+                case "ccl_green":
+                    return (int)ConsoleColor.Green;
+                case "ccl_cyan":
+                    return (int)ConsoleColor.Cyan;
+                case "ccl_red":
+                    return (int)ConsoleColor.Red;
+                case "ccl_magenta":
+                    return (int)ConsoleColor.Magenta;
+                case "ccl_yellow":
+                    return (int)ConsoleColor.Yellow;
+                case "ccl_white":
+                    return (int)ConsoleColor.Black;
                 case "date":
                     return DateTime.Now.ToString("yyyy-MM-dd");
                 case "date_time":
@@ -311,6 +343,7 @@ namespace AutoItCoreLibrary
 
             return null;
         });
+
 
         static AutoItFunctions()
         {
@@ -1489,6 +1522,20 @@ namespace AutoItCoreLibrary
         }
         [BuiltinFunction]
         public static var ConsoleWriteLine(var v) => __(() => Console.WriteLine(v.ToString()));
+        [BuiltinFunction]
+        public static var ConsoleSetForeground(var v) => __(() => Console.ForegroundColor = (ConsoleColor)v.ToInt());
+        [BuiltinFunction]
+        public static var ConsoleGetForeground() => (int)Console.ForegroundColor;
+        [BuiltinFunction]
+        public static var ConsoleSetBackground(var v) => __(() => Console.BackgroundColor = (ConsoleColor)v.ToInt());
+        [BuiltinFunction]
+        public static var ConsoleGetBackground() => (int)Console.BackgroundColor;
+        [BuiltinFunction]
+        public static var ConsoleClear() => __(Console.Clear);
+        [BuiltinFunction]
+        public static var ConsoleWidth() => Console.WindowWidth;
+        [BuiltinFunction]
+        public static var ConsoleHeight() => Console.WindowHeight;
         [BuiltinFunction]
         public static var ConsoleReadChar() => Console.ReadKey(true).KeyChar.ToString();
         [BuiltinFunction]

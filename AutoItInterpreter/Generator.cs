@@ -28,7 +28,7 @@ namespace AutoItInterpreter
         private const string TYPE_VAR_RPOVIDER = nameof(AutoItVariableDictionary);
         private const string TYPE_MAC_RPOVIDER = nameof(AutoItMacroDictionary);
         private const string REFTYPE = nameof(AutoItVariantTypeReference);
-        private const string TYPE = nameof(AutoItVariantType);
+        private const string TYPE = "variant";
         private const string FUNC_MODULE = nameof(AutoItFunctions);
         private const string FUNC_PREFIX = AutoItFunctions.FUNC_PREFIX;
         private const string PARAM_PREFIX = "__param_";
@@ -112,7 +112,7 @@ namespace AutoItInterpreter
                     rname,
                     rparams
                 );
-            }));
+            }, (s, c, a) => state.ReportKnownWarning(s, (DefinitionContext)c, a)));
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
             string tstr(EXPRESSION ex, DefinitionContext ctx)
             {
@@ -121,7 +121,7 @@ namespace AutoItInterpreter
                 else
                     try
                     {
-                        return ser.Serialize(ex);
+                        return ser.Serialize(ex, ctx);
                     }
                     catch (FunctionParameterCountMismatchException e)
                     {
@@ -152,6 +152,8 @@ using {nameof(AutoItCoreLibrary)};
 
 namespace {NAMESPACE}
 {{
+    using {TYPE} = {nameof(AutoItVariantType)};
+
     public static unsafe class {APPLICATION_MODULE}
     {{
         private static {TYPE_MAC_RPOVIDER} {MACROS_GLOBAL};

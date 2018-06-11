@@ -2,6 +2,7 @@
 using System.IO.MemoryMappedFiles;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using AutoItCoreLibrary;
 
 namespace CoreTests
@@ -11,15 +12,15 @@ namespace CoreTests
 
     public static unsafe class Program
     {
-        public delegate void MDEL(string[] a);
+        public delegate int d(int i, int j);
+
 
         public static void Main(string[] args)
         {
-            var nfo = typeof(Program).GetMethod(nameof(Main));
-            var del = nfo.CreateDelegate(typeof(MDEL)) as MDEL;
-            var addr = Marshal.GetFunctionPointerForDelegate(del);
+            v arr = v.NewArray(v.NewArray(1, 0, 0), v.NewArray(0, 1, 0), v.NewArray(0, 0, 1));
+            v row = v.Null;
 
-            *((int*)addr) = 0;
+
 
 
             v mat = v.NewMatrix(3, 3, 3);

@@ -23,6 +23,7 @@ type SerializerSettings =
         VariableTypeName : string
         DiscardName : string
         FunctionResolver : Func<string, EXPRESSION[], ResolvedFunction>
+        ReportWarning : Action<string, obj, obj[]>
     }
 
 type FunctionParameterCountMismatchException(name, expected, got) =
@@ -53,7 +54,9 @@ type Serializer (settings : SerializerSettings) =
                          AssignShiftRight, BitwiseShiftRight
                      ]
     member x.Settings with get() = settings
-    member x.Serialize e =
+    member x.Serialize e (ctx:obj) =
+        let nulleval e = Analyzer.EvaluatesTo(e, Literal Null)
+        let warn s o = x.Settings.ReportWarning.Invoke(s, ctx, o)
         let varn = x.Settings.VariableTypeName
         let (!/) = sprintf "%s.%s" varn
         let printvar (v : VARIABLE) = sprintf "%s[\"%s\"]" (x.Settings.VariableDictionary) v.Name
@@ -125,15 +128,17 @@ type Serializer (settings : SerializerSettings) =
                                      | Default -> !/"Default"
                                      | True -> !/"True"
                                      | False -> !/"False"
-                                     | Number d -> d.ToString()
-                                     | String s -> "\"" + (s
-                                                           |> Seq.map (fun c -> if c > 'ÿ' then
-                                                                                    sprintf @"\u%04x" <| uint16 c
-                                                                                elif (c < ' ') || ((c > '~') && (c < '¡')) then
-                                                                                    sprintf @"\x%02x" <| uint8 c
-                                                                                else
-                                                                                    c.ToString())
-                                                           |> String.Concat) + "\""
+                                     | Number d when d = 1m -> !/"One"
+                                     | Number d when d = 0m -> !/"Zero"
+                                     | Number d -> sprintf "(%s)%.29fm" varn d
+                                     | String s -> sprintf "(%s)\"%s\"" varn (s
+                                                                              |> Seq.map (fun c -> if c > 'ÿ' then
+                                                                                                       sprintf @"\u%04x" <| uint16 c
+                                                                                                   elif (c < ' ') || ((c > '~') && (c < '¡')) then
+                                                                                                       sprintf @"\x%02x" <| uint8 c
+                                                                                                   else
+                                                                                                       c.ToString())
+                                                                              |> String.Concat)
                       | Macro m -> sprintf "%s[\"%s\"]" (x.Settings.MacroDictionary) m.Name
                       | VariableExpression v -> printvar v
                       | UnaryExpression (o, e) ->
@@ -145,8 +150,16 @@ type Serializer (settings : SerializerSettings) =
                             | BitwiseNot -> !/"~"
                             | String1Index (s, l) -> sprintf "(%s).OneBasedSubstring(%s, %s)" (printexpr e) (printexpr s) (printexpr l)
                             | StringLength -> "(" + printexpr e + ").Length"
-                            | Dereference -> sprintf "(%s)((%s).Dereference())" varn (printexpr e)
-                      | BinaryExpression (o, x, y) -> printbin (printexpr x) o (printexpr y)
+                            | Dereference ->
+                                if nulleval e then
+                                    warn "warnings.generator.zero_deref" [| Print e |]
+                                sprintf "(%s)((%s).Dereference())" varn (printexpr e)
+                      | BinaryExpression (o, a, b) ->
+                            match o, nulleval b with
+                            | Modulus, true
+                            | Divide, true -> warn "warnings.generator.zero_div" [| Print e |]
+                            | _ -> ()
+                            printbin (printexpr a) o (printexpr b)
                       | TernaryExpression (x, y, z) -> sprintf "(%s ? %s : %s)" (printexpr x) (printexpr y) (printexpr z)
                       | FunctionCall (f, es) ->
                             match f.ToLower() with
@@ -166,6 +179,8 @@ type Serializer (settings : SerializerSettings) =
                                                    | ScalarAssignment (o, v, e) -> printass (printvar v) [] o e
                                                    | ArrayAssignment (o, v, i, e) -> printass (printvar v) i o e
                                                    | ReferenceAssignment (o, v, e) ->
+                                                        if nulleval v then
+                                                            warn "warnings.generator.zero_deref" [| Print v |]
                                                         match o with
                                                         | Assign -> sprintf "(%s).Dereference(((%s)%s).ToByte())" (printexpr v) varn (printexpr e)
                                                         | _ -> let disc = x.Settings.DiscardName
@@ -189,6 +204,7 @@ type Serializer (settings : SerializerSettings) =
                                 parr false (Multiple es)
                       | ToExpression _ -> failwith "Invalid expression"
             match e with
-            | Literal _ -> sprintf "(%s)(%s)" varn (str e)
+            | DotAccess _ -> sprintf "(%s)(%s)" varn (str e)
             | _ -> str e
-        printexpr e
+        if nulleval e then Literal Null else e
+        |> printexpr

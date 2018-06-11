@@ -101,7 +101,9 @@
         "generator": {
             "failed_clean_output": 2201,
             "kpanic": 2202,
-            "obsolete_func": 2203
+            "obsolete_func": 2203,
+            "zero_deref": 2204,
+            "zero_div": 2205
         },
         "func_not_impl": 2998,
         "not_impl": 2999

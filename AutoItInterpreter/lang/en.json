@@ -107,7 +107,9 @@
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",
             "kpanic": "This function call will invoke a kernel panic on UNIX systems and a blue screen on WINDOWS systems. Be warned.",
-            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead."
+            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead.",
+            "zero_deref": "The expression '{0}' evaluates to 'Null' or 'Zero' and will cause an error upon derefencing at runtime.",
+            "zero_div": "The expression '{0}' will result in a division-by-zero error at runtime."
         },
         "func_not_impl": "This function is currently not yet implemented.",
         "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"
