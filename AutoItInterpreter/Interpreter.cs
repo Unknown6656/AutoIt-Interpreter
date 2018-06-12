@@ -1073,7 +1073,7 @@ namespace AutoItInterpreter
                         else
                         {
 
-                            // TODO
+#warning TODO
 
                         }
                     }),
@@ -1329,7 +1329,7 @@ namespace AutoItInterpreter
 
                         try
                         {
-                            MULTI_EXPRESSION[] mes = p.Parse(TrimBoxingParentheseses(expr));
+                            MULTI_EXPRESSION[] mes = p.Parse(expr);
 
                             funccalls.AddRange(from exp in mes.SelectMany(me =>
                                                {
@@ -2187,6 +2187,7 @@ namespace AutoItInterpreter
                 }
             }
 
+            [Obsolete("oboslete!", true)]
             private static string TrimBoxingParentheseses(string expr)
             {
                 if (expr.Match(@"^(?<pre>\(+)[^\(](.*[^\)])?(?<post>\)+)$", out Match m))

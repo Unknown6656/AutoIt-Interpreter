@@ -54,8 +54,8 @@
     [x] improve test framework
     [ ] IMPL boolean optimization
     [-] informal tests
-        [ ] λ-functionality
-        [-] arrays / matrices
+        [-] λ-functionality
+        [x] arrays / matrices
         [-] optimization
         [ ] object expressions
         [x] for-loops
@@ -92,3 +92,4 @@
 [x] fix 'Default'
 [x] PFX/SNK signing of AutoIt++ applications
     [x] add compiler directive
+[-] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM

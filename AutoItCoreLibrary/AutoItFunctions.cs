@@ -986,7 +986,7 @@ namespace AutoItCoreLibrary
         {
             try
             {
-                socket.UseDisposeGCHandledData(o =>
+                socket.UseDisposeGCHandledData<IDisposable>(o =>
                 {
                     switch (o)
                     {

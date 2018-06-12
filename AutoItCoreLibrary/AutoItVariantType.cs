@@ -29,12 +29,12 @@ namespace AutoItCoreLibrary
         {
             set
             {
-                if (IsString || (index < 0) || (index >= Length))
+                if (!IsArray || (index < 0) || (index >= Length))
                     throw new InvalidArrayAccessExcpetion();
                 else
-                    _data.VariantData[index] = value.Clone();
+                    ((AutoItVariantType[])_data.VariantData)[index] = value.Clone();
             }
-            get => IsArray && (index >= 0) && (index < Length) ? _data.VariantData[index] : throw new InvalidArrayAccessExcpetion();
+            get => IsArray && (index >= 0) && (index < Length) ? ((AutoItVariantType[])_data.VariantData)[index] : throw new InvalidArrayAccessExcpetion();
         }
 
         public AutoItVariantType this[params long[] indices]
@@ -69,7 +69,9 @@ namespace AutoItCoreLibrary
 
         public bool IsNull => this == Null;
 
-        public bool IsArray => !IsString;
+        public bool IsArray => _data.IsArray;
+
+        public bool IsCOM => _data.IsCOM;
 
         public bool IsString => _data.IsString;
 
@@ -77,7 +79,7 @@ namespace AutoItCoreLibrary
 
         public long BinaryLength => BinaryData.LongLength;
 
-        public long Length => IsString ? ToString().Length : _data.Sizes[0];
+        public long Length => IsString ? ToString().Length : IsArray ? _data.Sizes[0] : 0;
 
         public long Dimensions => _data.Dimensions;
 
@@ -95,6 +97,8 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType Default { get; } = new AutoItVariantType(AutoItVariantData.Default);
 
         public static AutoItVariantType Null { get; } = (void*)null;
+
+        public static AutoItVariantType NullObj { get; } = new AutoItVariantType(new AutoItVariantData(null as object));
 
         public static AutoItVariantType Empty { get; } = "";
 
@@ -144,7 +148,7 @@ namespace AutoItCoreLibrary
         {
             if (IsString)
                 return ToString();
-            else
+            else if (IsArray)
             {
                 AutoItVariantType m = NewMatrix(_data.Sizes);
 
@@ -153,11 +157,13 @@ namespace AutoItCoreLibrary
 
                 return m;
             }
+            else
+                return new AutoItVariantType(_data);
         }
 
         object ICloneable.Clone() => Clone();
 
-        public override string ToString() => IsDefault ? "Default" : IsString ? _data.StringData : "";
+        public override string ToString() => IsDefault ? "Default" : IsString ? (string)_data.VariantData : "";
 
         public override int GetHashCode()
         {
@@ -174,26 +180,7 @@ namespace AutoItCoreLibrary
             }
         }
 
-        public string ToDebugString()
-        {
-            if (IsString)
-                try
-                {
-                    GCHandle gch = GCHandle.FromIntPtr((IntPtr)this);
-
-                    if (gch.IsAllocated)
-                        return $"{gch.AddrOfPinnedObject():x16}h [{gch.Target?.GetType()?.Name ?? "<void*>"}]:  {gch.Target}";
-                    else
-                        return $"{(long)this:x16}h";
-                }
-                catch
-                {
-                }
-            else
-                return $"[ {string.Join(", ", _data.VariantData.Select(x => x.ToDebugString()))} ]";
-
-            return _data.StringData;
-        }
+        public string ToDebugString() => _data.VariantData.Match(s => s, a => $"[ {string.Join(", ", a.Select(x => x.ToDebugString()))} ]", o => $"[{o?.GetType()?.Name ?? "<void*>"}]:  {o}");
 
         public override bool Equals(object obj) => obj is AutoItVariantType o && Equals(o);
 
@@ -204,7 +191,7 @@ namespace AutoItCoreLibrary
         public IEnumerator<AutoItVariantType> GetEnumerator()
         {
             if (IsArray)
-                return _data.VariantData.Cast<AutoItVariantType>().GetEnumerator();
+                return ((AutoItVariantType[])_data.VariantData).Cast<AutoItVariantType>().GetEnumerator();
             else
                 throw new InvalidArrayAccessExcpetion();
         }
@@ -380,57 +367,23 @@ namespace AutoItCoreLibrary
 
         public AutoItVariantTypeReference MakeReference() => new AutoItVariantTypeReference(this);
 
-        private void UseGCHandledData(Action<object> func, bool free)
+        private void UseGCHandledData(Action<object> func) => _data.VariantData.Match(default, default, func);
+
+        public void UseGCHandledData<T>(Action<T> func) => UseGCHandledData(o => func((T)o));
+
+        public void UseDisposeGCHandledData<T>(Action<T> func) where T : IDisposable => UseGCHandledData<T>(t =>
         {
-            if (func != null)
-                if (IsNull)
-                    func(null);
-                else
-                {
-                    GCHandle gch = this;
+            func?.Invoke(t);
+            t.Dispose();
+        });
 
-                    if (gch.IsAllocated)
-                    {
-                        func(gch.Target);
-
-                        if (free)
-                            gch.Free();
-                    }
-                }
-        }
-
-        public void UseGCHandledData(Action<object> func) => UseGCHandledData(func, false);
-
-        public void UseDisposeGCHandledData(Action<object> func) => UseGCHandledData(func, true);
-
-        public void UseGCHandledData<T>(Action<T> func) where T : class => UseGCHandledData(o => func(o as T));
-
-        public void UseDisposeGCHandledData<T>(Action<T> func) where T : class => UseDisposeGCHandledData(o => func(o as T));
-
-        public void DisposeGCHandledData<T>() where T : class, IDisposable => UseDisposeGCHandledData<T>(t => t.Dispose());
-
-        public void DisposeGCHandle()
-        {
-            if (!IsNull)
-                ToGCHandle().Free();
-        }
+        public void DisposeGCHandledData<T>() where T : IDisposable => UseGCHandledData<T>(t => t.Dispose());
 
         public U UseGCHandledData<T, U>(Func<T, U> func)
-            where T : class
         {
             U res = default;
 
-            UseGCHandledData(o => res = func(o as T));
-
-            return res;
-        }
-
-        public U UseDisposeGCHandledData<T, U>(Func<T, U> func)
-            where T : class
-        {
-            U res = default;
-
-            UseDisposeGCHandledData(o => res = func(o as T));
+            UseGCHandledData(o => res = func((T)o));
 
             return res;
         }
@@ -449,7 +402,7 @@ namespace AutoItCoreLibrary
 
         public static AutoItVariantType NewDelegate<T>(T func) where T : Delegate => NewDelegate(func?.Method);
         public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : CreateDelegate(func);
-        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc);
+        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc, GCHandleType.WeakTrackResurrection);
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {
             vars = vars ?? new AutoItVariantType[0];
@@ -534,7 +487,41 @@ namespace AutoItCoreLibrary
         public static implicit operator string(AutoItVariantType v) => v.ToString();
         public static implicit operator AutoItVariantType(string s) => new AutoItVariantType(s);
         public static implicit operator decimal(AutoItVariantType v) => v.IsDefault ? -1m : decimal.TryParse(v, out decimal d) ? d : (long)v;
-        public static implicit operator AutoItVariantType(decimal d) => d.ToString();
+        public static implicit operator AutoItVariantType(decimal d)
+        {
+            string s = d.ToString().TrimStart('+').TrimEnd('m');
+            bool neg = s.StartsWith('-');
+            int dot;
+
+            if (neg)
+                s = s.Substring(1);
+
+            if (s.Contains('.'))
+            {
+                dot = s.IndexOf('.');
+                s = s.Substring(0, dot).TrimStart('0') + '.' + s.Substring(dot + 1).TrimEnd('0');
+
+                if (s.StartsWith('.'))
+                    s = '0' + s;
+
+                if (s.EndsWith('.'))
+                    s += '0';
+            }
+            else
+                s = s.TrimStart('0');
+
+            if (s.Length == 0)
+                s = "0";
+            else if (neg)
+                s = '-' + s;
+
+            dot = s.IndexOf('.');
+
+            if (dot > 0 && (s.Substring(dot + 1).Trim('0').Length == 0))
+                s = s.Remove(dot);
+
+            return s;
+        }
         public static explicit operator long(AutoItVariantType v) => v.IsDefault ? -1L : long.TryParse(v, out long l) || long.TryParse(v, NumberStyles.HexNumber, null, out l) ? l : bool.TryParse(v, out bool b) && b ? 1L : 0L;
         public static implicit operator AutoItVariantType(long l) => l.ToString();
         public static implicit operator void* (AutoItVariantType v) => (void*)(long)v;
@@ -577,51 +564,53 @@ namespace AutoItCoreLibrary
 
         private sealed class AutoItVariantData
         {
-            public bool IsString { get; }
-            public string StringData { get; }
+            public Union3<string, AutoItVariantType[], object> VariantData { get; }
+            public bool IsString => VariantData.IsA;
+            public bool IsArray => VariantData.IsB;
+            public bool IsCOM => VariantData.IsC;
             public long[] Sizes { get; }
             public bool IsDefault => (Sizes.LongLength == 1) && (Sizes[0] == -1);
             public long Dimensions => Sizes.Count(l => l >= 0);
-            public AutoItVariantType[] VariantData { get; }
+
 
             public static AutoItVariantData Default => new AutoItVariantData();
 
 
             public AutoItVariantData()
             {
-                IsString = true;
-                StringData = "-1";
+                VariantData = "-1";
                 Sizes = new long[] { -1 };
-                VariantData = new AutoItVariantType[0];
+            }
+
+            public AutoItVariantData(object o)
+            {
+                VariantData = o;
+                Sizes = new long[0];
             }
 
             public AutoItVariantData(string s)
             {
-                IsString = true;
-                StringData = s ?? "";
+                VariantData = s ?? "";
                 Sizes = new long[0];
-                VariantData = new AutoItVariantType[0];
             }
 
             public AutoItVariantData(long[] sizes)
             {
-                StringData = "";
-
                 if (sizes is null || sizes.Length == 0)
                 {
-                    IsString = true;
+                    VariantData = "";
                     Sizes = new long[0];
                 }
                 else
                 {
                     long tsz = sizes[0];
-
-                    Sizes = sizes;
-                    IsString = false;
-                    VariantData = new AutoItVariantType[tsz];
+                    AutoItVariantType[] arr = new AutoItVariantType[tsz];
 
                     for (long i = 0; i < tsz; ++i)
-                        VariantData[i] = AutoItVariantType.NewMatrix(sizes.Skip(1).ToArray());
+                        arr[i] = NewMatrix(sizes.Skip(1).ToArray());
+
+                    Sizes = sizes;
+                    VariantData = arr;
                 }
             }
         }
