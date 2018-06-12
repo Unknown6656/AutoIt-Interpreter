@@ -2,6 +2,7 @@
 
 open AutoItExpressionParser.ExpressionAST
 open System
+open AutoItCoreLibrary
 
 
 type ResolvedFunctionParamter =
@@ -128,10 +129,14 @@ type Serializer (settings : SerializerSettings) =
                                      | Default -> !/"Default"
                                      | True -> !/"True"
                                      | False -> !/"False"
-                                     //| Number d when d = 1m -> !/"One"
-                                     //| Number d when d = 0m -> !/"Zero"
+                                     | Number 1m -> !/"One"
+                                     | Number 0m -> !/"Zero"
                                      //| Number d -> sprintf "(%s)%.29fm" varn d
-                                     | Number d ->  sprintf "(%s)%.29fm" varn d
+                                     | Number d ->
+                                        if (d % 1m) = 0m && abs(d) < decimal long.MaxValue then
+                                            sprintf "(%s)0x%XL" varn (System.Convert.ToInt64 d)
+                                        else
+                                            sprintf "(%s)%sm" varn <| (AutoItVariantType.FromDecimal d).ToString()
                                      | String s -> sprintf "(%s)\"%s\"" varn (s
                                                                               |> Seq.map (fun c -> if c > 'ÿ' then
                                                                                                        sprintf @"\u%04x" <| uint16 c

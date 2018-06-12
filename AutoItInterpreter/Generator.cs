@@ -714,6 +714,8 @@ using System.Reflection;
                 proc.Start();
                 proc.WaitForExit();
 
+                Console.WriteLine();
+
                 return proc.ExitCode;
             }
         }

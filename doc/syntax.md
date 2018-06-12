@@ -18,7 +18,8 @@ This article highlights the most important **differences** between AutoIt3's and
 9) [The `#OnAutoItExitRegister` directive](#onautoitexitregister-directive)
 10) [The `#include` directive](#include-directive)
 11) [The `#sign` directive](#sign-directive)
-12) [`enum` declarations](#enum-declarations)
+12) [The `#debug` directive](#debug-directive)
+13) [`enum` declarations](#enum-declarations)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -588,6 +589,10 @@ Examples:
 Please refer to the [AutoIt++ runtime behaviour description](runtime.md) for more information about the `#include` file path resoltion.
 
 # `#sign`-directive
+
+TODO
+
+# `#debug`-directive
 
 TODO
 

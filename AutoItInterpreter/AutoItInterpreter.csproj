@@ -65,6 +65,9 @@
     <None Update="autoit.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="include\debugprint.au3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="test/header-2.au3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

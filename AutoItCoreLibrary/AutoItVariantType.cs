@@ -452,8 +452,10 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType FromIntPtr(IntPtr v) => v;
         public static AutoItVariantType FromVoidPtr(void* v) => v;
         public static AutoItVariantType Not(AutoItVariantType v) => !(bool)v;
-        public static AutoItVariantType Or(AutoItVariantType v1, AutoItVariantType v2) => v1 || v2;
-        public static AutoItVariantType And(AutoItVariantType v1, AutoItVariantType v2) => (bool)v1 && (bool)v2;
+#pragma warning disable RSC1104 // THIS IS BY DESIGN, IN ORDER TO AVOID UNNESSARY EVALUATIONS (-> BOOLEAN SHORTCUT)
+        public static AutoItVariantType Or(AutoItVariantType v1, AutoItVariantType v2) => v1 ? (AutoItVariantType)true : v2;
+        public static AutoItVariantType And(AutoItVariantType v1, AutoItVariantType v2) => v1 ? (bool)v2 : false;
+#pragma warning restore RSC1104
         public static AutoItVariantType Xor(AutoItVariantType v1, AutoItVariantType v2) => (bool)v1 ^ (bool)v2;
         public static AutoItVariantType Nor(AutoItVariantType v1, AutoItVariantType v2) => Not(Or(v1, v2));
         public static AutoItVariantType Nand(AutoItVariantType v1, AutoItVariantType v2) => Not(And(v1, v2));

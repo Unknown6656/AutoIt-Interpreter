@@ -259,6 +259,9 @@ namespace AutoItInterpreter
             {
                 subdir.Attributes |= FileAttributes.Hidden | FileAttributes.System;
 
+                if (Options.UseVerboseOutput)
+                    DebugPrintUtil.DisplayArguments(Options);
+
                 if (Options.UseJITWarmup)
                 {
                     if (Options.UseVerboseOutput)
@@ -1064,6 +1067,7 @@ namespace AutoItInterpreter
                     ("^notrayicon$", _ => st.UseTrayIcon = false),
                     ("^requireadmin$", _ => st.RequireAdmin = true),
                     ("^include-once$", _ => st.IsIncludeOnce = true),
+                    ("^debug$", _ => inclpath = $"{typeof(Interpreter).Assembly.Location}/../include/debugprint.au3"),
                     (@"^using(\s|\b)\s*\""(?<asm>.*)\""$", m =>
                     {
                         string path = m.Get("asm").Trim();

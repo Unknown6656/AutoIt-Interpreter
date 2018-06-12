@@ -592,6 +592,24 @@ namespace AutoItInterpreter
 
         }
 
+        public static void DisplayArguments(InterpreterOptions options)
+        {
+            PrintSeperator("COMMAND LINE ARGUMENTS");
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"{options.RawArguments.Count} argument(s):");
+
+            foreach (string key in options.RawArguments.Keys)
+            {
+                string darg = ' ' + ("--" + key).PadLeft(options.RawArguments.Keys.Max(arg => arg.Length + 2));
+                string vals = string.Join(", ", options.RawArguments[key].Where(arg => arg.Length > 0).Select(arg => $"'{arg}'"));
+
+                Console.WriteLine(vals.Length > 0 ? $"{darg}: {vals}" : darg);
+            }
+
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
+
 
         public enum FinalResult
             : byte

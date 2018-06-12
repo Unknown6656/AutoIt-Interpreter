@@ -120,6 +120,7 @@ namespace AutoItInterpreter
                 InterpreterOptions opt = new InterpreterOptions(settings)
                 {
                     Language = lang,
+                    RawArguments = dic,
                     UseVerboseOutput = Cont("verbose"),
                     IncludeDebugSymbols = Cont("debug"),
                     UseMSBuildErrorOutput = Cont("msbuild-error-format"),
@@ -451,6 +452,7 @@ namespace AutoItInterpreter
         public Compatibility Compatibility { set; get; } = Win32.System == OS.Windows ? Compatibility.win
                                                          : Win32.System == OS.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
+        public Dictionary<string, List<string>> RawArguments { set; get; }
         public bool IncludeDebugSymbols { get; set; }
         public bool TreatWarningsAsErrors { get; set; }
         public bool CleanTargetFolder { set; get; }

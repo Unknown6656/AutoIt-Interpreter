@@ -93,3 +93,4 @@
 [x] PFX/SNK signing of AutoIt++ applications
     [x] add compiler directive
 [x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
+[ ] fix variable scoping
