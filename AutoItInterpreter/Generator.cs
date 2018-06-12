@@ -137,6 +137,7 @@ using System.Runtime.InteropServices;
 using System.IO.MemoryMappedFiles;
 using System.Collections.Generic;
 using System.Collections;
+using System.Diagnostics;
 using System.Reflection;
 using System.Resources;
 using System.Text;
@@ -177,6 +178,9 @@ namespace {NAMESPACE}
 /*{DISP_SKIP_S}*/
         public static void Main(string[] argv)
         {{  
+            if (argv.Contains(""{AutoItFunctions.DBG_CMDARG}""))
+                Debugger.Launch();
+
             try
             {{
                 Environment.SetEnvironmentVariable(""COREHOST_TRACE"", ""1"", EnvironmentVariableTarget.Process);
@@ -695,14 +699,14 @@ using System.Reflection;
             }
         }
 
-        public static int RunApplication(FileInfo path)
+        public static int RunApplication(FileInfo path, bool debug)
         {
             using (Process proc = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = path.Directory.FullName,
-                    Arguments = $"\"{path.FullName}\"",
+                    Arguments = $"\"{path.FullName}\"{(debug ? ' ' + AutoItFunctions.DBG_CMDARG : "")}",
                     FileName = "dotnet",
                 }
             })

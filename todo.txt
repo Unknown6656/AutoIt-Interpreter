@@ -92,4 +92,4 @@
 [x] fix 'Default'
 [x] PFX/SNK signing of AutoIt++ applications
     [x] add compiler directive
-[-] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
+[x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM

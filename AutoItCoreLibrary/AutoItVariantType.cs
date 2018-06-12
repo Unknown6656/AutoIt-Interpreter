@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Collections;
 using System.Reflection;
@@ -97,8 +96,6 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType Default { get; } = new AutoItVariantType(AutoItVariantData.Default);
 
         public static AutoItVariantType Null { get; } = (void*)null;
-
-        public static AutoItVariantType NullObj { get; } = new AutoItVariantType(new AutoItVariantData(null as object));
 
         public static AutoItVariantType Empty { get; } = "";
 
@@ -361,8 +358,6 @@ namespace AutoItCoreLibrary
 
         public double ToDouble() => (double)this;
 
-        public GCHandle ToGCHandle() => this;
-
         public StringBuilder ToStringBuilder() => new StringBuilder(this);
 
         public AutoItVariantTypeReference MakeReference() => new AutoItVariantTypeReference(this);
@@ -402,7 +397,7 @@ namespace AutoItCoreLibrary
 
         public static AutoItVariantType NewDelegate<T>(T func) where T : Delegate => NewDelegate(func?.Method);
         public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : CreateDelegate(func);
-        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : (AutoItVariantType)GCHandle.Alloc(gc, GCHandleType.WeakTrackResurrection);
+        public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : new AutoItVariantType(new AutoItVariantData(gc));
         public static AutoItVariantType NewArray(params AutoItVariantType[] vars)
         {
             vars = vars ?? new AutoItVariantType[0];
@@ -528,8 +523,6 @@ namespace AutoItCoreLibrary
         public static implicit operator AutoItVariantType(void* l) => (long)l;
         public static implicit operator IntPtr(AutoItVariantType v) => (IntPtr)(void*)v;
         public static implicit operator AutoItVariantType(IntPtr p) => (void*)p;
-        public static implicit operator GCHandle(AutoItVariantType v) => v.IsNull ? GCHandle.Alloc(null) : GCHandle.FromIntPtr(v);
-        public static implicit operator AutoItVariantType(GCHandle h) => (IntPtr)h;
         public static bool operator true(AutoItVariantType v) => v == true;
         public static bool operator false(AutoItVariantType v) => v == false;
         public static AutoItVariantType operator !(AutoItVariantType v) => Not(v);

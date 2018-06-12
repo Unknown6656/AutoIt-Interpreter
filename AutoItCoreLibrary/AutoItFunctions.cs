@@ -40,6 +40,7 @@ namespace AutoItCoreLibrary
         public const string PINVOKE_PREFIX = "__pinvoke_";
         public const string MMF_CMDRARG = "____input_shared_memory_mapped_file____";
         public const string MMF_CMDPARG = "____output_shared_memory_mapped_file____";
+        public const string DBG_CMDARG =  "____attach_debugger____";
 
         private static var __error;
         private static var __extended;

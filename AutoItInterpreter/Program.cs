@@ -180,7 +180,7 @@ namespace AutoItInterpreter
                     DebugPrintUtil.PrintSeperator("EXECUTION RESULT");
                     Console.WriteLine();
 
-                    return ApplicationGenerator.RunApplication(result.OutputFile);
+                    return ApplicationGenerator.RunApplication(result.OutputFile, Cont("debug"));
                 }
                 else
                     return 0;
