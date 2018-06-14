@@ -281,7 +281,7 @@ namespace AutoItInterpreter
 
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName, out string log);
-                void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null, 0), args);
+                void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null as FileInfo, 0), args);
 
                 if (ret != 0)
                 {
@@ -375,7 +375,7 @@ namespace AutoItInterpreter
                         FileInfo[] ovf = targetdir.EnumerateFiles().ToArray();
 
                         if ((ovf.Length > 0) && (!Options.CleanTargetFolder))
-                            state.ReportKnownWarning("warnings.generator.failed_clean_output", new DefinitionContext(null, 0), targetdir.FullName);
+                            state.ReportKnownWarning("warnings.generator.failed_clean_output", new DefinitionContext(null as FileInfo, 0), targetdir.FullName);
                         else
                             foreach (FileInfo file in ovf)
                                 file.Delete();
@@ -440,6 +440,7 @@ namespace AutoItInterpreter
             internal static InterpreterState PreprocessLines(InterpreterContext context, InterpreterOptions options)
             {
                 Stack<(FunctionDeclarationState, FunctionScope)> stack = new Stack<(FunctionDeclarationState, FunctionScope)>();
+                List<(FileInfo path, RawLine[] lines)> sources = new List<(FileInfo, RawLine[])>();
                 PreInterpreterState pstate = new PreInterpreterState
                 {
                     Language = options.Language,
@@ -454,6 +455,7 @@ namespace AutoItInterpreter
 
                 stack.Push((FunctionDeclarationState.RegularFunction, null));
                 lines.AddRange(FetchLines(pstate, context, options));
+                sources.Add((context.SourcePath, lines.ToArray()));
 
                 while (locindx < lines.Count)
                 {
@@ -477,8 +479,11 @@ namespace AutoItInterpreter
                                 if (inclpath?.Exists ?? false)
                                     using (StreamReader rd = inclpath.OpenText())
                                     {
+                                        RawLine[] incllines = FetchLines(pstate, new InterpreterContext(inclpath), options);
+
                                         lines.RemoveAt(locindx);
-                                        lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
+                                        lines.InsertRange(locindx, incllines);
+                                        sources.Add((inclpath, incllines));
 
                                         --locindx;
                                     }
@@ -510,6 +515,8 @@ namespace AutoItInterpreter
 
                 foreach (string func in ppfuncdir.Keys)
                     state.Functions[func] = ppfuncdir[func];
+
+                state.Sources = sources.ToArray();
 
                 return state;
             }
@@ -1266,18 +1273,6 @@ namespace AutoItInterpreter
                     ["productversion"] = () => ci.AssemblyProductVersion = Version.Parse(value.Contains(',') ? value.Remove(value.IndexOf(',')).Trim() : value),
                 },
                 () => err("errors.preproc.directive_invalid", name));
-            }
-
-
-            private struct RawLine
-            {
-                public int[] OriginalLineNumbers { get; }
-                public string Content { get; }
-                public FileInfo File { get; }
-
-
-                public RawLine(string c, int[] l, FileInfo f) =>
-                    (Content, OriginalLineNumbers, File) = (c, l, f);
             }
 
             private enum FunctionDeclarationState

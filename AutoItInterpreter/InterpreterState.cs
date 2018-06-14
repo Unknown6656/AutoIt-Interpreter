@@ -16,6 +16,17 @@ namespace AutoItInterpreter
     using static PInvoke;
 
 
+    public struct RawLine
+    {
+        public int[] OriginalLineNumbers { get; }
+        public string Content { get; }
+        public FileInfo File { get; }
+
+
+        public RawLine(string c, int[] l, FileInfo f) =>
+            (Content, OriginalLineNumbers, File) = (c, l, f);
+    }
+
     internal static class InterpreterConstants
     {
         public const string CSHARP_INLINE = "§___csharp___";
@@ -152,6 +163,7 @@ namespace AutoItInterpreter
         : AbstractParserState
     {
         public (string, PINVOKE_SIGNATURE)[] PInvokeSignatures { get; set; }
+        public (FileInfo Path, RawLine[] Lines)[] Sources { get; set; }
         public Dictionary<string, AST_FUNCTION> ASTFunctions { get; }
         public Dictionary<string, FUNCTION> Functions { get; }
         internal DebugPrintUtil.FinalResult Result { get; set; }
@@ -342,30 +354,6 @@ namespace AutoItInterpreter
 
         public static implicit operator BuiltinFunctionInformation((string lname, string name, int m_argc, int o_argc, bool @params, OS[] sys, bool @unsafe, CompilerIntrinsicMessage[] attrs) t) =>
             new BuiltinFunctionInformation(t.lname, t.name, t.m_argc, t.o_argc, t.@params, t.sys, t.@unsafe, t.attrs);
-    }
-
-    public struct DefinitionContext
-    {
-        public FileInfo FilePath { get; }
-        public int StartLine { get; }
-        public int? EndLine { get; }
-
-
-        public DefinitionContext(FileInfo path, int line)
-            : this(path, line, null)
-        {
-        }
-
-        public DefinitionContext(FileInfo path, int start, int? end)
-        {
-            ++start;
-
-            FilePath = path;
-            StartLine = start;
-            EndLine = end is int i && i > start ? (int?)(i + 1) : null;
-        }
-
-        public override string ToString() => $"[{FilePath?.Name ?? "<unknown>"}] l. {StartLine}{(EndLine is int i ? $"-{i}" : "")}";
     }
 
     public enum ExecutionLevel

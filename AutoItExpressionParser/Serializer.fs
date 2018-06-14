@@ -224,3 +224,8 @@ type Serializer (settings : SerializerSettings) =
             | _ -> str e
         if nulleval e then Literal Null else e
         |> printexpr
+    member x.GetPartialAssigment (e:ASSIGNMENT_EXPRESSION) (ctx:obj) =
+        match e with
+        | ScalarAssignment (Assign, v, e) -> (x.Serialize (VariableExpression v) ctx, e)
+        | ScalarAssignment (o, v, e) -> (x.Serialize (VariableExpression v) ctx, BinaryExpression (adict.[o], VariableExpression v, e))
+        | _ -> (null, AssignmentExpression e)

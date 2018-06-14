@@ -3,6 +3,7 @@ using System.Linq;
 using System;
 
 using AutoItExpressionParser;
+using AutoItCoreLibrary;
 
 namespace AutoItInterpreter.PartialAST
 {

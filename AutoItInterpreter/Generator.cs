@@ -28,13 +28,16 @@ namespace AutoItInterpreter
         private const string TYPE_VAR_RPOVIDER = nameof(AutoItVariableDictionary);
         private const string TYPE_MAC_RPOVIDER = nameof(AutoItMacroDictionary);
         private const string REFTYPE = nameof(AutoItVariantTypeReference);
-        private const string TYPE = "variant";
+        private const string DEFCTXTYPE = "defctx";
+        private const string TYPE = "v";
         private const string FUNC_MODULE = nameof(AutoItFunctions);
         private const string FUNC_PREFIX = AutoItFunctions.FUNC_PREFIX;
         private const string PARAM_PREFIX = "__param_";
         private const string DISCARD = "__discard";
+        private const string SYMBOL = "__symbol";
         private const string MACROS = "__macros";
         private const string MACROS_GLOBAL = MACROS + "_g";
+        private const string LAST_SYMBOL = "__lastsymbol";
         private const string VARS = "__vars";
 
 
@@ -114,14 +117,19 @@ namespace AutoItInterpreter
                 );
             }, (s, c, a) => state.ReportKnownWarning(s, (DefinitionContext)c, a)));
             bool allman = options.Settings.IndentationStyle == IndentationStyle.AllmanStyle;
-            string tstr(EXPRESSION ex, DefinitionContext ctx)
+            string tstr(EXPRESSION ex, DefinitionContext ctx, bool allowdebug = true)
             {
                 if (ex is null)
                     state.ReportKnownError("errors.astproc.fatal_codegen", ctx);
                 else
                     try
                     {
-                        return ser.Serialize(ex, ctx);
+                        string serialized = ser.Serialize(ex, ctx);
+
+                        if (options.IncludeDebugSymbols && allowdebug)
+                            return $"__lastsymbol<{TYPE}>(new {DEFCTXTYPE}({(ctx.FilePath is FileInfo nfo ? $"\"{nfo.FullName.Replace('\\', '/')}\"" : "null as FileInfo")}, {ctx.StartLine}, {(ctx.EndLine is int i ? i.ToString() : "null")}), () => {serialized})";
+                        else
+                            return serialized;
                     }
                     catch (FunctionParameterCountMismatchException e)
                     {
@@ -154,9 +162,11 @@ using {nameof(AutoItCoreLibrary)};
 namespace {NAMESPACE}
 {{
     using {TYPE} = {nameof(AutoItVariantType)};
+    using {DEFCTXTYPE} = {nameof(DefinitionContext)};
 
     public static unsafe class {APPLICATION_MODULE}
     {{
+        private static {DEFCTXTYPE}? {SYMBOL} = default;
         private static {TYPE_MAC_RPOVIDER} {MACROS_GLOBAL};
         private static {TYPE_VAR_RPOVIDER} {VARS};
         private static {TYPE} {DISCARD};
@@ -180,22 +190,37 @@ namespace {NAMESPACE}
         {{  
             if (argv.Contains(""{AutoItFunctions.DBG_CMDARG}""))
             {{
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write(""[AutoIt++] "");
+".TrimEnd());
+                    if (options.IncludeDebugSymbols)
+                        sb.AppendLine($@"
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine(""[STARTING DEBUGGER ...]"");
+                Console.WriteLine(""STARTING DEBUGGER ..."");
                 Debugger.Launch();
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write(""[AutoIt++] "");
 
                 if (Debugger.IsAttached)
                 {{
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine(""[DEBUGGER ATTACHED]"");
+                    Console.WriteLine(""DEBUGGER ATTACHED"");
                 }}
                 else
                 {{
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(""[DEBUGGER FAILED TO LAUNCH]"");
+                    Console.WriteLine(""DEBUGGER FAILED TO LAUNCH"");
                 }}
 
                 Console.ForegroundColor = ConsoleColor.White;
+".TrimEnd());
+                    else
+                        sb.AppendLine($@"
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(""UNABLE TO LAUNCH DEBUGGER DUE TO MISSING SYMBOLS"");
+                Console.ForegroundColor = ConsoleColor.White;
+".TrimEnd());
+                    sb.AppendLine($@"
             }}
 
             try
@@ -275,8 +300,24 @@ namespace {NAMESPACE}
                 }}
 
                 Console.Error.Write($""~~~~~~~~~~ FATAL ERROR ~~~~~~~~~~\n{{msg}}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"");
+".TrimEnd());
+
+                    // TODO : debug symbol recovery!!
+
+                    sb.AppendLine($@"
             }}
         }}
+".TrimEnd());
+                    if (options.IncludeDebugSymbols)
+                        sb.AppendLine($@"
+        public static T {LAST_SYMBOL}<T>({DEFCTXTYPE} ctx, Func<T> func)
+        {{
+            {SYMBOL} = ctx;
+
+            return func();
+        }}
+".TrimEnd());
+                    sb.AppendLine($@"
 /*{DISP_SKIP_E}*/
 
         private static {TYPE} ___globalentrypoint()
@@ -399,6 +440,11 @@ namespace {NAMESPACE}
                         println(s.Length > 0 ? $"}} {s}" : "}");
                 }
 
+                DefinitionContext context = e.Context;
+
+                if (options.IncludeDebugSymbols)
+                    println($"{SYMBOL} = new {DEFCTXTYPE}({(context.FilePath is FileInfo nfo ? $"\"{nfo.FullName.Replace('\\', '/')}\"" : "null as FileInfo")}, {context.StartLine}, {(context.EndLine is int i ? i.ToString() : "null")});");
+
                 switch (e)
                 {
                     case AST_IF_STATEMENT s:
@@ -453,14 +499,21 @@ namespace {NAMESPACE}
                         if (s.Expression is ASSIGNMENT_EXPRESSION.ArrayAssignment arrassg)
                         {
                             DefinitionContext ctx = s.Context;
-                            string varexpr = tstr(EXPRESSION.NewVariableExpression(arrassg.Item2), ctx);
+                            string varexpr = tstr(EXPRESSION.NewVariableExpression(arrassg.Item2), ctx, false);
+                            string varexprdbg = tstr(EXPRESSION.NewVariableExpression(arrassg.Item2), ctx);
 
-                            println($"{DISCARD} = {varexpr};");
+                            println($"{DISCARD} = {varexprdbg};");
                             println($"{DISCARD}[{string.Join(", ", arrassg.Item3.Select(x => tstr(x, ctx)))}] = {tstr(arrassg.Item4, ctx)};");
                             println($"{varexpr} = {DISCARD};");
                         }
-                        else
+                        else if (s.Expression is ASSIGNMENT_EXPRESSION.ReferenceAssignment)
                             println(tstr(EXPRESSION.NewAssignmentExpression(s.Expression), s.Context) + ';');
+                        else
+                        {
+                            (string left, EXPRESSION expr) = ser.GetPartialAssigment(s.Expression, s.Context).ToValueTuple();
+
+                            println($"{left ?? DISCARD} = {tstr(expr, s.Context)};");
+                        }
 
                         return;
                     case AST_EXPRESSION_STATEMENT s:

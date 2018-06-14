@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
+using AutoItCoreLibrary;
+
 namespace AutoItInterpreter.Preprocessed
 {
     public abstract class Entity

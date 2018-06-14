@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.IO;
+using System;
 
 namespace AutoItCoreLibrary
 {
@@ -148,5 +149,51 @@ namespace AutoItCoreLibrary
 
             public override T Match<T>(Func<A, T> f, Func<B, T> g, Func<C, T> h) => h is null ? default : h(Item);
         }
+    }
+
+    public struct DefinitionContext
+    {
+        public FileInfo FilePath { get; }
+        public int StartLine { get; }
+        public int? EndLine { get; }
+
+
+        public DefinitionContext(string path, int line)
+            : this(path, line, null)
+        {
+        }
+
+        public DefinitionContext(string path, int start, int? end)
+            : this(new FileInfo(path), start, end)
+        {
+        }
+
+        public DefinitionContext(FileInfo path, int line)
+            : this(path, line, null)
+        {
+        }
+
+        public DefinitionContext(FileInfo path, int start, int? end)
+        {
+            ++start;
+
+            FilePath = path;
+            StartLine = start;
+            EndLine = end is int i && i > start ? (int?)(i + 1) : null;
+        }
+
+        public override string ToString() => $"[{FilePath?.Name ?? "<unknown>"}] l. {StartLine}{(EndLine is int i ? $"-{i}" : "")}";
+
+        public static implicit operator DefinitionContext((FileInfo nfo, int start) t) => (t.nfo, t.start, null);
+
+        public static implicit operator DefinitionContext((FileInfo nfo, int start, int end) t) => (t.nfo, t.start, (int?)t.end);
+
+        public static implicit operator DefinitionContext((FileInfo nfo, int start, int? end) t) => new DefinitionContext(t.nfo, t.start, t.end);
+
+        public static implicit operator DefinitionContext((string nfo, int start) t) => (t.nfo, t.start, null);
+
+        public static implicit operator DefinitionContext((string nfo, int start, int end) t) => (t.nfo, t.start, (int?)t.end);
+
+        public static implicit operator DefinitionContext((string nfo, int start, int? end) t) => (new FileInfo(t.nfo), t.start, t.end);
     }
 }
