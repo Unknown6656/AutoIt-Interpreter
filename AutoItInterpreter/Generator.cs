@@ -182,8 +182,9 @@ namespace {NAMESPACE}
             {{
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 Console.WriteLine(""[STARTING DEBUGGER ...]"");
-                
-                if (Debugger.Launch())
+                Debugger.Launch();
+
+                if (Debugger.IsAttached)
                 {{
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine(""[DEBUGGER ATTACHED]"");
