@@ -18,7 +18,7 @@ This article highlights the most important **differences** between AutoIt3's and
 9) [The `#OnAutoItExitRegister` directive](#onautoitexitregister-directive)
 10) [The `#include` directive](#include-directive)
 11) [The `#sign` directive](#sign-directive)
-12) [The `#debug` directive](#debug-directive)
+12) [The `#debugattach`, `#debugprint` and `#breakpoint` directives](#debugattach-debugprint-and-breakpoint-directives)
 13) [`enum` declarations](#enum-declarations)
 
 <br/>
@@ -592,7 +592,7 @@ Please refer to the [AutoIt++ runtime behaviour description](runtime.md) for mor
 
 TODO
 
-# `#debug`-directive
+# `#debugattach`, `#debugprint` and `#breakpoint` directives
 
 TODO
 

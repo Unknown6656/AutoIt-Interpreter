@@ -179,7 +179,23 @@ namespace {NAMESPACE}
         public static void Main(string[] argv)
         {{  
             if (argv.Contains(""{AutoItFunctions.DBG_CMDARG}""))
-                Debugger.Launch();
+            {{
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine(""[STARTING DEBUGGER ...]"");
+                
+                if (Debugger.Launch())
+                {{
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine(""[DEBUGGER ATTACHED]"");
+                }}
+                else
+                {{
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(""[DEBUGGER FAILED TO LAUNCH]"");
+                }}
+
+                Console.ForegroundColor = ConsoleColor.White;
+            }}
 
             try
             {{
@@ -482,7 +498,7 @@ namespace {NAMESPACE}
                     case AST_SCOPE s:
                         println("{");
 
-                        if (s.UseExplicitLocalScoping)
+                        if (s.UseExplicitLocalScoping && s.ExplicitLocalVariables.Count > 0)
                         {
                             println($"    {VARS}.{nameof(AutoItVariableDictionary.InitLocalScope)}();");
 
@@ -496,7 +512,7 @@ namespace {NAMESPACE}
                         foreach (AST_STATEMENT ls in s.Statements ?? new AST_STATEMENT[0])
                             print(ls);
 
-                        if (s.UseExplicitLocalScoping)
+                        if (s.UseExplicitLocalScoping && s.ExplicitLocalVariables.Count > 0)
                             println($"    {VARS}.{nameof(AutoItVariableDictionary.DestroyLocalScope)}();");
 
                         println("}");

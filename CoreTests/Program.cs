@@ -29,6 +29,8 @@ namespace CoreTests
             void* ptr = mat[1, 1, 1];
             byte val = *((byte*)ptr);
 
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+
             AutoItFunctions.Debug(mat);
 
             //v server = AutoItFunctions.TCPListen("[::]", 41488);

@@ -22,6 +22,7 @@ namespace AutoItInterpreter
         public const string DISCARD_VARIBLE = "$___discard___";
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
+        public static readonly string CMP_INCLUDE_DIR = $"{typeof(Interpreter).Assembly.Location}/../include/";
         public static readonly string[] RESERVED_KEYWORDS =
         {
             "new",

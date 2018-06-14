@@ -108,10 +108,20 @@ type Serializer (settings : SerializerSettings) =
         and printparams name (ps : EXPRESSION list) (rf : ResolvedFunctionParamter[]) =
             let rf = match rf with
                      | null -> Array.create (ps.Length) ({ IsOptional = false; IsByRef = false })
-                     | _ -> if rf.Length = ps.Length then rf
-                            else FunctionParameterCountMismatchException(name, rf.Length, ps.Length)
-                                 |> raise
-                     |> Array.toList
+                            |> Array.toList
+                     | _ ->
+                            if rf.Length = ps.Length then Array.toList rf
+                            else
+                                let rf = rf
+                                         |> Array.toList
+                                         |> List.zip [0..rf.Length - 1]
+                                         |> List.rev
+                                         |> List.skipWhile (fun (i, p) -> p.IsOptional && (i >= ps.Length))
+                                         |> List.rev
+                                         |> List.map snd
+                                if rf.Length = ps.Length then rf
+                                else FunctionParameterCountMismatchException(name, rf.Length, ps.Length)
+                                     |> raise
                      |> List.zip ps
                      |> List.map (fun (e, rp) ->
                                       if rp.IsByRef then
@@ -125,12 +135,12 @@ type Serializer (settings : SerializerSettings) =
         and printexpr e =
             let str = function
                       | Literal l -> match l with
-                                     | Null -> !/"Null"
                                      | Default -> !/"Default"
                                      | True -> !/"True"
                                      | False -> !/"False"
-                                     | Number 1m -> !/"One"
+                                     | Null
                                      | Number 0m -> !/"Zero"
+                                     | Number 1m -> !/"One"
                                      //| Number d -> sprintf "(%s)%.29fm" varn d
                                      | Number d ->
                                         if (d % 1m) = 0m && abs(d) < decimal long.MaxValue then

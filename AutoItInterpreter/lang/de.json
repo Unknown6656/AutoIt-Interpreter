@@ -42,7 +42,9 @@
             "exit_func_args": "The exit function '{0}' must not have any mandatory arguments. Optinonal parameters are allowed.",
             "unknown_directive": "The preprocessor directive '#{0}' is unknown or could not be parsed.",
             "no_path_provided": "No path has been provided.",
-            "certificate_nfound": "The SNK/PFX certificate file '{0}' could not be found or is inaccessible."
+            "certificate_nfound": "The SNK/PFX certificate file '{0}' could not be found or is inaccessible.",
+            "directive_requires_unsafe": "The directive '#{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
+            "directive_requires_debug": "The directive '#{0}' can only be used when compiled with the compiler-flag '--debug' or '-d'."
         },
         "astproc": {
             "unknown_entity": "Interner Fehler: Die Entität '{0}' ist unbekannt.",

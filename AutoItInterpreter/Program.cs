@@ -116,6 +116,9 @@ namespace AutoItInterpreter
                 #endregion
                 #region DO MAGIC
 
+                if (!Cont("keep-temp") && Cont("debug") && Cont("run"))
+                    dic["keep-temp"] = new List<string>();
+
                 Interpreter intp;
                 InterpreterOptions opt = new InterpreterOptions(settings)
                 {

@@ -65,7 +65,7 @@
         [ ] select..case
         [ ] P/Invoke
         [x] byref calls
-        [ ] globals and parameter scoping
+        [-] globals and parameter scoping
         [x] UDP / TCP API
         [-] Serial API
         [ ] Compiler robustness
@@ -93,4 +93,4 @@
 [x] PFX/SNK signing of AutoIt++ applications
     [x] add compiler directive
 [x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
-[ ] fix variable scoping
+[-] fix variable scoping

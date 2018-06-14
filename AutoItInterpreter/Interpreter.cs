@@ -469,23 +469,24 @@ namespace AutoItInterpreter
                     {
                         string path = ProcessDirective(Line.Substring(1), pstate, options, err, defcntx);
 
-                        try
-                        {
-                            FileInfo inclpath = new FileResolver(path);
+                        if (path.Trim().Length > 0)
+                            try
+                            {
+                                FileInfo inclpath = new FileResolver(path);
 
-                            if (inclpath?.Exists ?? false)
-                                using (StreamReader rd = inclpath.OpenText())
-                                {
-                                    lines.RemoveAt(locindx);
-                                    lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
+                                if (inclpath?.Exists ?? false)
+                                    using (StreamReader rd = inclpath.OpenText())
+                                    {
+                                        lines.RemoveAt(locindx);
+                                        lines.InsertRange(locindx, FetchLines(pstate, new InterpreterContext(inclpath), options));
 
-                                    --locindx;
-                                }
-                        }
-                        catch
-                        {
-                            err("errors.preproc.include_nfound", path);
-                        }
+                                        --locindx;
+                                    }
+                            }
+                            catch
+                            {
+                                err("errors.preproc.include_nfound", path);
+                            }
                     }
                     else if (ProcessFunctionDeclaration(Line, stack, defcntx, pstate, err))
                         (stack.Peek().Item2 ?? pstate.GlobalFunction).Lines.Add((Line, defcntx));
@@ -1061,13 +1062,25 @@ namespace AutoItInterpreter
             private static string ProcessDirective(string line, PreInterpreterState st, InterpreterOptions options, ErrorReporter err, DefinitionContext defcntx)
             {
                 InterpreterSettings settings = options.Settings;
+                T debuggerdirective<T>(T t)
+                {
+                    if (!options.IncludeDebugSymbols)
+                        err("errors.preproc.directive_requires_debug", line);
+
+                    if (!options.AllowUnsafeCode)
+                        err("errors.preproc.directive_requires_unsafe", line);
+
+                    return t;
+                }
                 string inclpath = "";
 
                 line.Match(
                     ("^notrayicon$", _ => st.UseTrayIcon = false),
                     ("^requireadmin$", _ => st.RequireAdmin = true),
                     ("^include-once$", _ => st.IsIncludeOnce = true),
-                    ("^debug$", _ => inclpath = $"{typeof(Interpreter).Assembly.Location}/../include/debugprint.au3"),
+                    ("^debugattach$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugattach.au3")),
+                    ("^debugprint$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugprint.au3")),
+                    ("^breakpoint$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugbreak.au3")),
                     (@"^using(\s|\b)\s*\""(?<asm>.*)\""$", m =>
                     {
                         string path = m.Get("asm").Trim();
