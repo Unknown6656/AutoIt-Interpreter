@@ -26,9 +26,6 @@ namespace CoreTests
 
             mat[1, 1, 1] = v.NewDelegate<AutoItDelegate4Opt1>(TOP_KEK);
 
-            void* ptr = mat[1, 1, 1];
-            byte val = *((byte*)ptr);
-
             Console.ForegroundColor = ConsoleColor.DarkYellow;
 
             AutoItFunctions.Debug(mat);

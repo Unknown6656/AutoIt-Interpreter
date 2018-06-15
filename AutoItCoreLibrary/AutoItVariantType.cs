@@ -177,6 +177,10 @@ namespace AutoItCoreLibrary
             }
         }
 
+        public string ToCOMString() => _data.VariantData.Match(_ => "", _ => "", o => o?.ToString() ?? "");
+
+        public string ToArrayString() => IsArray ? $"[{string.Join(", ", this.Select(x => x.ToArrayString()))}]" : ToCOMString();
+
         public string ToDebugString() => _data.VariantData.Match(s => s, a => $"[ {string.Join(", ", a.Select(x => x.ToDebugString()))} ]", o => $"[{o?.GetType()?.Name ?? "<void*>"}]:  {o}");
 
         public override bool Equals(object obj) => obj is AutoItVariantType o && Equals(o);

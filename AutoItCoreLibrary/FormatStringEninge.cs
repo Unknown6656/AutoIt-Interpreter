@@ -203,7 +203,7 @@ namespace AutoItCoreLibrary
 
                             return "";
                         case VariableEscapeState.Type:
-                            object param = args[_aindex] ?? new AutoItVariantType("");
+                            object param = (_aindex < args.Length ? args[_aindex] : null) ?? AutoItVariantType.Empty;
                             long precision = long.Parse('0' + _prc);
                             long width = long.Parse('0' + _wdh);
                             string prefix = "";
@@ -262,18 +262,47 @@ namespace AutoItCoreLibrary
 
                                     break;
                                 case 'f':
+                                case 'F':
+                                case 'g':
+                                case 'G':
                                     res = ((decimal)param).ToString();
 
-                                    if (_numsign && !res.Contains("."))
+                                    if ((_numsign || precision > 0) && !res.Contains("."))
                                         res += ".0";
+
+                                    int idx = res.IndexOf('.');
+
+                                    if ((idx > 0) && (precision > 0) && (res.Length - (idx + 1) < precision))
+                                        res += new string('0', (int)(precision - res.Length + idx + 1)); // TODO: ?
+
+                                    if (char.ToLower(first) == 'f')
+                                        res = res.Remove((int)(idx + precision));
 
                                     break;
                                 case 'e':
                                 case 'E':
-                                case 'g':
-                                case 'G':
+                                    
+                                    // TODO
 #warning TODO
-                                    goto default; // TODO
+
+                                    break;
+                                case 'a':
+                                case 'A':
+                                    if (param is AutoItVariantType variant)
+                                    {
+                                        _0pad = false;
+
+                                        if (variant.IsString)
+                                            res = variant.ToString();
+                                        else if (variant.IsArray)
+                                            res = variant.ToArrayString();
+                                        else if (variant.IsCOM)
+                                            res = variant.ToCOMString();
+
+                                        break;
+                                    }
+                                    else
+                                        goto case 's';
                                 case 's':
                                     _0pad = false;
                                     res = param.ToString();
