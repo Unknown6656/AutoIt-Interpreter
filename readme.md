@@ -59,3 +59,6 @@ _An historic image:_<br/>
 
 _A not-so-historic image:_<br/>
 ![Exception Screenshot](doc/images/wtf-2.png)
+
+_Don't change the code of anonymous, dynamic types during runtime debugging:_<br/>
+![Exception Screenshot](doc/images/wtf-3.png)

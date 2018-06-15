@@ -251,6 +251,7 @@ namespace AutoItInterpreter
         public InterpreterState Interpret()
         {
             DirectoryInfo subdir = RootContext.SourcePath.Directory.CreateSubdirectory(".autoit++-compiler");
+            Dictionary<long, (DefinitionContext, string)> debugsymbols = new Dictionary<long, (DefinitionContext, string)>();
             DebugPrintUtil.FinalResult fr;
             InterpreterState state;
             bool success = false;
@@ -279,7 +280,8 @@ namespace AutoItInterpreter
 
                 ASTProcessor.ParseExpressionAST(state, Options);
 
-                string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options);
+                string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options, debugsymbols);
+                string dbg_code = ApplicationGenerator.GenerateCSharpDebugProviderCode(state, Options, debugsymbols);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName, out string log);
                 void cmperr(string msg, params object[] args) => state.ReportKnownError(msg, new DefinitionContext(null as FileInfo, 0), args);
 
@@ -331,6 +333,7 @@ namespace AutoItInterpreter
                         cmperr("errors.generator.target_deprecated", target.Compatibility);
 
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.cs", cs_code);
+                    File.WriteAllText($"{subdir.FullName}/debugsymbols.cs", dbg_code);
                     File.WriteAllText($"{subdir.FullName}/{ProjectName}.log", string.Join("\n", state.Errors.Select(err => err.ToString())));
 
                     if (Options.UseVerboseOutput && (!state.Fatal || Options.GenerateCodeEvenWithErrors))

@@ -32,6 +32,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118
 		doc\usage.md = doc\usage.md
 		doc\images\wtf-1.png = doc\images\wtf-1.png
 		doc\images\wtf-2.png = doc\images\wtf-2.png
+		doc\images\wtf-3.png = doc\images\wtf-3.png
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"

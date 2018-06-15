@@ -23,8 +23,9 @@ namespace AutoItInterpreter
         public FileInfo File { get; }
 
 
-        public RawLine(string c, int[] l, FileInfo f) =>
-            (Content, OriginalLineNumbers, File) = (c, l, f);
+        public RawLine(string c, int[] l, FileInfo f) => (Content, OriginalLineNumbers, File) = (c, l, f);
+
+        public override string ToString() => $"{File.Name}@{string.Join(":", OriginalLineNumbers)} \"{Content?.Trim() ?? ""}\"";
     }
 
     internal static class InterpreterConstants
