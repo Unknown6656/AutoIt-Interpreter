@@ -1,5 +1,6 @@
 ﻿{
     "errors": {
+        "__user__": 1000,
         "general": {
             "no_input": 1001,
             "inputfile_nfound": 1002,
@@ -88,6 +89,7 @@
         }
     },
     "warnings": {
+        "__user__": 2000,
         "preproc": {
             "no_closing_comment": 2001,
             "exit_level_truncated": 2002,
@@ -111,6 +113,7 @@
         "not_impl": 2999
     },
     "notes": {
+        "__user__": 3000,
         "optimized_away": 3001,
         "empty_block": 3002,
         "uncalled_function": 3003,

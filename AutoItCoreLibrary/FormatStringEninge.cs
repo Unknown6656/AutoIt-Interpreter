@@ -281,7 +281,7 @@ namespace AutoItCoreLibrary
                                     break;
                                 case 'e':
                                 case 'E':
-                                    
+
                                     // TODO
 #warning TODO
 

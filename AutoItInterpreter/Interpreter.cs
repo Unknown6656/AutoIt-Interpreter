@@ -1104,6 +1104,27 @@ namespace AutoItInterpreter
 
                         }
                     }),
+                    (@"^(?<type>note|warning|error)\s+(?<msg>[^\s].*)$", m =>
+                    {
+                        string msg = m.Get("msg").Trim();
+
+                        if (msg.Length > 0)
+                            switch (m.Get("type").ToLower())
+                            {
+                                case "note":
+                                    st.ReportNote(msg, defcntx, 3000);
+
+                                    break;
+                                case "warning":
+                                    st.ReportWarning(msg, defcntx, 2000);
+
+                                    break;
+                                case "error":
+                                    st.ReportError(msg, defcntx, 1000);
+
+                                    break;
+                            }
+                    }),
                     (@"^include(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
                     {
                         string path = new[] { "glob", "loc1", "loc2" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0);
