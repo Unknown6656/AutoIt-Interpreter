@@ -401,8 +401,8 @@ namespace AutoItInterpreter
 
             const int iwdith = 60;
             int iheight = 12 + GetSmallText().Length;
-            int w = Console.WindowWidth - 1;
-            int sdist = (Console.WindowWidth - iwdith) / 2;
+            int w = Math.Max(Console.WindowWidth - 1, 64);
+            int sdist = (w + 1 - iwdith) / 2;
             Random rand = new Random(Guid.NewGuid().GetHashCode());
             byte[] rline = new byte[w];
 
@@ -412,6 +412,12 @@ namespace AutoItInterpreter
 
                 for (int x = 0; x < w; ++x)
                     Console.Write((char)((rline[x] % 0x4f) + ' '));
+
+                if (y == 1)
+                {
+                    Console.CursorLeft = 5;
+                    Console.Write("Bush did 9/11");
+                }
 
                 Console.WriteLine();
             }
