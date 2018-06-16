@@ -208,10 +208,14 @@ The following basic rules apply:
    <br/>Keeps temporary generated code files.
  - **`-g` or `--generate-always`:**
    <br/>Generates always temporary code files. (Even if some fatal errors have occured)
+ - **`-d` or `--debug`:**
+   <br/>Includes the debugging symbols into the resulting application.
  - **`-t=...` or `--target-system=...`:**
    <br/>Compiles the application against the given target system.
  - **`-a=...` or `--architecture=...`:**
    <br/>Compiles the application against the given target architecture.
+ - **`-kp=...` or `--key-pair=...`:**
+   <br/> Signs the generated application with the given public/private key-pair. Web paths are also accepted as source paths.
 
 #### The target system and architecture
 
@@ -280,6 +284,10 @@ All compiled applications (independent from their target platform) can also be e
 $ dotnet <path>/<name>.dll
 ```
 where `name` is usually `AutoItApplication`. It can vary, if the corresponding `#pragma option ...`-lines have been specified in the input code.
+
+TODO
+
+# Debugging AutoIt applications with `-d` or `--debug`
 
 TODO
 

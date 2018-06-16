@@ -43,7 +43,9 @@
             "no_path_provided": "No path has been provided.",
             "certificate_nfound": "The SNK/PFX certificate file '{0}' could not be found or is inaccessible.",
             "directive_requires_unsafe": "The directive '#{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
-            "directive_requires_debug": "The directive '#{0}' can only be used when compiled with the compiler-flag '--debug' or '-d'."
+            "directive_requires_debug": "The directive '#{0}' can only be used when compiled with the compiler-flag '--debug' or '-d'.",
+            "dependency_invalid": "The .NET dependency '{0}' could not be found or is invalid. Please verify whether the file has a valid PE and .NET header.",
+            "invalid_namepsace": "The .NET namespace '{0}' has an invalid format."
         },
         "astproc": {
             "unknown_entity": "Internal error: The entity '{0}' is unknown.",

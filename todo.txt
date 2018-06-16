@@ -94,3 +94,4 @@
     [x] add compiler directive
 [x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
 [-] fix variable scoping
+[x] fix the expressions 'num(...)' and 'num[...]'

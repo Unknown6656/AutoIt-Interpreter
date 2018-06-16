@@ -185,8 +185,9 @@ type Serializer (settings : SerializerSettings) =
                             | f -> let rf = x.Settings.FunctionResolver.Invoke(f, List.toArray es)
                                    sprintf "%s(%s)" (rf.Name) (printparams (rf.Name) es (rf.Parameters))
                       | ΛFunctionCall (e, es) -> sprintf "(%s).Call(%s)" (printexpr e) (printparams "<anonymous>" es null)
-                      | ArrayAccess (e, i) -> sprintf "%s[%s]" (printexpr e) (printexpr i)
-                      | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) (m
+                      | ArrayAccess (e, i) -> sprintf "(%s)[%s]" (printexpr e) (printexpr i)
+                      | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) // TODO
+                                                                         (m
                                                                           |> List.map (fun m -> "." + match m with
                                                                                                       | Method f -> printexpr (FunctionCall f)
                                                                                                       | Field f -> f)

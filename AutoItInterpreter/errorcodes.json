@@ -38,7 +38,9 @@
             "no_path_provided": 1129,
             "certificate_nfound": 1130,
             "directive_requires_unsafe": 1131,
-            "directive_requires_debug": 1132
+            "directive_requires_debug": 1132,
+            "dependency_invalid": 1133,
+            "invalid_namepsace": 1134
         },
         "astproc": {
             "unknown_entity": 1201,

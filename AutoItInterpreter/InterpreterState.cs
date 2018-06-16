@@ -111,6 +111,7 @@ namespace AutoItInterpreter
         public Dictionary<string, (string Signature, string Library, DefinitionContext Context)> PInvokeFunctions { get; }
         public List<(string Func, DefinitionContext Context)> StartFunctions { get; }
         public List<(string Func, DefinitionContext Context)> ExitFunctions { get; }
+        public List<string> Namespaces { get; }
         public CompileInfo CompileInfo { private protected set; get; }
         public FileInfo RootDocument { get; set; }
         public Language Language { get; set; }
@@ -129,6 +130,7 @@ namespace AutoItInterpreter
             _errors = new List<InterpreterError>();
             StartFunctions = new List<(string, DefinitionContext)>();
             ExitFunctions = new List<(string, DefinitionContext)>();
+            Namespaces = new List<string>();
             CompileInfo = new CompileInfo();
             UseTrayIcon = true;
         }
@@ -189,9 +191,10 @@ namespace AutoItInterpreter
             };
             s.StartFunctions.AddRange(ps.StartFunctions);
             s.ExitFunctions.AddRange(ps.ExitFunctions);
+            s.Namespaces.AddRange(ps.Namespaces);
             s._errors.AddRange(ps.Errors);
 
-            foreach (var kvp in ps.PInvokeFunctions)
+            foreach (KeyValuePair<string, (string, string, DefinitionContext)> kvp in ps.PInvokeFunctions)
                 s.PInvokeFunctions[kvp.Key] = kvp.Value;
 
             return s;

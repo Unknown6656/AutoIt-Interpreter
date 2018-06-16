@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Net.Http;
 using System.Text;
 using System.Linq;
@@ -318,7 +319,7 @@ namespace AutoItInterpreter
                             cmperr("errors.generator.key_not_found", keypath);
                         }
 
-                    foreach (FileInfo dep in deps)
+                    foreach (FileInfo dep in deps.Concat(Options.Dependencies.Select(x => new FileInfo(x.Location))))
                     {
                         FileInfo tmp = new FileInfo(Path.Combine(subdir.FullName, dep.Name));
 
@@ -1091,17 +1092,41 @@ namespace AutoItInterpreter
                     ("^debugattach$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugattach.au3")),
                     ("^debugprint$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugprint.au3")),
                     ("^breakpoint$", _ => inclpath = debuggerdirective(CMP_INCLUDE_DIR + "debugbreak.au3")),
-                    (@"^using(\s|\b)\s*\""(?<asm>.*)\""$", m =>
+                    (@"^using\[csharp\]\s+(?<ns>.+)$", m =>
                     {
-                        string path = m.Get("asm").Trim();
+                        if (m.Get("ns").Trim().Match(@"^[_a-z]\w+(\.[_a-z]\w+)*$", out Match mm))
+                            st.Namespaces.Add(mm.ToString());
+                        else
+                            err("errors.preproc.invalid_namepsace", m.Get("ns"));
+                    }),
+                    (@"^using(\s|\b)\s*(\<(?<glob>.*)\>|\""(?<loc1>.*)\""|\'(?<loc2>.*)\')$", m =>
+                    {
+                        string path = new[] { "glob", "loc1", "loc2" }.Select(m.Get).FirstOrDefault(x => x?.Length > 0)?.Trim() ?? "";
+                        FileInfo nfo = null;
 
                         if (path.Length == 0)
                             err("errors.preproc.no_path_provided");
                         else
                         {
+                            try
+                            {
+                                if (!(nfo = FileResolver.Resolve(path)).Exists)
+                                    nfo = null;
+                            }
+                            catch
+                            {
+                            }
 
-#warning TODO
+                            try
+                            {
+                                Assembly asm = Assembly.LoadFrom(nfo.FullName);
 
+                                options.Dependencies.Add(asm);
+                            }
+                            catch
+                            {
+                                err("errors.preproc.dependency_invalid", path);
+                            }
                         }
                     }),
                     (@"^(?<type>note|warning|error)\s+(?<msg>[^\s].*)$", m =>

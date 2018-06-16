@@ -18,9 +18,10 @@ This article highlights the most important **differences** between AutoIt3's and
 9) [The `#OnAutoItExitRegister` directive](#onautoitexitregister-directive)
 10) [The `#include` directive](#include-directive)
 11) [The `#sign` directive](#sign-directive)
-12) [The `#debugattach`, `#debugprint` and `#breakpoint` directives](#debugattach-debugprint-and-breakpoint-directives)
-12) [The `#note`, `#warning` and `#error` directives](#note-warning-and-error-directives)
-13) [`enum` declarations](#enum-declarations)
+12) [The `#using` directive](#using-directive)
+13) [The `#debugattach`, `#debugprint` and `#breakpoint` directives](#debugattach-debugprint-and-breakpoint-directives)
+14) [The `#note`, `#warning` and `#error` directives](#note-warning-and-error-directives)
+15) [`enum` declarations](#enum-declarations)
 
 <br/>
 For a more detailed and formal syntax description of the AutoIt++ dialect, please refer to the [AutoIt++ syntax tree reference](syntax-tree.md).
@@ -158,17 +159,6 @@ ConsoleWrite($"\t$first_byte and $second_byte\n")
 
 Free($region)                   ; Free the memory region
 ```
-
-A function's assembler code can also be read via the `°` operator:
-```autoit
-Func f($a, $b)
-    Return 2 * $a + $b
-EndFunc
-
-$pointer = f
-$asm = °$pointer
-```
-The variable `asm` in the example above would contain the first assembler instruction byte of the function `f`.
 
 It is also possible to dereference constant pointers, e.g:
 ```autoit
@@ -528,6 +518,14 @@ __vars["name"]      // represents $name
 __macros["name"]    // represents @name
 ```
 
+To include a .NET namespace and use it inside an inline-C# code snippet, use the following directive:
+```autoit
+using[csharp] ...
+```
+where `...` is the name of the namespace, e.g. `System.Data` or `System.Security.Cryptography`.
+
+Use the directive `#using <...>` to include a .NET library. For more information about the `#using`-directive [jump to this section](#using-directive).
+
 **NOTE: The usage of inline-C#-code is considered unsafe, and therefore needs the compiler switch `-u` or `--unsafe` to compile.**
 
 # `ifn't`
@@ -590,6 +588,10 @@ Examples:
 Please refer to the [AutoIt++ runtime behaviour description](runtime.md) for more information about the `#include` file path resoltion.
 
 # `#sign`-directive
+
+TODO
+
+# `#using`-directive
 
 TODO
 

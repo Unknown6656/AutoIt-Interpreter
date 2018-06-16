@@ -190,6 +190,7 @@ using System.Linq;
 using System.Data;
 using System.IO;
 using System;
+{string.Concat(state.Namespaces.Select(ns => $"\nusing {ns};"))}
 
 using {nameof(AutoItCoreLibrary)};
 

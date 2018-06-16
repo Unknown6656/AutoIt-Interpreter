@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -33,6 +34,7 @@ namespace AutoItInterpreter
 
                 Dictionary<string, List<string>> dic = ParseParameters(argv,
                     ("d", "debug"),
+                    ("dp", "dependencies"),
                     ("o", "output"),
                     ("u", "unsafe"),
                     ("c", "clean-output"),
@@ -114,7 +116,7 @@ namespace AutoItInterpreter
                 settings.ToFile(stgpath);
 
                 #endregion
-                #region DO MAGIC
+                #region OPTIONS
 
                 if (!Cont("keep-temp") && Cont("debug") && Cont("run"))
                     dic["keep-temp"] = new List<string>();
@@ -158,6 +160,20 @@ namespace AutoItInterpreter
                         throw new ArgumentException($"The argument '{GetF("architecture")}' is not a valid architecture.");
                     }
 
+                List<Assembly> deps = new List<Assembly>();
+
+                foreach (string dep in Get("dependencies"))
+                    try
+                    {
+                        deps.Add(Assembly.LoadFrom(new FileResolver(dep).Resolve().FullName));
+                    }
+                    catch
+                    {
+                        lang["errors.preproc.dependency_invalid", dep].Error();
+                    }
+
+                opt.Dependencies.AddRange(deps);
+
                 try
                 {
                     intp = new Interpreter(GetF("input"), opt);
@@ -172,9 +188,9 @@ namespace AutoItInterpreter
                     return -1;
                 }
 
-                InterpreterState result = intp.Interpret();
-
                 #endregion
+
+                InterpreterState result = intp.Interpret();
 
                 if (result.Result > DebugPrintUtil.FinalResult.OK_Warnings)
                     return result.Errors.Count(x => x.Type == ErrorType.Fatal);
@@ -456,6 +472,7 @@ namespace AutoItInterpreter
                                                          : Win32.System == OS.Linux ? Compatibility.linux : Compatibility.osx;
         public Architecture TargetArchitecture { set; get; } = RuntimeInformation.OSArchitecture;
         public Dictionary<string, List<string>> RawArguments { set; get; }
+        public List<Assembly> Dependencies { get; } = new List<Assembly>();
         public bool IncludeDebugSymbols { get; set; }
         public bool TreatWarningsAsErrors { get; set; }
         public bool CleanTargetFolder { set; get; }

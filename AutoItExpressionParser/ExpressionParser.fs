@@ -203,6 +203,9 @@ type ExpressionParser(mode : ExpressionParserMode) =
                                 | TernaryMiddle -> reduce5 c n x c y n f
                                 | TernaryRight -> reduce5 c n x n y c f
                                 reduce0 c n
+        let reducett i o x y f = let f = (fun a _ b _ c -> f a b c)
+                                 reduce5 !@i !@o x !@o y !@o f
+                                 reduce0 !@i !@(i + 1)
         let reduceb i h x f = let n = !@(i + 1)
                               let c = !@i
                               let f = (fun a _ b -> f a b)
@@ -291,8 +294,12 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reducebe 14 BinaryLeft t_operator_comp_eq EqualCaseSensitive
         reducebe 15 BinaryLeft t_symbol_ampersand StringConcat
         ///////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////
-        // reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
-        // reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        //  reducet 16 TernaryLeft t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
+        //  reducet 17 TernaryLeft t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        // or
+        //  reducett 16 20 t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
+        //  reducett 17 20 t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+
         reduce0 !@16 !@18
         reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
         reduceb 19 BinaryLeft t_operator_at0 (fun e i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number 1m), Literal <| Number 1m), e))
