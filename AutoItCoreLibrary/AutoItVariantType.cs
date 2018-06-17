@@ -70,7 +70,9 @@ namespace AutoItCoreLibrary
 
         public bool IsArray => _data.IsArray;
 
-        public bool IsCOM => _data.IsCOM;
+        public bool IsObject => _data.IsObject;
+
+        public bool IsCOM => IsObject && UseGCHandledData<object, bool>(x => x is COM);
 
         public bool IsString => _data.IsString;
 
@@ -162,26 +164,31 @@ namespace AutoItCoreLibrary
 
         public override string ToString() => IsDefault ? "Default" : IsString ? (string)_data.VariantData : "";
 
-        public override int GetHashCode()
+        public override int GetHashCode() => _data.VariantData.Match(s => s.GetHashCode(), arr =>
         {
-            if (IsString)
-                return ToString().GetHashCode();
-            else
+            int code = 0x3d10f062 << (arr.Length % 27);
+            int shft = 0x31544a88;
+
+            foreach (AutoItVariantType v in arr)
             {
-                int code = 0x3d10f062 << (int)(Length % 27);
+                code ^= v.GetHashCode();
+                shft = (int)((shft * 1103515245L + 12345L) & 0x7ffffffcL);
 
-                foreach (AutoItVariantType v in this)
-                    code ^= v.GetHashCode();
-
-                return code;
+                if (((shft ^ code) % 3) == 1)
+                {
+                    code ^= ~shft;
+                    ++shft;
+                }
             }
-        }
+
+            return code - (shft & 7);
+        }, o => (o ?? new object()).GetHashCode());
 
         public string ToCOMString() => _data.VariantData.Match(_ => "", _ => "", o => o?.ToString() ?? "");
 
         public string ToArrayString() => IsArray ? $"[{string.Join(", ", this.Select(x => x.ToArrayString()))}]" : ToCOMString();
 
-        public string ToDebugString() => _data.VariantData.Match(s => s, a => $"[ {string.Join(", ", a.Select(x => x.ToDebugString()))} ]", o => $"[{o?.GetType()?.Name ?? "<void*>"}]:  {o}");
+        public string ToDebugString() => _data.VariantData.Match(s => s, a => $"{a.Length}: [| {string.Join(", ", a.Select(x => x.ToDebugString()))} |]", o => $"[{o?.GetType()?.Name ?? "<void*>"}]:  {o}");
 
         public override bool Equals(object obj) => obj is AutoItVariantType o && Equals(o);
 
@@ -368,6 +375,10 @@ namespace AutoItCoreLibrary
 
         private void UseGCHandledData(Action<object> func) => _data.VariantData.Match(default, default, func);
 
+        public object GetCOMObject() => GetCOMObject<object>();
+
+        public T GetCOMObject<T>() => UseGCHandledData<object, T>(x => (T)x);
+
         public void UseGCHandledData<T>(Action<T> func) => UseGCHandledData(o => func((T)o));
 
         public void UseDisposeGCHandledData<T>(Action<T> func) where T : IDisposable => UseGCHandledData<T>(t =>
@@ -544,13 +555,14 @@ namespace AutoItCoreLibrary
         public static AutoItVariantType operator ^(AutoItVariantType v1, AutoItVariantType v2) => (decimal)Math.Pow((double)(decimal)v1, (double)(decimal)v2);
         public static bool operator ==(AutoItVariantType v1, AutoItVariantType v2)
         {
-            string s1 = v1.ToString();
-            string s2 = v2.ToString();
-
-            if ((s1.Length + s2.Length) == 0)
-                return v1.ToDebugString() == v2.ToDebugString();
+            if (v1.IsString && v2.IsString)
+                return v1.ToString() == v2.ToString();
+            else if (v1.IsObject && v2.IsObject)
+                return v1.GetCOMObject() == v2.GetCOMObject();
+            else if (v1.IsArray && v2.IsArray)
+                return v1.SequenceEqual(v2);
             else
-                return (s1 == s2) && ((decimal)v1 == (decimal)v2);
+                return false;
         }
         public static bool operator !=(AutoItVariantType v1, AutoItVariantType v2) => !(v1 == v2);
         public static bool operator <(AutoItVariantType v1, AutoItVariantType v2) => (decimal)v1 < (decimal)v2;
@@ -566,7 +578,7 @@ namespace AutoItCoreLibrary
             public Union3<string, AutoItVariantType[], object> VariantData { get; }
             public bool IsString => VariantData.IsA;
             public bool IsArray => VariantData.IsB;
-            public bool IsCOM => VariantData.IsC;
+            public bool IsObject => VariantData.IsC;
             public long[] Sizes { get; }
             public bool IsDefault => (Sizes.LongLength == 1) && (Sizes[0] == -1);
             public long Dimensions => Sizes.Count(l => l >= 0);
@@ -615,6 +627,26 @@ namespace AutoItCoreLibrary
         }
 
         #endregion
+    }
+
+    public sealed class COM
+    {
+        public object Instance { get; }
+        public Type Type { get; }
+
+
+        public COM(Type t, params object[] args)
+        {
+            Type = t;
+            Instance = Activator.CreateInstance(t, args ?? new object[0]);
+        }
+
+        public static AutoItVariantType CreateCOM(string name, string server = null)
+        {
+            Type t = Guid.TryParse(name.TrimStart('{').TrimEnd('}'), out Guid guid) ? Type.GetTypeFromCLSID(guid, server) : Type.GetTypeFromProgID(name, server);
+
+            return AutoItVariantType.NewGCHandledData(new COM(t));
+        }
     }
 
 #pragma warning disable RCS1194

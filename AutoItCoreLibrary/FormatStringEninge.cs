@@ -296,7 +296,7 @@ namespace AutoItCoreLibrary
                                             res = variant.ToString();
                                         else if (variant.IsArray)
                                             res = variant.ToArrayString();
-                                        else if (variant.IsCOM)
+                                        else if (variant.IsObject)
                                             res = variant.ToCOMString();
 
                                         break;
