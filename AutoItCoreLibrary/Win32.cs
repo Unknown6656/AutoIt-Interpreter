@@ -221,6 +221,15 @@ namespace AutoItCoreLibrary
 
         [DllImport("ws2_32.dll", SetLastError = true)]
         internal static extern int WSAGetLastError();
+
+        [DllImport("ole32.dll")]
+        internal static extern int ProgIDFromCLSID(ref Guid clsid, [MarshalAs(UnmanagedType.LPWStr)] out string lplpszProgID);
+
+        [DllImport("ole32.dll")]
+        internal static extern int OleCreateFromFile(ref Guid rclsid, [MarshalAs(UnmanagedType.LPWStr)] string lpszFileName, ref Guid riid, int renderopt, void* lpFormatEtc, void* pClientSite, IStorage pStg, out IOleObject ppvObj);
+
+        [DllImport("ole32.dll")]
+        internal static extern int StgCreateStorageEx([MarshalAs(UnmanagedType.LPWStr)] string pwcsName, int grfMode, int stgfmt, int grfAttrs, void* pStgOptions, void* reserved2, ref Guid riid, out IStorage ppObjectOpen);
     }
 
     public static class AsyncHelper

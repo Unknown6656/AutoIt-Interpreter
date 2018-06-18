@@ -141,7 +141,7 @@ namespace AutoItInterpreter
                                                let pt = Path.GetFullPath(src.Path.FullName).Replace('\\', '/')
                                                where winsys ? path.Equals(pt, StringComparison.InvariantCultureIgnoreCase) : path == pt
                                                from ll in src.Lines
-                                               let ls = ll.OriginalLineNumbers[0]
+                                               let ls = ll.OriginalLineNumbers[0] + 1
                                                where ls >= start
                                                where ls < start + count
                                                select ll;
@@ -496,7 +496,7 @@ namespace {NAMESPACE}
 
                 DefinitionContext context = e.Context;
 
-                if (options.IncludeDebugSymbols)
+                if (options.IncludeDebugSymbols && !(e is AST_EXPRESSION_STATEMENT))
                     println($"{SYMBOL} = {adddbgsymbol(e.Context)};");
 
                 switch (e)

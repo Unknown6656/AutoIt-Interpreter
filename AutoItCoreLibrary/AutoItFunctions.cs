@@ -380,7 +380,7 @@ namespace AutoItCoreLibrary
             Console.WriteLine("globals:");
 
             foreach (string var in vardic._globals.Keys)
-                Console.WriteLine($"    ${var} = \"{vardic._globals[var]}\"");
+                Console.WriteLine($"    ${var} = \"{vardic._globals[var].ToDebugString()}\"");
 
             if (vardic._locals.Count > 0)
             {
@@ -389,7 +389,7 @@ namespace AutoItCoreLibrary
                 Console.WriteLine("locals:");
 
                 foreach (string var in topframe.Keys)
-                    Console.WriteLine($"    ${var} = \"{topframe[var]}\"");
+                    Console.WriteLine($"    ${var} = \"{topframe[var].ToDebugString()}\"");
             }
         });
 
@@ -793,6 +793,110 @@ namespace AutoItCoreLibrary
         public static var Min(var v1, var v2) => v1 <= v2 ? v1 : v2;
         [BuiltinFunction]
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
+
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var ObjCreate(var name, var? srv = null, var? user = null, var? pass = null)
+        {
+            // TODO : use params ?
+
+            try
+            {
+                return var.CreateCOM(name, srv?.ToString());
+            }
+            catch
+            {
+                SetError(-1);
+
+                return var.Empty;
+            }
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows), ObsoleteFunction(true, nameof(ObjCreateInterface), nameof(ObjGet), nameof(ObjCreate))]
+        public static var ObjCreateInterface(var clsid, var iid, var? sig = null, var? flag = null) => throw new NotImplementedException();
+        [BuiltinFunction, CompatibleOS(OS.Windows), Warning("warnings.func_not_impl")]
+        public static var ObjEvent(var obj, var prefix, var? iface = null)
+        {
+            throw new NotImplementedException(); // TODO
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var ObjGet(var path, var? @class = null, var? instance = null)
+        {
+            var cls = @class ?? var.Empty;
+            var com;
+
+            if (cls.Length > 0)
+                try
+                {
+                    com = ObjCreate(cls);
+
+                    if (com.IsCOM)
+                        return com;
+                }
+                catch
+                {
+                }
+
+            Guid clsid_null = Guid.Empty;
+            Guid iidoleobj = new Guid("{00000112-0000-0000-C000-000000000046}");
+            Guid iidstrg = new Guid("{0000000B-0000-0000-C000-000000000046}");
+
+            var outp = path & "~tmpcpy";
+
+            StgCreateStorageEx(outp, 0x00011012, 5, 0, null, null, ref iidstrg, out IStorage storage);
+            OleCreateFromFile(ref clsid_null, path, ref iidoleobj, 0, null, null, storage, out IOleObject ole);
+
+            if (File.Exists(outp))
+                File.Delete(outp);
+
+            try
+            {
+                com = ObjCreate(cls);
+
+                if (com.IsCOM)
+                    return com;
+            }
+            catch
+            {
+            }
+
+            // TODO ??
+
+            throw new NotImplementedException();
+        }
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var ObjName(var com, var? flag = null)
+        {
+            try
+            {
+                COM c = com.GetCOM();
+                Guid guid = c.Type.GUID;
+
+                switch ((flag ?? 1).ToInt())
+                {
+                    case 2:
+                        return c.Information.Description;
+                    case 3:
+                        ProgIDFromCLSID(ref guid, out string progid);
+
+                        return progid;
+                    case 4:
+                        return c.Type.Assembly.Location;
+                    case 5:
+                        return c.Type.Module.FullyQualifiedName;
+                    case 6:
+                        return guid.ToString("B").ToUpper();
+                    case 7:
+                        return "{00000000-0000-0000-0000-000000000000}"; // TODO
+                    default:
+                        return c.Information.Name;
+                }
+            }
+            catch
+            {
+                SetError(-1);
+
+                return var.Empty;
+            }
+        }
 
         [BuiltinFunction]
         public static var StringFormat(var fmt, params var[] args) => new FormatStringEngine(fmt).Format(args.Select(x => x as object).ToArray());

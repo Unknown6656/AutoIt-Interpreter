@@ -38,7 +38,7 @@
 [x] implement main return
 [x] implement non-string main arguments
 [x] implement local macros
-[ ] COM-interop
+[-] COM-interop
 [x] ifn't
 [x] fix byref calls
 [x] fix params calls
@@ -95,3 +95,4 @@
 [x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
 [-] fix variable scoping
 [x] fix the expressions 'num(...)' and 'num[...]'
+[x] fix debugging symbols

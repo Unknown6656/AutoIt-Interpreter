@@ -260,6 +260,22 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
+        public static void DisplayGeneratedSymbolTable(Dictionary<long, (DefinitionContext, string)> debugsymbols)
+        {
+            PrintSeperator("GENERATED DEBUG SYMBOL TABLE");
+
+            Console.WriteLine($"Generated {debugsymbols.Count} debug symbols:");
+
+            foreach (long idx in debugsymbols.Keys.OrderBy(i => i))
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"    {idx:x16}h ({idx})");
+                Console.CursorLeft = 45;
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine($"{debugsymbols[idx].Item1} {debugsymbols[idx].Item2}");
+            }
+        }
+
         public static void DisplayCodeAndErrors(InterpreterState state)
         {
             PrintSeperator("ERRORS, WARNINGS AND NOTES");

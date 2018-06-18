@@ -99,6 +99,8 @@ namespace AutoItCoreLibrary
 
         public static AutoItVariantType Null { get; } = (void*)null;
 
+        public static AutoItVariantType NullObject { get; } = NewGCHandledData(null);
+
         public static AutoItVariantType Empty { get; } = "";
 
         #endregion
@@ -184,7 +186,12 @@ namespace AutoItCoreLibrary
             return code - (shft & 7);
         }, o => (o ?? new object()).GetHashCode());
 
-        public string ToCOMString() => _data.VariantData.Match(_ => "", _ => "", o => o?.ToString() ?? "");
+        public string ToCOMString()
+        {
+            AutoItVariantType vt = this;
+
+            return _data.VariantData.Match(s => s, _ => vt.ToArrayString(), o => o?.ToString() ?? "");
+        }
 
         public string ToArrayString() => IsArray ? $"[{string.Join(", ", this.Select(x => x.ToArrayString()))}]" : ToCOMString();
 
@@ -375,9 +382,11 @@ namespace AutoItCoreLibrary
 
         private void UseGCHandledData(Action<object> func) => _data.VariantData.Match(default, default, func);
 
-        public object GetCOMObject() => GetCOMObject<object>();
+        public COM GetCOM() => GetObject<COM>();
 
-        public T GetCOMObject<T>() => UseGCHandledData<object, T>(x => (T)x);
+        public object GetObject() => GetObject<object>();
+
+        public T GetObject<T>() => UseGCHandledData<object, T>(x => (T)x);
 
         public void UseGCHandledData<T>(Action<T> func) => UseGCHandledData(o => func((T)o));
 
@@ -398,6 +407,8 @@ namespace AutoItCoreLibrary
             return res;
         }
 
+        public AutoItVariantType InvokeCOM(string member, params object[] args) => IsCOM ? FromCOMObject(GetCOM().Invoke(member, args)) : NullObject;
+
         #endregion
         #region STATIC FUNCTIONS
 
@@ -410,6 +421,13 @@ namespace AutoItCoreLibrary
         public static bool Greater(AutoItVariantType v1, AutoItVariantType v2) => v1 > v2;
         public static bool GreaterEquals(AutoItVariantType v1, AutoItVariantType v2) => v1 >= v2;
 
+        public static AutoItVariantType FromCOMObject(object com) => NewGCHandledData(new COM(com));
+        public static AutoItVariantType CreateCOM(string name, string server = null)
+        {
+            Type t = Guid.TryParse(name.TrimStart('{').TrimEnd('}'), out Guid guid) ? Type.GetTypeFromCLSID(guid, server) : Type.GetTypeFromProgID(name, server);
+
+            return NewGCHandledData(new COM(t));
+        }
         public static AutoItVariantType NewDelegate<T>(T func) where T : Delegate => NewDelegate(func?.Method);
         public static AutoItVariantType NewDelegate(MethodInfo func) => func is null ? Null : CreateDelegate(func);
         public static AutoItVariantType NewGCHandledData(object gc) => gc is null ? Null : new AutoItVariantType(new AutoItVariantData(gc));
@@ -558,7 +576,7 @@ namespace AutoItCoreLibrary
             if (v1.IsString && v2.IsString)
                 return v1.ToString() == v2.ToString();
             else if (v1.IsObject && v2.IsObject)
-                return v1.GetCOMObject() == v2.GetCOMObject();
+                return v1.GetObject() == v2.GetObject();
             else if (v1.IsArray && v2.IsArray)
                 return v1.SequenceEqual(v2);
             else
@@ -627,26 +645,6 @@ namespace AutoItCoreLibrary
         }
 
         #endregion
-    }
-
-    public sealed class COM
-    {
-        public object Instance { get; }
-        public Type Type { get; }
-
-
-        public COM(Type t, params object[] args)
-        {
-            Type = t;
-            Instance = Activator.CreateInstance(t, args ?? new object[0]);
-        }
-
-        public static AutoItVariantType CreateCOM(string name, string server = null)
-        {
-            Type t = Guid.TryParse(name.TrimStart('{').TrimEnd('}'), out Guid guid) ? Type.GetTypeFromCLSID(guid, server) : Type.GetTypeFromProgID(name, server);
-
-            return AutoItVariantType.NewGCHandledData(new COM(t));
-        }
     }
 
 #pragma warning disable RCS1194

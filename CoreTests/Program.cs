@@ -36,19 +36,10 @@ namespace CoreTests
 
             AutoItFunctions.Debug(v.NewArray(v.NewArray(1,0,0), v.NewArray(0,1,0), v.NewArray(0,0,1)));
 
+            v com = v.CreateCOM("shell.application");
+            var tp = com.GetCOM().Type;
 
-
-            if (Guid.TryParse("".TrimStart('{').TrimEnd('}'), out Guid guid))
-                ;
-            else
-                ;
-
-            Type t = Type.GetTypeFromProgID("System.Random");
-
-            dynamic o = Activator.CreateInstance(t);
-            var res0 = t.InvokeMember("Next", BindingFlags.InvokeMethod, null, o, new object[] { });
-            
-
+            AutoItFunctions.Debug(com);
         }
 
         public static v TOP_KEK(v v1, v v2, v v3, v? v4 = null) => $"v1={v1}, v2={v2}, v3={v3}, v4={v4 ?? v.Null}";

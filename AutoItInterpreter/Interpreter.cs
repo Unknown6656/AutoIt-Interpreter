@@ -342,6 +342,9 @@ namespace AutoItInterpreter
                         cs_code = Regex.Replace(cs_code, $@"\/\*{ApplicationGenerator.DISP_SKIP_S}\*\/.*\/\*{ApplicationGenerator.DISP_SKIP_E}\*\/", "        public static int Main(string[] argv) { ... }", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
                         DebugPrintUtil.DisplayGeneratedCode(cs_code);
+
+                        if (Options.IncludeDebugSymbols)
+                            DebugPrintUtil.DisplayGeneratedSymbolTable(debugsymbols);
                     }
 
                     DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
