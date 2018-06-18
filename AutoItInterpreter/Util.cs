@@ -11,6 +11,14 @@ using Microsoft.FSharp.Core;
 
 using Newtonsoft.Json.Linq;
 
+using SixLabors.ImageSharp.Processing.Drawing;
+using SixLabors.ImageSharp.Processing.Text;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp;
+using SixLabors.Primitives;
+using SixLabors.Fonts;
+
 using AutoItCoreLibrary;
 
 namespace AutoItInterpreter
@@ -187,6 +195,9 @@ namespace AutoItInterpreter
 
     internal static class DebugPrintUtil
     {
+        public static readonly string PATH_COURIER_TTF = typeof(DebugPrintUtil).Assembly.Location + "/../courier.ttf";
+
+
         public static void PrintSeperator(string title = null, int width = -1)
         {
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -632,6 +643,63 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
+        public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state)
+        {
+            var filesources = (from fi in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer())
+                               where fi != null
+                               let lines = (File.ReadAllText(fi.FullName) + "\n").SplitIntoLines()
+                               let lerrs = state.Errors.Where(e => e.ErrorContext.FilePath is FileInfo nfo && Util.ArePathsEqual(nfo, fi)).ToArray()
+                               select new
+                               {
+                                   Path = fi,
+                                   Lines = (from line in lines.Zip(Enumerable.Range(1, lines.Length), (l, i) => (Index: i, Content: l))
+                                            let errs = from err in lerrs
+                                                       let start = err.ErrorContext.StartLine
+                                                       let end = err.ErrorContext.EndLine ?? start
+                                                       where (line.Index >= start) && (line.Index <= end)
+                                                       select (Error: err, Line: end - start + 1)
+                                            select new
+                                            {
+                                                line.Index,
+                                                line.Content,
+                                                HasErrors = errs.Any(),
+                                                Errors = errs.ToArray()
+                                            }),
+                                   LocalErrors = lerrs
+                               }).ToArray();
+            double height = (from source in filesources
+                             from line in source.Lines
+                             let ec = line.Errors.Length
+                             select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 3) + 2;
+            double width = Math.Min(50, (from source in filesources
+                                         from line in source.Lines
+                                         select Math.Max(line.Content.Length, line.Errors.Max(err => err.Error.ErrorMessage.Length))).Max() + 12);
+
+            FontCollection collection = new FontCollection();
+
+            if (!collection.TryFind("Courier new", out FontFamily fam))
+                fam = collection.Install(PATH_COURIER_TTF);
+
+            RendererOptions opt = new RendererOptions(new Font(fam, 12));
+            SizeF charsize = TextMeasurer.Measure("W", opt);
+
+            width *= charsize.Width;
+            height *= charsize.Height;
+
+            Image<Argb32> img = new Image<Argb32>((int)width, (int)height);
+            TextGraphicsOptions texopt = new TextGraphicsOptions(true)
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                BlenderMode = PixelBlenderMode.Atop,
+                TabWidth = 4,
+            };
+
+            img.Mutate(i => i.Fill())
+            img.Mutate(i => i.DrawText(texopt, "text", , ));
+            
+        }
+
 
         public enum FinalResult
             : byte
@@ -650,5 +718,90 @@ namespace AutoItInterpreter
         public bool Equals(FileInfo x, FileInfo y) => Util.ArePathsEqual(x, y);
 
         public int GetHashCode(FileInfo obj) => obj is null ? 0 : Path.GetFullPath(obj.FullName).GetHashCode();
+    }
+
+    public sealed class VisualDisplayOptions
+    {
+        // TODO
+        //public static VisualDisplayOptions ThemeLight { get; } = new VisualDisplayOptions(
+        //    "Courier New",
+        //    0xFFD0D0D0,
+        //    0x,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    ,
+        //    '^'
+        //);
+        public static VisualDisplayOptions ThemeDark { get; } = new VisualDisplayOptions(
+            "Courier New",
+            0xFF202020,
+            0xFFFFFFFF,
+            0xFF707070,
+            0xFFE83030,
+            0xFFE89030,
+            0xFF3080F0,
+            0xFF666666,
+            0xFFEEBB22,
+            0xFF68B0FF,
+            0xFF50D0C0,
+            0xFFBB60FA,
+            0xFF14D81A,
+            '^'
+        );
+
+        public string FontName { get; }
+        public Argb32 Background { get; }
+        public Argb32 ForegroundCode { get; }
+        public Argb32 ForegroundIndent { get; }
+        public Argb32 ForegroundError { get; }
+        public Argb32 ForegroundWarning { get; }
+        public Argb32 ForegroundNote { get; }
+        public Argb32 ForegroundErrorMessage { get; }
+        public Argb32 ForegroundWarningMessage { get; }
+        public Argb32 ForegroundNoteMessage { get; }
+        public Argb32 ForegroundLineNumber { get; }
+        public Argb32 ForegroundFileHeader { get; }
+        public Argb32 ForegroundComment { get; }
+        public char CharSquiggly { get; }
+
+
+        public VisualDisplayOptions(
+            string fontName,
+            uint background,
+            uint foregroundCode,
+            uint foregroundIndent,
+            uint foregroundError,
+            uint foregroundWarning,
+            uint foregroundNote,
+            uint foregroundErrorMessage,
+            uint foregroundWarningMessage,
+            uint foregroundNoteMessage,
+            uint foregroundLineNumber,
+            uint foregroundFileHeader,
+            uint foregroundComment,
+            char charSquiggly
+        )
+        {
+            FontName = fontName;
+            Background = new Argb32(background);
+            ForegroundCode = new Argb32(foregroundCode);
+            ForegroundIndent = new Argb32(foregroundIndent);
+            ForegroundError = new Argb32(foregroundError);
+            ForegroundWarning = new Argb32(foregroundWarning);
+            ForegroundNote = new Argb32(foregroundNote);
+            ForegroundErrorMessage = new Argb32(foregroundErrorMessage);
+            ForegroundWarningMessage = new Argb32(foregroundWarningMessage);
+            ForegroundNoteMessage = new Argb32(foregroundNoteMessage);
+            ForegroundLineNumber = new Argb32(foregroundLineNumber);
+            ForegroundFileHeader = new Argb32(foregroundFileHeader);
+            ForegroundComment = new Argb32(foregroundComment);
+            CharSquiggly = charSquiggly;
+        }
     }
 }

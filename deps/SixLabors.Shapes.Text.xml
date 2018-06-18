@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SixLabors.Shapes.Text</name>
+    </assembly>
+    <members>
+        <member name="T:SixLabors.Shapes.Text.BaseGlyphBuilder">
+            <summary>
+            rendering surface that Fonts can use to generate Shapes.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.Text.BaseGlyphBuilder.builder">
+            <summary>
+            The builder. TODO: Should this be a property?
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Text.BaseGlyphBuilder"/> class.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Text.BaseGlyphBuilder.Paths">
+            <summary>
+            Gets the paths that have been rendered by this.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#EndText">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#BeginText(SixLabors.Primitives.RectangleF)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#BeginGlyph(SixLabors.Primitives.RectangleF,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#BeginFigure">
+            <summary>
+            Begins the figure.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#CubicBezierTo(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Draws a cubic bezier from the current point  to the <paramref name="point"/>
+            </summary>
+            <param name="secondControlPoint">The second control point.</param>
+            <param name="thirdControlPoint">The third control point.</param>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#EndGlyph">
+            <summary>
+            Ends the glyph.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#EndFigure">
+            <summary>
+            Ends the figure.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#LineTo(SixLabors.Primitives.PointF)">
+            <summary>
+            Draws a line from the current point  to the <paramref name="point"/>.
+            </summary>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#MoveTo(SixLabors.Primitives.PointF)">
+            <summary>
+            Moves to current point to the supplied vector.
+            </summary>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.SixLabors#Fonts#IGlyphRenderer#QuadraticBezierTo(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Draws a quadratics bezier from the current point  to the <paramref name="point"/>
+            </summary>
+            <param name="secondControlPoint">The second control point.</param>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.BeginText(SixLabors.Primitives.RectangleF)">
+            <summary>Called before any glyphs have been rendered.</summary>
+            <param name="rect">The bounds the text will be rendered at and at whats size.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.BaseGlyphBuilder.BeginGlyph(SixLabors.Primitives.RectangleF)">
+            <summary>Begins the glyph.</summary>
+            <param name="rect">The bounds the glyph will be rendered at and at what size.</param>
+        </member>
+        <member name="T:SixLabors.Shapes.Text.GlyphBuilder">
+            <summary>
+            rendering surface that Fonts can use to generate Shapes.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.GlyphBuilder.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Text.GlyphBuilder"/> class.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.GlyphBuilder.#ctor(System.Numerics.Vector2)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Text.GlyphBuilder"/> class.
+            </summary>
+            <param name="origin">The origin.</param>
+        </member>
+        <member name="T:SixLabors.Shapes.Text.PathGlyphBuilder">
+            <summary>
+            rendering surface that Fonts can use to generate Shapes by following a path
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.PathGlyphBuilder.#ctor(SixLabors.Shapes.IPath)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Text.PathGlyphBuilder"/> class.
+            </summary>
+            <param name="path">The path to render the glyps along.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.PathGlyphBuilder.BeginText(SixLabors.Primitives.RectangleF)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.Text.PathGlyphBuilder.BeginGlyph(SixLabors.Primitives.RectangleF)">
+            <inheritdoc/>
+        </member>
+        <member name="T:SixLabors.Shapes.TextBuilder">
+            <summary>
+            Text drawing extensions for a PathBuilder
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.TextBuilder.GenerateGlyphs(System.String,SixLabors.Primitives.PointF,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Generates the shapes corresponding the glyphs described by the font and with the settings withing the FontSpan
+            </summary>
+            <param name="text">The text to generate glyphs for</param>
+            <param name="location">The location</param>
+            <param name="style">The style and settings to use while rendering the glyphs</param>
+            <returns>The <see cref="T:SixLabors.Shapes.IPathCollection"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.TextBuilder.GenerateGlyphs(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Generates the shapes corresponding the glyphs described by the font and with the settings withing the FontSpan
+            </summary>
+            <param name="text">The text to generate glyphs for</param>
+            <param name="style">The style and settings to use while rendering the glyphs</param>
+            <returns>The <see cref="T:SixLabors.Shapes.IPathCollection"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.TextBuilder.GenerateGlyphs(System.String,SixLabors.Shapes.IPath,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Generates the shapes corresponding the glyphs described by the font and with the setting in within the FontSpan along the described path.
+            </summary>
+            <param name="text">The text to generate glyphs for</param>
+            <param name="path">The path to draw the text in relation to</param>
+            <param name="style">The style and settings to use while rendering the glyphs</param>
+            <returns>The <see cref="T:SixLabors.Shapes.IPathCollection"/></returns>
+        </member>
+    </members>
+</doc>

@@ -29,11 +29,20 @@
       <Reference Include="SixLabors.Core">
         <HintPath>..\deps\SixLabors.Core.dll</HintPath>
       </Reference>
+      <Reference Include="SixLabors.Fonts">
+        <HintPath>..\deps\SixLabors.Fonts.dll</HintPath>
+      </Reference>
       <Reference Include="SixLabors.ImageSharp">
         <HintPath>..\deps\SixLabors.ImageSharp.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.ImageSharp.Drawing">
         <HintPath>..\deps\SixLabors.ImageSharp.Drawing.dll</HintPath>
+      </Reference>
+      <Reference Include="SixLabors.Shapes">
+        <HintPath>..\deps\SixLabors.Shapes.dll</HintPath>
+      </Reference>
+      <Reference Include="SixLabors.Shapes.Text">
+        <HintPath>..\deps\SixLabors.Shapes.Text.dll</HintPath>
       </Reference>
     </ItemGroup>
     <ItemGroup>

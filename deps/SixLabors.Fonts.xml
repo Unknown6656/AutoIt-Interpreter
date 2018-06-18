@@ -1,0 +1,2119 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SixLabors.Fonts</name>
+    </assembly>
+    <members>
+        <member name="T:SixLabors.Fonts.BigEndianBitConverter">
+            <summary>
+            Equivalent of <see cref="T:System.BitConverter"/>, but with either endianness.
+            <remarks>
+            Adapted from Miscellaneous Utility Library <see href="http://jonskeet.uk/csharp/miscutil/"/>
+            This product includes software developed by Jon Skeet and Marc Gravell. Contact <see href="mailto:skeet@pobox.com"/>, or see
+            <see href="http://www.pobox.com/~skeet/"/>.
+            </remarks>
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.DoubleToInt64Bits(System.Double)">
+            <summary>
+            Converts the specified double-precision floating point number to a
+            64-bit signed integer. Note: the endianness of this converter does not
+            affect the returned value.
+            </summary>
+            <param name="value">The number to convert. </param>
+            <returns>A 64-bit signed integer whose value is equivalent to value.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.Int64BitsToDouble(System.Int64)">
+            <summary>
+            Converts the specified 64-bit signed integer to a double-precision
+            floating point number. Note: the endianness of this converter does not
+            affect the returned value.
+            </summary>
+            <param name="value">The number to convert. </param>
+            <returns>A double-precision floating point number whose value is equivalent to value.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.SingleToInt32Bits(System.Single)">
+            <summary>
+            Converts the specified single-precision floating point number to a
+            32-bit signed integer. Note: the endianness of this converter does not
+            affect the returned value.
+            </summary>
+            <param name="value">The number to convert. </param>
+            <returns>A 32-bit signed integer whose value is equivalent to value.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.Int32BitsToSingle(System.Int32)">
+            <summary>
+            Converts the specified 32-bit signed integer to a single-precision floating point
+            number. Note: the endianness of this converter does not
+            affect the returned value.
+            </summary>
+            <param name="value">The number to convert. </param>
+            <returns>A single-precision floating point number whose value is equivalent to value.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToBoolean(System.Byte[],System.Int32)">
+            <summary>
+            Returns a Boolean value converted from one byte at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>true if the byte at startIndex in value is nonzero; otherwise, false.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToChar(System.Byte[],System.Int32)">
+            <summary>
+            Returns a Unicode character converted from two bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A character formed by two bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToDouble(System.Byte[],System.Int32)">
+            <summary>
+            Returns a double-precision floating point number converted from eight bytes
+            at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A double precision floating point number formed by eight bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToSingle(System.Byte[],System.Int32)">
+            <summary>
+            Returns a single-precision floating point number converted from four bytes
+            at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A single precision floating point number formed by four bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToInt16(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 16-bit signed integer converted from two bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 16-bit signed integer formed by two bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToInt32(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 32-bit signed integer converted from four bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 32-bit signed integer formed by four bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToInt64(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 64-bit signed integer converted from eight bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 64-bit signed integer formed by eight bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToUInt16(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 16-bit unsigned integer converted from two bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 16-bit unsigned integer formed by two bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToUInt32(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 32-bit unsigned integer converted from four bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 32-bit unsigned integer formed by four bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToUInt64(System.Byte[],System.Int32)">
+            <summary>
+            Returns a 64-bit unsigned integer converted from eight bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A 64-bit unsigned integer formed by eight bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CheckByteArgument(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Checks the given argument for validity.
+            </summary>
+            <param name="value">The byte array passed in</param>
+            <param name="startIndex">The start index passed in</param>
+            <param name="bytesRequired">The number of bytes required</param>
+            <exception cref="T:System.ArgumentNullException">value is a null reference</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            startIndex is less than zero or greater than the length of value minus bytesRequired.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CheckedFromBytes(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Checks the arguments for validity before calling FromBytes
+            (which can therefore assume the arguments are valid).
+            </summary>
+            <param name="value">The bytes to convert after checking</param>
+            <param name="startIndex">The index of the first byte to convert</param>
+            <param name="bytesToConvert">The number of bytes to convert</param>
+            <returns>The <see cref="T:System.Int64"/></returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToString(System.Byte[])">
+            <summary>
+            Returns a String converted from the elements of a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <remarks>All the elements of value are converted.</remarks>
+            <returns>
+            A String of hexadecimal pairs separated by hyphens, where each pair
+            represents the corresponding element in value; for example, "7F-2C-4A".
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToString(System.Byte[],System.Int32)">
+            <summary>
+            Returns a String converted from the elements of a byte array starting at a specified array position.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <remarks>The elements from array position startIndex to the end of the array are converted.</remarks>
+            <returns>
+            A String of hexadecimal pairs separated by hyphens, where each pair
+            represents the corresponding element in value; for example, "7F-2C-4A".
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToString(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Returns a String converted from a specified number of bytes at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <param name="length">The number of bytes to convert.</param>
+            <remarks>The length elements from array position startIndex are converted.</remarks>
+            <returns>
+            A String of hexadecimal pairs separated by hyphens, where each pair
+            represents the corresponding element in value; for example, "7F-2C-4A".
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.ToDecimal(System.Byte[],System.Int32)">
+            <summary>
+            Returns a decimal value converted from sixteen bytes
+            at a specified position in a byte array.
+            </summary>
+            <param name="value">An array of bytes.</param>
+            <param name="startIndex">The starting position within value.</param>
+            <returns>A decimal  formed by sixteen bytes beginning at startIndex.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Decimal)">
+            <summary>
+            Returns the specified decimal value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 16.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Decimal,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified decimal value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">A character to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Int64,System.Int32)">
+            <summary>
+            Returns an array with the given number of bytes formed
+            from the least significant bytes of the specified value.
+            This is used to implement the other GetBytes methods.
+            </summary>
+            <param name="value">The value to get bytes for</param>
+            <param name="bytes">The number of significant bytes to return</param>
+            <returns>
+            The <see cref="T:byte[]"/>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Boolean)">
+            <summary>
+            Returns the specified Boolean value as an array of bytes.
+            </summary>
+            <param name="value">A Boolean value.</param>
+            <returns>An array of bytes with length 1.</returns>
+            <returns>
+            The <see cref="T:byte[]"/>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Char)">
+            <summary>
+            Returns the specified Unicode character value as an array of bytes.
+            </summary>
+            <param name="value">A character to convert.</param>
+            <returns>An array of bytes with length 2.</returns>
+            <returns>
+            The <see cref="T:byte[]"/>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Double)">
+            <summary>
+            Returns the specified double-precision floating point value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 8.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Int16)">
+            <summary>
+            Returns the specified 16-bit signed integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 2.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Int32)">
+            <summary>
+            Returns the specified 32-bit signed integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 4.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Int64)">
+            <summary>
+            Returns the specified 64-bit signed integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 8.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.Single)">
+            <summary>
+            Returns the specified single-precision floating point value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 4.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.UInt16)">
+            <summary>
+            Returns the specified 16-bit unsigned integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 2.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.UInt32)">
+            <summary>
+            Returns the specified 32-bit unsigned integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 4.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.GetBytes(System.UInt64)">
+            <summary>
+            Returns the specified 64-bit unsigned integer value as an array of bytes.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <returns>An array of bytes with length 8.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Int64,System.Int32,System.Byte[],System.Int32)">
+            <summary>
+            Copies the given number of bytes from the least-specific
+            end of the specified value into the specified byte array, beginning
+            at the specified index.
+            This is used to implement the other CopyBytes methods.
+            </summary>
+            <param name="value">The value to copy bytes for</param>
+            <param name="bytes">The number of significant bytes to copy</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Boolean,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified Boolean value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">A Boolean value.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Char,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified Unicode character value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">A character to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Double,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified double-precision floating point value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Int16,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 16-bit signed integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Int32,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 32-bit signed integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Int64,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 64-bit signed integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.Single,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified single-precision floating point value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.UInt16,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 16-bit unsigned integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.UInt32,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 32-bit unsigned integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.CopyBytes(System.UInt64,System.Byte[],System.Int32)">
+            <summary>
+            Copies the specified 64-bit unsigned integer value into the specified byte array,
+            beginning at the specified index.
+            </summary>
+            <param name="value">The number to convert.</param>
+            <param name="buffer">The byte array to copy the bytes into</param>
+            <param name="index">The first index into the array to copy the bytes into</param>
+        </member>
+        <member name="T:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion">
+            <summary>
+            Union used solely for the equivalent of DoubleToInt64Bits and vice versa.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.i">
+            <summary>
+            Int32 version of the value.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.f">
+            <summary>
+            Single version of the value.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion"/> struct.
+            </summary>
+            <param name="i">The integer value of the new instance.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.#ctor(System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion"/> struct.
+            </summary>
+            <param name="f">
+            The floating point value of the new instance.
+            </param>
+        </member>
+        <member name="P:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.AsInt32">
+            <summary>
+            Gets the value of the instance as an integer.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.BigEndianBitConverter.Int32SingleUnion.AsSingle">
+            <summary>
+            Gets the value of the instance as a floating point number.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.BinaryReader">
+            <summary>
+            BinaryReader using bigendian encoding.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.BinaryReader.storageBuffer">
+            <summary>
+            Buffer used for temporary storage before conversion into primitives
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.#ctor(System.IO.Stream,System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.BinaryReader" /> class.
+            Constructs a new binary reader with the given bit converter, reading
+            to the given stream, using the given encoding.
+            </summary>
+            <param name="stream">Stream to read data from</param>
+            <param name="leaveOpen">if set to <c>true</c> [leave open].</param>
+        </member>
+        <member name="P:SixLabors.Fonts.BinaryReader.BaseStream">
+            <summary>
+            Gets the underlying stream of the EndianBinaryReader.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.BinaryReader.BitConverter">
+            <summary>
+            Gets the bit converter used to read values from the stream.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Close">
+            <summary>
+            Closes the reader, including the underlying stream.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Seek(System.Int64,System.IO.SeekOrigin)">
+            <summary>
+            Seeks within the stream.
+            </summary>
+            <param name="offset">Offset to seek to.</param>
+            <param name="origin">Origin of seek operation.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Seek(SixLabors.Fonts.Tables.TableHeader)">
+            <summary>
+            Seeks within the stream.
+            </summary>
+            <param name="header">The header.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadByte">
+            <summary>
+            Reads a single byte from the stream.
+            </summary>
+            <returns>The byte read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadSByte">
+            <summary>
+            Reads a single signed byte from the stream.
+            </summary>
+            <returns>The byte read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadBoolean">
+            <summary>
+            Reads a boolean from the stream. 1 byte is read.
+            </summary>
+            <returns>The boolean read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadInt16">
+            <summary>
+            Reads a 16-bit signed integer from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <returns>The 16-bit integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadFixed">
+            <summary>
+            Reads a 32-bit signed integer from the stream, using the bit converter
+            for this reader. 4 bytes are read.
+            </summary>
+            <returns>The 32-bit integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadInt64">
+            <summary>
+            Reads a 64-bit signed integer from the stream, using the bit converter
+            for this reader. 8 bytes are read.
+            </summary>
+            <returns>The 64-bit integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt16">
+            <summary>
+            Reads a 16-bit unsigned integer from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <returns>The 16-bit unsigned integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt16Array(System.Int32)">
+            <summary>
+            Reads array or 16-bit unsigned integers from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <param name="length">The length.</param>
+            <returns>
+            The 16-bit unsigned integer read
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt32Array(System.Int32)">
+            <summary>
+            Reads array or 16-bit unsigned integers from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <param name="length">The length.</param>
+            <returns>
+            The 16-bit unsigned integer read
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Offset16Array(System.Int32)">
+            <summary>
+            Reads array or 16-bit unsigned integers from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <param name="length">The length.</param>
+            <returns>
+            The 16-bit unsigned integer read
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Offset32Array(System.Int32)">
+            <summary>
+            Reads array or 16-bit unsigned integers from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <param name="length">The length.</param>
+            <returns>
+            The 16-bit unsigned integer read
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadInt16Array(System.Int32)">
+            <summary>
+            Reads a 16-bit unsigned integer from the stream, using the bit converter
+            for this reader. 2 bytes are read.
+            </summary>
+            <param name="length">The length.</param>
+            <returns>
+            The 16-bit unsigned integer read
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt8">
+            <summary>
+            Reads a 8-bit unsigned integer from the stream, using the bit converter
+            for this reader. 1 bytes are read.
+            </summary>
+            <returns>The 8-bit unsigned integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt32">
+            <summary>
+            Reads a 32-bit unsigned integer from the stream, using the bit converter
+            for this reader. 4 bytes are read.
+            </summary>
+            <returns>The 32-bit unsigned integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadUInt64">
+            <summary>
+            Reads a 64-bit unsigned integer from the stream, using the bit converter
+            for this reader. 8 bytes are read.
+            </summary>
+            <returns>The 64-bit unsigned integer read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadSingle">
+            <summary>
+            Reads a single-precision floating-point value from the stream, using the bit converter
+            for this reader. 4 bytes are read.
+            </summary>
+            <returns>The floating point value read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadDouble">
+            <summary>
+            Reads a double-precision floating-point value from the stream, using the bit converter
+            for this reader. 8 bytes are read.
+            </summary>
+            <returns>The floating point value read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadDecimal">
+            <summary>
+            Reads a decimal value from the stream, using the bit converter
+            for this reader. 16 bytes are read.
+            </summary>
+            <returns>The decimal value read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Read(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Reads the specified number of bytes into the given buffer, starting at
+            the given index.
+            </summary>
+            <param name="buffer">The buffer to copy data into</param>
+            <param name="index">The first index to copy data into</param>
+            <param name="count">The number of bytes to read</param>
+            <returns>The number of bytes actually read. This will only be less than
+            the requested number of bytes if the end of the stream is reached.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadBytes(System.Int32)">
+            <summary>
+            Reads the specified number of bytes, returning them in a new byte array.
+            If not enough bytes are available before the end of the stream, this
+            method will return what is available.
+            </summary>
+            <param name="count">The number of bytes to read</param>
+            <returns>The bytes read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadBytesOrThrow(System.Int32)">
+            <summary>
+            Reads the specified number of bytes, returning them in a new byte array.
+            If not enough bytes are available before the end of the stream, this
+            method will throw an IOException.
+            </summary>
+            <param name="count">The number of bytes to read</param>
+            <returns>The bytes read</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.Read7BitEncodedInt">
+            <summary>
+            Reads a 7-bit encoded integer from the stream. This is stored with the least significant
+            information first, with 7 bits of information per byte of value, and the top
+            bit as a continuation flag. This method is not affected by the endianness
+            of the bit converter.
+            </summary>
+            <returns>The 7-bit encoded integer read from the stream.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadString(System.Int32,System.Text.Encoding)">
+            <summary>
+            Reads a string of a specific length, which specifies the number of bytes
+            to read from the stream. These bytes are then converted into a string with
+            the encoding for this reader.
+            </summary>
+            <param name="bytesToRead">The bytes to read.</param>
+            <param name="encoding">The encoding.</param>
+            <returns>
+            The string read from the stream.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadTag">
+            <summary>
+            Reads the uint32 string.
+            </summary>
+            <returns>a 4 character long UTF8 encoded string</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.ReadInternal(System.Byte[],System.Int32)">
+            <summary>
+            Reads the given number of bytes from the stream, throwing an exception
+            if they can't all be read.
+            </summary>
+            <param name="data">Buffer to read into</param>
+            <param name="size">Number of bytes to read</param>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.TryReadInternal(System.Byte[],System.Int32)">
+            <summary>
+            Reads the given number of bytes from the stream if possible, returning
+            the number of bytes actually read, which may be less than requested if
+            (and only if) the end of the stream is reached.
+            </summary>
+            <param name="data">Buffer to read into</param>
+            <param name="size">Number of bytes to read</param>
+            <returns>Number of bytes actually read</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.BinaryReader.CastTo`1">
+            <summary>
+            Class to cast to type <typeparamref name="TTarget"/>
+            </summary>
+            <typeparam name="TTarget">Target type</typeparam>
+        </member>
+        <member name="M:SixLabors.Fonts.BinaryReader.CastTo`1.From``1(``0)">
+            <summary>
+            Casts <typeparamref name="TSource" /> to <typeparamref name="TTarget" />.
+            This does not cause boxing for value types.
+            Useful in generic methods.
+            </summary>
+            <typeparam name="TSource">Source type to cast from. Usually a generic type.</typeparam>
+            <param name="s">The s.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.Exceptions.FontException">
+            <summary>
+            Base class for exceptions thrown by this library.
+            </summary>
+            <seealso cref="T:System.Exception" />
+        </member>
+        <member name="M:SixLabors.Fonts.Exceptions.FontException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Exceptions.FontException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException">
+            <summary>
+            Base class for exceptions thrown by this library.
+            </summary>
+            <seealso cref="T:System.Exception" />
+        </member>
+        <member name="M:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException"/> class.
+            </summary>
+            <param name="family">The name of the missing font family.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException.FontFamily">
+            <summary>
+            Gets the name of the font familiy we failed to find.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.Exceptions.InvalidFontFileException">
+            <summary>
+            Exception font loading can throw if it encounteres invalid data during font loading.
+            </summary>
+            <seealso cref="T:System.Exception" />
+        </member>
+        <member name="M:SixLabors.Fonts.Exceptions.InvalidFontFileException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Exceptions.InvalidFontFileException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.Exceptions.InvalidFontTableException">
+            <summary>
+            Exception font loading can throw if it encounteres invalid data during font loading.
+            </summary>
+            <seealso cref="T:System.Exception" />
+        </member>
+        <member name="M:SixLabors.Fonts.Exceptions.InvalidFontTableException.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Exceptions.InvalidFontTableException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+            <param name="table">The table.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.Exceptions.InvalidFontTableException.Table">
+            <summary>
+            Gets the table where the error originated.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.FileFontInstance">
+            <summary>
+            provide metadata about a font.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.Font">
+            <summary>
+            Defines a particular format for text, including font face, size, and style attributes. This class cannot be inherited.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.#ctor(SixLabors.Fonts.FontFamily,System.Single,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Font"/> class.
+            </summary>
+            <param name="family">The family.</param>
+            <param name="size">The size.</param>
+            <param name="style">The style.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.#ctor(SixLabors.Fonts.FontFamily,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Font"/> class.
+            </summary>
+            <param name="family">The family.</param>
+            <param name="size">The size.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.#ctor(SixLabors.Fonts.Font,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Font"/> class.
+            </summary>
+            <param name="prototype">The prototype.</param>
+            <param name="style">The style.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.#ctor(SixLabors.Fonts.Font,System.Single,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Font"/> class.
+            </summary>
+            <param name="prototype">The prototype.</param>
+            <param name="size">The size.</param>
+            <param name="style">The style.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.#ctor(SixLabors.Fonts.Font,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.Font"/> class.
+            </summary>
+            <param name="prototype">The prototype.</param>
+            <param name="size">The size.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Family">
+            <summary>
+            Gets the family.
+            </summary>
+            <value>
+            The family.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Name">
+            <summary>
+            Gets the name.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Size">
+            <summary>
+            Gets the size.
+            </summary>
+            <value>
+            The size.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Bold">
+            <summary>
+            Gets a value indicating whether this <see cref="T:SixLabors.Fonts.Font"/> is bold.
+            </summary>
+            <value>
+              <c>true</c> if bold; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Italic">
+            <summary>
+            Gets a value indicating whether this <see cref="T:SixLabors.Fonts.Font"/> is italic.
+            </summary>
+            <value>
+              <c>true</c> if italic; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.EmSize">
+            <summary>
+            Gets the size of the em.
+            </summary>
+            <value>
+            The size of the em.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Ascender">
+            <summary>
+            Gets the ascender (from the OS/2 table field <c>TypoAscender</c>).
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.Descender">
+            <summary>
+            Gets the descender (from the OS/2 table field <c>TypoDescender</c>).
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.LineGap">
+            <summary>
+            Gets the line gap (from the OS/2 table field <c>TypoLineGap</c>).
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.LineHeight">
+            <summary>
+            Gets the line height.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.Font.FontInstance">
+            <summary>
+            Gets the font instance.
+            </summary>
+            <value>
+            The font instance.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.Font.GetGlyph(System.Int32)">
+            <summary>
+            Gets the glyph.
+            </summary>
+            <param name="codePoint">The code point of the character.</param>
+            <returns>Returns the glyph</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontCollection">
+            <summary>
+            Provides a collection of fonts.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontCollection.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.FontCollection"/> class.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontCollection.Families">
+            <summary>
+            Gets the collection of <see cref="T:SixLabors.Fonts.FontFamily"/> objects associated with this <see cref="T:SixLabors.Fonts.FontCollection"/>.
+            </summary>
+            <value>
+            The families.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.FontCollection.Install(System.String)">
+            <summary>
+            Installs a font from the specified path.
+            </summary>
+            <param name="path">The path.</param>
+            <returns>the description of the font just loaded.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontCollection.Install(System.IO.Stream)">
+            <summary>
+            Installs the specified font stream.
+            </summary>
+            <param name="fontStream">The font stream.</param>
+            <returns>the description of the font just loaded.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontCollection.Find(System.String)">
+            <summary>
+            Finds the specified font family.
+            </summary>
+            <param name="fontFamily">The font family.</param>
+            <returns>The family if installed otherwise throws <see cref="T:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException"/></returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontCollection.TryFind(System.String,SixLabors.Fonts.FontFamily@)">
+            <summary>
+            Finds the specified font family.
+            </summary>
+            <param name="fontFamily">The font family to find.</param>
+            <param name="family">The found family.</param>
+            <returns>true if a font of that family has been installed into the font collection.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontDescription">
+            <summary>
+            provide metadata about a font.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontDescription.#ctor(SixLabors.Fonts.Tables.General.NameTable,SixLabors.Fonts.Tables.General.OS2Table,SixLabors.Fonts.Tables.General.HeadTable)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.FontDescription" /> class.
+            </summary>
+            <param name="nameTable">The name table.</param>
+            <param name="os2">The os2.</param>
+            <param name="head">The head.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.FontDescription.Style">
+            <summary>
+            Gets the style.
+            </summary>
+            <value>
+            The style.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.FontDescription.FontName">
+            <summary>
+            Gets the name of the font.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontDescription.FontFamily">
+            <summary>
+            Gets the name of the font.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontDescription.FontSubFamilyName">
+            <summary>
+            Gets the font sub family.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontDescription.LoadDescription(System.String)">
+            <summary>
+            Reads a <see cref="T:SixLabors.Fonts.FontDescription"/> from the specified stream.
+            </summary>
+            <param name="path">The file path.</param>
+            <returns>a <see cref="T:SixLabors.Fonts.FontDescription"/>.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontDescription.LoadDescription(System.IO.Stream)">
+            <summary>
+            Reads a <see cref="T:SixLabors.Fonts.FontDescription"/> from the specified stream.
+            </summary>
+            <param name="stream">The stream.</param>
+            <returns>a <see cref="T:SixLabors.Fonts.FontDescription"/>.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontDescription.LoadDescription(SixLabors.Fonts.FontReader)">
+            <summary>
+            Reads a <see cref="T:SixLabors.Fonts.FontDescription" /> from the specified stream.
+            </summary>
+            <param name="reader">The reader.</param>
+            <returns>
+            a <see cref="T:SixLabors.Fonts.FontDescription" />.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontFamily">
+            <summary>
+            Defines a group of type faces having a similar basic design and certain variations in styles. This class cannot be inherited.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontFamily.#ctor(System.String,SixLabors.Fonts.FontCollection)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.FontFamily"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="collection">The collection.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.FontFamily.Name">
+            <summary>
+            Gets the name of the <see cref="T:SixLabors.Fonts.FontFamily"/>.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.FontFamily.AvailibleStyles">
+            <summary>
+            Gets the availible <see cref="T:SixLabors.Fonts.FontStyle"/> that are currently availible.
+            </summary>
+            <value>
+            The availible styles.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.FontFamily.IsStyleAvailible(SixLabors.Fonts.FontStyle)">
+            <summary>
+            Determines whether the specified <see cref="T:SixLabors.Fonts.FontStyle"/> is availible.
+            </summary>
+            <param name="style">The style.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:SixLabors.Fonts.FontStyle"/> is availible; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontFamily.ToString">
+            <summary>
+            Returns a <see cref="T:System.String" /> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String" /> that represents this instance.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontFamilyCollectionExtensions">
+            <summary>
+            A readonly collection of fonts.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontFamilyCollectionExtensions.CreateFont(SixLabors.Fonts.FontFamily,System.Single,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family.
+            </summary>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+            <param name="style">The style.</param>
+            <returns>Returns instance of the <see cref="T:SixLabors.Fonts.Font"/> from the current collection.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontFamilyCollectionExtensions.CreateFont(SixLabors.Fonts.FontFamily,System.Single)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family with regular styling.
+            </summary>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+            <returns>Returns instance of the <see cref="T:SixLabors.Fonts.Font"/> from the current collection.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontInstance">
+            <summary>
+            provide metadata about a font.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontInstance.LineHeight">
+            <summary>
+            Gets the height of the line.
+            </summary>
+            <value>
+            The height of the line.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.FontInstance.Ascender">
+            <summary>
+            Gets the ascender.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontInstance.Descender">
+            <summary>
+            Gets the descender.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.FontInstance.LineGap">
+            <summary>
+            Gets the line gap.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.FontInstance.#ctor(SixLabors.Fonts.Tables.General.NameTable,SixLabors.Fonts.Tables.General.CMapTable,SixLabors.Fonts.Tables.General.GlyphTable,SixLabors.Fonts.Tables.General.OS2Table,SixLabors.Fonts.Tables.General.HorizontalMetricsTable,SixLabors.Fonts.Tables.General.HeadTable,SixLabors.Fonts.Tables.General.KerningTable)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.FontInstance"/> class.
+            </summary>
+            <param name="nameTable">The name table.</param>
+            <param name="cmap">The cmap.</param>
+            <param name="glyphs">The glyphs.</param>
+            <param name="os2">The os2.</param>
+            <param name="horizontalMetrics">The horizontal metrics.</param>
+            <param name="head">The head.</param>
+            <param name="kern">The kern.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.FontInstance.EmSize">
+            <summary>
+            Gets the size of the em.
+            </summary>
+            <value>
+            The size of the em.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.FontInstance.GetGlyph(System.Int32)">
+            <summary>
+            Gets the glyph.
+            </summary>
+            <param name="codePoint">The code point of the character.</param>
+            <returns>the glyph for a known character.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontInstance.GetOffset(SixLabors.Fonts.GlyphInstance,SixLabors.Fonts.GlyphInstance)">
+            <summary>
+            Gets the amount the <paramref name="glyph"/> should be ofset if it was proceeded by the <paramref name="previousGlyph"/>.
+            </summary>
+            <param name="glyph">The glyph.</param>
+            <param name="previousGlyph">The previous glyph.</param>
+            <returns>A <see cref="T:System.Numerics.Vector2"/> represting the offset that should be applied to the <paramref name="glyph"/>. </returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontInstance.LoadFont(System.String)">
+            <summary>
+            Reads a <see cref="T:SixLabors.Fonts.FontInstance"/> from the specified stream.
+            </summary>
+            <param name="path">The file path.</param>
+            <returns>a <see cref="T:SixLabors.Fonts.FontInstance"/>.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.FontInstance.LoadFont(System.IO.Stream)">
+            <summary>
+            Reads a <see cref="T:SixLabors.Fonts.FontInstance"/> from the specified stream.
+            </summary>
+            <param name="stream">The stream.</param>
+            <returns>a <see cref="T:SixLabors.Fonts.FontInstance"/>.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.FontStyle">
+            <summary>
+            The font styles
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.FontStyle.Regular">
+            <summary>
+            Regular
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.FontStyle.Bold">
+            <summary>
+            Bold
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.FontStyle.Italic">
+            <summary>
+            Italic
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.FontStyle.BoldItalic">
+            <summary>
+            Bold and Italic
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.Glyph">
+            <summary>
+            A glyph from a particular font face.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.Glyph.RenderTo(SixLabors.Fonts.IGlyphRenderer,SixLabors.Primitives.PointF,System.Single,System.Single)">
+            <summary>
+            Renders to.
+            </summary>
+            <param name="surface">The surface.</param>
+            <param name="location">The location.</param>
+            <param name="dpi">The dpi.</param>
+            <param name="lineHeight">The line height.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.Glyph.RenderTo(SixLabors.Fonts.IGlyphRenderer,SixLabors.Primitives.PointF,System.Single,System.Single,System.Single)">
+            <summary>
+            Renders the glyph to the render surface in font units relative to a bottom left origin at (0,0)
+            </summary>
+            <param name="surface">The surface.</param>
+            <param name="location">The location.</param>
+            <param name="dpiX">The dpi along the X axis.</param>
+            <param name="dpiY">The dpi along the Y axis.</param>
+            <param name="lineHeight">The line height.</param>
+            <exception cref="T:System.NotSupportedException">Too many control points</exception>
+        </member>
+        <member name="T:SixLabors.Fonts.GlyphInstance">
+            <summary>
+            A glyph from a particular font face.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphInstance.Bounds">
+            <summary>
+            Gets the bounds.
+            </summary>
+            <value>
+            The bounds.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphInstance.AdvanceWidth">
+            <summary>
+            Gets the width of the advance.
+            </summary>
+            <value>
+            The width of the advance.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphInstance.Height">
+            <summary>
+            Gets the height.
+            </summary>
+            <value>
+            The height.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphInstance.Index">
+            <summary>
+            Gets the index.
+            </summary>
+            <value>
+            The index.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.GlyphInstance.RenderTo(SixLabors.Fonts.IGlyphRenderer,System.Single,System.Numerics.Vector2,System.Numerics.Vector2,System.Single)">
+            <summary>
+            Renders the glyph to the render surface in font units relative to a bottom left origin at (0,0)
+            </summary>
+            <param name="surface">The surface.</param>
+            <param name="pointSize">Size of the point.</param>
+            <param name="location">The location.</param>
+            <param name="dpi">The dpi.</param>
+            <param name="lineHeight">The lineHeight the current glyph was draw agains to offset topLeft while calling out to IGlyphRenderer.</param>
+            <exception cref="T:System.NotSupportedException">Too many control points</exception>
+        </member>
+        <member name="T:SixLabors.Fonts.GlyphMetric">
+            <summary>
+            Represents a <see cref="T:SixLabors.Fonts.Glyph"/> metric.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.GlyphMetric.#ctor(System.Int32,SixLabors.Primitives.RectangleF,System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.GlyphMetric"/> struct.
+            </summary>
+            <param name="codePoint">Unicode codepoint of the character.</param>
+            <param name="bounds">The bounds.</param>
+            <param name="isControlCharacter">Whether the character is a control character.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphMetric.Codepoint">
+            <summary>
+            Gets the Unicode codepoint of the character.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphMetric.Character">
+            <summary>
+            Gets the UTF-16 encoded character.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphMetric.Bounds">
+            <summary>
+            Gets the character bounds.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphMetric.IsControlCharacter">
+            <summary>
+            Gets a value indicating whether the character is a control character.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.GlyphMetric.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.HashHelpers.Combine(System.Int32,System.Int32)">
+            <summary>
+            Combines the two specified hash codes.
+            </summary>
+            <param name="h1">Hash code one</param>
+            <param name="h2">Hash code two</param>
+            <returns>Returns a hash code for the two specified has codes.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.HorizontalAlignment">
+            <summary>
+            Horizontal alignment modes.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.HorizontalAlignment.Left">
+            <summary>
+            Aligns text from the left.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.HorizontalAlignment.Right">
+            <summary>
+            Aligns text from the right.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.HorizontalAlignment.Center">
+            <summary>
+            Aligns text from the center.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.IFontCollection">
+            <summary>
+            A readable and writable collection of fonts.
+            </summary>
+            <seealso cref="T:SixLabors.Fonts.IReadOnlyFontCollection" />
+        </member>
+        <member name="M:SixLabors.Fonts.IFontCollection.Install(System.String)">
+            <summary>
+            Installs a font from the specified path.
+            </summary>
+            <param name="path">The path.</param>
+            <returns>the description of the font just loaded.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.IFontCollection.Install(System.IO.Stream)">
+            <summary>
+            Installs the specified font stream.
+            </summary>
+            <param name="fontStream">The font stream.</param>
+            <returns>the description of the font just loaded.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.IGlyphRenderer">
+            <summary>
+            A surface that can have a glyph renered to it as a series of actions.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.BeginFigure">
+            <summary>
+            Begins the figure.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.MoveTo(SixLabors.Primitives.PointF)">
+            <summary>
+            Sets a new start point to draw lines from
+            </summary>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.QuadraticBezierTo(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Draw a quadratic bezier curve connecting the previous point to <paramref name="point"/>.
+            </summary>
+            <param name="secondControlPoint">The second control point.</param>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.CubicBezierTo(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Draw a Cubics bezier curve connecting the previous point to <paramref name="point"/>.
+            </summary>
+            <param name="secondControlPoint">The second control point.</param>
+            <param name="thirdControlPoint">The third control point.</param>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.LineTo(SixLabors.Primitives.PointF)">
+            <summary>
+            Draw a straight line connecting the previous point to <paramref name="point"/>.
+            </summary>
+            <param name="point">The point.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.EndFigure">
+            <summary>
+            Ends the figure.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.EndGlyph">
+            <summary>
+            Ends the glyph.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.BeginGlyph(SixLabors.Primitives.RectangleF,System.Int32)">
+            <summary>
+            Begins the glyph.
+            </summary>
+            <param name="bounds">The bounds the glyph will be rendered at and at what size.</param>
+            <param name="cacheKey">The a key that uniquely represents a version of a glyph in at particular font size, font family, font style and DPI.</param>
+            <returns>Returns true if the glyph should be rendered othersie it returns false.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.EndText">
+            <summary>
+            Called once all glyphs have completed rendering
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRenderer.BeginText(SixLabors.Primitives.RectangleF)">
+            <summary>
+            Called before any glyphs have been rendered.
+            </summary>
+            <param name="bounds">The bounds the text will be rendered at and at whats size.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.IGlyphRendererExtensions">
+            <summary>
+            A surface that can have a glyph renered to it as a series of actions.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IGlyphRendererExtensions.Render(SixLabors.Fonts.IGlyphRenderer,System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Renders the text.
+            </summary>
+            <param name="renderer">The target renderer surface.</param>
+            <param name="text">The text.</param>
+            <param name="options">The options.</param>
+            <returns>Returns the orginonal <paramref name="renderer"/></returns>
+        </member>
+        <member name="F:SixLabors.Fonts.IO.ZlibInflateStream.rawStream">
+            <summary>
+            The raw stream containing the uncompressed image data.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.IO.ZlibInflateStream.isDisposed">
+            <summary>
+            A value indicating whether this instance of the given entity has been disposed.
+            </summary>
+            <value><see langword="true"/> if this instance has been disposed; otherwise, <see langword="false"/>.</value>
+            <remarks>
+            If the entity is disposed, it must not be disposed a second
+            time. The isDisposed field is set the first time the entity
+            is disposed. If the isDisposed field is true, then the Dispose()
+            method will not dispose again. This help not to prolong the entity's
+            life in the Garbage Collector.
+            </remarks>
+        </member>
+        <member name="F:SixLabors.Fonts.IO.ZlibInflateStream.crcread">
+            <summary>
+            The read crc data.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.IO.ZlibInflateStream.deflateStream">
+            <summary>
+            The stream responsible for decompressing the input stream.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.#ctor(System.IO.Stream)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.IO.ZlibInflateStream"/> class.
+            </summary>
+            <param name="stream">The stream.</param>
+            <exception cref="T:System.Exception">
+            Thrown if the compression method is incorrect.
+            </exception>
+        </member>
+        <member name="P:SixLabors.Fonts.IO.ZlibInflateStream.CanRead">
+            <inheritdoc/>
+        </member>
+        <member name="P:SixLabors.Fonts.IO.ZlibInflateStream.CanSeek">
+            <inheritdoc/>
+        </member>
+        <member name="P:SixLabors.Fonts.IO.ZlibInflateStream.CanWrite">
+            <inheritdoc/>
+        </member>
+        <member name="P:SixLabors.Fonts.IO.ZlibInflateStream.Length">
+            <inheritdoc/>
+        </member>
+        <member name="P:SixLabors.Fonts.IO.ZlibInflateStream.Position">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.Flush">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.Read(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.Seek(System.Int64,System.IO.SeekOrigin)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.SetLength(System.Int64)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.Write(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Fonts.IO.ZlibInflateStream.Dispose(System.Boolean)">
+            <inheritdoc/>
+        </member>
+        <member name="T:SixLabors.Fonts.IReadOnlyFontCollection">
+            <summary>
+            A readonly collection of fonts.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.IReadOnlyFontCollection.Families">
+            <summary>
+            Gets the collection of <see cref="T:SixLabors.Fonts.FontFamily"/> objects associated with this <see cref="T:SixLabors.Fonts.FontCollection"/>.
+            </summary>
+            <value>
+            The families.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.IReadOnlyFontCollection.Find(System.String)">
+            <summary>
+            Finds the specified font family.
+            </summary>
+            <param name="fontFamily">The font family.</param>
+            <returns>The family if installed otherwise throws <see cref="T:SixLabors.Fonts.Exceptions.FontFamilyNotFoundException"/></returns>
+        </member>
+        <member name="M:SixLabors.Fonts.IReadOnlyFontCollection.TryFind(System.String,SixLabors.Fonts.FontFamily@)">
+            <summary>
+            Finds the specified font family.
+            </summary>
+            <param name="fontFamily">The font family to find.</param>
+            <param name="family">The found family.</param>
+            <returns>true if a font of that family has been installed into the font collection.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.IReadonlyFontCollectionExtensions">
+            <summary>
+            A readonly collection of fonts.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.IReadonlyFontCollectionExtensions.CreateFont(SixLabors.Fonts.IReadOnlyFontCollection,System.String,System.Single,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family.
+            </summary>
+            <param name="collection">The the ont collection to retrieve the font family from.</param>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+            <param name="style">The style.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.IReadonlyFontCollectionExtensions.CreateFont(SixLabors.Fonts.IReadOnlyFontCollection,System.String,System.Single)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family with regular styling.
+            </summary>
+            <param name="collection">The the ont collection to retrieve the font family from.</param>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.RendererOptions">
+            <summary>
+            The font style to render onto a peice of text.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+            <param name="dpi">The dpi.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+            <param name="dpiX">The X dpi.</param>
+            <param name="dpiY">The Y dpi.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font,SixLabors.Primitives.PointF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+            <param name="origin">The origin location.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font,System.Single,SixLabors.Primitives.PointF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+            <param name="dpi">The dpi.</param>
+            <param name="origin">The origin location.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.#ctor(SixLabors.Fonts.Font,System.Single,System.Single,SixLabors.Primitives.PointF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.RendererOptions"/> class.
+            </summary>
+            <param name="font">The font.</param>
+            <param name="dpiX">The X dpi.</param>
+            <param name="dpiY">The Y dpi.</param>
+            <param name="origin">The origin location.</param>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.Font">
+            <summary>
+            Gets the font.
+            </summary>
+            <value>
+            The font.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.TabWidth">
+            <summary>
+            Gets or sets the width of the tab.
+            </summary>
+            <value>
+            The width of the tab.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.ApplyKerning">
+            <summary>
+            Gets or sets a value indicating whether [apply kerning].
+            </summary>
+            <value>
+              <c>true</c> if [apply kerning]; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.DpiX">
+            <summary>
+            Gets or sets the the current X DPI to render/measure the text at.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.DpiY">
+            <summary>
+            Gets or sets the the current Ys DPI to render/measure the text at.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.WrappingWidth">
+            <summary>
+            Gets or sets the width relative to the current DPI at which text will automatically wrap onto a newline
+            </summary>
+            <value>
+                if value is -1 then wrapping is disabled.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.HorizontalAlignment">
+            <summary>
+            Gets or sets the Horizontal alignment of the text.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.VerticalAlignment">
+            <summary>
+            Gets or sets the Vertical alignment of the text.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.RendererOptions.Origin">
+            <summary>
+            Gets or sets the rendering origin.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.RendererOptions.GetStyle(System.Int32,System.Int32)">
+            <summary>
+            Gets the style. In derived classes this could switchout to different fonts mid stream
+            </summary>
+            <param name="index">The index.</param>
+            <param name="length">The length.</param>
+            <returns>
+            The Font style that applies to a region of text.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Fonts.SystemFontCollection">
+            <summary>
+            Provides a collection of fonts.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.SystemFontCollection.Families">
+            <summary>
+            Gets the collection of <see cref="T:SixLabors.Fonts.FontFamily"/> objects associated with this <see cref="T:SixLabors.Fonts.FontCollection"/>.
+            </summary>
+            <value>
+            The families.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFontCollection.Find(System.String)">
+            <inheritdocs />
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFontCollection.TryFind(System.String,SixLabors.Fonts.FontFamily@)">
+            <inheritdocs />
+        </member>
+        <member name="T:SixLabors.Fonts.SystemFonts">
+            <summary>
+            Provides a collection of fonts.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.SystemFonts.Collection">
+            <summary>
+            Gets the collection hosting the globably installled system fonts.
+            </summary>
+            <value>
+            The system fonts.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.SystemFonts.Families">
+            <summary>
+            Gets the collection of <see cref="T:SixLabors.Fonts.FontFamily"/>s installed on current system.
+            </summary>
+            <value>
+            The families.
+            </value>
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFonts.Find(System.String)">
+            <summary>
+            Finds the specified font family from the system font store.
+            </summary>
+            <param name="fontFamily">The font family.</param>
+            <returns>The family if installed otherwise null</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFonts.TryFind(System.String,SixLabors.Fonts.FontFamily@)">
+            <summary>
+            Finds the specified font family from the system font store.
+            </summary>
+            <param name="fontFamily">The font family to find.</param>
+            <param name="family">The found family.</param>
+            <returns>true if a font of that family has been installed into the font collection.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFonts.CreateFont(System.String,System.Single,SixLabors.Fonts.FontStyle)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family.
+            </summary>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+            <param name="style">The style.</param>
+            <returns>Returns instance of the <see cref="T:SixLabors.Fonts.Font"/> from the current collection.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.SystemFonts.CreateFont(System.String,System.Single)">
+            <summary>
+            Create a new instance of the <see cref="T:SixLabors.Fonts.Font"/> for the named font family with regular styling.
+            </summary>
+            <param name="fontFamily">The family.</param>
+            <param name="size">The size.</param>
+            <returns>Returns instance of the <see cref="T:SixLabors.Fonts.Font"/> from the current collection.</returns>
+        </member>
+        <member name="P:SixLabors.Fonts.Tables.General.NameTable.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Tables.General.NameTable.FontName">
+            <summary>
+            Gets the name of the font.
+            </summary>
+            <value>
+            The name of the font.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Tables.General.NameTable.FontFamilyName">
+            <summary>
+            Gets the name of the font family.
+            </summary>
+            <value>
+            The name of the font family.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.Tables.General.NameTable.FontSubFamilyName">
+            <summary>
+            Gets the name of the font sub family.
+            </summary>
+            <value>
+            The name of the font sub family.
+            </value>
+        </member>
+        <member name="T:SixLabors.Fonts.TextLayout">
+            <summary>
+            Encapsulated logic or laying out text.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.TextLayout.GenerateLayout(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Generates the layout.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <returns>A collection of layout that describe all thats needed to measure or render a series of glyphs.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.GlyphLayout">
+            <summary>
+            A glyphs layout and location
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.IsWhiteSpace">
+            <summary>
+            Gets a value indicating whether gets the glyphe represents a whitespace character.
+            </summary>
+            <value>
+            The bounds.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.Glyph">
+            <summary>
+            Gets the glyph.
+            </summary>
+            <value>
+            The glyph.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.Location">
+            <summary>
+            Gets the location.
+            </summary>
+            <value>
+            The location.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.Width">
+            <summary>
+            Gets the width.
+            </summary>
+            <value>
+            The width.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.Height">
+            <summary>
+            Gets the height.
+            </summary>
+            <value>
+            The height.
+            </value>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.StartOfLine">
+            <summary>
+            Gets or sets a value indicating whether this glyph is the first glyph on a new line.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Fonts.GlyphLayout.CodePoint">
+            <summary>
+            Gets the Unicode code point of the character.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.TextMeasurer">
+            <summary>
+            Encapulated logic for laying out and measuring text.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.Measure(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Measures the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <returns>The size of the text if it was to be rendered.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.MeasureBounds(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Measures the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <returns>The size of the text if it was to be rendered.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.TryMeasureCharacterBounds(System.String,SixLabors.Fonts.RendererOptions,System.Collections.Generic.IReadOnlyList{SixLabors.Fonts.GlyphMetric}@)">
+            <summary>
+            Measures the character bounds of the text. For each control character the list contains a <c>null</c> element.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <param name="characterBounds">The list of character bounds of the text if it was to be rendered.</param>
+            <returns>Whether any of the characters had non-empty bounds.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.TextMeasurerInt.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.TextMeasurer.TextMeasurerInt"/> class.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.TextMeasurerInt.MeasureBounds(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Measures the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <returns>The size of the text if it was to be rendered.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.TextMeasurerInt.TryMeasureCharacterBounds(System.String,SixLabors.Fonts.RendererOptions,System.Collections.Generic.IReadOnlyList{SixLabors.Fonts.GlyphMetric}@)">
+            <summary>
+            Measures the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <param name="characterBounds">The character bounds list.</param>
+            <returns>The size of the text if it was to be rendered.</returns>
+        </member>
+        <member name="M:SixLabors.Fonts.TextMeasurer.TextMeasurerInt.Measure(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Measures the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+            <returns>The size of the text if it was to be rendered.</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.TextRenderer">
+            <summary>
+            Encapulated logic for laying out and then rendering text to a <see cref="T:SixLabors.Fonts.IGlyphRenderer"/> surface.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.TextRenderer.#ctor(SixLabors.Fonts.IGlyphRenderer)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Fonts.TextRenderer"/> class.
+            </summary>
+            <param name="renderer">The renderer.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.TextRenderer.RenderTextTo(SixLabors.Fonts.IGlyphRenderer,System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Renders the text to the <paramref name="renderer"/>.
+            </summary>
+            <param name="renderer">The target renderer.</param>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+        </member>
+        <member name="M:SixLabors.Fonts.TextRenderer.RenderText(System.String,SixLabors.Fonts.RendererOptions)">
+            <summary>
+            Renders the text.
+            </summary>
+            <param name="text">The text.</param>
+            <param name="options">The style.</param>
+        </member>
+        <member name="T:SixLabors.Fonts.Utilities.EncodingIDExtensions">
+            <summary>
+            Converts encoding ID to TextEncoding
+            </summary>
+        </member>
+        <member name="M:SixLabors.Fonts.Utilities.EncodingIDExtensions.AsEncoding(SixLabors.Fonts.WellKnownIds.EncodingIDs)">
+            <summary>
+            Converts encoding ID to TextEncoding
+            </summary>
+            <param name="id">The identifier.</param>
+            <returns>the encoding for this encoding ID</returns>
+        </member>
+        <member name="T:SixLabors.Fonts.VerticalAlignment">
+            <summary>
+            Vertial alignment modes.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.VerticalAlignment.Top">
+            <summary>
+            Aligns downward from the top.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.VerticalAlignment.Center">
+            <summary>
+            Aligns text up and down from the middle.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.VerticalAlignment.Bottom">
+            <summary>
+            Aligns text upwards from the bottom
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.WellKnownIds.EncodingIDs">
+            <summary>
+            Encoding IDS
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.Unicode1">
+            <summary>
+            Unicode 1.0 semantics
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.Unicode11">
+            <summary>
+            Unicode 1.1 semantics
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.ISO10646">
+            <summary>
+            ISO/IEC 10646 semantics
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.Unicode2">
+            <summary>
+            Unicode 2.0 and onwards semantics, Unicode BMP only (cmap subtable formats 0, 4, 6).
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.Unicode2Plus">
+            <summary>
+            Unicode 2.0 and onwards semantics, Unicode full repertoire (cmap subtable formats 0, 4, 6, 10, 12).
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.UnicodeVariationSequences">
+            <summary>
+            Unicode Variation Sequences (cmap subtable format 14).
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.EncodingIDs.UnicodeFull">
+            <summary>
+            Unicode full repertoire (cmap subtable formats 0, 4, 6, 10, 12, 13)
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.WellKnownIds.NameIds">
+            <summary>
+            Common name ids
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.CopyrightNotice">
+            <summary>
+            The copyright notice
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.FontFamilyName">
+            <summary>
+            The font family name; Up to four fonts can share the Font Family name, forming a font style linking group (regular, italic, bold, bold italic — as defined by OS/2.fsSelection bit settings).
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.FontSubfamilyName">
+            <summary>
+            The font subfamily name; The Font Subfamily name distinguishes the font in a group with the same Font Family name (name ID 1). This is assumed to address style (italic, oblique) and weight (light, bold, black, etc.). A font with no particular differences in weight or style (e.g. medium weight, not italic and fsSelection bit 6 set) should have the string “Regular” stored in this position.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.UniqueFontID">
+            <summary>
+            The unique font identifier
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.FullFontName">
+            <summary>
+            The full font name; a combination of strings 1 and 2, or a similar human-readable variant. If string 2 is "Regular", it is sometimes omitted from name ID 4.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.Version">
+            <summary>
+            Version string. Should begin with the syntax 'Version &lt;number&gt;.&lt;number>' (upper case, lower case, or mixed, with a space between “Version” and the number).
+            The string must contain a version number of the following form: one or more digits (0-9) of value less than 65,535, followed by a period, followed by one or more digits of value less than 65,535. Any character other than a digit will terminate the minor number. A character such as “;” is helpful to separate different pieces of version information.
+            The first such match in the string can be used by installation software to compare font versions. Note that some installers may require the string to start with “Version ”, followed by a version number as above.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.PostscriptName">
+            <summary>
+            Postscript name for the font; Name ID 6 specifies a string which is used to invoke a PostScript language font that corresponds to this OpenType font. When translated to ASCII, the name string must be no longer than 63 characters and restricted to the printable ASCII subset, codes 33 to 126, except for the 10 characters '[', ']', '(', ')', '{', '}', '&lt;', '&gt;', '/', '%'.
+            In a CFF OpenType font, there is no requirement that this name be the same as the font name in the CFF’s Name INDEX. Thus, the same CFF may be shared among multiple font components in a Font Collection. See the 'name' table section of Recommendations for OpenType fonts "" for additional information.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.Trademark">
+            <summary>
+            Trademark; this is used to save any trademark notice/information for this font. Such information should be based on legal advice. This is distinctly separate from the copyright.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.Manufacturer">
+            <summary>
+            The manufacturer
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.Designer">
+            <summary>
+            Designer; name of the designer of the typeface.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.Description">
+            <summary>
+            Description; description of the typeface. Can contain revision information, usage recommendations, history, features, etc.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.VendorUrl">
+            <summary>
+            URL Vendor; URL of font vendor (with protocol, e.g., http://, ftp://). If a unique serial number is embedded in the URL, it can be used to register the font.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.DesignerUrl">
+            <summary>
+            URL Designer; URL of typeface designer (with protocol, e.g., http://, ftp://).
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.LicenseDescription">
+            <summary>
+            License Description; description of how the font may be legally used, or different example scenarios for licensed use. This field should be written in plain language, not legalese.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.LicenseInfoUrl">
+            <summary>
+            License Info URL; URL where additional licensing information can be found.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.TypographicFamilyName">
+            <summary>
+            Typographic Family name: The typographic family grouping doesn't impose any constraints on the number of faces within it, in contrast with the 4-style family grouping (ID 1), which is present both for historical reasons and to express style linking groups. If name ID 16 is absent, then name ID 1 is considered to be the typographic family name. (In earlier versions of the specification, name ID 16 was known as "Preferred Family".)
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.TypographicSubfamilyName">
+            <summary>
+            Typographic Subfamily name: This allows font designers to specify a subfamily name within the typographic family grouping. This string must be unique within a particular typographic family. If it is absent, then name ID 2 is considered to be the typographic subfamily name. (In earlier versions of the specification, name ID 17 was known as "Preferred Subfamily".)
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.NameIds.SampleText">
+            <summary>
+            Sample text; This can be the font name, or any other text that the designer thinks is the best sample to display the font in.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Fonts.WellKnownIds.PlatformIDs">
+            <summary>
+            platforms ids
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.PlatformIDs.Unicode">
+            <summary>
+            Unicode platform
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.PlatformIDs.Macintosh">
+            <summary>
+            Script manager code
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.PlatformIDs.ISO">
+            <summary>
+            [deprecated] ISO encoding
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.PlatformIDs.Windows">
+            <summary>
+            Window encoding
+            </summary>
+        </member>
+        <member name="F:SixLabors.Fonts.WellKnownIds.PlatformIDs.Custom">
+            <summary>
+            Custom platform
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,1921 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SixLabors.Shapes</name>
+    </assembly>
+    <members>
+        <member name="T:SixLabors.Shapes.ClipperExtensions">
+            <summary>
+            Clipping extensions for shapes
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.ClipperExtensions.Clip(SixLabors.Shapes.IPath,System.Collections.Generic.IEnumerable{SixLabors.Shapes.IPath})">
+            <summary>
+            Clips the specified holes.
+            </summary>
+            <param name="shape">The shape.</param>
+            <param name="holes">The holes.</param>
+            <returns>Returns a new shape with the holes cliped out out the shape.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ClipperExtensions.Clip(SixLabors.Shapes.IPath,SixLabors.Shapes.IPath[])">
+            <summary>
+            Clips the specified holes.
+            </summary>
+            <param name="shape">The shape.</param>
+            <param name="holes">The holes.</param>
+            <returns>Returns a new shape with the holes cliped out out the shape.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.ComplexPolygon">
+            <summary>
+            Represents a complex polygon made up of one or more shapes overlayed on each other, where overlaps causes holes.
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.IPath" />
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.#ctor(SixLabors.Shapes.IPath[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.ComplexPolygon" /> class.
+            </summary>
+            <param name="paths">The paths.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.IPath})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.ComplexPolygon" /> class.
+            </summary>
+            <param name="paths">The paths.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.ComplexPolygon.Length">
+            <summary>
+            Gets the length of the path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.ComplexPolygon.PathType">
+            <summary>
+            Gets a value indicating whether this instance is closed, open or a composite path with a mixture of open and closed figures.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.ComplexPolygon.Paths">
+            <summary>
+            Gets the paths that make up this shape
+            </summary>
+            <value>
+            The paths.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.ComplexPolygon.Bounds">
+            <summary>
+            Gets the bounding box of this shape.
+            </summary>
+            <value>
+            The bounds.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.ComplexPolygon.MaxIntersections">
+            <summary>
+            Gets the maximum number intersections that a shape can have when testing a line.
+            </summary>
+            <value>
+            The maximum intersections.
+            </value>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.Distance(SixLabors.Primitives.PointF)">
+            <summary>
+            the distance of the point from the outline of the shape, if the value is negative it is inside the polygon bounds
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+            Returns the distance from thr shape to the point
+            </returns>
+            <remarks>
+            Due to the clipping we did during construction we know that out shapes do not overlap at there edges
+            therefore for a point to be in more that one we must be in a hole of another, theoretically this could
+            then flip again to be in a outline inside a hole inside an outline :)
+            </remarks>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[],System.Int32)">
+            <summary>
+            Based on a line described by <paramref name="start"/> and <paramref name="end"/>
+            populate a buffer for all points on all the polygons, that make up this complex shape,
+            that the line intersects.
+            </summary>
+            <param name="start">The start point of the line.</param>
+            <param name="end">The end point of the line.</param>
+            <param name="buffer">The buffer that will be populated with intersections.</param>
+            <param name="offset">The offset within the buffer</param>
+            <returns>
+            The number of intersections populated into the buffer.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.Contains(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines whether the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+              <c>true</c> if the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the shape using the specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new shape with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.IPath" /> into a simple linear path..
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.IPath" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.AsClosedPath">
+            <summary>
+            Converts a path to a closed path.
+            </summary>
+            <returns>
+            Returns the path as a closed path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ComplexPolygon.PointAlongPath(System.Single)">
+            <summary>
+            Calculates the the point a certain distance a path.
+            </summary>
+            <param name="distanceAlongPath">The distance along the path to find details of.</param>
+            <returns>
+            Returns details about a point along a path.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.CubicBezierLineSegment">
+            <summary>
+            Represents a line segment that contains a lists of control points that will be rendered as a cubic bezier curve
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.ILineSegment" />
+        </member>
+        <member name="F:SixLabors.Shapes.CubicBezierLineSegment.linePoints">
+            <summary>
+            The line points.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Primitives.PointF})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.CubicBezierLineSegment"/> class.
+            </summary>
+            <param name="points">The points.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.#ctor(SixLabors.Primitives.PointF[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.CubicBezierLineSegment"/> class.
+            </summary>
+            <param name="points">The points.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.CubicBezierLineSegment"/> class.
+            </summary>
+            <param name="start">The start.</param>
+            <param name="controlPoint1">The control point1.</param>
+            <param name="controlPoint2">The control point2.</param>
+            <param name="end">The end.</param>
+            <param name="additionalPoints">The additional points.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.CubicBezierLineSegment.EndPoint">
+            <summary>
+            Gets the end point.
+            </summary>
+            <value>
+            The end point.
+            </value>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.Flatten">
+            <summary>
+            Returns the current <see cref="T:SixLabors.Shapes.ILineSegment" /> a simple linear path.
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.ILineSegment" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the current LineSegment using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A line segment with the matrix applied to it.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.SixLabors#Shapes#ILineSegment#Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the current LineSegment using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A line segment with the matrix applied to it.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.CubicBezierLineSegment.CalculateBezierPoint(System.Single,System.Numerics.Vector2,System.Numerics.Vector2,System.Numerics.Vector2,System.Numerics.Vector2)">
+            <summary>
+            Calculates the bezier point along the line.
+            </summary>
+            <param name="t">The position within the line.</param>
+            <param name="p0">The p 0.</param>
+            <param name="p1">The p 1.</param>
+            <param name="p2">The p 2.</param>
+            <param name="p3">The p 3.</param>
+            <returns>
+            The <see cref="T:System.Numerics.Vector2"/>.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.EllipsePolygon">
+            <summary>
+            A shape made up of a single path made up of one of more <see cref="T:SixLabors.Shapes.ILineSegment"/>s
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.SizeF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.EllipsePolygon" /> class.
+            </summary>
+            <param name="location">The location the center of the ellipse will be placed.</param>
+            <param name="size">The width/hight of the final ellipse.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.#ctor(SixLabors.Primitives.PointF,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.EllipsePolygon" /> class.
+            </summary>
+            <param name="location">The location the center of the circle will be placed.</param>
+            <param name="radius">The radius final circle.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.#ctor(System.Single,System.Single,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.EllipsePolygon" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the ellipse.</param>
+            <param name="y">The Y coordinate of the center of the ellipse.</param>
+            <param name="width">The width the ellipse should have.</param>
+            <param name="height">The height the ellipse should have.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.#ctor(System.Single,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.EllipsePolygon" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the circle.</param>
+            <param name="y">The Y coordinate of the center of the circle.</param>
+            <param name="radius">The radius final circle.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#ISimplePath#IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#ISimplePath#Points">
+            <summary>
+            Gets the points that make up this simple linear path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.Bounds">
+            <inheritdoc />
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#PathType">
+            <summary>
+            Gets a value indicating whether this instance is closed, open or a composite path with a mixture of open and closed figures.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#MaxIntersections">
+            <summary>
+            Gets the maximum number intersections that a shape can have when testing a line.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.EllipsePolygon.Length">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.Distance(SixLabors.Primitives.PointF)">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the rectangle using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new path with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the path using the specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new path with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#AsClosedPath">
+            <summary>
+            Returns this polygon as a path
+            </summary>
+            <returns>This polygon as a path</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.IPath" /> into a simple linear path..
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.IPath" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[],System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.SixLabors#Shapes#IPath#FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <inheritdoc/>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.Contains(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines whether the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+              <c>true</c> if the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.EllipsePolygon.PointAlongPath(System.Single)">
+            <inheritdoc />
+        </member>
+        <member name="T:SixLabors.Shapes.ArrayExtensions">
+            <summary>
+            Extensions on arrays.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.ArrayExtensions.Merge``1(``0[],``0[])">
+            <summary>
+            Merges the specified source2.
+            </summary>
+            <typeparam name="T">the type of the array</typeparam>
+            <param name="source1">The source1.</param>
+            <param name="source2">The source2.</param>
+            <returns>the Merged arrays</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.Guard">
+            <summary>
+            Provides methods to protect against invalid parameters.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.NotNull(System.Object,System.String,System.String)">
+            <summary>
+            Verifies, that the method parameter with specified object value is not null
+            and throws an exception if it is found to be so.
+            </summary>
+            <param name="target">The target object, which cannot be null.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <param name="message">The error message, if any to add to the exception.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="target"/> is null</exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.NotNullOrEmpty(System.String,System.String,System.String)">
+            <summary>
+            Verifies, that the string method parameter with specified object value and message
+            is not null, not empty and does not contain only blanks and throws an exception
+            if the object is null.
+            </summary>
+            <param name="target">The target string, which should be checked against being null or empty.</param>
+            <param name="parameterName">Name of the parameter.</param>
+            <param name="message">The error message, if any to add to the exception.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="target"/> is null.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="target"/> is empty or contains only blanks.</exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.NotNullOrEmpty``1(System.Collections.Generic.IEnumerable{``0},System.String,System.String)">
+            <summary>
+            Verifies, that the enumeration is not null and not empty.
+            </summary>
+            <typeparam name="T">The type of objects in the <paramref name="target"/></typeparam>
+            <param name="target">The target enumeration, which should be checked against being null or empty.</param>
+            <param name="parameterName">Name of the parameter.</param>
+            <param name="message">The error message, if any to add to the exception.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="target"/> is null.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="target"/> is empty.</exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.MustBeLessThan``1(``0,``0,System.String)">
+            <summary>
+            Verifies that the specified value is less than a maximum value
+            and throws an exception if it is not.
+            </summary>
+            <param name="value">The target value, which should be validated.</param>
+            <param name="max">The maximum value.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value"/> is greater than the maximum value.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.MustBeLessThanOrEqualTo``1(``0,``0,System.String)">
+            <summary>
+            Verifies that the specified value is less than or equal to a maximum value
+            and throws an exception if it is not.
+            </summary>
+            <param name="value">The target value, which should be validated.</param>
+            <param name="max">The maximum value.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value"/> is greater than the maximum value.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.MustBeGreaterThan``1(``0,``0,System.String)">
+            <summary>
+            Verifies that the specified value is greater than a minimum value
+            and throws an exception if it is not.
+            </summary>
+            <param name="value">The target value, which should be validated.</param>
+            <param name="min">The minimum value.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value"/> is less than the minimum value.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.MustBeGreaterThanOrEqualTo``1(``0,``0,System.String)">
+            <summary>
+            Verifies that the specified value is greater than or equal to a minimum value
+            and throws an exception if it is not.
+            </summary>
+            <param name="value">The target value, which should be validated.</param>
+            <param name="min">The minimum value.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value"/> is less than the minimum value.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.MustBeBetweenOrEqualTo``1(``0,``0,``0,System.String)">
+            <summary>
+            Verifies that the specified value is greater than or equal to a minimum value and less than
+            or equal to a maximum value and throws an exception if it is not.
+            </summary>
+            <param name="value">The target value, which should be validated.</param>
+            <param name="min">The minimum value.</param>
+            <param name="max">The maximum value.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value"/> is less than the minimum value of greater than the maximum value.
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.IsTrue(System.Boolean,System.String,System.String)">
+            <summary>
+            Verifies, that the method parameter with specified target value is true
+            and throws an exception if it is found to be so.
+            </summary>
+            <param name="target">
+            The target value, which cannot be false.
+            </param>
+            <param name="parameterName">
+            The name of the parameter that is to be checked.
+            </param>
+            <param name="message">
+            The error message, if any to add to the exception.
+            </param>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="target"/> is false
+            </exception>
+        </member>
+        <member name="M:SixLabors.Shapes.Guard.IsFalse(System.Boolean,System.String,System.String)">
+            <summary>
+            Verifies, that the method parameter with specified target value is false
+            and throws an exception if it is found to be so.
+            </summary>
+            <param name="target">The target value, which cannot be true.</param>
+            <param name="parameterName">The name of the parameter that is to be checked.</param>
+            <param name="message">The error message, if any to add to the exception.</param>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="target"/> is true
+            </exception>
+        </member>
+        <member name="T:SixLabors.Shapes.VectorExtensions">
+            <summary>
+            Extensions on arrays.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.VectorExtensions.Equivelent(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Single)">
+            <summary>
+            Merges the specified source2.
+            </summary>
+            <param name="source1">The source1.</param>
+            <param name="source2">The source2.</param>
+            <param name="threshold">The threshold.</param>
+            <returns>
+            the Merged arrays
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.VectorExtensions.Equivelent(System.Numerics.Vector2,System.Numerics.Vector2,System.Single)">
+            <summary>
+            Merges the specified source2.
+            </summary>
+            <param name="source1">The source1.</param>
+            <param name="source2">The source2.</param>
+            <param name="threshold">The threshold.</param>
+            <returns>
+            the Merged arrays
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.ILineSegment">
+            <summary>
+            Represents a simple path segment
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.ILineSegment.EndPoint">
+            <summary>
+            Gets the end point.
+            </summary>
+            <value>
+            The end point.
+            </value>
+        </member>
+        <member name="M:SixLabors.Shapes.ILineSegment.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.ILineSegment" /> into a simple linear path..
+            </summary>
+            <returns>Returns the current <see cref="T:SixLabors.Shapes.ILineSegment" /> as simple linear path.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.ILineSegment.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the current LineSegment using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A line segment with the matrix applied to it.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.InternalPath">
+            <summary>
+            Internal logic for integrating linear paths.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.Epsilon">
+            <summary>
+            The epsilon for float comparison
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.MaxVector">
+            <summary>
+            The maximum vector
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.points">
+            <summary>
+            The points.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.closedPath">
+            <summary>
+            The closed path.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.ILineSegment},System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.InternalPath"/> class.
+            </summary>
+            <param name="segments">The segments.</param>
+            <param name="isClosedPath">if set to <c>true</c> [is closed path].</param>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.#ctor(SixLabors.Shapes.ILineSegment,System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.InternalPath" /> class.
+            </summary>
+            <param name="segment">The segment.</param>
+            <param name="isClosedPath">if set to <c>true</c> [is closed path].</param>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Primitives.PointF},System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.InternalPath" /> class.
+            </summary>
+            <param name="points">The points.</param>
+            <param name="isClosedPath">if set to <c>true</c> [is closed path].</param>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.#ctor(SixLabors.Shapes.InternalPath.PointData[],System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.InternalPath" /> class.
+            </summary>
+            <param name="points">The points.</param>
+            <param name="isClosedPath">if set to <c>true</c> [is closed path].</param>
+        </member>
+        <member name="T:SixLabors.Shapes.InternalPath.Orientation">
+            <summary>
+            the orrientateion of an point form a line
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.Orientation.Colinear">
+            <summary>
+            Point is colienear
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.Orientation.Clockwise">
+            <summary>
+            Its clockwise
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.Orientation.Counterclockwise">
+            <summary>
+            Its counter clockwise
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.InternalPath.Bounds">
+            <summary>
+            Gets the bounds.
+            </summary>
+            <value>
+            The bounds.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.InternalPath.Length">
+            <summary>
+            Gets the length.
+            </summary>
+            <value>
+            The length.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.InternalPath.PointCount">
+            <summary>
+            Gets the length.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.DistanceFromPath(SixLabors.Primitives.PointF)">
+            <summary>
+            Calculates the distance from the path.
+            </summary>
+            <param name="point">The point.</param>
+            <returns>Returns the distance from the path</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <summary>
+            Based on a line described by <paramref name="start" /> and <paramref name="end" />
+            populates a buffer for all points on the path that the line intersects.
+            </summary>
+            <param name="start">The start.</param>
+            <param name="end">The end.</param>
+            <param name="buffer">The buffer.</param>
+            <returns>number of intersections hit</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.PointInPolygon(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines if the specified point is inside or outside the path.
+            </summary>
+            <param name="point">The point.</param>
+            <returns>Returns true if the point is inside the closed path.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.Points">
+            <summary>
+            Gets the points.
+            </summary>
+            <returns>The <see cref="T:System.Collections.Generic.IReadOnlyCollection`1"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.PointAlongPath(System.Single)">
+            <summary>
+            Calculates the the point a certain distance a path.
+            </summary>
+            <param name="distanceAlongPath">The distance along the path to find details of.</param>
+            <returns>
+            Returns details about a point along a path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.FindIntersection(SixLabors.Shapes.InternalPath.Segment,SixLabors.Shapes.InternalPath.Segment)">
+            <summary>
+            Finds the point on line described by <paramref name="source" />
+            that intersects with line described by <paramref name="target" />.
+            </summary>
+            <param name="source">The line1 start.</param>
+            <param name="target">The target line.</param>
+            <returns>
+            The point on the line that it hit
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.Simplify(System.Collections.Generic.IEnumerable{SixLabors.Shapes.ILineSegment},System.Boolean)">
+            <summary>
+            Simplifies the collection of segments.
+            </summary>
+            <param name="segments">The segments.</param>
+            <param name="isClosed">Weather the path is closed or open.</param>
+            <returns>
+            The <see cref="T:Vector2[]"/>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.CalculateLength">
+            <summary>
+            Returns the length of the path.
+            </summary>
+            <returns>
+            The <see cref="T:System.Single"/>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.InternalPath.CalculateShorterDistance(System.Numerics.Vector2,System.Numerics.Vector2,System.Numerics.Vector2,SixLabors.Shapes.InternalPath.PointInfoInternal@)">
+            <summary>
+            Calculate any shorter distances along the path.
+            </summary>
+            <param name="start">The start position.</param>
+            <param name="end">The end position.</param>
+            <param name="point">The current point.</param>
+            <param name="info">The info.</param>
+            <returns>
+            The <see cref="T:System.Boolean"/>.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.InternalPath.PointInfoInternal">
+            <summary>
+            Contains information about the current point.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.PointInfoInternal.DistanceSquared">
+            <summary>
+            The distance squared.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.InternalPath.PointInfoInternal.PointOnLine">
+            <summary>
+            The point on the current line.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.IPath">
+            <summary>
+            Represents a logic path that can be drawn
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.IPath.PathType">
+            <summary>
+            Gets a value indicating whether this instance is closed, open or a composite path with a mixture of open and closed figures.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.IPath.Bounds">
+            <summary>
+            Gets the bounds enclosing the path
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.IPath.MaxIntersections">
+            <summary>
+            Gets the maximum number intersections that a shape can have when testing a line.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.IPath.Length">
+            <summary>
+            Gets the length of the path.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.PointAlongPath(System.Single)">
+            <summary>
+            Calculates the the point a certain distance along a path.
+            </summary>
+            <param name="distanceAlongPath">The distance along the path to find details of.</param>
+            <returns>
+            Returns details about a point along a path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.Distance(SixLabors.Primitives.PointF)">
+            <summary>
+            Calculates the distance along and away from the path for a specified point.
+            </summary>
+            <param name="point">The point along the path.</param>
+            <returns>
+            Returns details about the point and its distance away from the path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.IPath" /> into a simple linear path.
+            </summary>
+            <returns>Returns the current <see cref="T:SixLabors.Shapes.IPath" /> as simple linear path.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[],System.Int32)">
+            <summary>
+            Based on a line described by <paramref name="start"/> and <paramref name="end"/>
+            populate a buffer for all points on the polygon that the line intersects.
+            </summary>
+            <param name="start">The start point of the line.</param>
+            <param name="end">The end point of the line.</param>
+            <param name="buffer">The buffer that will be populated with intersections.</param>
+            <param name="offset">The offset within the buffer to start.</param>
+            <returns>
+            The number of intersections populated into the buffer.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <summary>
+            Based on a line described by <paramref name="start"/> and <paramref name="end"/>
+            populate a buffer for all points on the polygon that the line intersects.
+            </summary>
+            <param name="start">The start point of the line.</param>
+            <param name="end">The end point of the line.</param>
+            <param name="buffer">The buffer that will be populated with intersections.</param>
+            <returns>
+            The number of intersections populated into the buffer.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.Contains(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines whether the <see cref="T:SixLabors.Shapes.IPath"/> contains the specified point
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+              <c>true</c> if the <see cref="T:SixLabors.Shapes.IPath"/> contains the specified point; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the path using the specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A new path with the matrix applied to it.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.IPath.AsClosedPath">
+            <summary>
+            Returns this path with all figures closed.
+            </summary>
+            <returns>Returns the path as a closed path.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.IPathCollection">
+            <summary>
+            Represents a logic path that can be drawn
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.IPathCollection.Bounds">
+            <summary>
+            Gets the bounds enclosing the path
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.IPathCollection.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the path using the specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A new path with the matrix applied to it.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.ISimplePath">
+            <summary>
+            Represents a logic path that can be drawn
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.ISimplePath.IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.ISimplePath.Points">
+            <summary>
+            Gets the points that make this up as a simple linear path.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.LinearLineSegment">
+            <summary>
+            Represents a series of control points that will be joined by straight lines
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.ILineSegment" />
+        </member>
+        <member name="F:SixLabors.Shapes.LinearLineSegment.points">
+            <summary>
+            The collection of points.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.LinearLineSegment"/> class.
+            </summary>
+            <param name="start">The start.</param>
+            <param name="end">The end.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.LinearLineSegment" /> class.
+            </summary>
+            <param name="point1">The point1.</param>
+            <param name="point2">The point2.</param>
+            <param name="additionalPoints">Additional points</param>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Primitives.PointF})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.LinearLineSegment"/> class.
+            </summary>
+            <param name="points">The points.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.LinearLineSegment.EndPoint">
+            <summary>
+            Gets the end point.
+            </summary>
+            <value>
+            The end point.
+            </value>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.ILineSegment" /> into a simple linear path..
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.ILineSegment" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the current LineSegment using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A line segment with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.LinearLineSegment.SixLabors#Shapes#ILineSegment#Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the current LineSegment using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>A line segment with the matrix applied to it.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.Outliner">
+            <summary>
+            Path extensions to generate outlines of paths.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Outliner.GenerateOutline(SixLabors.Shapes.IPath,System.Single,System.Single[])">
+            <summary>
+            Generates a outline of the path with alternating on and off segments based on the pattern.
+            </summary>
+            <param name="path">the path to outline</param>
+            <param name="width">The final width outline</param>
+            <param name="pattern">The pattern made of multiples of the width.</param>
+            <returns>A new path representing the outline.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Outliner.GenerateOutline(SixLabors.Shapes.IPath,System.Single,System.ReadOnlySpan{System.Single})">
+            <summary>
+            Generates a outline of the path with alternating on and off segments based on the pattern.
+            </summary>
+            <param name="path">the path to outline</param>
+            <param name="width">The final width outline</param>
+            <param name="pattern">The pattern made of multiples of the width.</param>
+            <returns>A new path representing the outline.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Outliner.GenerateOutline(SixLabors.Shapes.IPath,System.Single,System.Single[],System.Boolean)">
+            <summary>
+            Generates a outline of the path with alternating on and off segments based on the pattern.
+            </summary>
+            <param name="path">the path to outline</param>
+            <param name="width">The final width outline</param>
+            <param name="pattern">The pattern made of multiples of the width.</param>
+            <param name="startOff">Weather the first item in the pattern is on or off.</param>
+            <returns>A new path representing the outline.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Outliner.GenerateOutline(SixLabors.Shapes.IPath,System.Single,System.ReadOnlySpan{System.Single},System.Boolean)">
+            <summary>
+            Generates a outline of the path with alternating on and off segments based on the pattern.
+            </summary>
+            <param name="path">the path to outline</param>
+            <param name="width">The final width outline</param>
+            <param name="pattern">The pattern made of multiples of the width.</param>
+            <param name="startOff">Weather the first item in the pattern is on or off.</param>
+            <returns>A new path representing the outline.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Outliner.GenerateOutline(SixLabors.Shapes.IPath,System.Single)">
+            <summary>
+            Generates a solid outline of the path.
+            </summary>
+            <param name="path">the path to outline</param>
+            <param name="width">The final width outline</param>
+            <returns>A new path representing the outline.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.Path">
+            <summary>
+            A aggregate of <see cref="T:SixLabors.Shapes.ILineSegment"/>s making a single logical path
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.IPath" />
+        </member>
+        <member name="M:SixLabors.Shapes.Path.#ctor(SixLabors.Shapes.ILineSegment[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Path"/> class.
+            </summary>
+            <param name="segment">The segment.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.#ctor(SixLabors.Shapes.Path)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Path" /> class.
+            </summary>
+            <param name="path">The path.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.ILineSegment})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Path"/> class.
+            </summary>
+            <param name="segments">The segments.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.Length">
+            <summary>
+            Gets the length of the path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.SixLabors#Shapes#ISimplePath#IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.SixLabors#Shapes#ISimplePath#Points">
+            <summary>
+            Gets the points that make up this simple linear path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.Bounds">
+            <inheritdoc />
+        </member>
+        <member name="P:SixLabors.Shapes.Path.PathType">
+            <summary>
+            Gets a value indicating whether this instance is closed, open or a composite path with a mixture of open and closed figures.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.MaxIntersections">
+            <summary>
+            Gets the maximum number intersections that a shape can have when testing a line.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.LineSegments">
+            <summary>
+            Gets the line segments
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.Path.IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.Distance(SixLabors.Primitives.PointF)">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.Path.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the rectangle using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new path with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.AsClosedPath">
+            <summary>
+            Returns this polygon as a path
+            </summary>
+            <returns>This polygon as a path</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.IPath" /> into a simple linear path..
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.IPath" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[],System.Int32)">
+            <summary>
+            Based on a line described by <paramref name="start" /> and <paramref name="end" />
+            populate a buffer for all points on the polygon that the line intersects.
+            </summary>
+            <param name="start">The start point of the line.</param>
+            <param name="end">The end point of the line.</param>
+            <param name="buffer">The buffer that will be populated with intersections.</param>
+            <param name="offset">The offset within the buffer</param>
+            <returns>
+            The number of intersections populated into the buffer.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.Path.Contains(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines whether the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+              <c>true</c> if the <see cref="T:SixLabors.Shapes.IPath" /> contains the specified point; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.Path.PointAlongPath(System.Single)">
+            <summary>
+            Calculates the the point a certain distance a path.
+            </summary>
+            <param name="distanceAlongPath">The distance along the path to find details of.</param>
+            <returns>
+            Returns details about a point along a path.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.PathBuilder">
+            <summary>
+            Allow you to derivatively build shapes and paths.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PathBuilder" /> class.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.#ctor(System.Numerics.Matrix3x2)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PathBuilder"/> class.
+            </summary>
+            <param name="defaultTransform">The default transform.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.SetTransform(System.Numerics.Matrix3x2)">
+            <summary>
+            Sets the translation to be applied to all items to follow being applied to the <see cref="T:SixLabors.Shapes.PathBuilder"/>.
+            </summary>
+            <param name="translation">The translation.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.SetOrigin(SixLabors.Primitives.PointF)">
+            <summary>
+            Sets the origin all subsequent point should be relative to.
+            </summary>
+            <param name="origin">The origin.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.ResetTransform">
+            <summary>
+            Resets the translation to the default.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.ResetOrigin">
+            <summary>
+            Resets the origin to the default.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddLine(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Adds the line connecting the current point to the new point.
+            </summary>
+            <param name="start">The start.</param>
+            <param name="end">The end.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddLine(System.Single,System.Single,System.Single,System.Single)">
+            <summary>
+            Adds the line connecting the current point to the new point.
+            </summary>
+            <param name="x1">The x1.</param>
+            <param name="y1">The y1.</param>
+            <param name="x2">The x2.</param>
+            <param name="y2">The y2.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddLines(System.Collections.Generic.IEnumerable{SixLabors.Primitives.PointF})">
+            <summary>
+            Adds a series of line segments connecting the current point to the new points.
+            </summary>
+            <param name="points">The points.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddLines(SixLabors.Primitives.PointF[])">
+            <summary>
+            Adds a series of line segments connecting the current point to the new points.
+            </summary>
+            <param name="points">The points.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddSegment(SixLabors.Shapes.ILineSegment)">
+            <summary>
+            Adds the segment.
+            </summary>
+            <param name="segment">The segment.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddBezier(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Adds a quadratic bezier curve to the current figure joining the last point to the endPoint.
+            </summary>
+            <param name="startPoint">The start point.</param>
+            <param name="controlPoint">The control point1.</param>
+            <param name="endPoint">The end point.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.AddBezier(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Adds a cubic bezier curve to the current figure joining the last point to the endPoint.
+            </summary>
+            <param name="startPoint">The start point.</param>
+            <param name="controlPoint1">The control point1.</param>
+            <param name="controlPoint2">The control point2.</param>
+            <param name="endPoint">The end point.</param>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.StartFigure">
+            <summary>
+            Starts a new figure but leaves the previous one open.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.CloseFigure">
+            <summary>
+            Closes the current figure.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.CloseAllFigures">
+            <summary>
+            Closes the current figure.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.Build">
+            <summary>
+            Builds a complex polygon fromn the current working set of working operations.
+            </summary>
+            <returns>The current set of operations as a complex polygon</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.Reset">
+            <summary>
+            Resets this instance, clearing any drawn paths and reseting any transforms.
+            </summary>
+            <returns>The <see cref="T:SixLabors.Shapes.PathBuilder"/></returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathBuilder.Clear">
+            <summary>
+            Clears all drawn paths, Leaving any applied transforms.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.PathCollection">
+            <summary>
+            A aggregate of <see cref="T:SixLabors.Shapes.IPath"/>s to apply common operations to them.
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.IPath" />
+        </member>
+        <member name="M:SixLabors.Shapes.PathCollection.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.IPath})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PathCollection"/> class.
+            </summary>
+            <param name="paths">The collection of paths</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PathCollection.#ctor(SixLabors.Shapes.IPath[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PathCollection"/> class.
+            </summary>
+            <param name="paths">The collection of paths</param>
+        </member>
+        <member name="P:SixLabors.Shapes.PathCollection.Bounds">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.PathCollection.GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.PathCollection.Transform(System.Numerics.Matrix3x2)">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.PathCollection.System#Collections#IEnumerable#GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="T:SixLabors.Shapes.PathExtensions">
+            <summary>
+            Convenience methods that can be applied to shapes and paths
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Rotate(SixLabors.Shapes.IPathCollection,System.Single)">
+            <summary>
+            Creates a path rotated by the specified radians around its center.
+            </summary>
+            <param name="path">The path to rotate.</param>
+            <param name="radians">The radians to rotate the path.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a rotate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.RotateDegree(SixLabors.Shapes.IPathCollection,System.Single)">
+            <summary>
+            Creates a path rotated by the specified degrees around its center.
+            </summary>
+            <param name="shape">The path to rotate.</param>
+            <param name="degrees">The degrees to rotate the path.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a rotate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Translate(SixLabors.Shapes.IPathCollection,SixLabors.Primitives.PointF)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="position">The translation position.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Translate(SixLabors.Shapes.IPathCollection,System.Single,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="x">The amount to translate along the X axis.</param>
+            <param name="y">The amount to translate along the Y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Scale(SixLabors.Shapes.IPathCollection,System.Single,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="scaleX">The amount to scale along the X axis.</param>
+            <param name="scaleY">The amount to scale along the Y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Scale(SixLabors.Shapes.IPathCollection,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="scale">The amount to scale along both the x and y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Rotate(SixLabors.Shapes.IPath,System.Single)">
+            <summary>
+            Creates a path rotated by the specified radians around its center.
+            </summary>
+            <param name="path">The path to rotate.</param>
+            <param name="radians">The radians to rotate the path.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a rotate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.RotateDegree(SixLabors.Shapes.IPath,System.Single)">
+            <summary>
+            Creates a path rotated by the specified degrees around its center.
+            </summary>
+            <param name="shape">The path to rotate.</param>
+            <param name="degrees">The degrees to rotate the path.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a rotate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Translate(SixLabors.Shapes.IPath,SixLabors.Primitives.PointF)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="position">The translation position.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Translate(SixLabors.Shapes.IPath,System.Single,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="x">The amount to translate along the X axis.</param>
+            <param name="y">The amount to translate along the Y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Scale(SixLabors.Shapes.IPath,System.Single,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="scaleX">The amount to scale along the X axis.</param>
+            <param name="scaleY">The amount to scale along the Y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.Scale(SixLabors.Shapes.IPath,System.Single)">
+            <summary>
+            Creates a path translated by the supplied postion
+            </summary>
+            <param name="path">The path to translate.</param>
+            <param name="scale">The amount to scale along both the x and y axis.</param>
+            <returns>A <see cref="T:SixLabors.Shapes.IPath"/> with a translate transform applied.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PathExtensions.FindIntersections(SixLabors.Shapes.IPath,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Finds the intersections.
+            </summary>
+            <param name="path">The path.</param>
+            <param name="start">The start.</param>
+            <param name="end">The end.</param>
+            <returns>
+            The points along the line the intersect with the boundaries of the polygon.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.PathTypes">
+            <summary>
+            Describes the different type of paths.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PathTypes.Open">
+            <summary>
+            Denotes a path containing a single simple open path
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PathTypes.Closed">
+            <summary>
+            Denotes a path describing a single simple closed shape
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PathTypes.Mixed">
+            <summary>
+            Denotes a path containing one or more child paths that could be open or closed.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.PointInfo">
+            <summary>
+            Returns meta data about the nearest point on a path from a vector
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PointInfo.SearchPoint">
+            <summary>
+            The search point
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PointInfo.DistanceAlongPath">
+            <summary>
+            The distance along path <see cref="F:SixLabors.Shapes.PointInfo.ClosestPointOnPath"/> is away from the start of the path
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PointInfo.DistanceFromPath">
+            <summary>
+            The distance <see cref="F:SixLabors.Shapes.PointInfo.SearchPoint"/> is away from <see cref="F:SixLabors.Shapes.PointInfo.ClosestPointOnPath"/>.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PointInfo.ClosestPointOnPath">
+            <summary>
+            The closest point to <see cref="F:SixLabors.Shapes.PointInfo.SearchPoint"/> that lies on the path.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.Polygon">
+            <summary>
+            A shape made up of a single path made up of one of more <see cref="T:SixLabors.Shapes.ILineSegment"/>s
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Polygon.#ctor(SixLabors.Shapes.ILineSegment[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Polygon"/> class.
+            </summary>
+            <param name="segments">The segments.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Polygon.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.ILineSegment})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Polygon"/> class.
+            </summary>
+            <param name="segments">The segments.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Polygon.#ctor(SixLabors.Shapes.ILineSegment)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Polygon" /> class.
+            </summary>
+            <param name="segment">The segment.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Polygon.#ctor(SixLabors.Shapes.Path)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Polygon"/> class.
+            </summary>
+            <param name="path">The path.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.Polygon.IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Polygon.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the rectangle using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new shape with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="T:SixLabors.Shapes.PolygonClipper.ClippablePath">
+            <summary>
+            Represents a shape and its type for when clipping is applies.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.ClippablePath.#ctor(SixLabors.Shapes.IPath,SixLabors.Shapes.PolygonClipper.ClippingType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PolygonClipper.ClippablePath" /> struct.
+            </summary>
+            <param name="path">The path.</param>
+            <param name="type">The type.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.PolygonClipper.ClippablePath.Path">
+            <summary>
+            Gets the path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.PolygonClipper.ClippablePath.Type">
+            <summary>
+            Gets the type.
+            </summary>
+            <value>
+            The type.
+            </value>
+        </member>
+        <member name="T:SixLabors.Shapes.PolygonClipper.Clipper">
+            <summary>
+            Library to clip polygons.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PolygonClipper.Clipper"/> class.
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.#ctor(System.Collections.Generic.IEnumerable{SixLabors.Shapes.PolygonClipper.ClippablePath})">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PolygonClipper.Clipper"/> class.
+            </summary>
+            <param name="shapes">The shapes.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.#ctor(SixLabors.Shapes.PolygonClipper.ClippablePath[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PolygonClipper.Clipper" /> class.
+            </summary>
+            <param name="shapes">The shapes.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.GenerateClippedShapes">
+            <summary>
+            Executes the specified clip type.
+            </summary>
+            <returns>
+            Returns the <see cref="T:SixLabors.Shapes.IPath" /> array containing the converted polygons.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.AddPaths(System.Collections.Generic.IEnumerable{SixLabors.Shapes.PolygonClipper.ClippablePath})">
+            <summary>
+            Adds the paths.
+            </summary>
+            <param name="paths">The paths.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.AddPaths(System.Collections.Generic.IEnumerable{SixLabors.Shapes.IPath},SixLabors.Shapes.PolygonClipper.ClippingType)">
+            <summary>
+            Adds the shapes.
+            </summary>
+            <param name="paths">The paths.</param>
+            <param name="clippingType">The clipping type.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.AddPath(SixLabors.Shapes.IPath,SixLabors.Shapes.PolygonClipper.ClippingType)">
+            <summary>
+            Adds the path.
+            </summary>
+            <param name="path">The path.</param>
+            <param name="clippingType">The clipping type.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.Clipper.AddPath(SixLabors.Shapes.ISimplePath,SixLabors.Shapes.PolygonClipper.ClippingType)">
+            <summary>
+            Adds the path.
+            </summary>
+            <param name="path">The path.</param>
+            <param name="clippingType">Type of the poly.</param>
+            <exception cref="T:SixLabors.Shapes.PolygonClipper.ClipperException">AddPath: Open paths have been disabled.</exception>
+        </member>
+        <member name="T:SixLabors.Shapes.PolygonClipper.ClipperException">
+            <summary>
+            Clipper Exception
+            </summary>
+            <seealso cref="T:System.Exception" />
+        </member>
+        <member name="M:SixLabors.Shapes.PolygonClipper.ClipperException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.PolygonClipper.ClipperException"/> class.
+            </summary>
+            <param name="description">The description.</param>
+        </member>
+        <member name="T:SixLabors.Shapes.PolygonClipper.ClippingType">
+            <summary>
+            Poly Type
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PolygonClipper.ClippingType.Subject">
+            <summary>
+            Represent a main shape to act as a main subject whoes path will be clipped or merged.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.PolygonClipper.ClippingType.Clip">
+            <summary>
+            Represents a shape to act as a clipped path.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.RectangularPolygon">
+            <summary>
+            A way of optimizing drawing rectangles.
+            </summary>
+            <seealso cref="T:SixLabors.Shapes.IPath" />
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.#ctor(System.Single,System.Single,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RectangularPolygon" /> class.
+            </summary>
+            <param name="x">The x.</param>
+            <param name="y">The y.</param>
+            <param name="width">The width.</param>
+            <param name="height">The height.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RectangularPolygon" /> class.
+            </summary>
+            <param name="topLeft">The top left.</param>
+            <param name="bottomRight">The bottom right.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.#ctor(SixLabors.Primitives.PointF,SixLabors.Primitives.SizeF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RectangularPolygon"/> class.
+            </summary>
+            <param name="location">The location.</param>
+            <param name="size">The size.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.#ctor(SixLabors.Primitives.RectangleF)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RectangularPolygon"/> class.
+            </summary>
+            <param name="rectangle">The rectangle.</param>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Location">
+            <summary>
+            Gets the location.
+            </summary>
+            <value>
+            The location.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Left">
+            <summary>
+            Gets the left.
+            </summary>
+            <value>
+            The left.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.X">
+            <summary>
+            Gets the X.
+            </summary>
+            <value>
+            The X.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Right">
+            <summary>
+            Gets the right.
+            </summary>
+            <value>
+            The right.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Top">
+            <summary>
+            Gets the top.
+            </summary>
+            <value>
+            The top.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Y">
+            <summary>
+            Gets the Y.
+            </summary>
+            <value>
+            The Y.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Bottom">
+            <summary>
+            Gets the bottom.
+            </summary>
+            <value>
+            The bottom.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#IPath#Bounds">
+            <summary>
+            Gets the bounding box of this shape.
+            </summary>
+            <value>
+            The bounds.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#IPath#Length">
+            <inheritdoc />
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#IPath#MaxIntersections">
+            <summary>
+            Gets the maximum number intersections that a shape can have when testing a line.
+            </summary>
+            <value>
+            The maximum intersections.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#ISimplePath#IsClosed">
+            <summary>
+            Gets a value indicating whether this instance is a closed path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#ISimplePath#Points">
+            <summary>
+            Gets the points that make this up as a simple linear path.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Size">
+            <summary>
+            Gets the size.
+            </summary>
+            <value>
+            The size.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Width">
+            <summary>
+            Gets the size.
+            </summary>
+            <value>
+            The size.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Height">
+            <summary>
+            Gets the height.
+            </summary>
+            <value>
+            The height.
+            </value>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#IPath#PathType">
+            <summary>
+            Gets a value indicating whether this instance is closed, open or a composite path with a mixture of open and closed figures.
+            </summary>
+        </member>
+        <member name="P:SixLabors.Shapes.RectangularPolygon.Center">
+            <summary>
+            Gets the center.
+            </summary>
+            <value>
+            The center.
+            </value>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.op_Explicit(SixLabors.Shapes.Polygon)~SixLabors.Shapes.RectangularPolygon">
+            <summary>
+            Converts the polygon to a rectangular polygon from its bounds.
+            </summary>
+            <param name="polygon">The polygon to convert.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.Contains(SixLabors.Primitives.PointF)">
+            <summary>
+            Determines if the specified point is contained within the rectangular region defined by
+            this <see cref="T:SixLabors.Shapes.RectangularPolygon" />.
+            </summary>
+            <param name="point">The point.</param>
+            <returns>
+            The <see cref="T:System.Boolean" />
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,SixLabors.Primitives.PointF[],System.Int32)">
+            <summary>
+            Based on a line described by <paramref name="start"/> and <paramref name="end"/>
+            populate a buffer for all points on the edges of the <see cref="T:SixLabors.Shapes.RectangularPolygon"/>
+            that the line intersects.
+            </summary>
+            <param name="start">The start point of the line.</param>
+            <param name="end">The end point of the line.</param>
+            <param name="buffer">The buffer that will be populated with intersections.</param>
+            <param name="offset">The starting offset within the buffer</param>
+            <returns>
+            The number of intersections populated into the buffer.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.FindIntersections(SixLabors.Primitives.PointF,SixLabors.Primitives.PointF,System.Span{SixLabors.Primitives.PointF})">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.Transform(System.Numerics.Matrix3x2)">
+            <summary>
+            Transforms the rectangle using specified matrix.
+            </summary>
+            <param name="matrix">The matrix.</param>
+            <returns>
+            A new shape with the matrix applied to it.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.PointAlongPath(System.Single)">
+            <inheritdoc />
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.Distance(SixLabors.Primitives.PointF)">
+            <summary>
+            Calculates the distance along and away from the path for a specified point.
+            </summary>
+            <param name="point">The point along the path.</param>
+            <returns>
+            Returns details about the point and its distance away from the path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.Flatten">
+            <summary>
+            Converts the <see cref="T:SixLabors.Shapes.IPath" /> into a simple linear path..
+            </summary>
+            <returns>
+            Returns the current <see cref="T:SixLabors.Shapes.IPath" /> as simple linear path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.SixLabors#Shapes#IPath#AsClosedPath">
+            <summary>
+            Converts a path to a closed path.
+            </summary>
+            <returns>
+            Returns the path as a closed path.
+            </returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.Equals(System.Object)">
+            <summary>
+            Equality comparer for two RectangularPolygons
+            </summary>
+            <param name="obj">The polygon to compare to.</param>
+            <returns>Returns a value indicating if the rectangles are equal.</returns>
+        </member>
+        <member name="M:SixLabors.Shapes.RectangularPolygon.GetHashCode">
+            <summary>
+                Serves as the default hash function.
+            </summary>
+            <returns>A hash code for the current object.</returns>
+        </member>
+        <member name="T:SixLabors.Shapes.RegularPolygon">
+            <summary>
+            A shape made up of a single path made up of one of more <see cref="T:SixLabors.Shapes.ILineSegment"/>s
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.RegularPolygon.#ctor(SixLabors.Primitives.PointF,System.Int32,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RegularPolygon" /> class.
+            </summary>
+            <param name="location">The location the center of the polygon will be placed.</param>
+            <param name="verticies">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon"/> should have.</param>
+            <param name="radius">The radius of the circle that would touch all verticies.</param>
+            <param name="angle">The angle of rotation in Radians</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RegularPolygon.#ctor(SixLabors.Primitives.PointF,System.Int32,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RegularPolygon" /> class.
+            </summary>
+            <param name="location">The location the center of the polygon will be placed.</param>
+            <param name="radius">The radius of the circle that would touch all verticies.</param>
+            <param name="verticies">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon"/> should have.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RegularPolygon.#ctor(System.Single,System.Single,System.Int32,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RegularPolygon" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the polygon.</param>
+            <param name="y">The Y coordinate of the center of the polygon.</param>
+            <param name="verticies">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon" /> should have.</param>
+            <param name="radius">The radius of the circle that would touch all verticies.</param>
+            <param name="angle">The angle of rotation in Radians</param>
+        </member>
+        <member name="M:SixLabors.Shapes.RegularPolygon.#ctor(System.Single,System.Single,System.Int32,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.RegularPolygon" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the polygon.</param>
+            <param name="y">The Y coordinate of the center of the polygon.</param>
+            <param name="radius">The radius of the circle that would touch all verticies.</param>
+            <param name="verticies">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon"/> should have.</param>
+        </member>
+        <member name="T:SixLabors.Shapes.SegmentInfo">
+            <summary>
+            Returns metadata about the point along a path.
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.SegmentInfo.Point">
+            <summary>
+            The point on the path
+            </summary>
+        </member>
+        <member name="F:SixLabors.Shapes.SegmentInfo.Angle">
+            <summary>
+            The angle of the segment.
+            </summary>
+        </member>
+        <member name="T:SixLabors.Shapes.Star">
+            <summary>
+            A shape made up of a single path made up of one of more <see cref="T:SixLabors.Shapes.ILineSegment"/>s
+            </summary>
+        </member>
+        <member name="M:SixLabors.Shapes.Star.#ctor(SixLabors.Primitives.PointF,System.Int32,System.Single,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Star" /> class.
+            </summary>
+            <param name="location">The location the center of the polygon will be placed.</param>
+            <param name="prongs">The number of points the <see cref="T:SixLabors.Shapes.Star" /> should have.</param>
+            <param name="innerRadii">The inner radii.</param>
+            <param name="outerRadii">The outer radii.</param>
+            <param name="angle">The angle of rotation in Radians</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Star.#ctor(SixLabors.Primitives.PointF,System.Int32,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Star" /> class.
+            </summary>
+            <param name="location">The location the center of the polygon will be placed.</param>
+            <param name="prongs">The number of verticies the <see cref="T:SixLabors.Shapes.Star" /> should have.</param>
+            <param name="innerRadii">The inner radii.</param>
+            <param name="outerRadii">The outer radii.</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Star.#ctor(System.Single,System.Single,System.Int32,System.Single,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Star" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the polygon.</param>
+            <param name="y">The Y coordinate of the center of the polygon.</param>
+            <param name="prongs">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon" /> should have.</param>
+            <param name="innerRadii">The inner radii.</param>
+            <param name="outerRadii">The outer radii.</param>
+            <param name="angle">The angle of rotation in Radians</param>
+        </member>
+        <member name="M:SixLabors.Shapes.Star.#ctor(System.Single,System.Single,System.Int32,System.Single,System.Single)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SixLabors.Shapes.Star" /> class.
+            </summary>
+            <param name="x">The X coordinate of the center of the polygon.</param>
+            <param name="y">The Y coordinate of the center of the polygon.</param>
+            <param name="prongs">The number of verticies the <see cref="T:SixLabors.Shapes.RegularPolygon" /> should have.</param>
+            <param name="innerRadii">The inner radii.</param>
+            <param name="outerRadii">The outer radii.</param>
+        </member>
+    </members>
+</doc>
