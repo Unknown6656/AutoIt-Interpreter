@@ -192,8 +192,8 @@ namespace AutoItInterpreter
             return sb.ToString();
         }
 
-        public static FileInfo FindFont(string name) => (from dir in new[] {
-                                                                         "%SYSTEMROOT%/fonts/",
+        public static FileInfo[] FindFont(string name) => (from dir in new[] {
+                                                                         "%SYSTEMROOT%/Fonts/",
                                                                          "~/.fonts/",
                                                                          "/usr/local/share/fonts/",
                                                                          "/usr/share/fonts/",
@@ -202,21 +202,25 @@ namespace AutoItInterpreter
                                                                          "/Network/Library/Fonts/",
                                                                          "/System/Library/Fonts/",
                                                                          "/System Folder/Fonts/"
-                                                                    }.AsParallel()
-                                                         let di = new DirectoryInfo(dir)
-                                                         where di.Exists
-                                                         from fi in di.EnumerateFiles($"*{name}*.ttf")
-                                                         where fi.Exists
-                                                         select fi).FirstOrDefault();
+                                                                    }
+                                                           let di = new DirectoryInfo(Environment.ExpandEnvironmentVariables(dir))
+                                                           where di.Exists
+                                                           from fi in di.EnumerateFiles($"*{name}*.ttf")
+                                                           where fi.Exists
+                                                           orderby fi.FullName.Length ascending
+                                                           select fi).ToArray();
 
         public static FontFamily FindFontFamily(string name, params string[] hints)
         {
-            if (hints.AsParallel().Select(FindFont).FirstOrDefault(fi => fi != null) is FileInfo nfo)
+            if (hints.Select(FindFont).FirstOrDefault(fi => fi != null) is FileInfo[] nfos && nfos.Length > 0)
             {
                 FontCollection coll = new FontCollection();
 
-                using (FileStream fs = nfo.OpenRead())
-                    return coll.Install(fs);
+                foreach (FileInfo nfo in nfos)
+                    using (FileStream fs = nfo.OpenRead())
+                        coll.Install(fs);
+
+                return coll.Find(name);
             }
             else
                 return SystemFonts.Families.AsParallel().FirstOrDefault(ff => ff.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
@@ -675,6 +679,9 @@ namespace AutoItInterpreter
 
         public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, VisualDisplayOptions style)
         {
+            const int FontSizePX = 32;
+
+            var sourcelesserrors = state.Errors.Where(err => err.ErrorContext.FilePath is null).ToArray();
             var filesources = (from fi in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer())
                                where fi != null
                                let lines = (File.ReadAllText(fi.FullName) + "\n").SplitIntoLines()
@@ -682,7 +689,7 @@ namespace AutoItInterpreter
                                select new
                                {
                                    Path = fi,
-                                   Lines = (from line in lines.Zip(Enumerable.Range(1, lines.Length), (l, i) => (Index: i, Content: l))
+                                   Lines = (from line in lines.Zip(Enumerable.Range(1, lines.Length), (l, i) => (Index: i, Content: l.Replace("\t", "    ")))
                                             let errs = from err in lerrs
                                                        let start = err.ErrorContext.StartLine
                                                        let end = err.ErrorContext.EndLine ?? start
@@ -691,33 +698,39 @@ namespace AutoItInterpreter
                                             select new
                                             {
                                                 line.Index,
-                                                line.Content,
+                                                Content = line.Content.TrimEnd(),
                                                 HasErrors = errs.Any(),
                                                 Errors = errs.ToArray()
-                                            }),
+                                            }).ToArray(),
                                    LocalErrors = lerrs
                                }).ToArray();
-            double height = (from source in filesources
-                             from line in source.Lines
-                             let ec = line.Errors.Length
-                             select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 3) + 2;
-            double width = Math.Min(50, (from source in filesources
-                                         from line in source.Lines
-                                         select Math.Max(line.Content.Length, line.Errors.Length > 0 ? line.Errors.Max(err => err.Error.ErrorMessage.Length) : 0)).Max() + 12);
+            int height = (from source in filesources
+                          from line in source.Lines
+                          let ec = line.Errors.Length
+                          select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 4) + 4;
+            int width = Math.Max(50, (from source in filesources
+                                      from line in source.Lines
+                                      from ll in new int[] { line.Content.Length, source.Path.FullName.Length, line.Errors.Length > 0 ? line.Errors.Max(err => err.Error.ErrorMessage.Length) : 0 }
+                                      select ll).Max() + 32);
+
+            if (sourcelesserrors.Length > 0)
+                height += 3 + sourcelesserrors.Length;
 
             FontFamily fam = Util.FindFontFamily(style.FontName, style.FontPathHints);
-            Font fnt_rg = new Font(fam, 12, FontStyle.Regular);
-            Font fnt_it = new Font(fam, 12, FontStyle.Italic);
+            Font fnt_rg = new Font(fam, FontSizePX, FontStyle.Regular);
+            Font fnt_it = new Font(fam, FontSizePX, FontStyle.Italic);
+            Font fnt_bl = new Font(fam, FontSizePX, FontStyle.Bold);
 
             string measurement_string = new string('@', 20);
             RendererOptions renderopt = new RendererOptions(fnt_rg);
-            SizeF charsize = TextMeasurer.Measure(measurement_string, renderopt);
-            float lineheight = charsize.Height;
+            SizeF rawcharsize = TextMeasurer.Measure(measurement_string, renderopt);
+            float charwitdh = rawcharsize.Width / measurement_string.Length;
+            float lineheight = rawcharsize.Height - 3;
 
-            width *= charsize.Width / (double)measurement_string.Length;
-            height *= lineheight;
-
-            Image<Argb32> img = new Image<Argb32>((int)width + style.BorderLeft + style.BorderRight, (int)height + style.BorderTop + style.BorderBottom);
+            Image<Argb32> img = new Image<Argb32>(
+                (int)(width * charwitdh + style.BorderLeft + style.BorderRight),
+                (int)(height * lineheight + style.BorderTop + style.BorderBottom + 100)
+            );
             TextGraphicsOptions texopt = new TextGraphicsOptions(true)
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -729,25 +742,110 @@ namespace AutoItInterpreter
             int ecnt = state.Errors.Count(err => err.Type == ErrorType.Fatal);
             int wcnt = state.Errors.Count(err => err.Type == ErrorType.Warning);
             int ncnt = state.Errors.Length - ecnt - wcnt;
-            int voffs = 3;
+            int voffs = 4;
 
             int drawtxt(string s, Font f, Argb32 c, int x, int y)
             {
-                img.Mutate(i => i.DrawText(texopt, s, f, c, new PointF((x * lineheight) + style.BorderLeft, (y * charsize.Width) + style.BorderRight)));
+                img.Mutate(i => i.DrawText(texopt, s, f, c, new PointF((x * charwitdh) + style.BorderLeft, (y * lineheight) + style.BorderTop + 100)));
 
                 return s.SplitIntoLines().Length;
             }
+            string pluralize(int cnt, string word) => $"{cnt} {word}{(cnt != 1 ? "s" : "")}";
 
-            img.Mutate(i => i.Fill(style.Background));
+            using (Image<Argb32> banner = Image.Load<Argb32>(Properties.Resources.banner_small))
+                img.Mutate(i => i.DrawImage(banner, PixelBlenderMode.Atop, 1, new Point(style.BorderLeft, style.BorderTop)));
 
-            drawtxt($"// Comiled at {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}\n{ecnt,5} Errors, {wcnt,5} Warnings, {ncnt,5} Notes", fnt_it, style.ForegroundComment, 0, 0);
+            img.Mutate(i => i.Fill(style.Background, new RectangleF(0, 0, img.Width, img.Height)));
+
+            drawtxt($@"
+// Compiled using the AutoIt++ Interpreter v.-----
+// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}
+// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}".Trim(), fnt_it, style.ForegroundComment, 0, 0);
 
             foreach (var source in filesources)
             {
-                voffs += drawtxt(source.Path.FullName, fnt_rg, style.ForegroundFileHeader, 0, voffs);
+                int linenr = 0;
 
+                voffs += drawtxt("      | " + source.Path.FullName, fnt_rg, style.ForegroundFileHeader, 0, voffs);
+                voffs += drawtxt("------+" + new string('-', width - 7), fnt_rg, style.ForegroundIndent, 0, voffs);
 
-                // TODO
+                foreach (var line in source.Lines)
+                {
+                    ++linenr;
+
+                    Argb32 txtcol = style.ForegroundCode;
+                    Argb32 lnrcol = style.ForegroundLineNumber;
+                    Argb32 indcol = style.ForegroundIndent;
+
+                    switch (line.HasErrors ? line.Errors.Min(err => (int)err.Error.Type) : -1)
+                    {
+                        case 0:
+                            txtcol = lnrcol = style.ForegroundError;
+                            indcol = style.ForegroundErrorMessage;
+
+                            break;
+                        case 1:
+                            txtcol = lnrcol = style.ForegroundWarning;
+                            indcol = style.ForegroundWarningMessage;
+
+                            break;
+                        case 2:
+                            txtcol = lnrcol = style.ForegroundNote;
+                            indcol = style.ForegroundNoteMessage;
+
+                            break;
+                    }
+
+                    drawtxt(linenr.ToString().PadLeft(5), line.HasErrors ? fnt_bl : fnt_rg, lnrcol, 0, voffs);
+                    drawtxt(" | ", fnt_rg, indcol, 5, voffs);
+
+                    voffs += drawtxt(line.Content, line.HasErrors ? fnt_bl : fnt_rg, txtcol, 8, voffs);
+
+                    if (line.HasErrors)
+                    {
+                        string pad = new string(' ', Math.Max(0, line.Content.Length - line.Content.TrimStart().Length));
+
+                        drawtxt(" | ", fnt_rg, indcol, 5, voffs);
+
+                        voffs += drawtxt(new string('^', Math.Max(0, line.Content.Length - pad.Length)), fnt_bl, indcol, 8 + pad.Length, voffs);
+
+                        foreach ((InterpreterError err, _) in line.Errors)
+                        {
+                            switch (err.Type)
+                            {
+                                case ErrorType.Warning:
+                                    txtcol = style.ForegroundWarningMessage;
+
+                                    break;
+                                case ErrorType.Note:
+                                    txtcol = style.ForegroundNoteMessage;
+
+                                    break;
+                                default:
+                                    txtcol = style.ForegroundErrorMessage;
+
+                                    break;
+                            }
+
+                            drawtxt("|", fnt_rg, indcol, 6, voffs);
+
+                            voffs += drawtxt(err.ErrorMessage, fnt_bl, txtcol, 8 + pad.Length, voffs);
+                        }
+                    }
+                }
+
+                ++voffs;
+            }
+
+            if (sourcelesserrors.Length > 0)
+            {
+                voffs += drawtxt("      | <no source available>", fnt_rg, style.ForegroundFileHeader, 0, voffs);
+                voffs += drawtxt("------+" + new string('-', width - 7), fnt_rg, style.ForegroundIndent, 0, voffs);
+
+                foreach (InterpreterError err in sourcelesserrors)
+                {
+                    // TODO
+                }
             }
 
             return img;
@@ -802,17 +900,17 @@ namespace AutoItInterpreter
             0xFF202020,
             0xFFFFFFFF,
             0xFF707070,
+            0xFFFF6666,
+            0xFFEEBB22,
+            0xFF68B0FF,
             0xFFE83030,
             0xFFE89030,
             0xFF3080F0,
-            0xFF666666,
-            0xFFEEBB22,
-            0xFF68B0FF,
             0xFF50D0C0,
             0xFFBB60FA,
             0xFF14D81A,
             '^',
-            100,
+            10,
             10,
             10,
             10
@@ -863,23 +961,30 @@ namespace AutoItInterpreter
         {
             FontName = fontName;
             FontPathHints = fontHints ?? new string[0];
-            Background = new Argb32(background);
-            ForegroundCode = new Argb32(foregroundCode);
-            ForegroundIndent = new Argb32(foregroundIndent);
-            ForegroundError = new Argb32(foregroundError);
-            ForegroundWarning = new Argb32(foregroundWarning);
-            ForegroundNote = new Argb32(foregroundNote);
-            ForegroundErrorMessage = new Argb32(foregroundErrorMessage);
-            ForegroundWarningMessage = new Argb32(foregroundWarningMessage);
-            ForegroundNoteMessage = new Argb32(foregroundNoteMessage);
-            ForegroundLineNumber = new Argb32(foregroundLineNumber);
-            ForegroundFileHeader = new Argb32(foregroundFileHeader);
-            ForegroundComment = new Argb32(foregroundComment);
+            Background = ToArgb32(background);
+            ForegroundCode = ToArgb32(foregroundCode);
+            ForegroundIndent = ToArgb32(foregroundIndent);
+            ForegroundError = ToArgb32(foregroundError);
+            ForegroundWarning = ToArgb32(foregroundWarning);
+            ForegroundNote = ToArgb32(foregroundNote);
+            ForegroundErrorMessage = ToArgb32(foregroundErrorMessage);
+            ForegroundWarningMessage = ToArgb32(foregroundWarningMessage);
+            ForegroundNoteMessage = ToArgb32(foregroundNoteMessage);
+            ForegroundLineNumber = ToArgb32(foregroundLineNumber);
+            ForegroundFileHeader = ToArgb32(foregroundFileHeader);
+            ForegroundComment = ToArgb32(foregroundComment);
             CharSquiggly = charSquiggly;
             BorderTop = borderTop;
             BorderLeft = borderLeft;
             BorderRight = borderRight;
             BorderBottom = borderBottom;
         }
+
+        private static Argb32 ToArgb32(uint v) => new Argb32(
+            (byte)(v >> 16),
+            (byte)(v >> 8),
+            (byte)v,
+            (byte)(v >> 24)
+        );
     }
 }

@@ -14,12 +14,14 @@
       <DelaySign>false</DelaySign>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="banner_small.png" />
     <None Remove="errorcodes.json" />
     <None Remove="lang/de.json" />
     <None Remove="lang/en.json" />
   </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="../bin/autoitcorlib.dll" />
+        <EmbeddedResource Include="banner_small.png" />
     <EmbeddedResource Include="errorcodes.json" />
     <EmbeddedResource Include="lang/de.json" />
     <EmbeddedResource Include="lang/en.json" />
@@ -60,9 +62,18 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Update="Properties/Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>

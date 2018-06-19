@@ -73,6 +73,16 @@ namespace AutoItInterpreter.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] banner_small {
+            get {
+                object obj = ResourceManager.GetObject("banner_small", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] de {
             get {
                 object obj = ResourceManager.GetObject("de", resourceCulture);

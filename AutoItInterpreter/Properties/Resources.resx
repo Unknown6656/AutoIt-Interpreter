@@ -121,6 +121,9 @@
   <data name="autoitcorlib" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\..\bin\autoitcorlib.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="banner_small" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\banner_small.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="de" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\lang\de.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

@@ -283,8 +283,11 @@ namespace AutoItInterpreter
 
 
                 // TEST
-                DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark).SaveAsPng(File.Create("output.png"));
+                using (var bmp = DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark))
+                    bmp.SaveAsPng(File.Create("output.png"));
 
+                Environment.Exit(0);
+                return state;
 
 
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options, debugsymbols);

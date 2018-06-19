@@ -895,23 +895,26 @@ using System.Reflection;
 
         public static int RunApplication(FileInfo path, bool debug)
         {
-            using (Process proc = new Process
-            {
-                StartInfo = new ProcessStartInfo
+            if (path is null)
+                return -1;
+            else
+                using (Process proc = new Process
                 {
-                    WorkingDirectory = path.Directory.FullName,
-                    Arguments = $"\"{path.FullName}\"{(debug ? ' ' + AutoItFunctions.DBG_CMDARG : "")}",
-                    FileName = "dotnet",
+                    StartInfo = new ProcessStartInfo
+                    {
+                        WorkingDirectory = path.Directory.FullName,
+                        Arguments = $"\"{path.FullName}\"{(debug ? ' ' + AutoItFunctions.DBG_CMDARG : "")}",
+                        FileName = "dotnet",
+                    }
+                })
+                {
+                    proc.Start();
+                    proc.WaitForExit();
+
+                    Console.WriteLine();
+
+                    return proc.ExitCode;
                 }
-            })
-            {
-                proc.Start();
-                proc.WaitForExit();
-
-                Console.WriteLine();
-
-                return proc.ExitCode;
-            }
         }
     }
 
