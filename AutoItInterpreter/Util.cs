@@ -191,6 +191,36 @@ namespace AutoItInterpreter
 
             return sb.ToString();
         }
+
+        public static FileInfo FindFont(string name) => (from dir in new[] {
+                                                                         "%SYSTEMROOT%/fonts/",
+                                                                         "~/.fonts/",
+                                                                         "/usr/local/share/fonts/",
+                                                                         "/usr/share/fonts/",
+                                                                         "~/Library/Fonts/",
+                                                                         "/Library/Fonts/",
+                                                                         "/Network/Library/Fonts/",
+                                                                         "/System/Library/Fonts/",
+                                                                         "/System Folder/Fonts/"
+                                                                    }.AsParallel()
+                                                         let di = new DirectoryInfo(dir)
+                                                         where di.Exists
+                                                         from fi in di.EnumerateFiles($"*{name}*.ttf")
+                                                         where fi.Exists
+                                                         select fi).FirstOrDefault();
+
+        public static FontFamily FindFontFamily(string name, params string[] hints)
+        {
+            if (hints.AsParallel().Select(FindFont).FirstOrDefault(fi => fi != null) is FileInfo nfo)
+            {
+                FontCollection coll = new FontCollection();
+
+                using (FileStream fs = nfo.OpenRead())
+                    return coll.Install(fs);
+            }
+            else
+                return SystemFonts.Families.AsParallel().FirstOrDefault(ff => ff.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
     }
 
     internal static class DebugPrintUtil
@@ -643,7 +673,7 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
-        public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state)
+        public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, VisualDisplayOptions style)
         {
             var filesources = (from fi in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer())
                                where fi != null
@@ -673,20 +703,21 @@ namespace AutoItInterpreter
                              select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 3) + 2;
             double width = Math.Min(50, (from source in filesources
                                          from line in source.Lines
-                                         select Math.Max(line.Content.Length, line.Errors.Max(err => err.Error.ErrorMessage.Length))).Max() + 12);
+                                         select Math.Max(line.Content.Length, line.Errors.Length > 0 ? line.Errors.Max(err => err.Error.ErrorMessage.Length) : 0)).Max() + 12);
 
-            FontCollection collection = new FontCollection();
+            FontFamily fam = Util.FindFontFamily(style.FontName, style.FontPathHints);
+            Font fnt_rg = new Font(fam, 12, FontStyle.Regular);
+            Font fnt_it = new Font(fam, 12, FontStyle.Italic);
 
-            if (!collection.TryFind("Courier new", out FontFamily fam))
-                fam = collection.Install(PATH_COURIER_TTF);
+            string measurement_string = new string('@', 20);
+            RendererOptions renderopt = new RendererOptions(fnt_rg);
+            SizeF charsize = TextMeasurer.Measure(measurement_string, renderopt);
+            float lineheight = charsize.Height;
 
-            RendererOptions opt = new RendererOptions(new Font(fam, 12));
-            SizeF charsize = TextMeasurer.Measure("W", opt);
+            width *= charsize.Width / (double)measurement_string.Length;
+            height *= lineheight;
 
-            width *= charsize.Width;
-            height *= charsize.Height;
-
-            Image<Argb32> img = new Image<Argb32>((int)width, (int)height);
+            Image<Argb32> img = new Image<Argb32>((int)width + style.BorderLeft + style.BorderRight, (int)height + style.BorderTop + style.BorderBottom);
             TextGraphicsOptions texopt = new TextGraphicsOptions(true)
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -695,9 +726,31 @@ namespace AutoItInterpreter
                 TabWidth = 4,
             };
 
-            img.Mutate(i => i.Fill())
-            img.Mutate(i => i.DrawText(texopt, "text", , ));
-            
+            int ecnt = state.Errors.Count(err => err.Type == ErrorType.Fatal);
+            int wcnt = state.Errors.Count(err => err.Type == ErrorType.Warning);
+            int ncnt = state.Errors.Length - ecnt - wcnt;
+            int voffs = 3;
+
+            int drawtxt(string s, Font f, Argb32 c, int x, int y)
+            {
+                img.Mutate(i => i.DrawText(texopt, s, f, c, new PointF((x * lineheight) + style.BorderLeft, (y * charsize.Width) + style.BorderRight)));
+
+                return s.SplitIntoLines().Length;
+            }
+
+            img.Mutate(i => i.Fill(style.Background));
+
+            drawtxt($"// Comiled at {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}\n{ecnt,5} Errors, {wcnt,5} Warnings, {ncnt,5} Notes", fnt_it, style.ForegroundComment, 0, 0);
+
+            foreach (var source in filesources)
+            {
+                voffs += drawtxt(source.Path.FullName, fnt_rg, style.ForegroundFileHeader, 0, voffs);
+
+
+                // TODO
+            }
+
+            return img;
         }
 
 
@@ -725,6 +778,7 @@ namespace AutoItInterpreter
         // TODO
         //public static VisualDisplayOptions ThemeLight { get; } = new VisualDisplayOptions(
         //    "Courier New",
+        //    new[] { "cour" },
         //    0xFFD0D0D0,
         //    0x,
         //    ,
@@ -736,10 +790,15 @@ namespace AutoItInterpreter
         //    ,
         //    ,
         //    ,
-        //    '^'
+        //    '^',
+        //    ,
+        //    ,
+        //    ,
+        //    ,
         //);
         public static VisualDisplayOptions ThemeDark { get; } = new VisualDisplayOptions(
             "Courier New",
+            new[] { "cour" },
             0xFF202020,
             0xFFFFFFFF,
             0xFF707070,
@@ -752,9 +811,14 @@ namespace AutoItInterpreter
             0xFF50D0C0,
             0xFFBB60FA,
             0xFF14D81A,
-            '^'
+            '^',
+            100,
+            10,
+            10,
+            10
         );
 
+        public string[] FontPathHints { get; }
         public string FontName { get; }
         public Argb32 Background { get; }
         public Argb32 ForegroundCode { get; }
@@ -769,10 +833,15 @@ namespace AutoItInterpreter
         public Argb32 ForegroundFileHeader { get; }
         public Argb32 ForegroundComment { get; }
         public char CharSquiggly { get; }
+        public int BorderTop { get; }
+        public int BorderLeft { get; }
+        public int BorderRight { get; }
+        public int BorderBottom { get; }
 
 
         public VisualDisplayOptions(
             string fontName,
+            string[] fontHints,
             uint background,
             uint foregroundCode,
             uint foregroundIndent,
@@ -785,10 +854,15 @@ namespace AutoItInterpreter
             uint foregroundLineNumber,
             uint foregroundFileHeader,
             uint foregroundComment,
-            char charSquiggly
+            char charSquiggly,
+            int borderTop,
+            int borderLeft,
+            int borderRight,
+            int borderBottom
         )
         {
             FontName = fontName;
+            FontPathHints = fontHints ?? new string[0];
             Background = new Argb32(background);
             ForegroundCode = new Argb32(foregroundCode);
             ForegroundIndent = new Argb32(foregroundIndent);
@@ -802,6 +876,10 @@ namespace AutoItInterpreter
             ForegroundFileHeader = new Argb32(foregroundFileHeader);
             ForegroundComment = new Argb32(foregroundComment);
             CharSquiggly = charSquiggly;
+            BorderTop = borderTop;
+            BorderLeft = borderLeft;
+            BorderRight = borderRight;
+            BorderBottom = borderBottom;
         }
     }
 }

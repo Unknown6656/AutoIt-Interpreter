@@ -281,6 +281,12 @@ namespace AutoItInterpreter
 
                 ASTProcessor.ParseExpressionAST(state, Options);
 
+
+                // TEST
+                DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark).SaveAsPng(File.Create("output.png"));
+
+
+
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options, debugsymbols);
                 string dbg_code = ApplicationGenerator.GenerateCSharpDebugProviderCode(state, Options, debugsymbols);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName, out string log);
