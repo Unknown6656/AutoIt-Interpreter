@@ -757,10 +757,9 @@ namespace AutoItInterpreter
 
             img.Mutate(i => i.Fill(style.Background, new RectangleF(0, 0, img.Width, img.Height)));
 
-            drawtxt($@"
-// Compiled using the AutoIt++ Interpreter v.-----
-// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}
-// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}".Trim(), fnt_it, style.ForegroundComment, 0, 0);
+            drawtxt($"// Compiled using the AutoIt++ Interpreter v.-----".Trim(), fnt_it, style.ForegroundComment, 0, 0);
+            drawtxt($"// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}".Trim(), fnt_it, style.ForegroundComment, 0, 1);
+            drawtxt($"// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}".Trim(), fnt_it, style.ForegroundComment, 0, 2);
 
             foreach (var source in filesources)
             {
