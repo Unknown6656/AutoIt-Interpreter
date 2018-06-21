@@ -812,7 +812,7 @@ namespace AutoItInterpreter
 
                         drawtxt(" | ", fnt_rg, indcol, 5, voffs);
 
-                        voffs += drawtxt(new string('^', Math.Max(0, line.Content.Length - pad.Length)), fnt_bl, indcol, 8 + pad.Length, voffs);
+                        voffs += drawtxt(new string(style.CharSquiggly, Math.Max(0, line.Content.Length - pad.Length)), fnt_bl, indcol, 8 + pad.Length, voffs);
 
                         foreach ((InterpreterError err, _) in line.Errors)
                         {

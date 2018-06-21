@@ -30,12 +30,16 @@ type Section =
         member x.Length = x.Content.Length
         member x.StringContent = System.String(List.toArray x.Content)
         static member Create l i h c = { Line = l; Index = i; Style = h; Content = c }
+        override x.ToString() = sprintf "[%06d:%03d..%03d] %20s  '%s'" (x.Line) (x.Index) (x.Index + x.Length) (x.Style.ToString()) (x.StringContent)
 
-type InternalParsingState(dsc) =
-    static member Default = InternalParsingState()
-    member val DirectiveStringChar : char option = dsc with get, set
-    with
-        new() = InternalParsingState(None)
+type stringtype =
+    | SingleQuote
+    | DoubleQuote
+    | InterpolatedString
+
+type InternalParsingState() =
+    member val DirectiveStringChar : char option = None with get, set
+    member val StringType : stringtype option = None with get, set
 
 type ParsingState =
     {
@@ -50,12 +54,19 @@ type ParsingState =
             let curr = x.CurrentSection
             if curr.Style = h then
                 ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])) i
-            elif back then
-                ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) h (curr.Content @ [c])) i
             else
-                ParsingState.Create b (x.PastSections @ [curr]) (Section.Create (curr.Line) (curr.Index + curr.Length) h [c]) i
+                match back with
+                | 0 -> ParsingState.Create b (x.PastSections @ [curr]) (Section.Create (curr.Line) (curr.Index + curr.Length) h [c]) i
+                | _ when back > 0 ->
+                    let back = curr.Length - min back curr.Length
+                    let cc = curr.Content @ [c]
+                    let s1 = Section.Create (curr.Line) (curr.Index) (curr.Style) <| List.take back cc
+                    let s2 = Section.Create (curr.Line) (curr.Index + back) h <| List.skip back cc
+                    ParsingState.Create b (x.PastSections @ [s1]) s2 i
+                | _ -> ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) h (curr.Content @ [c])) i
+                
         member x.Finish =
-            ParsingState.Create (x.IsBlockComment) (x.PastSections @ [x.CurrentSection]) (Section.Create (x.CurrentSection.Line + 1) (0) (x.CurrentStyle) []) (InternalParsingState.Default)
+            ParsingState.Create (x.IsBlockComment) (x.PastSections @ [x.CurrentSection]) (Section.Create (x.CurrentSection.Line + 1) (0) (x.CurrentStyle) []) (InternalParsingState())
         member x.CurrentStyle = x.CurrentSection.Style
         member x.IsInsideString = x.CurrentStyle = HighlightningStyle.String || x.CurrentStyle = HighlightningStyle.StringEscapeSequence
         member x.IsInsideDirective = x.CurrentStyle = HighlightningStyle.Directive || x.CurrentStyle = HighlightningStyle.DirectiveParameters
@@ -69,24 +80,31 @@ module SyntaxHighlighter =
             "and"; "or"; "xor"; "nxor"; "xnor"; "impl"; "while"; "wend"; "if"; "then"; "else"; "elseif"; "endif"; "next"; "for"; "do"; "in"; "continueloop"; "exitloop"; "continuecase"; "case"
             "switch"; "select"; "endswitch"; "endselect"; "func"; "endfunc"; "byref"; "const"; "dim"; "local"; "global"; "enum"; // TODO ?
         |]
+    let Operators = [|
+            "="; "=="; "<>"; "<"; ">"; "<="; ">="; "<<"; ">>"; "<<<"; ">>>"; "~"; "!"; "+"; "-"; "*"; "/"; "%"; "&"; "&&"; "^"; "^^"; "||"; "~^^"; "~||"; "~&&"
+            "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||="; "~&&="; "@"; ".."; "@|"
+        |]
 
-    let ParseChar (c : char) (s : ParsingState) (bc : bool) : HighlightningStyle * bool * bool * InternalParsingState =
+    let ParseChar (c : char) (s : ParsingState) (bc : bool) : HighlightningStyle * bool * int * InternalParsingState =
+        let MAX = System.Int32.MaxValue
         let num = ['0'..'9']
         let alphanum = '_'::['a'..'z'] @ ['A'..'Z'] @ num
 
         if s.CurrentStyle = HighlightningStyle.Comment && not bc then
-            (HighlightningStyle.Comment, false, false, s.Internals)
-        elif not s.IsInsideString && s.EndsWith "#c" true && c = 's' then
-            (HighlightningStyle.Comment, true, true, s.Internals)
+            (HighlightningStyle.Comment, false, 0, s.Internals)
+        elif not s.IsInsideString && s.EndsWith "#c" true && c = 's' (* && s.CurrentSection.Index = 0 *) then
+            (HighlightningStyle.Comment, true, MAX, s.Internals)
         elif bc && s.EndsWith "#ce" true then
-            (HighlightningStyle.Comment, false, false, s.Internals)
+            (HighlightningStyle.Comment, false, 0, s.Internals)
         elif bc then
-            (HighlightningStyle.Comment, true, false, s.Internals)
+            (HighlightningStyle.Comment, true, 0, s.Internals)
         elif not s.IsInsideString && not s.IsInsideDirective && Array.contains ((s.CurrentSection.StringContent + c.ToString()).ToLower()) Keywords then
-            (HighlightningStyle.Keyword, false, true, s.Internals)
+            (HighlightningStyle.Keyword, false, MAX, s.Internals)
+        elif not s.IsInsideString && not s.IsInsideDirective && Array.contains ((s.CurrentSection.StringContent + c.ToString()).Trim()) Operators then
+            (HighlightningStyle.Operator, false, MAX, s.Internals)
         else
             let ints = s.Internals
-            let mutable excl = false
+            let mutable lookbehind = 0
             let h = 
                     let as_good_as_code = match s.CurrentStyle with
                                           | HighlightningStyle.Code
@@ -109,7 +127,7 @@ module SyntaxHighlighter =
                         ints.DirectiveStringChar <- Some '>'
                         HighlightningStyle.String
                     | (''' | '"' | '>'), true, false, _ when Some c = ints.DirectiveStringChar ->
-                        excl <- true
+                        lookbehind <- -1
                         ints.DirectiveStringChar <- None
                         HighlightningStyle.DirectiveParameters
                     | '@', false, false, _ ->
@@ -121,13 +139,42 @@ module SyntaxHighlighter =
                     | _, false, false, _ when as_good_as_code && List.contains c num ->
                         HighlightningStyle.Number
                     | _, false, false, _ when as_good_as_code && List.contains c alphanum ->
-                        HighlightningStyle.Function
+                        if s.EndsWith "@" true then
+                            lookbehind <- 1
+                            HighlightningStyle.Macro
+                        else
+                            HighlightningStyle.Function
+                    | '"', false, false, _ when s.EndsWith "$" true ->
+                        lookbehind <- MAX
+                        ints.StringType <- Some InterpolatedString
+                        HighlightningStyle.String
+                    | '"', false, false, _ ->
+                        ints.StringType <- Some DoubleQuote
+                        HighlightningStyle.String
+                    | ''', false, false, _ ->
+                        ints.StringType <- Some SingleQuote
+                        HighlightningStyle.String
+                    | ''', true, false, _ when ints.StringType = Some DoubleQuote ->
+                        HighlightningStyle.String
+                    | '"', true, false, _ when ints.StringType = Some SingleQuote ->
+                        HighlightningStyle.String
+
+                    
+                    | ''', true, false, _ when ints.StringType = Some SingleQuote ->
+                        //lookbehind <- -1
+                        HighlightningStyle.Code
+                    | '"', true, false, _ when ints.StringType = Some DoubleQuote ->
+                        //lookbehind <- -1
+                        HighlightningStyle.Code
+
+                    | ' ', true, false, HighlightningStyle.StringEscapeSequence ->
+                        HighlightningStyle.String
 
 
                     // TODO
 
                     | _ -> s.CurrentStyle
-            (h, false, excl, ints)
+            (h, false, lookbehind, ints)
 
     let ParseLine (line : string) lnr isblockcomment : Section[] * bool =
         let rec parse cl (s : ParsingState) : ParsingState =
@@ -141,9 +188,9 @@ module SyntaxHighlighter =
             | c::cs ->
                 let h, bc, b, i = ParseChar c s (s.IsBlockComment)
                 parse cs (s.Next c h bc b i)
-        let s = parse (Array.toList <| line.ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState.Default))
+        let s = parse (Array.toList <| line.ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState()))
         (s.PastSections
-         |> List.filter (fun s -> not s.Content.IsEmpty)
+         // |> List.filter (fun s -> not s.Content.IsEmpty)
          |> List.toArray , s.IsBlockComment)
 
     let ParseCode (code : string) =

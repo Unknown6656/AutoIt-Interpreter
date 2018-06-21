@@ -6,6 +6,8 @@ using System.Text;
 
 using AutoItExpressionParser.SyntaxHighlightning;
 using AutoItCoreLibrary;
+using System.Collections.Generic;
+using System.IO;
 
 namespace CoreTests
 {
@@ -28,13 +30,47 @@ code() ; test
 #using <system32/kernel32.dll>
 #include ""\\8.8.8.8\test.au3""
 
-If $a Or @macro Then
-    $test = $""Interpolated $var and \$escaped ""
+If $a Or @macro @ macro() ..1-2 Then
+    $test = $""Interpolated $var and \$escaped\n"" << 2
+    $test = ""quotes --> """" <-- and  --> ' <-- "" + 2
+    $test = 'quotes --> '' <-- and  --> """" <-- ' - 4
 EndIf
 ";
+            au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
 
+            int ll = 0;
+            var fgc = new Dictionary<HighlightningStyle, ConsoleColor> {
+                [HighlightningStyle.Code] = ConsoleColor.White,
+                [HighlightningStyle.Number] = ConsoleColor.Gray,
+                [HighlightningStyle.Directive] = ConsoleColor.Yellow,
+                [HighlightningStyle.DirectiveParameters] = ConsoleColor.DarkYellow,
+                [HighlightningStyle.Variable] = ConsoleColor.Magenta,
+                [HighlightningStyle.Macro] = ConsoleColor.DarkMagenta,
+                [HighlightningStyle.String] = ConsoleColor.Red,
+                [HighlightningStyle.StringEscapeSequence] = ConsoleColor.DarkRed,
+                [HighlightningStyle.Keyword] = ConsoleColor.Cyan,
+                [HighlightningStyle.Function] = ConsoleColor.White,
+                [HighlightningStyle.Operator] = ConsoleColor.DarkGray,
+                [HighlightningStyle.Symbol] = ConsoleColor.DarkGray,
+                [HighlightningStyle.Comment] = ConsoleColor.Green,
+                [HighlightningStyle.Error] = ConsoleColor.DarkBlue,
+            };
             foreach (var sec in SyntaxHighlighter.ParseCode(au3.Trim()))
-                Console.WriteLine(sec);
+            {
+                if (ll != sec.Line)
+                {
+                    Console.WriteLine();
+                    ll = sec.Line;
+                }
+                Console.ForegroundColor = fgc[sec.Style];
+                Console.Write(sec.StringContent);
+            }
+            Console.WriteLine();
+            Console.ReadKey(true);
+            return;
+
+
+
 
             v mat = v.NewMatrix(3, 3, 3);
 
