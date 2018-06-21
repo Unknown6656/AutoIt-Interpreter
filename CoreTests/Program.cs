@@ -3,6 +3,8 @@ using System.IO.MemoryMappedFiles;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+
+using AutoItExpressionParser.SyntaxHighlightning;
 using AutoItCoreLibrary;
 
 namespace CoreTests
@@ -17,6 +19,23 @@ namespace CoreTests
 
         public static void Main(string[] args)
         {
+            string au3 = @"
+#cs
+    comment
+#ce still ignored
+code() ; test
+
+#using <system32/kernel32.dll>
+#include ""\\8.8.8.8\test.au3""
+
+If $a Or @macro Then
+    $test = $""Interpolated $var and \$escaped ""
+EndIf
+";
+
+            foreach (var sec in SyntaxHighlighter.ParseCode(au3.Trim()))
+                Console.WriteLine(sec);
+
             v mat = v.NewMatrix(3, 3, 3);
 
             for (int z = 0; z < 3; ++z)

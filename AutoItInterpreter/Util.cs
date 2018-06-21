@@ -19,6 +19,7 @@ using SixLabors.ImageSharp;
 using SixLabors.Primitives;
 using SixLabors.Fonts;
 
+using AutoItExpressionParser.SyntaxHighlightning;
 using AutoItCoreLibrary;
 
 namespace AutoItInterpreter
@@ -684,12 +685,15 @@ namespace AutoItInterpreter
             var sourcelesserrors = state.Errors.Where(err => err.ErrorContext.FilePath is null).ToArray();
             var filesources = (from fi in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer())
                                where fi != null
-                               let lines = (File.ReadAllText(fi.FullName) + "\n").SplitIntoLines()
+                               let rawc = File.ReadAllText(fi.FullName).Replace("\t", "    ")
+                               let lines = (rawc.Length > 0 ? rawc : "\n").SplitIntoLines()
                                let lerrs = state.Errors.Where(e => e.ErrorContext.FilePath is FileInfo nfo && Util.ArePathsEqual(nfo, fi)).ToArray()
+                               let sects = SyntaxHighlighter.ParseCode(string.Join("\n", lines))
                                select new
                                {
                                    Path = fi,
-                                   Lines = (from line in lines.Zip(Enumerable.Range(1, lines.Length), (l, i) => (Index: i, Content: l.Replace("\t", "    ")))
+                                   Lines = (from line in lines.Zip(Enumerable.Range(1, lines.Length), (l, i) => (Index: i, Content: l))
+                                            let sections = sects.Where(s => s.Line == line.Index)
                                             let errs = from err in lerrs
                                                        let start = err.ErrorContext.StartLine
                                                        let end = err.ErrorContext.EndLine ?? start
@@ -698,6 +702,7 @@ namespace AutoItInterpreter
                                             select new
                                             {
                                                 line.Index,
+                                                HighlightningSections = sections.ToArray(),
                                                 Content = line.Content.TrimEnd(),
                                                 HasErrors = errs.Any(),
                                                 Errors = errs.ToArray()
@@ -718,6 +723,7 @@ namespace AutoItInterpreter
 
             FontFamily fam = Util.FindFontFamily(style.FontName, style.FontPathHints);
             Font fnt_rg = new Font(fam, FontSizePX, FontStyle.Regular);
+            Font fnt_bi = new Font(fam, FontSizePX, FontStyle.BoldItalic);
             Font fnt_it = new Font(fam, FontSizePX, FontStyle.Italic);
             Font fnt_bl = new Font(fam, FontSizePX, FontStyle.Bold);
 
@@ -772,24 +778,24 @@ namespace AutoItInterpreter
                 {
                     ++linenr;
 
-                    Argb32 txtcol = style.ForegroundCode;
+                    Argb32 txtcol;
                     Argb32 lnrcol = style.ForegroundLineNumber;
                     Argb32 indcol = style.ForegroundIndent;
 
                     switch (line.HasErrors ? line.Errors.Min(err => (int)err.Error.Type) : -1)
                     {
                         case 0:
-                            txtcol = lnrcol = style.ForegroundError;
+                            lnrcol = style.ForegroundError;
                             indcol = style.ForegroundErrorMessage;
 
                             break;
                         case 1:
-                            txtcol = lnrcol = style.ForegroundWarning;
+                            lnrcol = style.ForegroundWarning;
                             indcol = style.ForegroundWarningMessage;
 
                             break;
                         case 2:
-                            txtcol = lnrcol = style.ForegroundNote;
+                            lnrcol = style.ForegroundNote;
                             indcol = style.ForegroundNoteMessage;
 
                             break;
@@ -797,11 +803,11 @@ namespace AutoItInterpreter
 
                     drawtxt(linenr.ToString().PadLeft(5), line.HasErrors ? fnt_bl : fnt_rg, lnrcol, 0, voffs);
                     drawtxt(" | ", fnt_rg, indcol, 5, voffs);
-
-                    voffs += drawtxt(line.Content, line.HasErrors ? fnt_bl : fnt_rg, txtcol, 8, voffs);
-
+                    
                     if (line.HasErrors)
                     {
+                        voffs += drawtxt(line.Content, line.HasErrors ? fnt_bl : fnt_rg, lnrcol, 8, voffs);
+
                         string pad = new string(' ', Math.Max(0, line.Content.Length - line.Content.TrimStart().Length));
 
                         drawtxt(" | ", fnt_rg, indcol, 5, voffs);
@@ -830,6 +836,18 @@ namespace AutoItInterpreter
 
                             voffs += drawtxt(err.ErrorMessage, fnt_bl, txtcol, 8 + pad.Length, voffs);
                         }
+                    }
+                    else
+                    {
+                        foreach (Section section in line.HighlightningSections)
+                        {
+                            CodeStyle cstyle = style.Foreground[section.Style];
+                            Font fnt = cstyle.IsBold && cstyle.IsItalic ? fnt_bi : cstyle.IsBold ? fnt_bl : cstyle.IsItalic ? fnt_it : fnt_rg;
+
+                            drawtxt(section.StringContent, fnt, cstyle.Color, section.Index + 8, voffs);
+                        }
+
+                        ++voffs;
                     }
                 }
 
@@ -870,34 +888,48 @@ namespace AutoItInterpreter
         public int GetHashCode(FileInfo obj) => obj is null ? 0 : Path.GetFullPath(obj.FullName).GetHashCode();
     }
 
+    public struct CodeStyle
+    {
+        public Argb32 Color { get; }
+        public bool IsItalic { get; }
+        public bool IsBold { get; }
+
+
+        public CodeStyle(uint clr, bool italic = false, bool bold = false)
+        {
+            Color = VisualDisplayOptions.ToArgb32(clr);
+            IsItalic = italic;
+            IsBold = bold;
+        }
+
+        public static implicit operator CodeStyle(uint c) => new CodeStyle(c);
+        public static implicit operator CodeStyle((uint c, bool i) t) => new CodeStyle(t.c, t.i);
+        public static implicit operator CodeStyle((uint c, bool i, bool b) t) => new CodeStyle(t.c, t.i, t.b);
+    }
+
     public sealed class VisualDisplayOptions
     {
-        // TODO
-        //public static VisualDisplayOptions ThemeLight { get; } = new VisualDisplayOptions(
-        //    "Courier New",
-        //    new[] { "cour" },
-        //    0xFFD0D0D0,
-        //    0x,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //    '^',
-        //    ,
-        //    ,
-        //    ,
-        //    ,
-        //);
         public static VisualDisplayOptions ThemeDark { get; } = new VisualDisplayOptions(
             "Courier New",
             new[] { "cour" },
             0xFF202020,
-            0xFFFFFFFF,
+            new Dictionary<HighlightningStyle, CodeStyle>
+            {
+                [HighlightningStyle.Code] = 0xFFFFFFFF,
+                [HighlightningStyle.Number] = 0xFF99A88E,
+                [HighlightningStyle.Directive] = 0xFFAB9769,
+                [HighlightningStyle.DirectiveParameters] = 0xFF82894C,
+                [HighlightningStyle.Variable] = 0xFFD2BC6F,
+                [HighlightningStyle.Macro] = 0xFFCC7BFF,
+                [HighlightningStyle.String] = 0xFFD09175,
+                [HighlightningStyle.StringEscapeSequence] = 0xFF2FECC1,
+                [HighlightningStyle.Keyword] = 0xFF4496F0,
+                [HighlightningStyle.Function] = 0xFFDDDDDD,
+                [HighlightningStyle.Operator] = 0xFFB4B4FF,
+                [HighlightningStyle.Symbol] = 0xFFB4B4B4,
+                [HighlightningStyle.Comment] = (0xFF14D81A, true),
+                [HighlightningStyle.Error] = (0xFFFF6666, false, true),
+            },
             0xFF707070,
             0xFFFF6666,
             0xFFEEBB22,
@@ -908,17 +940,17 @@ namespace AutoItInterpreter
             0xFF50D0C0,
             0xFFBB60FA,
             0xFF14D81A,
-            '^',
+            '~',
             10,
             10,
             10,
             10
         );
 
+        public Dictionary<HighlightningStyle, CodeStyle> Foreground { get; }
         public string[] FontPathHints { get; }
         public string FontName { get; }
         public Argb32 Background { get; }
-        public Argb32 ForegroundCode { get; }
         public Argb32 ForegroundIndent { get; }
         public Argb32 ForegroundError { get; }
         public Argb32 ForegroundWarning { get; }
@@ -940,7 +972,7 @@ namespace AutoItInterpreter
             string fontName,
             string[] fontHints,
             uint background,
-            uint foregroundCode,
+            Dictionary<HighlightningStyle, CodeStyle> foreground,
             uint foregroundIndent,
             uint foregroundError,
             uint foregroundWarning,
@@ -961,7 +993,7 @@ namespace AutoItInterpreter
             FontName = fontName;
             FontPathHints = fontHints ?? new string[0];
             Background = ToArgb32(background);
-            ForegroundCode = ToArgb32(foregroundCode);
+            Foreground = foreground;
             ForegroundIndent = ToArgb32(foregroundIndent);
             ForegroundError = ToArgb32(foregroundError);
             ForegroundWarning = ToArgb32(foregroundWarning);
@@ -979,7 +1011,7 @@ namespace AutoItInterpreter
             BorderBottom = borderBottom;
         }
 
-        private static Argb32 ToArgb32(uint v) => new Argb32(
+        internal static Argb32 ToArgb32(uint v) => new Argb32(
             (byte)(v >> 16),
             (byte)(v >> 8),
             (byte)v,

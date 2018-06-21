@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AutoItCoreLibrary\AutoItCoreLibrary.csproj" />
+    <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
   </ItemGroup>
 
 </Project>
