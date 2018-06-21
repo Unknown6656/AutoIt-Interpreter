@@ -63,7 +63,9 @@ type ParsingState =
                     let s1 = Section.Create (curr.Line) (curr.Index) (curr.Style) <| List.take back cc
                     let s2 = Section.Create (curr.Line) (curr.Index + back) h <| List.skip back cc
                     ParsingState.Create b (x.PastSections @ [s1]) s2 i
-                | _ -> ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) h (curr.Content @ [c])) i
+                | _ ->
+                    let past = x.PastSections @ [Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])]
+                    ParsingState.Create b past (Section.Create (curr.Line) (curr.Index + curr.Length + 1) h []) i
                 
         member x.Finish =
             ParsingState.Create (x.IsBlockComment) (x.PastSections @ [x.CurrentSection]) (Section.Create (x.CurrentSection.Line + 1) (0) (x.CurrentStyle) []) (InternalParsingState())
@@ -111,6 +113,7 @@ module SyntaxHighlighter =
                                           | HighlightningStyle.Symbol
                                           | HighlightningStyle.Operator -> true
                                           | _ -> false
+                    let is_intpol = ints.StringType = Some InterpolatedString
                     match c, s.IsInsideString, s.IsInsideDirective, s.CurrentStyle with
                     | ' ', false, false, _ ->
                         HighlightningStyle.Code
@@ -158,17 +161,41 @@ module SyntaxHighlighter =
                         HighlightningStyle.String
                     | '"', true, false, _ when ints.StringType = Some SingleQuote ->
                         HighlightningStyle.String
-
-                    
                     | ''', true, false, _ when ints.StringType = Some SingleQuote ->
-                        //lookbehind <- -1
+                        lookbehind <- -1
                         HighlightningStyle.Code
                     | '"', true, false, _ when ints.StringType = Some DoubleQuote ->
-                        //lookbehind <- -1
+                        lookbehind <- -1
                         HighlightningStyle.Code
-
                     | ' ', true, false, HighlightningStyle.StringEscapeSequence ->
                         HighlightningStyle.String
+                    | '@', true, false, HighlightningStyle.String when is_intpol ->
+                        HighlightningStyle.StringEscapeSequence
+                    | '$', true, false, HighlightningStyle.String when is_intpol ->
+                        let str = s.CurrentSection.StringContent
+                        let cnt = str.Length - str.TrimEnd('\\').Length
+
+                        if cnt > 0 && (cnt % 2) = 1 then
+                            printfn "kek"
+
+                            lookbehind <- -1
+                            HighlightningStyle.String
+                        else
+                            printfn "ifn't"
+
+
+                            HighlightningStyle.StringEscapeSequence
+                    | _, true, false, HighlightningStyle.StringEscapeSequence when is_intpol && as_good_as_code && List.contains c alphanum ->
+                        printfn "czech'em"
+
+                        lookbehind <- -1
+                        HighlightningStyle.String
+                    | '\\', true, false, HighlightningStyle.String when is_intpol ->
+                        HighlightningStyle.StringEscapeSequence
+                    | ('\\' | '$' | '@' | 'r' | 't' | 'n' | 'v' | 'b' | 'a' | '0'), true, false, HighlightningStyle.StringEscapeSequence when is_intpol ->
+                        lookbehind <- -1
+                        HighlightningStyle.String
+
 
 
                     // TODO
@@ -189,9 +216,7 @@ module SyntaxHighlighter =
                 let h, bc, b, i = ParseChar c s (s.IsBlockComment)
                 parse cs (s.Next c h bc b i)
         let s = parse (Array.toList <| line.ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState()))
-        (s.PastSections
-         // |> List.filter (fun s -> not s.Content.IsEmpty)
-         |> List.toArray , s.IsBlockComment)
+        (List.toArray s.PastSections, s.IsBlockComment)
 
     let ParseCode (code : string) =
         let lines = Array.toList <| code.Replace("\r\n", "\n").Split('\n')
@@ -199,7 +224,7 @@ module SyntaxHighlighter =
             match lines, idxs with
             | l::ls, i::is ->
                 let x, bc = ParseLine l i bc
-                Array.toList x @ processlines ls is bc
+                Array.toList x @ processlines ls is bc // <----- TODO : make tail recursive !!
             | _ -> []
         processlines lines [1..lines.Length] false
         |> List.toArray

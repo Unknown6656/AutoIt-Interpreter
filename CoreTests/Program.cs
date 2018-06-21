@@ -36,29 +36,26 @@ If $a Or @macro @ macro() ..1-2 Then
     $test = 'quotes --> '' <-- and  --> """" <-- ' - 4
 EndIf
 ";
-            au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
-
+            // au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
             int ll = 0;
             var fgc = new Dictionary<HighlightningStyle, ConsoleColor> {
                 [HighlightningStyle.Code] = ConsoleColor.White,
                 [HighlightningStyle.Number] = ConsoleColor.Gray,
                 [HighlightningStyle.Directive] = ConsoleColor.Yellow,
                 [HighlightningStyle.DirectiveParameters] = ConsoleColor.DarkYellow,
-                [HighlightningStyle.Variable] = ConsoleColor.Magenta,
-                [HighlightningStyle.Macro] = ConsoleColor.DarkMagenta,
+                [HighlightningStyle.Variable] = ConsoleColor.Cyan,
+                [HighlightningStyle.Macro] = ConsoleColor.Magenta,
                 [HighlightningStyle.String] = ConsoleColor.Red,
-                [HighlightningStyle.StringEscapeSequence] = ConsoleColor.DarkRed,
-                [HighlightningStyle.Keyword] = ConsoleColor.Cyan,
+                [HighlightningStyle.StringEscapeSequence] = ConsoleColor.DarkCyan,
+                [HighlightningStyle.Keyword] = ConsoleColor.Blue,
                 [HighlightningStyle.Function] = ConsoleColor.White,
                 [HighlightningStyle.Operator] = ConsoleColor.DarkGray,
                 [HighlightningStyle.Symbol] = ConsoleColor.DarkGray,
                 [HighlightningStyle.Comment] = ConsoleColor.Green,
-                [HighlightningStyle.Error] = ConsoleColor.DarkBlue,
+                [HighlightningStyle.Error] = ConsoleColor.Black,
             };
-            foreach (var sec in SyntaxHighlighter.ParseCode(au3.Trim()))
-            {
-                if (ll != sec.Line)
-                {
+            foreach (var sec in SyntaxHighlighter.ParseCode(au3.Trim())) {
+                if (ll != sec.Line) {
                     Console.WriteLine();
                     ll = sec.Line;
                 }
