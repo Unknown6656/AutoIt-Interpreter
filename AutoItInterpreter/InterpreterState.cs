@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 using System;
 
+using AutoItExpressionParser.SyntaxHighlightning;
 using AutoItInterpreter.Preprocessed;
 using AutoItInterpreter.PartialAST;
 using AutoItExpressionParser;
@@ -35,11 +36,7 @@ namespace AutoItInterpreter
         public const string ERROR_VARIBLE = "$___error___";
         public const string GLOBAL_FUNC_NAME = "__global<>";
         public static readonly string CMP_INCLUDE_DIR = $"{typeof(Interpreter).Assembly.Location}/../include/";
-        public static readonly string[] RESERVED_KEYWORDS =
-        {
-            "new",
-            // TODO : add other ones?
-        };
+        public static readonly string[] RESERVED_KEYWORDS = SyntaxHighlighter.Keywords;
 
         private static readonly OS[] ALL_OS = new[] { OS.Windows, OS.MacOS, OS.Linux };
         private static readonly CompilerIntrinsicMessage[] NO_MSG = new CompilerIntrinsicMessage[0];

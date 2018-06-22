@@ -927,6 +927,7 @@ namespace AutoItInterpreter
                 [HighlightningStyle.Function] = 0xFFDDDDDD,
                 [HighlightningStyle.Operator] = 0xFFB4B4FF,
                 [HighlightningStyle.Symbol] = 0xFFB4B4B4,
+                [HighlightningStyle.DotMember] = 0xFFF2C2CD,
                 [HighlightningStyle.Comment] = (0xFF14D81A, true),
                 [HighlightningStyle.Error] = (0xFFFF6666, false, true),
             },

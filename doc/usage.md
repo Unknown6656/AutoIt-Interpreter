@@ -198,6 +198,8 @@ The following basic rules apply:
    <br/>Displays a list of all available display languages.
  - **`-v` or `--verbose`:**
    <br/>Displays verbose compilation output (instead of only the compiler errors and warnings).
+ - **`-vv=...` or `--visual=...`:**
+   <br/>Generates a bitmap with the compiled AutoIt++ code (including syntax highlightning and error/warning listing). The bitmap will be written to the given path.
  - **`-q` or `--quiet`:**
    <br/>Displays no output (Returns only the exit code).
  - **`-mef`, `-ms` or `--msbuild-error-format`:**

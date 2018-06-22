@@ -48,6 +48,7 @@ namespace AutoItInterpreter
                     ("s", "settings"),
                     ("rs", "reset-settings"),
                     ("v", "verbose"),
+                    ("vv", "visual"),
                     ("mef", "msbuild-error-format"),
                     ("ms", "msbuild-error-format"),
                     ("k", "keep-temp"),
@@ -128,6 +129,7 @@ namespace AutoItInterpreter
                     RawArguments = dic,
                     UseVerboseOutput = Cont("verbose"),
                     IncludeDebugSymbols = Cont("debug"),
+                    VisualOutputPath = GetF("visual", null),
                     UseMSBuildErrorOutput = Cont("msbuild-error-format"),
                     DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
                     GenerateCodeEvenWithErrors = Cont("generate-always"),
@@ -314,6 +316,9 @@ namespace AutoItInterpreter
 | -rs               | --reset-settings      | Resets the .json settings file to its defaults.                   |
 | -v                | --verbose             | Displays verbose compilation output (instead of only the compiler |
 |                   |                       | errors and warnings).                                             |
+| -vv=...           | --visual=...          | Generates a bitmap with the compiled AutoIt++ code (including     |
+|                   |                       | syntax highlightning and error/warning listing). The bitmap will  |
+|                   |                       | be written to the given path.                                     |
 | -q                | --quiet               | Displays no output (Returns only the exit code).                  |
 | -l=....           | --lang=...            | Sets the language for the current session using the given language|
 |                   |                       | code. (Doesn't affect the stored settings)                        |
@@ -478,6 +483,7 @@ namespace AutoItInterpreter
         public bool CleanTargetFolder { set; get; }
         public string RawCommandLine { set; get; }
         public string TargetDirectory { set; get; }
+        public string VisualOutputPath { get; set; }
         public string KeyPairPath { get; set; }
         public bool AllowUnsafeCode { set; get; }
         public bool UseMSBuildErrorOutput { set; get; }

@@ -1,4 +1,5 @@
-﻿[x] λs
+﻿----------------------------------------- FINISHED -----------------------------------------
+[x] λs
     [x] fix λs on unitizitalized method-pointers
     [x] fix λ: optional arguments
     [x] λ currying
@@ -10,46 +11,37 @@
     [x] element assignment
 [x] enum constants
 [x] pinvoke
-[-] documentation
-    [-] usage
-    [ ] language reference (functions etc.)
-    [-] syntax reference (differences betw. AU++ and AU3)
-    [-] official syntax tree of AU++
-    [ ] examples
 [x] fix start functions
 [x] fix exit functions
 [x] const variables : assignment
 [x] -Wall compiler flag
 [x] BSOD/KPanic-function
-[ ] 'execute'-function
-    [ ] reflection ?
-[-] implement macros
-    [-] AutoIt3-specific
-[-] implement funcitions
-    [-] AutoIt3-specific
-    [x] serial API
-    [x] http API
-    [ ] ftp API
-    [x] ssh/sftp API
-    [-] graphics API
 [x] pointer assignments
-[ ] implement "continuecase"
-[ ] implement "with ..."-statements
 [x] implement main return
 [x] implement non-string main arguments
 [x] implement local macros
-[-] COM-interop
 [x] ifn't
 [x] fix byref calls
 [x] fix params calls
+[x] fix loops
+    [x] exitloop / continueloop
+    [x] for loops going in wrong direction
+[x] Support web-compilation
+[x] Support web-includes
+[x] Add 'Run after compilation' compiler switch
+[x] fix 'Default'
+[x] PFX/SNK signing of AutoIt++ applications
+    [x] add compiler directive
+[x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
+[x] fix the expressions 'num(...)' and 'num[...]'
+[x] fix debugging symbols
+----------------------------------------- UNFINISHED -----------------------------------------
+[-] COM-interop
 [-] fix expression parser
     [x] fix single equals mis-interpreted as assignment
     [x] fix array indices
     [ ] fix @|.. and @.. operators
     [x] fix ?: operator
-[x] fix loops
-    [x] exitloop / continueloop
-    [x] for loops going in wrong direction
 [-] unit tests
     [x] improve test framework
     [ ] IMPL boolean optimization
@@ -85,14 +77,34 @@
         [ ] UDP / TCP API
         [ ] Serial API
         [ ] Compiler robustness
-[x] Support web-compilation
-[x] Support web-includes
-[ ] SciTE support for AutoIt++
-[x] Add 'Run after compilation' compiler switch
-[x] fix 'Default'
-[x] PFX/SNK signing of AutoIt++ applications
-    [x] add compiler directive
-[x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
 [-] fix variable scoping
-[x] fix the expressions 'num(...)' and 'num[...]'
-[x] fix debugging symbols
+[-] IDE
+    [x] syntax highlightning
+    [ ] UI
+    [ ] SciTE support for AutoIt++
+[-] language packages
+    [-] translate to GER
+    [ ] translate to FRA
+    [ ] translate to ESP
+    [ ] translate to ITA
+    [ ] translate to RUS
+    [ ] add console strings to lang packg
+[-] documentation
+    [-] usage
+    [ ] language reference (functions etc.)
+    [-] syntax reference (differences betw. AU++ and AU3)
+    [-] official syntax tree of AU++
+    [ ] examples
+[ ] 'execute'-function
+    [ ] reflection ?
+[-] implement macros
+    [-] AutoIt3-specific
+[-] implement funcitions
+    [-] AutoIt3-specific
+    [x] serial API
+    [x] http API
+    [ ] ftp API
+    [x] ssh/sftp API
+    [-] graphics API
+[ ] implement "continuecase"
+[ ] implement "with ..."-statements

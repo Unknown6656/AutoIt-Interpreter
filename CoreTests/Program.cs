@@ -27,14 +27,22 @@ namespace CoreTests
 #ce still ignored
 code() ; test
 
+#warning This is a warning!
 #using <system32/kernel32.dll>
 #include ""\\8.8.8.8\test.au3""
 
 If $a Or @macro @ macro() ..1-2 Then
-    $test = $""Interpolated $var and \$escaped\n"" << 2
+    $test = $""Interpolated $var @lel and \@lol \$escaped \\$unescaped \\@kek \nhello, \""test "" << 2
     $test = ""quotes --> """" <-- and  --> ' <-- "" + 2
     $test = 'quotes --> '' <-- and  --> """" <-- ' - 4
+Ifn't
+    $com = .... ; dunno
+    $com.xyz[$a].bc().d
 EndIf
+
+enum $x = 0, $y,$z, $w = ""test""#3
+
+°$x = °°$y ~^^ °0
 ";
             // au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
             int ll = 0;
@@ -51,6 +59,7 @@ EndIf
                 [HighlightningStyle.Function] = ConsoleColor.White,
                 [HighlightningStyle.Operator] = ConsoleColor.DarkGray,
                 [HighlightningStyle.Symbol] = ConsoleColor.DarkGray,
+                [HighlightningStyle.DotMember] = ConsoleColor.DarkMagenta,
                 [HighlightningStyle.Comment] = ConsoleColor.Green,
                 [HighlightningStyle.Error] = ConsoleColor.Black,
             };

@@ -16,8 +16,9 @@ type HighlightningStyle =
     | Function = 9
     | Operator = 10
     | Symbol = 11
-    | Comment = 12
-    | Error = 13
+    | DotMember = 12
+    | Comment = 13
+    | Error = 14
 
 type Section =
     {
@@ -79,12 +80,13 @@ type ParsingState =
 
 module SyntaxHighlighter =
     let Keywords = [|
-            "and"; "or"; "xor"; "nxor"; "xnor"; "impl"; "while"; "wend"; "if"; "then"; "else"; "elseif"; "endif"; "next"; "for"; "do"; "in"; "continueloop"; "exitloop"; "continuecase"; "case"
-            "switch"; "select"; "endswitch"; "endselect"; "func"; "endfunc"; "byref"; "const"; "dim"; "local"; "global"; "enum"; // TODO ?
+            "and"; "or"; "xor"; "nxor"; "xnor"; "nand"; "nor"; "impl"; "while"; "wend"; "if"; "then"; "else"; "elseif"; "endif"; "next"; "for"; "do"; "in"; "continueloop"; "exitloop"; "continuecase"; "case"; "->"
+            "switch"; "select"; "endswitch"; "endselect"; "func"; "endfunc"; "byref"; "const"; "dim"; "local"; "global"; "enum"; "step"; "new"; "to"; "not"; "null"; "default"; "empty"; "false"; "true"; "from"; "as"; "ifn't"
         |]
     let Operators = [|
-            "="; "=="; "<>"; "<"; ">"; "<="; ">="; "<<"; ">>"; "<<<"; ">>>"; "~"; "!"; "+"; "-"; "*"; "/"; "%"; "&"; "&&"; "^"; "^^"; "||"; "~^^"; "~||"; "~&&"
-            "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||="; "~&&="; "@"; ".."; "@|"
+            "="; "=="; "<>"; "<"; ">"; "<="; ">="; "<<"; ">>"; "<<<"; ">>>"; "~"; "!"; "+"; "-"; "*"; "/"; "%"; "&"; "&&"; "^"; "^^"; "||"; "~^^"; "~||"; "~&&"; "\\"; "\\="; "?"; ":"
+            "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||="; "~&&="; "@"; ".."; "@|"; "°"; "�";
+            // TODO: "#"
         |]
 
     let ParseChar (c : char) (s : ParsingState) (bc : bool) : HighlightningStyle * bool * int * InternalParsingState =
@@ -120,7 +122,9 @@ module SyntaxHighlighter =
                     | ';', false, _, _ ->
                         HighlightningStyle.Comment
                     | '#', false, _, _ ->
-                        HighlightningStyle.Directive
+                        if s.CurrentSection.Index = 0 then
+                             HighlightningStyle.Directive
+                        else HighlightningStyle.Operator
                     | ' ', false, true, _ ->
                         HighlightningStyle.DirectiveParameters
                     | (''' | '"'), false, true, _ ->
@@ -154,7 +158,7 @@ module SyntaxHighlighter =
                     | '"', false, false, _ ->
                         ints.StringType <- Some DoubleQuote
                         HighlightningStyle.String
-                    | ''', false, false, _ ->
+                    | ''', false, false, _ when not (s.EndsWith "ifn" true) ->
                         ints.StringType <- Some SingleQuote
                         HighlightningStyle.String
                     | ''', true, false, _ when ints.StringType = Some DoubleQuote ->
@@ -176,26 +180,36 @@ module SyntaxHighlighter =
                         let cnt = str.Length - str.TrimEnd('\\').Length
 
                         if cnt > 0 && (cnt % 2) = 1 then
-                            printfn "kek"
-
                             lookbehind <- -1
                             HighlightningStyle.String
                         else
-                            printfn "ifn't"
-
-
                             HighlightningStyle.StringEscapeSequence
                     | _, true, false, HighlightningStyle.StringEscapeSequence when is_intpol && as_good_as_code && List.contains c alphanum ->
-                        printfn "czech'em"
-
                         lookbehind <- -1
                         HighlightningStyle.String
                     | '\\', true, false, HighlightningStyle.String when is_intpol ->
                         HighlightningStyle.StringEscapeSequence
-                    | ('\\' | '$' | '@' | 'r' | 't' | 'n' | 'v' | 'b' | 'a' | '0'), true, false, HighlightningStyle.StringEscapeSequence when is_intpol ->
-                        lookbehind <- -1
-                        HighlightningStyle.String
+                    | ('\\' | '$' | '@' | 'r' | 't' | 'n' | 'v' | 'b' | 'a' | '0' | '"' | 'f' | 'd' | 'x' | 'u'), true, false, HighlightningStyle.StringEscapeSequence when is_intpol ->
+                        if s.EndsWith "\\" true then
+                            lookbehind <- -1
+                            HighlightningStyle.String
+                        else
+                            HighlightningStyle.StringEscapeSequence
+                    | '"', true, false, HighlightningStyle.String when is_intpol ->
+                        let str = s.CurrentSection.StringContent
+                        let cnt = str.Length - str.TrimEnd('\\').Length
 
+                        if (cnt % 2) = 1 then
+                            lookbehind <- cnt
+                            HighlightningStyle.StringEscapeSequence
+                        else
+                            lookbehind <- -1
+                            HighlightningStyle.Code
+                    | '.', false, false, _ when s.CurrentStyle <> HighlightningStyle.Number ->
+                        HighlightningStyle.DotMember
+                     
+                    // TODO : syntax highlightning for \x.. and \u.... ?
+                    
 
 
                     // TODO
@@ -206,9 +220,7 @@ module SyntaxHighlighter =
     let ParseLine (line : string) lnr isblockcomment : Section[] * bool =
         let rec parse cl (s : ParsingState) : ParsingState =
             match cl with
-            | []
-            | ['\000']
-            | '\000'::_ -> s.Finish
+            | [] | ['\000'] | '\000'::_ -> s.Finish
             | [c] ->
                 let h, bc, b, i = ParseChar c s (s.IsBlockComment)
                 parse [] (s.Next c h bc b i)
@@ -220,11 +232,11 @@ module SyntaxHighlighter =
 
     let ParseCode (code : string) =
         let lines = Array.toList <| code.Replace("\r\n", "\n").Split('\n')
-        let rec processlines lines idxs bc =
+        let rec processlines acc lines idxs bc =
             match lines, idxs with
             | l::ls, i::is ->
                 let x, bc = ParseLine l i bc
-                Array.toList x @ processlines ls is bc // <----- TODO : make tail recursive !!
-            | _ -> []
-        processlines lines [1..lines.Length] false
+                processlines (acc @ Array.toList x) ls is bc
+            | _ -> acc
+        processlines [] lines [1..lines.Length] false
         |> List.toArray

@@ -19,6 +19,7 @@ using Piglet.Parser.Configuration;
 
 using Renci.SshNet;
 
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.Primitives;
 
@@ -281,15 +282,6 @@ namespace AutoItInterpreter
 
                 ASTProcessor.ParseExpressionAST(state, Options);
 
-
-                // TEST
-                using (var bmp = DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark))
-                    bmp.SaveAsPng(File.Create("output.png"));
-
-                Environment.Exit(0);
-                return state;
-
-
                 string cs_code = ApplicationGenerator.GenerateCSharpCode(state, Options, debugsymbols);
                 string dbg_code = ApplicationGenerator.GenerateCSharpDebugProviderCode(state, Options, debugsymbols);
                 int ret = ApplicationGenerator.GenerateDotnetProject(ref subdir, ProjectName, out string log);
@@ -355,6 +347,10 @@ namespace AutoItInterpreter
                         if (Options.IncludeDebugSymbols)
                             DebugPrintUtil.DisplayGeneratedSymbolTable(debugsymbols);
                     }
+
+                    if (Options.VisualOutputPath is string vis)
+                        using (Image<Argb32> bmp = DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark))
+                            bmp.SaveAsPng(File.Create(vis));
 
                     DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
 #if PRE_BUILD || !USE_PUBLISHER
