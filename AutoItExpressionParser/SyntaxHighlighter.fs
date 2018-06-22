@@ -194,8 +194,15 @@ module SyntaxHighlighter =
                         if s.EndsWith "\\" true then
                             lookbehind <- -1
                             HighlightningStyle.String
-                        else
+                        elif c <> '"' then
                             HighlightningStyle.StringEscapeSequence
+                        else
+                            // TODO : The following two lines are wrong. The result should be as follows:
+                            //          The previous character is of the type 'stringescape'
+                            //          The current character is of the type 'string'
+                            //          The next character is of the type 'code'
+                            lookbehind <- -1
+                            HighlightningStyle.Code
                     | '"', true, false, HighlightningStyle.String when is_intpol ->
                         let str = s.CurrentSection.StringContent
                         let cnt = str.Length - str.TrimEnd('\\').Length
@@ -214,7 +221,9 @@ module SyntaxHighlighter =
 
 
                     // TODO
-
+                    
+                    | _, true, false, HighlightningStyle.StringEscapeSequence when not (List.contains c alphanum) ->
+                        HighlightningStyle.String
                     | _ -> s.CurrentStyle
             (h, false, lookbehind, ints)
 

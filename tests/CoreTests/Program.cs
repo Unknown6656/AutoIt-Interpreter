@@ -19,6 +19,7 @@ namespace CoreTests
         public delegate int d(int i, int j);
 
 
+
         public static void Main(string[] args)
         {
             string au3 = @"
@@ -43,6 +44,7 @@ EndIf
 enum $x = 0, $y,$z, $w = ""test""#3
 
 °$x = °°$y ~^^ °0
+$b %= $""this is $b inside a text, e.g. '$x' or $a"" & ""test\n""
 ";
             // au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
             int ll = 0;

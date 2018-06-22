@@ -370,6 +370,13 @@ namespace {NAMESPACE}
 
             return func();
         }}
+
+        public static void {LAST_SYMBOL}(long dbgsym, Action func)
+        {{
+            {SYMBOL} = dbgsym;
+
+            func();
+        }}
 ".TrimEnd());
                     sb.AppendLine($@"
 /*{DISP_SKIP_E}*/

@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.27428.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{0A29D372-4C3B-4345-8EED-883263BC1EAF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {D0B49752-AE89-4B3F-8C25-729E92612B69}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{577AA580-8D49-423E-9841-534919E3FA90}"
 	ProjectSection(SolutionItems) = preProject
@@ -16,12 +19,21 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PigletParser", "PigletParser\PigletParser.csproj", "{C08309F8-B0A3-4F02-BB0E-3BD30A9E50F2}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItExpressionParser", "AutoItExpressionParser\AutoItExpressionParser.fsproj", "{FED10D83-7B97-4AF1-AB43-C12D38BD2832}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {D0B49752-AE89-4B3F-8C25-729E92612B69}
+	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "tests", "{2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "tests\UnitTests\UnitTests.csproj", "{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {D0B49752-AE89-4B3F-8C25-729E92612B69}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItCoreLibrary", "AutoItCoreLibrary\AutoItCoreLibrary.csproj", "{383B9D39-32AC-4E73-848F-1ECB88E44F6B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {D0B49752-AE89-4B3F-8C25-729E92612B69}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118B-4538-8A35-36D3A68DB14C}"
 	ProjectSection(SolutionItems) = preProject
@@ -47,6 +59,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "artwork", "artwork", "{0C84
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "editor", "editor", "{2A081940-6F18-46AD-ACDD-252C831FE432}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{ED6B1505-F525-470E-BDA3-9716A35984DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionIncrementer", "util\VersionIncrementer\VersionIncrementer.csproj", "{D0B49752-AE89-4B3F-8C25-729E92612B69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,6 +94,10 @@ Global
 		{B7B86CA6-C5D0-495B-A329-3717109FAFAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7B86CA6-C5D0-495B-A329-3717109FAFAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B7B86CA6-C5D0-495B-A329-3717109FAFAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -85,6 +105,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3} = {2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}
 		{B7B86CA6-C5D0-495B-A329-3717109FAFAD} = {2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}
+		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {ED6B1505-F525-470E-BDA3-9716A35984DB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {897DECA3-CA6B-4D7D-A760-705444DF5ECE}

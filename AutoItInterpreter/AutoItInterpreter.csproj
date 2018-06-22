@@ -18,6 +18,7 @@
     <None Remove="errorcodes.json" />
     <None Remove="lang/de.json" />
     <None Remove="lang/en.json" />
+    <None Remove="version.txt" />
   </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="../bin/autoitcorlib.dll" />
@@ -25,6 +26,7 @@
     <EmbeddedResource Include="errorcodes.json" />
     <EmbeddedResource Include="lang/de.json" />
     <EmbeddedResource Include="lang/en.json" />
+    <EmbeddedResource Include="version.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
@@ -110,4 +112,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="dotnet &quot;$(OutDir)incr.dll&quot; &quot;$(ProjectPath)&quot;" />
+  </Target>
 </Project>

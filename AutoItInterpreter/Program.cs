@@ -20,6 +20,10 @@ namespace AutoItInterpreter
         private static readonly MemoryStream ms = new MemoryStream();
         private static TextWriter @out;
 
+        public static Version InterpreterVersion { get; }
+        
+
+        static Program() => InterpreterVersion = Version.TryParse(Properties.Resources.version.Trim(), out Version v) ? v : new Version();
 
         public static int Main(string[] argv)
         {
@@ -281,8 +285,13 @@ namespace AutoItInterpreter
             return dic;
         }
 
-        private static void PrintCopyrightHeader(ConsoleColor c, bool open = false) => PrintC($@"
+        private static void PrintCopyrightHeader(ConsoleColor c, bool open = false)
+        {
+            string vstr = $"|     Core Library Version: {AutoItCoreLibrary.Module.LibraryVersion}, Interpreter Version: { InterpreterVersion}".PadRight(108) + '|';
+
+            PrintC($@"
 +------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
+{vstr}
 |                             AutoIt Interpreter : Copyright (c) Unknown6656, 2018{(DateTime.Now.Year > 2018 ? "-" + DateTime.Now.Year : "     ")}                         |
 |                          Piglet Parser Library : Copyright (c) Dervall, 2012                                  |
 |            ImageSharp Image Processing Library : Copyright (c) SixLabors, 2014-2018                           |
@@ -291,6 +300,7 @@ namespace AutoItInterpreter
 | Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/readme.md for an expanded documentation.  |
 | Visit https://github.com/Unknown6656/AutoIt-Interpreter/blob/master/doc/usage.md for an usage reference.      |
 {(open ? "" : "+---------------------------------------------------------------------------------------------------------------+")}".TrimEnd(), c);
+        }
 
         private static void PrintUsage()
         {
