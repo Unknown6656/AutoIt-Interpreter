@@ -32,4 +32,8 @@
         <ProjectReference Include="..\AutoItCoreLibrary\AutoItCoreLibrary.csproj" />
         <ProjectReference Include="..\PigletParser\PigletParser.csproj" />
   </ItemGroup>
+    <ItemGroup>
+      <PackageReference Update="FSharp.Core" Version="4.5.0" />
+      <PackageReference Update="System.ValueTuple" Version="4.5.0" />
+    </ItemGroup>
 </Project>

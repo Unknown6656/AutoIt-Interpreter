@@ -80,13 +80,14 @@ type ParsingState =
 
 module SyntaxHighlighter =
     let Keywords = [|
-            "and"; "or"; "xor"; "nxor"; "xnor"; "nand"; "nor"; "impl"; "while"; "wend"; "if"; "then"; "else"; "elseif"; "endif"; "next"; "for"; "do"; "in"; "continueloop"; "exitloop"; "continuecase"; "case"; "->"
-            "switch"; "select"; "endswitch"; "endselect"; "func"; "endfunc"; "byref"; "const"; "dim"; "local"; "global"; "enum"; "step"; "new"; "to"; "not"; "null"; "default"; "empty"; "false"; "true"; "from"; "as"; "ifn't"
+            "and"; "or"; "xor"; "nxor"; "xnor"; "nand"; "nor"; "impl"; "while"; "wend"; "if"; "then"; "else"; "elseif"; "endif"; "next"; "for"; "do";
+            "in"; "continueloop"; "exitloop"; "continuecase"; "case"; "->"; "switch"; "select"; "endswitch"; "endselect"; "func"; "endfunc"; "byref";
+            "const"; "dim"; "local"; "global"; "enum"; "step"; "new"; "to"; "not"; "null"; "default"; "empty"; "false"; "true"; "from"; "as"; "ifn't"
         |]
     let Operators = [|
-            "="; "=="; "<>"; "<"; ">"; "<="; ">="; "<<"; ">>"; "<<<"; ">>>"; "~"; "!"; "+"; "-"; "*"; "/"; "%"; "&"; "&&"; "^"; "^^"; "||"; "~^^"; "~||"; "~&&"; "\\"; "\\="; "?"; ":"
-            "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||="; "~&&="; "@"; ".."; "@|"; "°"; "�";
-            // TODO: "#"
+            "="; "=="; "<>"; "<"; ">"; "<="; ">="; "<<"; ">>"; "<<<"; ">>>"; "~"; "!"; "+"; "-"; "*"; "/"; "%"; "&"; "&&"; "^"; "^^"; "||"; "~^^"; "~||";
+            "~&&"; "\\"; "\\="; "?"; ":"; "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||=";
+            "~&&="; "@"; ".."; "@|"; "°";
         |]
 
     let ParseChar (c : char) (s : ParsingState) (bc : bool) : HighlightningStyle * bool * int * InternalParsingState =
@@ -227,7 +228,7 @@ module SyntaxHighlighter =
             | c::cs ->
                 let h, bc, b, i = ParseChar c s (s.IsBlockComment)
                 parse cs (s.Next c h bc b i)
-        let s = parse (Array.toList <| line.ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState()))
+        let s = parse (Array.toList <| line.Replace('�', '°').ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState()))
         (List.toArray s.PastSections, s.IsBlockComment)
 
     let ParseCode (code : string) =

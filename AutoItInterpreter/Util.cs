@@ -803,7 +803,7 @@ namespace AutoItInterpreter
 
                     drawtxt(linenr.ToString().PadLeft(5), line.HasErrors ? fnt_bl : fnt_rg, lnrcol, 0, voffs);
                     drawtxt(" | ", fnt_rg, indcol, 5, voffs);
-                    
+
                     if (line.HasErrors)
                     {
                         voffs += drawtxt(line.Content, line.HasErrors ? fnt_bl : fnt_rg, lnrcol, 8, voffs);
