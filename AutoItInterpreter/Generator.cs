@@ -164,7 +164,7 @@ namespace AutoItInterpreter
                         string serialized = ser.Serialize(ex, ctx);
 
                         if (options.IncludeDebugSymbols && allowdebug)
-                            return $"__lastsymbol<{TYPE}>({adddbgsymbol(ctx)}, () => {serialized})";
+                            return $"__lastsymbol/*<{TYPE}>*/({adddbgsymbol(ctx)}, () => {serialized})";
                         else
                             return serialized;
                     }

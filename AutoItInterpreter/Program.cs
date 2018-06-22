@@ -287,7 +287,7 @@ namespace AutoItInterpreter
 
         private static void PrintCopyrightHeader(ConsoleColor c, bool open = false)
         {
-            string vstr = $"|     Core Library Version: {AutoItCoreLibrary.Module.LibraryVersion}, Interpreter Version: { InterpreterVersion}".PadRight(108) + '|';
+            string vstr = $"|     Core Library Version: {AutoItCoreLibrary.Module.LibraryVersion}, Interpreter Version: { InterpreterVersion}".PadRight(112) + '|';
 
             PrintC($@"
 +------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
