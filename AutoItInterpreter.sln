@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.27428.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{0A29D372-4C3B-4345-8EED-883263BC1EAF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{577AA580-8D49-423E-9841-534919E3FA90}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{577AA580-8D49-423E-9841-534919E3FA90}"
 	ProjectSection(SolutionItems) = preProject
 		readme.md = readme.md
 		todo.txt = todo.txt
@@ -17,9 +17,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PigletParser", "PigletParse
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItExpressionParser", "AutoItExpressionParser\AutoItExpressionParser.fsproj", "{FED10D83-7B97-4AF1-AB43-C12D38BD2832}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "tests", "{2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "UnitTests\UnitTests.csproj", "{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "tests\UnitTests\UnitTests.csproj", "{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItCoreLibrary", "AutoItCoreLibrary\AutoItCoreLibrary.csproj", "{383B9D39-32AC-4E73-848F-1ECB88E44F6B}"
 EndProject
@@ -35,16 +35,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{DED9B6EF-118
 		doc\images\wtf-3.png = doc\images\wtf-3.png
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "tests\CoreTests\CoreTests.csproj", "{B7B86CA6-C5D0-495B-A329-3717109FAFAD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "artwork", "artwork", "{0C841933-866E-450D-AEED-D1E610D25868}"
 	ProjectSection(SolutionItems) = preProject
-		Artwork\AutoIt.aep = Artwork\AutoIt.aep
-		Artwork\banner.png = Artwork\banner.png
-		Artwork\favicon.ico = Artwork\favicon.ico
-		Artwork\icon.png = Artwork\icon.png
-		Artwork\icon_shadow.png = Artwork\icon_shadow.png
+		artwork\AutoIt.aep = artwork\AutoIt.aep
+		artwork\banner.png = artwork\banner.png
+		artwork\favicon.ico = artwork\favicon.ico
+		artwork\icon.png = artwork\icon.png
+		artwork\icon_shadow.png = artwork\icon_shadow.png
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "editor", "editor", "{2A081940-6F18-46AD-ACDD-252C831FE432}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

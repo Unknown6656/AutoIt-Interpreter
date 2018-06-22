@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -7,7 +6,7 @@
     <AssemblyName>autoitutests</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
-    <OutputPath>../bin</OutputPath>
+    <OutputPath>../../bin</OutputPath>
     <LangVersion>latest</LangVersion>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -17,8 +16,8 @@
     <PackageReference Include="MSTest.TestFramework" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
-    <ProjectReference Include="..\AutoItInterpreter\AutoItInterpreter.csproj" />
+    <ProjectReference Include="..\..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+    <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="unittest.bat">
