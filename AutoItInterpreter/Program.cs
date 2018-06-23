@@ -153,7 +153,9 @@ namespace AutoItInterpreter
                     }
                     catch
                     {
-                        throw new ArgumentException($"The argument '{GetF("target-system")}' is not a valid target system.");
+                        lang["invalid_targetsys", GetF("target-system")].Error();
+
+                        return -1;
                     }
 
                 if (Cont("architecture"))
@@ -163,7 +165,9 @@ namespace AutoItInterpreter
                     }
                     catch
                     {
-                        throw new ArgumentException($"The argument '{GetF("architecture")}' is not a valid architecture.");
+                        lang["invalid_architecture", GetF("target-system")].Error();
+
+                        return -1;
                     }
 
                 List<Assembly> deps = new List<Assembly>();
@@ -171,7 +175,7 @@ namespace AutoItInterpreter
                 foreach (string dep in Get("dependencies"))
                     try
                     {
-                        deps.Add(Assembly.LoadFrom(new FileResolver(dep).Resolve().FullName));
+                        deps.Add(Assembly.LoadFrom(new FileResolver(lang, dep).Resolve().FullName));
                     }
                     catch
                     {
@@ -203,7 +207,7 @@ namespace AutoItInterpreter
                 else if (Cont("run"))
                 {
                     Console.WriteLine();
-                    DebugPrintUtil.PrintSeperator("EXECUTION RESULT");
+                    DebugPrintUtil.PrintSeperator(lang["cli.sep.exec_result"]);
                     Console.WriteLine();
 
                     return ApplicationGenerator.RunApplication(result.OutputFile, Cont("debug"));

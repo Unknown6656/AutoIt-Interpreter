@@ -5,7 +5,11 @@
             "no_input": 1001,
             "inputfile_nfound": 1002,
             "file_nopen": 1003,
-            "reserved_name": 1004
+            "reserved_name": 1004,
+            "invalid_targetsys": 1005,
+            "invalid_architecture": 1006,
+            "invalid_resolve": 1007,
+            "no_src_avail": 1008
         },
         "preproc": {
             "include_nfound": 1101,

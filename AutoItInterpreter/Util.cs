@@ -255,9 +255,9 @@ namespace AutoItInterpreter
             }
         }
 
-        public static void DisplayGeneratedCode(string code)
+        public static void DisplayGeneratedCode(Language lang, string code)
         {
-            PrintSeperator("GENERATED CODE");
+            PrintSeperator(lang["cli.sep.gen_code"]);
 
             int lastpadl = 0;
             int linecnt = 0;
@@ -306,11 +306,11 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
-        public static void DisplayGeneratedSymbolTable(Dictionary<long, (DefinitionContext, string)> debugsymbols)
+        public static void DisplayGeneratedSymbolTable(Language lang, Dictionary<long, (DefinitionContext, string)> debugsymbols)
         {
-            PrintSeperator("GENERATED DEBUG SYMBOL TABLE");
+            PrintSeperator(lang["cli.sep.gen_dbgtable"]);
 
-            Console.WriteLine($"Generated {debugsymbols.Count} debug symbols:");
+            Console.WriteLine(lang["cli.generated_dbgsymb"]);
 
             foreach (long idx in debugsymbols.Keys.OrderBy(i => i))
             {
@@ -322,9 +322,9 @@ namespace AutoItInterpreter
             }
         }
 
-        public static void DisplayCodeAndErrors(InterpreterState state)
+        public static void DisplayCodeAndErrors(Language lang, InterpreterState state)
         {
-            PrintSeperator("ERRORS, WARNINGS AND NOTES");
+            PrintSeperator(lang["cli.sep.err_warn_note"]);
 
             foreach (FileInfo path in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer()))
             {
@@ -410,9 +410,9 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
-        public static void DisplayPreState(PreInterpreterState state)
+        public static void DisplayPreState(Language lang, PreInterpreterState state)
         {
-            PrintSeperator("PRE-INTERPRETER STATE");
+            PrintSeperator(lang["cli.sep.pre_state"]);
 
             foreach (string fn in state.Functions.Keys)
             {
@@ -422,23 +422,23 @@ namespace AutoItInterpreter
                 Console.WriteLine($"---------------------------------------- {state.GetFunctionSignature(fn)} ----------------------------------------");
                 Console.ForegroundColor = ConsoleColor.Gray;
 
-                foreach (var l in func.Lines)
+                foreach ((string Line, DefinitionContext Context) in func.Lines)
                 {
                     Console.CursorLeft = 10;
-                    Console.Write(l.Context);
+                    Console.Write(Context);
                     Console.CursorLeft = 50;
-                    Console.WriteLine(l.Line);
+                    Console.WriteLine(Line);
                 }
             }
         }
 
         public static void DisplayErrors(InterpreterState state, InterpreterOptions options)
         {
-            PrintSeperator("ERROR LIST");
+            PrintSeperator(options.Language["cli.sep.err_list"]);
 
             string root = state.RootDocument.FullName;
 
-            Console.WriteLine($"{state.Errors.Length} Errors, warnings and notes:\n");
+            Console.WriteLine(options.Language["cli.sep.err_list", state.Errors.Length]);
 
             foreach (IGrouping<ErrorType, InterpreterError> g in state.Errors.GroupBy(err => err.Type).OrderBy(g => g.Key))
             {
@@ -662,10 +662,10 @@ namespace AutoItInterpreter
 
         public static void DisplayArguments(InterpreterOptions options)
         {
-            PrintSeperator("COMMAND LINE ARGUMENTS");
+            PrintSeperator(options.Language["cli.sep.cmd_args"]);
 
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"{options.RawArguments.Count} argument(s):");
+            Console.WriteLine(options.Language["cli.cmd_args_desc", options.RawArguments.Count]);
 
             foreach (string key in options.RawArguments.Keys)
             {
@@ -678,7 +678,7 @@ namespace AutoItInterpreter
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
-        public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, VisualDisplayOptions style)
+        public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, Language lang, VisualDisplayOptions style)
         {
             const int FontSizePX = 32;
 
@@ -857,7 +857,7 @@ namespace AutoItInterpreter
 
             if (sourcelesserrors.Length > 0)
             {
-                voffs += drawtxt("      | <no source available>", fnt_rg, style.ForegroundFileHeader, 0, voffs);
+                voffs += drawtxt("      | " + lang["errors.general.no_src_avail"], fnt_rg, style.ForegroundFileHeader, 0, voffs);
                 voffs += drawtxt("------+" + new string('-', width - 7), fnt_rg, style.ForegroundIndent, 0, voffs);
 
                 foreach (InterpreterError err in sourcelesserrors)

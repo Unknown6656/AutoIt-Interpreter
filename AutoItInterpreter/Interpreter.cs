@@ -39,6 +39,7 @@ namespace AutoItInterpreter
     public delegate void ErrorReporter(string name, params object[] args);
 
     public sealed class FileResolver
+        : Localizable
     {
         private static readonly List<string> TEMP_FILES = new List<string>();
 
@@ -46,8 +47,8 @@ namespace AutoItInterpreter
         public string RawPath { get; }
 
 
-        public FileResolver(string path) =>
-            RawPath = path is string s ? s : throw new ArgumentNullException(nameof(path));
+        public FileResolver(Language lang, string path)
+            : base(lang) => RawPath = path is string s ? s : throw new ArgumentNullException(nameof(path));
 
         public FileInfo Resolve() => Resolve(true);
 
@@ -181,7 +182,7 @@ namespace AutoItInterpreter
             {
                 LastResolvedPath = null;
 
-                throw new ArgumentException($"The path '{RawPath}' could not be resolved to a file.");
+                throw new ArgumentException(base["errors.general.invalid_resolve", RawPath]);
             }
         }
 
@@ -198,9 +199,9 @@ namespace AutoItInterpreter
                     }
         }
 
-        public static FileInfo Resolve(string path) => new FileResolver(path).Resolve();
+        public static FileInfo Resolve(Language lang, string path) => new FileResolver(lang, path).Resolve();
 
-        public static FileInfo Resolve(string path, bool allowWebCrawls) => new FileResolver(path).Resolve(allowWebCrawls);
+        public static FileInfo Resolve(Language lang, string path, bool allowWebCrawls) => new FileResolver(lang, path).Resolve(allowWebCrawls);
 
         public static implicit operator FileInfo(FileResolver resv) => resv.Resolve();
     }
@@ -233,7 +234,7 @@ namespace AutoItInterpreter
 
             try
             {
-                RootContext = new InterpreterContext(new FileResolver(path));
+                RootContext = new InterpreterContext(new FileResolver(Options.Language, path));
                 path = RootContext.SourcePath.FullName;
             }
             catch
@@ -268,13 +269,13 @@ namespace AutoItInterpreter
                 if (Options.UseJITWarmup)
                 {
                     if (Options.UseVerboseOutput)
-                        Console.WriteLine($"Pre-compiling internal methods for {Win32.System} ({Environment.OSVersion}, {RuntimeInformation.OSArchitecture})");
+                        Console.WriteLine(Options.Language["cli.precomp_init", Win32.System, Environment.OSVersion, RuntimeInformation.OSArchitecture]);
 
                     foreach (Type t in new[] { typeof(ISymbol<>), typeof(AutoItFunctions), typeof(ExpressionParser), typeof(Interpreter) })
                         t.Assembly.PreJIT();
 
                     if (Options.UseVerboseOutput)
-                        Console.WriteLine("Finished pre-compiling.");
+                        Console.WriteLine(Options.Language["cli.precomp_finish"]);
                 }
 
                 state = LinePreprocessor.PreprocessLines(RootContext, Options);
@@ -306,7 +307,7 @@ namespace AutoItInterpreter
                     if (Options.KeyPairPath is string keypath)
                         try
                         {
-                            using (FileStream fs = new FileResolver(keypath).Resolve().OpenRead())
+                            using (FileStream fs = new FileResolver(Options.Language, keypath).Resolve().OpenRead())
                             {
                                 byte[] data = new byte[fs.Length];
 
@@ -342,17 +343,17 @@ namespace AutoItInterpreter
                     {
                         cs_code = Regex.Replace(cs_code, $@"\/\*{ApplicationGenerator.DISP_SKIP_S}\*\/.*\/\*{ApplicationGenerator.DISP_SKIP_E}\*\/", "        public static int Main(string[] argv) { ... }", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-                        DebugPrintUtil.DisplayGeneratedCode(cs_code);
+                        DebugPrintUtil.DisplayGeneratedCode(Options.Language, cs_code);
 
                         if (Options.IncludeDebugSymbols)
-                            DebugPrintUtil.DisplayGeneratedSymbolTable(debugsymbols);
+                            DebugPrintUtil.DisplayGeneratedSymbolTable(Options.Language, debugsymbols);
                     }
 
                     if (Options.VisualOutputPath is string vis)
-                        using (Image<Argb32> bmp = DebugPrintUtil.VisuallyPrintCodeAndErrors(state, VisualDisplayOptions.ThemeDark))
+                        using (Image<Argb32> bmp = DebugPrintUtil.VisuallyPrintCodeAndErrors(state, Options.Language, VisualDisplayOptions.ThemeDark))
                             bmp.SaveAsPng(File.Create(vis));
 
-                    DebugPrintUtil.PrintSeperator("ROSLYN COMPILER OUTPUT");
+                    DebugPrintUtil.PrintSeperator(Options.Language["cli.sep.roslyn_output"]);
 #if PRE_BUILD || !USE_PUBLISHER
                     ret = ApplicationGenerator.BuildDotnetProject(subdir);
 #endif
@@ -407,7 +408,7 @@ namespace AutoItInterpreter
                 if (Options.UseVerboseOutput)
                 {
                     if (state.Errors.Length > 0)
-                        DebugPrintUtil.DisplayCodeAndErrors(state);
+                        DebugPrintUtil.DisplayCodeAndErrors(Options.Language, state);
 
                     DebugPrintUtil.DisplayFinalResult(fr);
                 }
@@ -486,7 +487,7 @@ namespace AutoItInterpreter
                         if (path.Trim().Length > 0)
                             try
                             {
-                                FileInfo inclpath = new FileResolver(path);
+                                FileInfo inclpath = new FileResolver(options.Language, path);
 
                                 if (inclpath?.Exists ?? false)
                                     using (StreamReader rd = inclpath.OpenText())
@@ -520,7 +521,7 @@ namespace AutoItInterpreter
                     pstate.ReportKnownError("errors.preproc.fatal_internal_funcparsing_error", eofctx);
 
                 if (options.UseVerboseOutput)
-                    DebugPrintUtil.DisplayPreState(pstate);
+                    DebugPrintUtil.DisplayPreState(options.Language, pstate);
 
                 Dictionary<string, FUNCTION> ppfuncdir = PreprocessFunctions(pstate, options);
                 InterpreterState state = InterpreterState.Convert(pstate);
@@ -617,11 +618,11 @@ namespace AutoItInterpreter
                         lines.RemoveAt(lcnt);
                         lines.AddRange(new(string, int[])[]
                         {
-                        ($"If ({m.Get("cond")}) Then", lnr),
-                        (m.Get("iaction"), lnr),
-                        ("Else", lnr),
-                        (m.Get("eaction"), lnr),
-                        ("EndIf", lnr)
+                            ($"If ({m.Get("cond")}) Then", lnr),
+                            (m.Get("iaction"), lnr),
+                            ("Else", lnr),
+                            (m.Get("eaction"), lnr),
+                            ("EndIf", lnr)
                         });
                     }
                     else if (lines[lcnt].c.Match(@"^if\s+(?<cond>.+)\s+then\s+(?<then>.+)$", out m))
@@ -629,9 +630,9 @@ namespace AutoItInterpreter
                         lines.RemoveAt(lcnt);
                         lines.AddRange(new(string, int[])[]
                         {
-                        ($"If ({m.Get("cond")}) Then", lnr),
-                        (m.Get("then"), lnr),
-                        ("EndIf", lnr)
+                            ($"If ({m.Get("cond")}) Then", lnr),
+                            (m.Get("then"), lnr),
+                            ("EndIf", lnr)
                         });
                     }
 
@@ -1118,7 +1119,7 @@ namespace AutoItInterpreter
                         {
                             try
                             {
-                                if (!(nfo = FileResolver.Resolve(path)).Exists)
+                                if (!(nfo = FileResolver.Resolve(options.Language, path)).Exists)
                                     nfo = null;
                             }
                             catch
@@ -1172,7 +1173,7 @@ namespace AutoItInterpreter
 
                         try
                         {
-                            if ((nfo = FileResolver.Resolve(path)).Exists)
+                            if ((nfo = FileResolver.Resolve(options.Language, path)).Exists)
                             {
                                 include();
 
@@ -1189,7 +1190,7 @@ namespace AutoItInterpreter
                             foreach (string prefix in new[] { $"{st.CurrentContext.SourcePath.FullName}/.." }.Concat(settings.IncludeDirectories))
                                 try
                                 {
-                                    nfo = FileResolver.Resolve((prefix + '/' + path).Replace('\\', '/'), false);
+                                    nfo = FileResolver.Resolve(options.Language, (prefix + '/' + path).Replace('\\', '/'), false);
 
                                     if (nfo?.Exists ?? false)
                                     {
@@ -1227,7 +1228,7 @@ namespace AutoItInterpreter
 
                         try
                         {
-                            if (!(nfo = FileResolver.Resolve(path)).Exists)
+                            if (!(nfo = FileResolver.Resolve(options.Language, path)).Exists)
                                 nfo = null;
                         }
                         catch
@@ -1238,7 +1239,7 @@ namespace AutoItInterpreter
                             foreach (string prefix in new[] { $"{st.CurrentContext.SourcePath.FullName}/.." }.Concat(settings.IncludeDirectories))
                                 try
                                 {
-                                    nfo = FileResolver.Resolve((prefix + '/' + path).Replace('\\', '/'), false);
+                                    nfo = FileResolver.Resolve(options.Language, (prefix + '/' + path).Replace('\\', '/'), false);
 
                                     if (nfo?.Exists ?? false)
                                         break;
@@ -2684,8 +2685,6 @@ namespace AutoItInterpreter
         }
     }
 }
-
-
 
 
 

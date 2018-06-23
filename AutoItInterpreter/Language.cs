@@ -10,6 +10,15 @@ using AutoItInterpreter.Properties;
 
 namespace AutoItInterpreter
 {
+    public abstract class Localizable
+    {
+        public Language Language { get; }
+
+        public string this[string name, params object[] args] => Language[name, args];
+
+        public Localizable(Language lang) => Language = lang;
+    }
+
     public sealed class Language
     {
         private readonly static Language _errcodes;
