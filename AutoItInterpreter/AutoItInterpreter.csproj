@@ -18,6 +18,7 @@
     <None Remove="errorcodes.json" />
     <None Remove="lang/de.json" />
     <None Remove="lang/en.json" />
+    <None Remove="lang\fr.json" />
     <None Remove="version.txt" />
   </ItemGroup>
     <ItemGroup>
@@ -26,6 +27,7 @@
     <EmbeddedResource Include="errorcodes.json" />
     <EmbeddedResource Include="lang/de.json" />
     <EmbeddedResource Include="lang/en.json" />
+    <EmbeddedResource Include="lang\fr.json" />
     <EmbeddedResource Include="version.txt" />
   </ItemGroup>
   <ItemGroup>

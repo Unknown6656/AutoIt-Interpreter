@@ -133,6 +133,9 @@
   <data name="errorcodes" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\errorcodes.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="fr" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\lang\fr.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="version" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\version.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
   </data>

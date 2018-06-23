@@ -83,8 +83,8 @@
     [ ] UI
     [ ] SciTE support for AutoIt++
 [-] language packages
-    [-] translate to GER
-    [ ] translate to FRA
+    [x] translate to GER
+    [-] translate to FRA
     [ ] translate to ESP
     [ ] translate to ITA
     [ ] translate to RUS

@@ -111,7 +111,17 @@ namespace AutoItInterpreter.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 0.0.1.20180622.
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] fr {
+            get {
+                object obj = ResourceManager.GetObject("fr", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 0.1.16.20180624.
         /// </summary>
         internal static string version {
             get {
