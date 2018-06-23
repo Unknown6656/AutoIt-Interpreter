@@ -135,38 +135,37 @@
     },
     "warnings": {
         "preproc": {
-            ///////////////////////////////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////////////////////////////
-            "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
-            "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
-            "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
-            "continue_level_truncated": "The continuation level {0} is too high. It has been truncated to level {1}.",
-            "continue_level_invalid": "The continuation level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
+            "no_closing_comment": "Der aktuell geöffnete Kommentar-Block wurde nicht korrekt mit einer '#ce'-Direktive geschlossen. Er wurde implizit nach dieser Zeile geschlossen.",
+            "exit_level_truncated": "Das Exit-Ebene {0} ist zu hoch. Es wurde auf Stufe {1} reduziert.",
+            "exit_level_invalid": "Der Exit-Ebene '{0}' konnte nicht verarbeitet werden oder ist kleiner als 1. Aus diesem Grund wurde die Anweisung ignoriert.",
+            "continue_level_truncated": "Das Fortsetzungs-Ebene {0} ist zu hoch. Es wurde auf Stufe {1} reduziert.",
+            "continue_level_invalid": "Der Fortsetzungs-Ebene '{0}' konnte nicht verarbeitet werden oder ist kleiner als 1. Aus diesem Grund wurde die Anweisung ignoriert.",
             "invalid_local": "Eine lokale Variable kann nicht auf globaler Sichtbarkeitsebene erstellt werden. Entfernen Sie den Sichtbarkeitsmodifikator oder ersetzen Sie diesen durch 'Global' oder 'Dim'."
         },
         "astproc": {
-            "expression_result_discarded": "The result of this expression is implicitly discarded. consider assigning the expression to a local or global variable.",
-            "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code."
+            "expression_result_discarded": "Das Ergebnis dieses Ausdrucks wird implizit verworfen. Erwägen Sie, den Ausdruck einer lokalen oder globalen Variablen zuzuweisen.",
+            "pinvoke_already_declared": "Die P/Invoke-Funktion, welche auf die Funktion '{0}' in '{1}' zugreift, wurde bereits zuvor deklariert. Erwägen Sie, die aktuelle Zeile aus dem Code zu entfernen, um Redundanz zu vermeiden."
         },
         "generator": {
-            "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",
-            "kpanic": "This function call will invoke a kernel panic on UNIX systems and a blue screen on WINDOWS systems. Be warned.",
-            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead.",
-            "zero_deref": "The expression '{0}' evaluates to 'Null' or 'Zero' and will cause an error upon derefencing at runtime.",
-            "zero_div": "The expression '{0}' will result in a division-by-zero error at runtime."
+            "failed_clean_output": "Das nicht-leere Ausgabeverzeichnis '{0}' konnte nicht bereinigt werden, da die Compileroption '--clean-output' oder '-c' nicht angegeben wurde.",
+            "kpanic": "Dieser Funktionsaufruf ruft eine Kernelpanic auf UNIX-Systemen und einen BlueScreen auf WINDOWS-Systemen auf. Sie seien hiermit vor den Folgen gewarnt.",
+            "obsolete_func": "Die Funktion '{0}' ist veraltet. Bitte verwenden Sie stattdessen die Funktion(en) '{1}'.",
+            "zero_deref": "Der Ausdruck '{0}' wird zu 'Null' oder 'Zero' ausgewertet und führt bei einer Dereferenzierung zur Laufzeit zu einem Fehler.",
+            "zero_div": "Der Ausdruck '{0}' führt zur Laufzeit zu einer fatalen Division mit Null."
         },
-        "func_not_impl": "This function is currently not yet implemented.",
-        "not_impl": "Diese Funktionalität wurde von leider noch nicht implementiert. Dies tut uns Leid :/"
+        "func_not_impl": "Diese Funktion wurde derzeitig noch nicht implementiert.",
+        "not_impl": "Diese Funktionalität wurde leider noch nicht implementiert. Dies tut uns Leid :/"
     },
     "notes": {
-        "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
-        "empty_block": "This block is either empty or has been optimized away. Consider removing it from the source code.",
-        "uncalled_function": "The function '{0}' will never be called.",
-        "unsafe_execute": "Calling the function 'Execute' is considered unsafe and is quite resource-intensive. Consider refactoring the code to remove the call.",
-        "empty_function": "The function '{0}' contains no statements. Consider removing it from the source code, as it has no effect on the program's semantics.",
-        "unnecessary_function_comp": "The function '{0}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
-        "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored.",
-        "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call.",
-        "unnecessary_function_param": "The function parameter № {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
-        "net_regex": "This expression depends upon RegEx evaluation. The results can vary from the official AutoIt3-specification, as RegEx functions are implemeneted using the .NET RegEx engine."
+        "optimized_away": "Diese Anweisung oder dieser Block wurde vom Compiler bei der Optimierung entfernt, da er/sie keinen Einfluss auf den Ausführungsablauf hat. Erwägen Sie, ihn/sie aus dem Quellcode zu entfernen.",
+        "empty_block": "Dieser Block ist entweder leer oder wurde bei der Optimierung entfernt. Erwägen Sie, es aus dem Quellcode zu entfernen.",
+        "uncalled_function": "Die Funktion '{0}' wird nie aufgerufen.",
+        "unsafe_execute": "Der Aufruf der Funktion 'Execute' gilt als unsicher und ist sehr ressourcenintensiv. Erwägen Sie, den Code zu überarbeiten, um den Anruf zu entfernen.",
+        "empty_function": "Die Funktion '{0}' enthält keine Anweisungen. Erwägen Sie, diese aus dem Quellcode zu entfernen, da sie keinen Einfluss auf die Semantik des Programms hat.",
+        "unnecessary_function_comp": "Die Funktion '{0}' existiert nur, um die Kompatibilität mit der AutoIt3-Spezifikation zu erhalten, kann allerdings aufgrund von Implementierungsoptimierungen sicher entfernt werden.",
+        "init_0_dim": "Mindestens eine der {0} Array-Dimensionen hat die Größe 0. Dies ergibt wenig Sinn und der Initialisierungsausdruck wurde daher ignoriert.",
+        "global_return": "Der Rückgabewert des globalen Codes wird ignoriert - es sei denn, er wird von einem 'Execute'-Aufruf heraus aufgerufen.",
+        "unnecessary_function_param": "Der Funktionsparameter Nr. {0} des Funktionsaufrufs '{1}' existiert nur, um die Kompatibilität mit der AutoIt3-Spezifikation zu erhalten, kann aber aufgrund von Implementierungsoptimierungen sicher entfernt werden.",
+        "net_regex": "Dieser Ausdruck hängt von einer RegEx-Auswertung ab. Die Ergebnisse können von der offiziellen AutoIt3-Spezifikation abweichen, da RegEx-Funktionen mithilfe der .NET RegEx-Engine implementiert wurden."
     }
 }

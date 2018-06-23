@@ -88,7 +88,7 @@
     [ ] translate to ESP
     [ ] translate to ITA
     [ ] translate to RUS
-    [ ] add console strings to lang packg
+    [x] add console strings to lang packg
 [-] documentation
     [-] usage
     [ ] language reference (functions etc.)

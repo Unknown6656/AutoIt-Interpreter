@@ -310,7 +310,7 @@ namespace AutoItInterpreter
         {
             PrintSeperator(lang["cli.sep.gen_dbgtable"]);
 
-            Console.WriteLine(lang["cli.generated_dbgsymb"]);
+            Console.WriteLine(lang["cli.generated_dbgsymb", debugsymbols.Count]);
 
             foreach (long idx in debugsymbols.Keys.OrderBy(i => i))
             {

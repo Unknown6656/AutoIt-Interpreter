@@ -167,7 +167,7 @@
         "init_0_dim": "At least one of the {0} array dimensions has the size 0. That does not make much sense and the initialization expression has therefore been ignored.",
         "global_return": "The return value of the global code will be ignored except when being called from inside an 'Execute'-call.",
         "alias_function": "The function '{0}' is an alias of the function '{1}' in order to maintain compatibility with AutoIt3. It is advised to use '{1}' instead.",
-        "unnecessary_function_param": "The function parameter № {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
+        "unnecessary_function_param": "The function parameter no. {0} of the function call '{1}' only exists to keep compatibility with the AutoIt3-specification, but can be safely removed due to implementation optimizations.",
         "net_regex": "This expression depends upon RegEx evaluation. The results can vary from the official AutoIt3-specification, as RegEx functions are implemeneted using the .NET RegEx engine."
     }
 }
