@@ -82,8 +82,8 @@
             "unknown_directive": "Die Präprozessor-Direktive '#{0}' ist unbekannt oder konnte nicht analysiert werden.",
             "no_path_provided": "Es wurde kein Pfad angegeben.",
             "certificate_nfound": "Die SNK/PFX Zertifikatdatei '{0}' konnte nicht gefunden oder geöffnet werden.",
-            "directive_requires_unsafe": "Die Präprozessor-Direktive '#{0}' kann nur verwendet werden, wenn die Compileroption '--unsafe' oder '-u' angegeben wird.",
-            "directive_requires_debug": "Die Präprozessor-Direktive '#{0}' kann nur verwendet werden, wenn die Compileroption '--debug' oder '-d' angegeben wird.",
+            "directive_requires_unsafe": "Die Präprozessor-Direktive '#{0}' kann nur verwendet werden, wenn sie mit der Compileroption '--unsafe' oder '-u' kompiliert wurde.",
+            "directive_requires_debug": "Die Präprozessor-Direktive '#{0}' kann nur verwendet werden, wenn sie mit der Compileroption '--debug' oder '-d' kompiliert wurde.",
             "dependency_invalid": "Die .NET-Abhängigkeit '{0}' konnte nicht gefunden werden oder ist ungültig. Bitte überprüfen Sie die Datei auf einen gültigen PE- und .NET-Header.",
             "invalid_namepsace": "Der .NET-Namespace '{0}' besitzt ein ungültiges Format."
         },
@@ -103,39 +103,39 @@
             "missing_value": "Konstante Variablen müssen bei der Deklaration mit einem Wert initialisiert werden.",
             "variable_exists": "Die Variable '{0}' wurde bereits vor dieser Anweisung deklariert (siehe {1}).",
             "init_invalid_operator": "Variablen können nicht mit dem Operator '{0}' initialisiert werden. Verwenden Sie stattdessen den Operator'='.",
-            ///////////////////////////////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////////////////////////////
-            "init_invalid_expression": "Variables can only be initialized using simple assignments or array declarations.",
-            "unsafe_func": "The function '{0}' can only be used when compiled with the compiler-flag '--unsafe' or '-u'.",
-            "invalid_system": "The function call cannot be used, when targeting a {0} system, as the function is specific for only the following platform(s): {1}.",
-            "pinvoke_sig_invalid": "The signature '{0}' is not valid for the P/Invoke function '{1}'.",
-            "dllcall_odd_argc": "The function 'DllCall' requires an odd amount of arguments.",
-            "dllcall_const_args": "The function 'DllCall' currently requires constant string arguments for the entry point and type names. This will be fixed in the near future.",
-            "dllcall_assign": "The function 'DllCall' cannot be λ-assigned to a variable.",
-            "trailing_comma": "Invalid trailing comma in the declaration expression.",
-            "init_no_dynamic_dimensions": "Array initalization dimensions must be compile-time static, when providing the initial values using the '... = [ ... ]' notation.",
-            "init_internal_error": "Some internal error occured during the parsing of the array initialization expression",
-            "init_dimension_mismatch": "The dimension no. {0} in the definition does not match the provided one: The size {1} was provided in the definition, however the according dimension in the initialization expression has the size {2}.",
-            "variable_is_const": "The value cannot be assigned to the variable or parameter '{0}', as it has been marked as constant.",
-            "ast_error": "The following critial error occured during the parsing of the interal partial abstract syntax tree:\n{0}",
-            "enum_inval_stepop": "The step operator '{0}' is invalid for an enum declaration.",
-            "enum_inval_stepval": "The step value '{0}' could not be parsed.",
-            "enum_div_zero": "The step operator-value-combination is invalid due to a division by zero.",
-            "enum_inval_expr": "The expression '{0}' is invalid for an enum declararion or could not be parsed.",
-            "fatal_codegen": "A fatal internal error occured duing code generation.",
-            "mismatch_parcount": "The parameter count for the call of the function '{0}' is {1}, however {2} parameter(s) are required."
+            "init_invalid_expression": "Variablen können nur durch einfache Zuweisungen oder Array-Deklarationen initialisiert werden.",
+            "unsafe_func": "Die Funktion'{0}' kann nur verwendet werden, wenn sie mit der Compileroption '--unsafe' oder'-u' kompiliert wurde.",
+            "invalid_system": "Der Funktionsaufruf kann nicht verwendet werden, wenn {0} als Zielsystem verwendet wird, da die Funktion nur für folgende Plattform(en) definitiert ist: {1}.",
+            "pinvoke_sig_invalid": "Die Signatur '{0}' ist für die P/Invoke-Function '{1}' ungültig.",
+            "dllcall_odd_argc": "Die Funktion 'DllCall' benötigt eine ungerade Anzahl von Argumenten.",
+            "dllcall_const_args": "Die Funktion'DllCall' benötigt konstante String-Argumente für den Einstiegspunkt und Typnamen. Dies wird in naher Zukunft behoben werden.",
+            "dllcall_assign": "Die Funktion 'DllCall' kann nicht mithilfe einr λ-Zuweisung einer Variablen zugewiesen werden.",
+            "trailing_comma": "Ungültiges Komma im Deklarationsausdruck.",
+            "init_no_dynamic_dimensions": "Array-Initalisierungsdimensionen müssen statisch sein, wenn die Anfangswerte mit der Notation '... = [ ... ]' angegeben werden.",
+            "init_internal_error": "Bei der Auswertung des Array-Initialisierungsausdrucks ist ein interner Fehler aufgetreten.",
+            "init_dimension_mismatch": "Die Dimension Nr. {0} in der Definition stimmt nicht mit der angegebenen überein: Die Größe {1} wurde in der Definition angegeben, die entsprechende Dimension im Initialisierungsausdruck hat jedoch die Größe {2}.",
+            "variable_is_const": "Der Wert kann nicht der Variable oder dem Parameter '{0}' zugewiesen werden, da diese als konstant markiert wurde.",
+            "ast_error": "Der folgende kritische Fehler trat während der Auswertung des interal partiellen abstrakten Syntaxbaums auf:\n{0}",
+            "enum_inval_stepop": "Der Schritt-Operator '{0}' ist für eine Enum-Deklaration ungültig.",
+            "enum_inval_stepval": "Der Schrittwert '{0}' konnte nicht ausgewertet werden.",
+            "enum_div_zero": "Die Operator-Wert-Kombination ist aufgrund einer Division durch Null ungültig.",
+            "enum_inval_expr": "Der Ausdruck '{0}' ist für eine Enum-Deklaration ungültig oder konnte nicht verarbeitet werden.",
+            "fatal_codegen": "Ein fataler interner Fehler trat bei der Codegenerierung auf.",
+            "mismatch_parcount": "Die Parameteranzahl für den Aufruf der Funktion '{0}' ist {1}, es werden jedoch {2} Parameter benötigt."
         },
         "generator": {
-            "cannot_create": "The intermediate code represenation could not be created, as one or more fatal compiler errors occured.",
-            "cannot_create_dotnet": "The engine could not create the .NET project system. Exit code {0} (0x{0:x8})",
-            "build_failed": "The .NET project system build failed. Exit code {0} (0x{0:x8})",
-            "target_deprecated": "The target system '{0}' is deprecated and therefore no longer supported.",
-            "key_not_found": "The private/public key pair '{0}' could not be found.",
-            "obsolete_func": "The function '{0}' is obsolete. Please use the function(s) '{1}' instead.",
-            "invalid_jump": "The code around this line has been compiled down to a set of invalid 'jump'-instructions. This is usually a sign of a misplaced 'ExitLoop'- or 'ContinueLoop'-Statement."
+            "cannot_create": "Die Zwischencode-Darstellung konnte nicht erstellt werden, da ein oder mehrere fatale Compilerfehler aufgetreten sind.",
+            "cannot_create_dotnet": "Die Engine konnte das .NET-Projektsystem nicht erstellen. Fehlercode {0} (0x{0:x8})",
+            "build_failed": "Der Build des .NET-Projektsystems schlug fehl. Fehlercode {0} (0x{0:x8})",
+            "target_deprecated": "Das Zielsystem'{0}' ist veraltet und wird daher nicht mehr unterstützt.",
+            "key_not_found": "Das private/öffentliche Schlüsselpaar '{0}' konnte nicht gefunden werden.",
+            "obsolete_func": "Die Funktion '{0}' ist veraltet. Bitte verwenden Sie stattdessen die Funktion(en) '{1}'.",
+            "invalid_jump": "Der Code um diese Zeile herum wurde zu einer Reihe von ungültigen 'jump'-Anweisungen kompiliert. Dies ist in der Regel ein Zeichen für eine falsche 'ExitLoop'- oder 'ContinueLoop'-Anweisung."
         }
     },
     "warnings": {
         "preproc": {
+            ///////////////////////////////////////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////////////////////////////////////
             "no_closing_comment": "The currently open comment block has not been closed properly using an '#ce'-directive. It has been closed implicitly.",
             "exit_level_truncated": "The exit level {0} is too high. It has been truncated to level {1}.",
             "exit_level_invalid": "The exit level '{0}' could not be parsed or is lower than 1. The statement has therefore been ignored.",
@@ -155,7 +155,7 @@
             "zero_div": "The expression '{0}' will result in a division-by-zero error at runtime."
         },
         "func_not_impl": "This function is currently not yet implemented.",
-        "not_impl": "Diese Funktionalität wurde von mir leider noch nicht implementiert.   Tut mir Leid :/"
+        "not_impl": "Diese Funktionalität wurde von leider noch nicht implementiert. Dies tut uns Leid :/"
     },
     "notes": {
         "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
