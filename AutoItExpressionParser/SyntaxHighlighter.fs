@@ -250,3 +250,13 @@ module SyntaxHighlighter =
             | _ -> acc
         processlines [] lines [1..lines.Length] false
         |> List.toArray
+
+    let Optimize = Array.fold (fun s (e : Section) -> 
+                                    if e.Length > 0 then match s with
+                                                            | [] -> [e]
+                                                            | x::xs -> if e.Line = x.Line && e.Style = x.Style
+                                                                       then { Line = e.Line; Style = e.Style; Index = x.Index; Content = x.Content@e.Content }::xs
+                                                                       else e::x::xs
+                                    else s) []
+                >> List.rev
+                >> List.toArray

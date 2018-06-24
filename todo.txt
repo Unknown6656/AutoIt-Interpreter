@@ -61,6 +61,7 @@
         [x] UDP / TCP API
         [-] Serial API
         [ ] Compiler robustness
+        [x] Syntax highlightner
     [ ] official tests
         [ ] λ-functionality
         [ ] arrays / matrices
@@ -77,6 +78,7 @@
         [ ] UDP / TCP API
         [ ] Serial API
         [ ] Compiler robustness
+        [ ] Syntax highlightner
 [-] fix variable scoping
 [-] IDE
     [x] syntax highlightning

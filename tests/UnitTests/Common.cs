@@ -93,9 +93,9 @@ namespace UnitTests
 
             WriteLine($@"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNIT TESTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Expression Parser verison: {AutoItExpressionParser.Module.Version}
          Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
                                {AutoItCoreLibrary.Module.GitHash}
-    Expression Parser verison: {AutoItExpressionParser.Module.Version}
 
 Testing {types.Length} types:
 ".TrimStart());

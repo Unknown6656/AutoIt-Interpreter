@@ -1,10 +1,6 @@
-using System.Runtime.CompilerServices;
-
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using AutoItExpressionParser;
-using AutoItCoreLibrary;
-using AutoItInterpreter;
 
 namespace UnitTests
 {

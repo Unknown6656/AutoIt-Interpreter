@@ -681,6 +681,7 @@ namespace AutoItInterpreter
         public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, Language lang, VisualDisplayOptions style)
         {
             const int FontSizePX = 32;
+            int voffs = 7;
 
             var sourcelesserrors = state.Errors.Where(err => err.ErrorContext.FilePath is null).ToArray();
             var filesources = (from fi in state.Errors.Select(e => e.ErrorContext.FilePath).Concat(new[] { state.RootDocument }).Distinct(new PathEqualityComparer())
@@ -712,7 +713,7 @@ namespace AutoItInterpreter
             int height = (from source in filesources
                           from line in source.Lines
                           let ec = line.Errors.Length
-                          select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 4) + 4;
+                          select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 4) + voffs - 1;
             int width = Math.Max(50, (from source in filesources
                                       from line in source.Lines
                                       from ll in new int[] { line.Content.Length, source.Path.FullName.Length, line.Errors.Length > 0 ? line.Errors.Max(err => err.Error.ErrorMessage.Length) : 0 }
@@ -748,7 +749,6 @@ namespace AutoItInterpreter
             int ecnt = state.Errors.Count(err => err.Type == ErrorType.Fatal);
             int wcnt = state.Errors.Count(err => err.Type == ErrorType.Warning);
             int ncnt = state.Errors.Length - ecnt - wcnt;
-            int voffs = 7;
 
             int drawtxt(string s, Font f, Argb32 c, int x, int y)
             {
