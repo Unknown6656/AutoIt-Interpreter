@@ -1,11 +1,18 @@
 ﻿namespace AutoItExpressionParser
 
+open Microsoft.FSharp.Quotations.Patterns
+
 open Piglet.Parser.Configuration
 open Piglet.Parser
+
 
 [<AutoOpen>]
 module Util =
     let internal (+>) (o : obj[]) n = unbox o.[n]
+
+    let GetModuleType = function
+                        | PropertyGet (_, propertyInfo, _) -> propertyInfo.DeclaringType
+                        | _ -> failwith "Expression is no property."
 
     let (|As|_|) (p:'T) : 'U option =
         let p = p :> obj

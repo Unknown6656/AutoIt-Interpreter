@@ -74,7 +74,7 @@ namespace UnitTests
             PrintLine($"] {descr ?? ""}", ConsoleColor.White);
         }
 
-        public static int Main(string[] argv)
+        public static int Main(string[] __)
         {
             #region REFLECTION + INVOCATION
 
@@ -84,13 +84,23 @@ namespace UnitTests
             int passed = 0, failed = 0, skipped = 0;
             Stopwatch sw = new Stopwatch();
             long swc, swi, swm;
+            Type[] types = (from t in typeof(TestCommons).Assembly.GetTypes()
+                            let attr = t.GetCustomAttributes<TestClassAttribute>(true).FirstOrDefault()
+                            where attr != null
+                            orderby t.Name ascending
+                            orderby t.GetCustomAttributes<PriorityAttribute>(true).FirstOrDefault()?.Priority ?? 0 descending
+                            select t).ToArray();
 
-            foreach (Type t in from t in typeof(TestCommons).Assembly.GetTypes()
-                               let attr = t.GetCustomAttributes<TestClassAttribute>(true).FirstOrDefault()
-                               where attr != null
-                               orderby t.Name ascending
-                               orderby t.GetCustomAttributes<PriorityAttribute>(true).FirstOrDefault()?.Priority ?? 0 descending
-                               select t)
+            WriteLine($@"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNIT TESTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
+                               {AutoItCoreLibrary.Module.GitHash}
+    Expression Parser verison: {AutoItExpressionParser.Module.Version}
+
+Testing {types.Length} types:
+".TrimStart());
+
+            foreach (Type t in types)
             {
                 sw.Restart();
                 swc = swi = swm = 0;

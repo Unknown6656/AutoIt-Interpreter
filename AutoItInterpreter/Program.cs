@@ -406,16 +406,18 @@ namespace AutoItInterpreter
             PrintCopyrightHeader(ConsoleColor.Cyan);
 
             $@"
-    AutoIt++ Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
-     AutoIt++ Interpreter version: {Module.InterpreterVersion}".PrintC(ConsoleColor.Cyan);
+         AutoIt++ Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
+    AutoIt++ Expression Parser version: {AutoItExpressionParser.Module.Version}
+          AutoIt++ Interpreter version: {Module.InterpreterVersion}".PrintC(ConsoleColor.Cyan);
 
-            if (Module.GitHash != AutoItCoreLibrary.Module.GitHash)
+            if (Module.GitHash != AutoItCoreLibrary.Module.GitHash || Module.GitHash != AutoItExpressionParser.Module.GitHash)
             {
-                $"   AutoIt++ Core Library Git hash: {AutoItCoreLibrary.Module.GitHash}".PrintC(ConsoleColor.Cyan);
-                $"    AutoIt++ Interpreter Git hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
+                $"        AutoIt++ Core Library Git hash: {AutoItCoreLibrary.Module.GitHash}".PrintC(ConsoleColor.Cyan);
+                $"   AutoIt++ Expression Parser Git hash: {AutoItExpressionParser.Module.GitHash}".PrintC(ConsoleColor.Cyan);
+                $"         AutoIt++ Interpreter Git hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
             }
             else
-                $"                  Git commit hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
+                $"                       Git commit hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
         }
 
         private static void PrintC(this string msg, ConsoleColor c)

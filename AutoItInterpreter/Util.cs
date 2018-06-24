@@ -748,7 +748,7 @@ namespace AutoItInterpreter
             int ecnt = state.Errors.Count(err => err.Type == ErrorType.Fatal);
             int wcnt = state.Errors.Count(err => err.Type == ErrorType.Warning);
             int ncnt = state.Errors.Length - ecnt - wcnt;
-            int voffs = 6;
+            int voffs = 7;
 
             int drawtxt(string s, Font f, Argb32 c, int x, int y)
             {
@@ -763,10 +763,12 @@ namespace AutoItInterpreter
 
             img.Mutate(i => i.Fill(style.Background, new RectangleF(0, 0, img.Width, img.Height)));
 
-            drawtxt($"// Compiled using the AutoIt++ Interpreter v.{Module.InterpreterVersion}".Trim(), fnt_it, style.ForegroundComment, 0, 0);
-            drawtxt($"//           and the AutoIt++ Core Library v.{AutoItCoreLibrary.Module.LibraryVersion}".Trim(), fnt_it, style.ForegroundComment, 0, 1);
-            drawtxt($"// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}".Trim(), fnt_it, style.ForegroundComment, 0, 2);
-            drawtxt($"// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}".Trim(), fnt_it, style.ForegroundComment, 0, 3);
+            drawtxt("// Compiled using:", fnt_it, style.ForegroundComment, 0, 0);
+            drawtxt($"//    AutoIt++ Interpreter        v.{Module.InterpreterVersion}", fnt_it, style.ForegroundComment, 0, 1);
+            drawtxt($"//    AutoIt++ Expression Parser  v.{AutoItExpressionParser.Module.Version}", fnt_it, style.ForegroundComment, 0, 2);
+            drawtxt($"//    AutoIt++ Core Library       v.{AutoItCoreLibrary.Module.LibraryVersion}", fnt_it, style.ForegroundComment, 0, 3);
+            drawtxt($"// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}", fnt_it, style.ForegroundComment, 0, 4);
+            drawtxt($"// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}", fnt_it, style.ForegroundComment, 0, 5);
 
             foreach (var source in filesources)
             {

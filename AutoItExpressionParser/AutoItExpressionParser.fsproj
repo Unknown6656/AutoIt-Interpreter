@@ -27,6 +27,10 @@
         <Compile Include="PInvokeParser.fs" />
         <Compile Include="Serializer.fs" />
         <Compile Include="SyntaxHighlighter.fs" />
+        <Compile Include="Module.fs" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="version.txt" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../AutoItCoreLibrary/AutoItCoreLibrary.csproj" />
@@ -37,7 +41,7 @@
       <PackageReference Update="System.ValueTuple" Version="4.5.0" />
     </ItemGroup>
     <ItemGroup>
-      <Folder Include="Properties/" />
+        <Folder Include="Properties/" />
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
       <Exec Command="dotnet &quot;$(OutDir)incr.dll&quot; &quot;$(ProjectPath)&quot;" />
