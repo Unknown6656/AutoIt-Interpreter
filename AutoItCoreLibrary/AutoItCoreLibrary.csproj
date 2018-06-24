@@ -4,7 +4,7 @@
   </PropertyGroup>
     <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Optimize>false</Optimize>
+        <Optimize>true</Optimize>
         <OutputPath>../bin</OutputPath>
         <LangVersion>latest</LangVersion>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

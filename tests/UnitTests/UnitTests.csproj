@@ -5,7 +5,7 @@
     <StartupObject>UnitTests.UnitTestRunner</StartupObject>
     <AssemblyName>autoitutests</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <OutputPath>../../bin</OutputPath>
     <LangVersion>latest</LangVersion>
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

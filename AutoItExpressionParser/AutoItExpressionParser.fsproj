@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp2.1</TargetFramework>
         <ApplicationIcon>favicon.ico</ApplicationIcon>
-        <Optimize>false</Optimize>
+        <Optimize>true</Optimize>
         <OutputPath>bin</OutputPath>
         <LangVersion>latest</LangVersion>
         <OutputPath>../bin</OutputPath>

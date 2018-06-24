@@ -47,6 +47,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let nt_deref_target_expressions = x.nt<EXPRESSION>              "dereferencing-targets"
         let nt_expression_ext           = x.nt<EXPRESSION>              "extended-expression"
         let nt_expression               = x.nt<EXPRESSION>              "expression"
+        let nt_at_expression            = x.nt<EXPRESSION>              "at-expression"
         let nt_subexpression            = Array.map (x.nt<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
         let nt_funccall                 = x.nt<FUNCCALL>                "function-call"
         let nt_funcparams               = x.nt<EXPRESSION list>         "function-parameters"
@@ -91,8 +92,7 @@ type ExpressionParser(mode : ExpressionParserMode) =
         let t_operator_comp_lte         = x.t @"<="
         let t_operator_comp_lt          = x.t @"<"
         let t_operator_comp_eq          = x.t @"=="
-        let t_operator_at1              = x.t @"@\|"
-        let t_operator_at0              = x.t @"@"
+        let t_operator_at               = x.tf @"(@\||@)"                       (fun s -> if s.Contains('|') then 1m else 0m)
         let t_operator_dotrange         = x.t @"\.?\.\." // TODO
         let t_operator_dereference      = x.t @"[°�]"
         let t_symbol_equal              = x.t @"="
@@ -299,10 +299,14 @@ type ExpressionParser(mode : ExpressionParserMode) =
         // or
         //  reducett 16 20 t_operator_at1 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(s, l), e))
         //  reducett 17 20 t_operator_at0 t_operator_dotrange (fun e s l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number 1m), l), e))
+        //
+        // reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
+        // reduceb 19 BinaryLeft t_operator_at0 (fun e i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number 1m), Literal <| Number 1m), e))
+        reduce0 !@16 nt_at_expression
+        reduce5 nt_at_expression nt_at_expression t_operator_at !@20 t_operator_dotrange !@20 (fun e o s _ l -> UnaryExpression(String1Index(BinaryExpression(Add, s, Literal <| Number o), l), e))
+        reduce3 nt_at_expression nt_at_expression t_operator_at !@20 (fun e o i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number o), Literal <| Number 1m), e))
+        reduce0 nt_at_expression !@20
 
-        reduce0 !@16 !@18
-        reduceb 18 BinaryLeft t_operator_at1 (fun e i -> UnaryExpression(String1Index(i, Literal <| Number 1m), e))
-        reduceb 19 BinaryLeft t_operator_at0 (fun e i -> UnaryExpression(String1Index(BinaryExpression(Add, i, Literal <| Number 1m), Literal <| Number 1m), e))
         reducebe 20 BinaryLeft t_operator_bit_nor BitwiseNor
         reducebe 21 BinaryLeft t_operator_bit_or BitwiseOr
         reducebe 22 BinaryLeft t_operator_bit_nxor BitwiseNxor

@@ -35,13 +35,13 @@
 [x] FIX AND CHANGE/REFACTOR GC-OBJECT SYSTEM
 [x] fix the expressions 'num(...)' and 'num[...]'
 [x] fix debugging symbols
------------------------------------------ UNFINISHED -----------------------------------------
-[-] COM-interop
-[-] fix expression parser
+[x] fix expression parser
     [x] fix single equals mis-interpreted as assignment
     [x] fix array indices
-    [ ] fix @|.. and @.. operators
+    [x] fix @|.. and @.. operators
     [x] fix ?: operator
+----------------------------------------- UNFINISHED -----------------------------------------
+[-] COM-interop
 [-] unit tests
     [x] improve test framework
     [ ] IMPL boolean optimization

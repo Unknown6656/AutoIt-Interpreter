@@ -181,5 +181,26 @@ namespace UnitTests
 
         [TestMethod]
         public void Test_46() => AssertValidExpression("°func() = °0", true);
+
+        [TestMethod]
+        public void Test_47() => AssertValidExpression("$a @ 5", false);
+
+        [TestMethod]
+        public void Test_48() => AssertValidExpression("$a @| $b", false);
+
+        [TestMethod]
+        public void Test_49() => AssertValidExpression("$a @ $b .. $c", false);
+
+        [TestMethod]
+        public void Test_50() => AssertValidExpression("$a @ -1 .. 7 + 9", false);
+
+        [TestMethod]
+        public void Test_51() => AssertInvalidExpression("$a @ $b .. $c .. $d", false);
+
+        [TestMethod]
+        public void Test_52() => AssertInvalidExpression("$a .. 7", true);
+
+        [TestMethod]
+        public void Test_53() => AssertEqualExpressions("$a @| $b @ $c .. $d", "(($a @| $b) @ $c .. $d)", false);
     }
 }

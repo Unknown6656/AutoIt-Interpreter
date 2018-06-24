@@ -781,6 +781,9 @@ namespace AutoItCoreLibrary
         [BuiltinFunction, Note("notes.unnecessary_function_comp", nameof(EnvUpdate))]
         public static var EnvUpdate() => 1;
 
+        [BuiltinFunction, Warning("warnings.func_not_impl")]
+        public static var Execute(var code) => throw new NotImplementedException(); // TODO
+
         [BuiltinFunction, Note("notes.alias_function", nameof(FileChangeDir), nameof(FileChangeDir))]
         public static var FileChangeDir(var v) => FileChangeDir(v);
 
