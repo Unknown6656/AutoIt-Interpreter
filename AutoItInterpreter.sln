@@ -62,7 +62,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "editor", "editor", "{2A0819
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{ED6B1505-F525-470E-BDA3-9716A35984DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionIncrementer", "util\VersionIncrementer\VersionIncrementer.csproj", "{D0B49752-AE89-4B3F-8C25-729E92612B69}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VersionIncrementer", "util\VersionIncrementer\VersionIncrementer.csproj", "{D0B49752-AE89-4B3F-8C25-729E92612B69}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItEditor", "editor\AutoItEditor\AutoItEditor.csproj", "{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -98,6 +100,10 @@ Global
 		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0B49752-AE89-4B3F-8C25-729E92612B69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -106,6 +112,7 @@ Global
 		{5724E7F2-B3C3-4CCC-A2FF-74731229E5E3} = {2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}
 		{B7B86CA6-C5D0-495B-A329-3717109FAFAD} = {2FE29777-3D28-4F63-994F-9E8B5FBE1FAD}
 		{D0B49752-AE89-4B3F-8C25-729E92612B69} = {ED6B1505-F525-470E-BDA3-9716A35984DB}
+		{09A47CC1-6460-4F5D-BDEB-C037FA2C0C62} = {2A081940-6F18-46AD-ACDD-252C831FE432}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {897DECA3-CA6B-4D7D-A760-705444DF5ECE}

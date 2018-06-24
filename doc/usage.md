@@ -116,6 +116,7 @@ Follow these steps to remove or change the signing certificate:
     ```
     AutoItCoreLibrary/AutoItCoreLibrary.csproj
     AutoItInterpreter/AutoItInterpreter.csproj
+    editor/AutoItEditor/AutoItEditor.fsproj
     AutoItExpressionParser/AutoItExpressionParser.fsproj
     ```
  2) For each of the files, scroll to the following lines:<br/>

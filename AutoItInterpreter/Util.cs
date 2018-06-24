@@ -680,7 +680,7 @@ namespace AutoItInterpreter
 
         public static Image<Argb32> VisuallyPrintCodeAndErrors(InterpreterState state, Language lang, VisualDisplayOptions style)
         {
-            const int FontSizePX = 32;
+            const int FontSizePX = 24;
             int voffs = 7;
 
             var sourcelesserrors = state.Errors.Where(err => err.ErrorContext.FilePath is null).ToArray();
