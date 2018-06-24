@@ -23,9 +23,9 @@ If applicable, add screenshots to help explain your problem.
 ### Used system
  - OS: _[e.g. Windows 10 64Bit, Build № 42]_
  - Architecture: _[e.g. Intel/AMD x64]_
- - Interpreter Version: _The version can be found using the command `autoit -?`_
- - Core Library Version: _The version can be found using the command `autoit -?`_
- - Commit hash: _Insert the commit hash (if you know it)_
+ - Interpreter Version: _The version can be found using the command `autoit --version`_
+ - Core Library Version: _The version can be found using the command `autoit --version`_
+ - Commit hash: _The git commit hash can be found using the command `autoit --version`_
 [additional configuration information]
 
 <!-- optional -->
