@@ -33,22 +33,22 @@
     </ItemGroup>
     <ItemGroup>
       <Reference Include="SixLabors.Core">
-        <HintPath>..\deps\SixLabors.Core.dll</HintPath>
+        <HintPath>../deps/SixLabors.Core.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.Fonts">
-        <HintPath>..\deps\SixLabors.Fonts.dll</HintPath>
+        <HintPath>../deps/SixLabors.Fonts.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.ImageSharp">
-        <HintPath>..\deps\SixLabors.ImageSharp.dll</HintPath>
+        <HintPath>../deps/SixLabors.ImageSharp.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.ImageSharp.Drawing">
-        <HintPath>..\deps\SixLabors.ImageSharp.Drawing.dll</HintPath>
+        <HintPath>../deps/SixLabors.ImageSharp.Drawing.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.Shapes">
-        <HintPath>..\deps\SixLabors.Shapes.dll</HintPath>
+        <HintPath>../deps/SixLabors.Shapes.dll</HintPath>
       </Reference>
       <Reference Include="SixLabors.Shapes.Text">
-        <HintPath>..\deps\SixLabors.Shapes.Text.dll</HintPath>
+        <HintPath>../deps/SixLabors.Shapes.Text.dll</HintPath>
       </Reference>
     </ItemGroup>
     <ItemGroup>
@@ -66,14 +66,14 @@
         <AutoGen>True</AutoGen>
         <DependentUpon>AutoItCurryingDelegate.tt</DependentUpon>
       </Compile>
-      <Compile Update="Properties\Resources.Designer.cs">
+      <Compile Update="Properties/Resources.Designer.cs">
         <DesignTime>True</DesignTime>
         <AutoGen>True</AutoGen>
         <DependentUpon>Resources.resx</DependentUpon>
       </Compile>
     </ItemGroup>
     <ItemGroup>
-      <EmbeddedResource Update="Properties\Resources.resx">
+      <EmbeddedResource Update="Properties/Resources.resx">
         <Generator>ResXFileCodeGenerator</Generator>
         <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       </EmbeddedResource>

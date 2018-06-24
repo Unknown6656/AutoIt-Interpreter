@@ -176,6 +176,8 @@ The following basic rules apply:
 
 ### Command line option reference
 
+ - **`--version`:**
+   <br/>Prints the interpreter's build version string.
  - **`-i=...` or `--input=...`:**
    <br/>The input .au3 AutoIt Script file. The file resolver [described here](syntax.md#include-directive) also applies to the input path. _[required]_
  - **`-o=...` or `--output=...`:**

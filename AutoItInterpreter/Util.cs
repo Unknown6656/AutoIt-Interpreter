@@ -763,7 +763,7 @@ namespace AutoItInterpreter
 
             img.Mutate(i => i.Fill(style.Background, new RectangleF(0, 0, img.Width, img.Height)));
 
-            drawtxt($"// Compiled using the AutoIt++ Interpreter v.{Program.InterpreterVersion}".Trim(), fnt_it, style.ForegroundComment, 0, 0);
+            drawtxt($"// Compiled using the AutoIt++ Interpreter v.{Module.InterpreterVersion}".Trim(), fnt_it, style.ForegroundComment, 0, 0);
             drawtxt($"//           and the AutoIt++ Core Library v.{AutoItCoreLibrary.Module.LibraryVersion}".Trim(), fnt_it, style.ForegroundComment, 0, 1);
             drawtxt($"// {DateTime.Now:yyyy-MM-dd HH:mm:ss.ffffff}".Trim(), fnt_it, style.ForegroundComment, 0, 2);
             drawtxt($"// {pluralize(ecnt, "Error")}, {pluralize(wcnt, "Warning")} and {pluralize(ncnt, "Note")}".Trim(), fnt_it, style.ForegroundComment, 0, 3);

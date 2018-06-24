@@ -20,10 +20,6 @@ namespace AutoItInterpreter
         private static readonly MemoryStream ms = new MemoryStream();
         private static TextWriter @out;
 
-        public static Version InterpreterVersion { get; }
-        
-
-        static Program() => InterpreterVersion = Version.TryParse(Properties.Resources.version.Trim(), out Version v) ? v : new Version();
 
         public static int Main(string[] argv)
         {
@@ -74,9 +70,15 @@ namespace AutoItInterpreter
 
                     return 0;
                 }
-                if (Cont("list-languages"))
+                else if (Cont("list-languages"))
                 {
                     PrintLanguages();
+
+                    return 0;
+                }
+                else if (Cont("version"))
+                {
+                    PrintVersion();
 
                     return 0;
                 }
@@ -291,7 +293,7 @@ namespace AutoItInterpreter
 
         private static void PrintCopyrightHeader(ConsoleColor c, bool open = false)
         {
-            string vstr = $"|     Core Library Version: {AutoItCoreLibrary.Module.LibraryVersion}, Interpreter Version: { InterpreterVersion}".PadRight(112) + '|';
+            string vstr = $"|     Core Library Version: {AutoItCoreLibrary.Module.LibraryVersion}, Interpreter Version: {Module.InterpreterVersion}".PadRight(112) + '|';
 
             PrintC($@"
 +------------------------------------ C#/F# AutoIt3 Interpreter and Compiler -----------------------------------+
@@ -319,6 +321,7 @@ namespace AutoItInterpreter
 | OPTION (short)    | OPTION (long)         | Effect                                                            |
 +-------------------+-----------------------+-------------------------------------------------------------------+
 | -h, -?            | --help                | Displays this help menu.                                          |
+|                   | --version             | Prints the interpreter's build version string.                    |
 | -i=...            | --input=...           | The input .au3 AutoIt Script file.                     [required] |
 | -o=...            | --output=...          | The output directory, to which the application will be written.   |
 |                   |                       | If no output directory is given, the directory will be created in |
@@ -396,6 +399,23 @@ namespace AutoItInterpreter
 
                 $"        {code} : {lang["meta.name"]} ({lang["meta.name_e"]}) by {lang["meta.author"]}".PrintC(ConsoleColor.Cyan);
             }
+        }
+
+        private static void PrintVersion()
+        {
+            PrintCopyrightHeader(ConsoleColor.Cyan);
+
+            $@"
+    AutoIt++ Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
+     AutoIt++ Interpreter version: {Module.InterpreterVersion}".PrintC(ConsoleColor.Cyan);
+
+            if (Module.GitHash != AutoItCoreLibrary.Module.GitHash)
+            {
+                $"   AutoIt++ Core Library Git hash: {AutoItCoreLibrary.Module.GitHash}".PrintC(ConsoleColor.Cyan);
+                $"    AutoIt++ Interpreter Git hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
+            }
+            else
+                $"                  Git commit hash: {Module.GitHash}".PrintC(ConsoleColor.Cyan);
         }
 
         private static void PrintC(this string msg, ConsoleColor c)
