@@ -23,8 +23,20 @@ namespace AutoItInterpreter
 
         public static int Main(string[] argv)
         {
+            void resetstdout()
+            {
+                if (@out != null)
+                {
+                    Console.Out.Dispose();
+                    Console.SetOut(@out);
+
+                    ms.Dispose();
+                }
+            }
+
             int ret;
-            int __inner__()
+
+            try
             {
                 Directory.SetCurrentDirectory(ASM_FILE.Directory.FullName);
                 Console.Title = TITLE;
@@ -32,7 +44,7 @@ namespace AutoItInterpreter
                 if (Win32.System == OS.Windows)
                     Console.BufferWidth = Math.Max(201, Console.BufferWidth);
 
-                Dictionary<string, List<string>> dic = ParseParameters(argv,
+                ret = MainCore(ParseParameters(argv,
                     ("d", "debug"),
                     ("dp", "dependencies"),
                     ("o", "output"),
@@ -59,178 +71,8 @@ namespace AutoItInterpreter
                     ("r", "run"),
                     ("w", "warm-up"),
                     ("wup", "warm-up")
-                );
-                bool Cont(string arg) => dic.ContainsKey(arg);
-                List<string> Get(string arg) => Cont(arg) ? dic[arg] : new List<string>();
-                string GetF(string arg, string def = "") => Get(arg).FirstOrDefault() ?? def;
+                ), out _);
 
-                if (Cont("help") || Cont("?"))
-                {
-                    PrintUsage();
-
-                    return 0;
-                }
-                else if (Cont("list-languages"))
-                {
-                    PrintLanguages();
-
-                    return 0;
-                }
-                else if (Cont("version"))
-                {
-                    PrintVersion();
-
-                    return 0;
-                }
-
-                #region SETTINGS
-
-                if (Cont("quiet"))
-                {
-                    @out = Console.Out;
-
-                    Console.SetOut(new StreamWriter(ms));
-                }
-
-                string stgpath = GetF("settings", InterpreterSettings.DefaultSettingsPath);
-                InterpreterSettings settings;
-                Language lang;
-
-                if ((settings = InterpreterSettings.FromFile(stgpath)) is null)
-                {
-                    $"The settings file '{stgpath}' could not be found or parsed - the default settings will be used.".Warn();
-
-                    stgpath = InterpreterSettings.DefaultSettingsPath;
-                }
-
-                if ((settings = InterpreterSettings.FromFile(stgpath)) is null || GetF("reset-settings", null) != null)
-                    settings = InterpreterSettings.DefaultSettings;
-
-                string lcode = GetF("lang", settings.LanguageCode ?? "").ToLower().Trim();
-
-                if (Language.LanugageCodes.Contains(lcode))
-                    lang = Language.FromLanguageCode(lcode);
-                else
-                {
-                    $"The language code '{lcode}' is not associated with any known language. The language code 'en' will be used instead.".Warn();
-
-                    lang = Language.FromLanguageCode("en");
-                }
-
-                if (!Cont("lang"))
-                    settings.LanguageCode = lang.Code;
-
-                settings.ToFile(stgpath);
-
-                #endregion
-                #region OPTIONS
-
-                if (!Cont("keep-temp") && Cont("debug") && Cont("run"))
-                    dic["keep-temp"] = new List<string>();
-
-                Interpreter intp;
-                InterpreterOptions opt = new InterpreterOptions(settings)
-                {
-                    Language = lang,
-                    RawArguments = dic,
-                    UseVerboseOutput = Cont("verbose"),
-                    IncludeDebugSymbols = Cont("debug"),
-                    VisualOutputPath = GetF("visual", null),
-                    UseMSBuildErrorOutput = Cont("msbuild-error-format"),
-                    DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
-                    GenerateCodeEvenWithErrors = Cont("generate-always"),
-                    KeyPairPath = GetF("key-pair", null),
-                    AllowUnsafeCode = Cont("unsafe"),
-                    RawCommandLine = Environment.CommandLine,
-                    TargetDirectory = GetF("output", null),
-                    CleanTargetFolder = Cont("clean-output"),
-                    TreatWarningsAsErrors = Cont("warnings-as-errors"),
-                    UseJITWarmup = Cont("warm-up"),
-                };
-
-                if (Cont("target-system"))
-                    try
-                    {
-                        opt.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), GetF("target-system").ToLower(), true);
-                    }
-                    catch
-                    {
-                        lang["invalid_targetsys", GetF("target-system")].Error();
-
-                        return -1;
-                    }
-
-                if (Cont("architecture"))
-                    try
-                    {
-                        opt.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), GetF("architecture").ToLower(), true);
-                    }
-                    catch
-                    {
-                        lang["invalid_architecture", GetF("target-system")].Error();
-
-                        return -1;
-                    }
-
-                List<Assembly> deps = new List<Assembly>();
-
-                foreach (string dep in Get("dependencies"))
-                    try
-                    {
-                        deps.Add(Assembly.LoadFrom(new FileResolver(lang, dep).Resolve().FullName));
-                    }
-                    catch
-                    {
-                        lang["errors.preproc.dependency_invalid", dep].Error();
-                    }
-
-                opt.Dependencies.AddRange(deps);
-
-                try
-                {
-                    intp = new Interpreter(GetF("input"), opt);
-                }
-                catch
-                {
-                    if (GetF("input", null) is string s)
-                        lang["errors.general.inputfile_nfound", s].Error();
-                    else
-                        lang["errors.general.no_input"].Error();
-
-                    return -1;
-                }
-
-                #endregion
-
-                InterpreterState result = intp.Interpret();
-
-                if (result.Result > DebugPrintUtil.FinalResult.OK_Warnings)
-                    return result.Errors.Count(x => x.Type == ErrorType.Fatal);
-                else if (Cont("run"))
-                {
-                    Console.WriteLine();
-                    DebugPrintUtil.PrintSeperator(lang["cli.sep.exec_result"]);
-                    Console.WriteLine();
-
-                    return ApplicationGenerator.RunApplication(result.OutputFile, Cont("debug"));
-                }
-                else
-                    return 0;
-            }
-            void resetstdout()
-            {
-                if (@out != null)
-                {
-                    Console.Out.Dispose();
-                    Console.SetOut(@out);
-
-                    ms.Dispose();
-                }
-            }
-
-            try
-            {
-                ret  = __inner__();
                 resetstdout();
             }
             catch (Exception ex)
@@ -264,6 +106,162 @@ namespace AutoItInterpreter
             }
 
             return ret;
+        }
+
+        public static int MainCore(Dictionary<string, List<string>> args, out InterpreterState result)
+        {
+            bool Cont(string arg) => args.ContainsKey(arg);
+            List<string> Get(string arg) => Cont(arg) ? args[arg] : new List<string>();
+            string GetF(string arg, string def = "") => Get(arg).FirstOrDefault() ?? def;
+
+            result = null;
+
+            if (Cont("help") || Cont("?"))
+            {
+                PrintUsage();
+
+                return 0;
+            }
+            else if (Cont("list-languages"))
+            {
+                PrintLanguages();
+
+                return 0;
+            }
+            else if (Cont("version"))
+            {
+                PrintVersion();
+
+                return 0;
+            }
+            
+            if (Cont("quiet"))
+            {
+                @out = Console.Out;
+
+                Console.SetOut(new StreamWriter(ms));
+            }
+
+            string stgpath = GetF("settings", InterpreterSettings.DefaultSettingsPath);
+            InterpreterSettings settings;
+            Language lang;
+
+            if ((settings = InterpreterSettings.FromFile(stgpath)) is null)
+            {
+                $"The settings file '{stgpath}' could not be found or parsed - the default settings will be used.".Warn();
+
+                stgpath = InterpreterSettings.DefaultSettingsPath;
+            }
+
+            if ((settings = InterpreterSettings.FromFile(stgpath)) is null || GetF("reset-settings", null) != null)
+                settings = InterpreterSettings.DefaultSettings;
+
+            string lcode = GetF("lang", settings.LanguageCode ?? "").ToLower().Trim();
+
+            if (Language.LanugageCodes.Contains(lcode))
+                lang = Language.FromLanguageCode(lcode);
+            else
+            {
+                $"The language code '{lcode}' is not associated with any known language. The language code 'en' will be used instead.".Warn();
+
+                lang = Language.FromLanguageCode("en");
+            }
+
+            if (!Cont("lang"))
+                settings.LanguageCode = lang.Code;
+
+            settings.ToFile(stgpath);
+
+
+            if (!Cont("keep-temp") && Cont("debug") && Cont("run"))
+                args["keep-temp"] = new List<string>();
+
+            Interpreter intp;
+            InterpreterOptions opt = new InterpreterOptions(settings)
+            {
+                Language = lang,
+                RawArguments = args,
+                UseVerboseOutput = Cont("verbose"),
+                IncludeDebugSymbols = Cont("debug"),
+                VisualOutputPath = GetF("visual", null),
+                UseMSBuildErrorOutput = Cont("msbuild-error-format"),
+                DeleteTempFilesAfterSuccess = !Cont("keep-temp"),
+                GenerateCodeEvenWithErrors = Cont("generate-always"),
+                KeyPairPath = GetF("key-pair", null),
+                AllowUnsafeCode = Cont("unsafe"),
+                RawCommandLine = Environment.CommandLine,
+                TargetDirectory = GetF("output", null),
+                CleanTargetFolder = Cont("clean-output"),
+                TreatWarningsAsErrors = Cont("warnings-as-errors"),
+                UseJITWarmup = Cont("warm-up"),
+            };
+
+            if (Cont("target-system"))
+                try
+                {
+                    opt.Compatibility = (Compatibility)Enum.Parse(typeof(Compatibility), GetF("target-system").ToLower(), true);
+                }
+                catch
+                {
+                    lang["invalid_targetsys", GetF("target-system")].Error();
+
+                    return -1;
+                }
+
+            if (Cont("architecture"))
+                try
+                {
+                    opt.TargetArchitecture = (Architecture)Enum.Parse(typeof(Architecture), GetF("architecture").ToLower(), true);
+                }
+                catch
+                {
+                    lang["invalid_architecture", GetF("target-system")].Error();
+
+                    return -1;
+                }
+
+            List<Assembly> deps = new List<Assembly>();
+
+            foreach (string dep in Get("dependencies"))
+                try
+                {
+                    deps.Add(Assembly.LoadFrom(new FileResolver(lang, dep).Resolve().FullName));
+                }
+                catch
+                {
+                    lang["errors.preproc.dependency_invalid", dep].Error();
+                }
+
+            opt.Dependencies.AddRange(deps);
+
+            try
+            {
+                intp = new Interpreter(GetF("input"), opt);
+            }
+            catch
+            {
+                if (GetF("input", null) is string s)
+                    lang["errors.general.inputfile_nfound", s].Error();
+                else
+                    lang["errors.general.no_input"].Error();
+
+                return -1;
+            }
+
+            result = intp.Interpret();
+
+            if (result.Result > DebugPrintUtil.FinalResult.OK_Warnings)
+                return result.Errors.Count(x => x.Type == ErrorType.Fatal);
+            else if (Cont("run"))
+            {
+                Console.WriteLine();
+                DebugPrintUtil.PrintSeperator(lang["cli.sep.exec_result"]);
+                Console.WriteLine();
+
+                return ApplicationGenerator.RunApplication(result.OutputFile, Cont("debug"));
+            }
+            else
+                return 0;
         }
 
         public static Dictionary<string, List<string>> ParseParameters(string[] argv, params (string Short, string Long)[] translator)

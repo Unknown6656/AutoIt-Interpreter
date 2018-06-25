@@ -1,6 +1,7 @@
 ﻿namespace AutoItExpressionParser.SyntaxHighlightning
 
 open System.Globalization
+open System.Linq
 
 
 type HighlightningStyle =
@@ -51,31 +52,12 @@ type ParsingState =
     }
     with
         static member Create b p c i = { IsBlockComment = b; PastSections = p; CurrentSection = c; Internals = i }
-        member x.Next c h b back i =
-            let curr = x.CurrentSection
-            if curr.Style = h then
-                ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])) i
-            else
-                match back with
-                | 0 -> ParsingState.Create b (x.PastSections @ [curr]) (Section.Create (curr.Line) (curr.Index + curr.Length) h [c]) i
-                | _ when back > 0 ->
-                    let back = curr.Length - min back curr.Length
-                    let cc = curr.Content @ [c]
-                    let s1 = Section.Create (curr.Line) (curr.Index) (curr.Style) <| List.take back cc
-                    let s2 = Section.Create (curr.Line) (curr.Index + back) h <| List.skip back cc
-                    ParsingState.Create b (x.PastSections @ [s1]) s2 i
-                | _ ->
-                    let past = x.PastSections @ [Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])]
-                    ParsingState.Create b past (Section.Create (curr.Line) (curr.Index + curr.Length + 1) h []) i
-                
-        member x.Finish =
-            ParsingState.Create (x.IsBlockComment) (x.PastSections @ [x.CurrentSection]) (Section.Create (x.CurrentSection.Line + 1) (0) (x.CurrentStyle) []) (InternalParsingState())
+        member x.Finish = ParsingState.Create (x.IsBlockComment) (x.PastSections @ [x.CurrentSection]) (Section.Create (x.CurrentSection.Line + 1) (0) (x.CurrentStyle) []) (InternalParsingState())
         member x.CurrentStyle = x.CurrentSection.Style
         member x.IsInsideString = x.CurrentStyle = HighlightningStyle.String || x.CurrentStyle = HighlightningStyle.StringEscapeSequence
         member x.IsInsideDirective = x.CurrentStyle = HighlightningStyle.Directive || x.CurrentStyle = HighlightningStyle.DirectiveParameters
         member x.EndsWith s b = x.CurrentSection.StringContent.EndsWith(s, b, CultureInfo.InvariantCulture)
-        static member InitState line ibc =
-            ParsingState.Create ibc [] (Section.Create line 0 (HighlightningStyle.Code) [])
+        static member InitState line ibc = ParsingState.Create ibc [] (Section.Create line 0 (HighlightningStyle.Code) [])
 
 
 module SyntaxHighlighter =
@@ -89,17 +71,18 @@ module SyntaxHighlighter =
             "~&&"; "\\"; "\\="; "?"; ":"; "<<="; ">>="; "<<<="; ">>>="; "+="; "-="; "*="; "/="; "%="; "&="; "&&="; "^="; "^^="; "||="; "~^^="; "~||=";
             "~&&="; "@"; ".."; "@|"; "°";
         |]
+    let Digits = [| '0'..'9' |]
+    let AlphaNumericCharacters = List.toArray <| '_'::['a'..'z'] @ ['A'..'Z'] @ [ '0'..'9' ]
 
     let ParseChar (c : char) (s : ParsingState) (bc : bool) : HighlightningStyle * bool * int * InternalParsingState =
         let MAX = System.Int32.MaxValue
-        let num = ['0'..'9']
-        let alphanum = '_'::['a'..'z'] @ ['A'..'Z'] @ num
+        let endswith ss = (s.CurrentSection.StringContent + c.ToString()).EndsWith(ss, System.StringComparison.InvariantCultureIgnoreCase)
 
         if s.CurrentStyle = HighlightningStyle.Comment && not bc then
             (HighlightningStyle.Comment, false, 0, s.Internals)
-        elif not s.IsInsideString && s.EndsWith "#c" true && c = 's' (* && s.CurrentSection.Index = 0 *) then
+        elif not s.IsInsideString && (endswith "#cs" || endswith "#comments-start") (* && s.CurrentSection.Index = 0 *) then
             (HighlightningStyle.Comment, true, MAX, s.Internals)
-        elif bc && s.EndsWith "#ce" true then
+        elif bc && (endswith "#ce" || endswith "#comments-end") then
             (HighlightningStyle.Comment, false, 0, s.Internals)
         elif bc then
             (HighlightningStyle.Comment, true, 0, s.Internals)
@@ -144,9 +127,9 @@ module SyntaxHighlighter =
                         HighlightningStyle.Variable
                     | ('(' | ')' | ',' | '[' | ']' | '{' | '}'), false, false, _ ->
                         HighlightningStyle.Symbol
-                    | _, false, false, _ when as_good_as_code && List.contains c num ->
+                    | _, false, false, _ when as_good_as_code && Array.contains c Digits ->
                         HighlightningStyle.Number
-                    | _, false, false, _ when as_good_as_code && List.contains c alphanum ->
+                    | _, false, false, _ when as_good_as_code && Array.contains c AlphaNumericCharacters ->
                         if s.EndsWith "@" true then
                             lookbehind <- 1
                             HighlightningStyle.Macro
@@ -185,7 +168,7 @@ module SyntaxHighlighter =
                             HighlightningStyle.String
                         else
                             HighlightningStyle.StringEscapeSequence
-                    | _, true, false, HighlightningStyle.StringEscapeSequence when is_intpol && as_good_as_code && List.contains c alphanum ->
+                    | _, true, false, HighlightningStyle.StringEscapeSequence when is_intpol && as_good_as_code && Array.contains c AlphaNumericCharacters ->
                         lookbehind <- -1
                         HighlightningStyle.String
                     | '\\', true, false, HighlightningStyle.String when is_intpol ->
@@ -222,34 +205,57 @@ module SyntaxHighlighter =
 
                     // TODO
                     
-                    | _, true, false, HighlightningStyle.StringEscapeSequence when not (List.contains c alphanum) ->
+                    | _, true, false, HighlightningStyle.StringEscapeSequence when not (Array.contains c AlphaNumericCharacters) ->
                         HighlightningStyle.String
                     | _ -> s.CurrentStyle
             (h, false, lookbehind, ints)
 
-    let ParseLine (line : string) lnr isblockcomment : Section[] * bool =
-        let rec parse cl (s : ParsingState) : ParsingState =
-            match cl with
-            | [] | ['\000'] | '\000'::_ -> s.Finish
-            | [c] ->
-                let h, bc, b, i = ParseChar c s (s.IsBlockComment)
-                parse [] (s.Next c h bc b i)
-            | c::cs ->
-                let h, bc, b, i = ParseChar c s (s.IsBlockComment)
-                parse cs (s.Next c h bc b i)
-        let s = parse (Array.toList <| line.Replace('�', '°').ToCharArray()) (ParsingState.InitState lnr isblockcomment (InternalParsingState()))
-        (List.toArray s.PastSections, s.IsBlockComment)
+    let private __internal_preprocline (s : string) = s.Replace('�', '°').ToCharArray() |> Array.toList
+            
+    let Next (x : ParsingState) c h b back i =
+        let curr = x.CurrentSection
+        if curr.Style = h then
+            ParsingState.Create b (x.PastSections) (Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])) i
+        else
+            match back with
+            | 0 -> ParsingState.Create b (x.PastSections @ [curr]) (Section.Create (curr.Line) (curr.Index + curr.Length) h [c]) i
+            | _ when back > 0 ->
+                let back = curr.Length - min back curr.Length
+                let cc = curr.Content @ [c]
+                let s1 = Section.Create (curr.Line) (curr.Index) (curr.Style) <| List.take back cc
+                let s2 = Section.Create (curr.Line) (curr.Index + back) h <| List.skip back cc
+                ParsingState.Create b (x.PastSections @ [s1]) s2 i
+            | _ ->
+                let past = x.PastSections @ [Section.Create (curr.Line) (curr.Index) (x.CurrentStyle) (curr.Content @ [c])]
+                ParsingState.Create b past (Section.Create (curr.Line) (curr.Index + curr.Length + 1) h []) i
 
+    let private __internal_parseline line lnr isblockcomment =
+        let rec parse (s : ParsingState) =
+            let parsenext c cs =
+                let h, bc, b, i = ParseChar c s (s.IsBlockComment)
+                parse (Next s c h bc b i) cs
+            function
+            | [] | ['\000'] | '\000'::_ -> s.Finish
+            | [c] -> parsenext c []
+            | c::cs -> parsenext c cs
+        let s = parse (ParsingState.InitState lnr isblockcomment (InternalParsingState())) line
+        (s.PastSections, s.IsBlockComment)
+        
     let ParseCode (code : string) =
-        let lines = Array.toList <| code.Replace("\r\n", "\n").Split('\n')
+        let lines = code.Replace("\r\n", "\n").Split('\n')
+                  |> Array.map __internal_preprocline
+                  |> Array.toList
         let rec processlines acc lines idxs bc =
             match lines, idxs with
             | l::ls, i::is ->
-                let x, bc = ParseLine l i bc
-                processlines (acc @ Array.toList x) ls is bc
+                let x, bc = __internal_parseline l i bc
+                processlines (acc @ x) ls is bc
             | _ -> acc
         processlines [] lines [1..lines.Length] false
-        |> List.toArray
+    
+    let ParseLine line lnr isblockcomment : Section[] * bool =
+        let ps, ibc = __internal_parseline (__internal_preprocline line) lnr isblockcomment
+        (List.toArray ps, ibc)
 
     let Optimize = Array.fold (fun s (e : Section) -> 
                                     if e.Length > 0 then match s with

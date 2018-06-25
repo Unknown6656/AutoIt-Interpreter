@@ -8,6 +8,9 @@ using AutoItExpressionParser.SyntaxHighlightning;
 using AutoItCoreLibrary;
 using System.Collections.Generic;
 using System.IO;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace CoreTests
 {
@@ -46,7 +49,6 @@ enum $x = 0, $y,$z, $w = ""test""#3
 °$x = °°$y ~^^ °0
 $b %= $""this is $b inside a text, e.g. '$x' or $a"" & ""test\n""
 ";
-            // au3 = File.ReadAllText(@"C:\Users\unknown6656\Documents\autoit\dnsclient.au3");
             int ll = 0;
             var fgc = new Dictionary<HighlightningStyle, ConsoleColor> {
                 [HighlightningStyle.Code] = ConsoleColor.White,
