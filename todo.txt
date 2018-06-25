@@ -41,8 +41,10 @@
     [x] fix @|.. and @.. operators
     [x] fix ?: operator
 [x] fix switch...case
+[x] fix variable scoping
 ----------------------------------------- UNFINISHED -----------------------------------------
 [-] COM-interop
+[-] fix nested/chained references (e.g. ref of ref-variables)
 [-] unit tests
     [x] improve test framework
     [ ] IMPL boolean optimization
@@ -54,11 +56,11 @@
         [x] for-loops
         [x] while-loops
         [x] foreach-loops
-        [ ] switch..case
-        [ ] select..case
-        [ ] P/Invoke
+        [x] switch..case
+        [x] select..case
+        [-] P/Invoke
         [x] byref calls
-        [-] globals and parameter scoping
+        [x] globals and parameter scoping
         [x] UDP / TCP API
         [-] Serial API
         [ ] Compiler robustness
@@ -80,7 +82,6 @@
         [ ] Serial API
         [ ] Compiler robustness
         [ ] Syntax highlightner
-[-] fix variable scoping
 [-] IDE
     [x] syntax highlightning
     [ ] UI
