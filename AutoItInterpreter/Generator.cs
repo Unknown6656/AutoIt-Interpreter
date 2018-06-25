@@ -136,18 +136,20 @@ namespace AutoItInterpreter
                     bool winsys = Win32.System == OS.Windows;
                     string cont = options.Language["gen.unknown_src"];
 
-                    IEnumerable<RawLine> raw = from src in state.Sources
-                                               where src.Path != null
-                                               let pt = Path.GetFullPath(src.Path.FullName).Replace('\\', '/')
-                                               where winsys ? path.Equals(pt, StringComparison.InvariantCultureIgnoreCase) : path == pt
-                                               from ll in src.Lines
-                                               let ls = ll.OriginalLineNumbers[0] + 1
-                                               where ls >= start
-                                               where ls < start + count
-                                               select ll;
+                    IEnumerable<RawLine> raw = (from src in state.Sources
+                                                where src.Path != null
+                                                let pt = Path.GetFullPath(src.Path.FullName).Replace('\\', '/')
+                                                where winsys ? path.Equals(pt, StringComparison.InvariantCultureIgnoreCase) : path == pt
+                                                from ll in src.Lines
+                                                let ls = ll.OriginalLineNumbers[0] + 1
+                                                where ls >= start
+                                                where ls < start + count
+                                                select ll).DistinctBy(ll => ll.Context);
 
                     if (raw.Any())
-                        cont = string.Join("\n", raw.Select(r => r.Content));
+                        cont = string.Join("\n", raw.Select(r => (r.Content.Match($@"^{CSHARP_INLINE}\s+(?<b64>[^\s]+)\s*$", out Match m)
+                                                                  ? Encoding.Default.GetString(Convert.FromBase64String(m.Get("b64")))
+                                                                  : r.Content).Trim()));
 
                     debugsymbols[++debugindex] = (ctx, cont);
 

@@ -23,6 +23,8 @@ namespace AutoItInterpreter
         public string Content { get; }
         public FileInfo File { get; }
 
+        public DefinitionContext Context => new DefinitionContext(File, OriginalLineNumbers[0], OriginalLineNumbers.Length > 1 && OriginalLineNumbers[1] > OriginalLineNumbers[0] ? (int?)OriginalLineNumbers[1] : null);
+
 
         public RawLine(string c, int[] l, FileInfo f) => (Content, OriginalLineNumbers, File) = (c, l, f);
 

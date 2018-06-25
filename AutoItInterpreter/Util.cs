@@ -58,6 +58,15 @@ namespace AutoItInterpreter
 
         public static string Get(this Match m, string g) => m.Groups[g]?.ToString() ?? "";
 
+        public static IEnumerable<T> DistinctBy<T, U>(this IEnumerable<T> e, Func<T, U> sel)
+        {
+            HashSet<U> keys = new HashSet<U>();
+
+            foreach (T x in e)
+                if (keys.Add(sel(x)))
+                    yield return x;
+        }
+
         public static U Switch<T, U>(this T t, Dictionary<T, Func<U>> d, Func<U> n) => d.Switch(t, n);
 
         public static void Switch<T>(this T t, Dictionary<T, Action> d, Action n) => d.Switch(t, n);
@@ -320,7 +329,7 @@ namespace AutoItInterpreter
                 Console.Write($"    {idx:x16}h ({idx})");
                 Console.CursorLeft = 45;
                 Console.ForegroundColor = ConsoleColor.Gray;
-                Console.WriteLine($"{debugsymbols[idx].Item1} {debugsymbols[idx].Item2}");
+                Console.WriteLine($"{debugsymbols[idx].Item1}  {debugsymbols[idx].Item2}");
             }
         }
 

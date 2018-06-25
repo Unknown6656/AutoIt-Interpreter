@@ -184,6 +184,10 @@ namespace AutoItCoreLibrary
 
         public override string ToString() => $"[{FilePath?.Name ?? "<unknown>"}] l. {StartLine}{(EndLine is int i ? $"-{i}" : "")}";
 
+        public override int GetHashCode() => (Path.GetFullPath(FilePath?.FullName)?.GetHashCode() ?? 0) ^ StartLine ^ ((EndLine ?? -12938104) << 3);
+
+        public override bool Equals(object obj) => obj is DefinitionContext ctx && ctx.GetHashCode() == GetHashCode();
+
         public static implicit operator DefinitionContext((FileInfo nfo, int start) t) => (t.nfo, t.start, null);
 
         public static implicit operator DefinitionContext((FileInfo nfo, int start, int end) t) => (t.nfo, t.start, (int?)t.end);

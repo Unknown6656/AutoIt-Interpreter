@@ -49,7 +49,7 @@
     [x] improve test framework
     [ ] IMPL boolean optimization
     [-] informal tests
-        [-] λ-functionality
+        [x] λ-functionality
         [x] arrays / matrices
         [-] optimization
         [ ] object expressions
@@ -63,7 +63,7 @@
         [x] globals and parameter scoping
         [x] UDP / TCP API
         [-] Serial API
-        [ ] Compiler robustness
+        [-] Compiler robustness
         [x] Syntax highlightner
     [ ] official tests
         [ ] λ-functionality
