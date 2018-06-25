@@ -793,9 +793,12 @@ namespace AutoItCoreLibrary
 
 
         [BuiltinFunction]
-        public static var Min(var v1, var v2) => v1 <= v2 ? v1 : v2;
-        [BuiltinFunction]
         public static var Max(var v1, var v2) => v1 >= v2 ? v1 : v2;
+        [BuiltinFunction]
+        public static var Min(var v1, var v2) => v1 <= v2 ? v1 : v2;
+
+        [BuiltinFunction, CompatibleOS(OS.Windows)]
+        public static var MsgBox(var flag, var title, var text, var? to = null, var? hwnd = null) => MessageBoxTimeout(hwnd ?? (void*)null, text, title, (uint)flag.ToLong(), 0, (to ?? 0).ToInt());
 
         [BuiltinFunction, CompatibleOS(OS.Windows)]
         public static var ObjCreate(var name, var? srv = null, var? user = null, var? pass = null)

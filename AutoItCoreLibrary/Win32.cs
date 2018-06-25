@@ -230,6 +230,9 @@ namespace AutoItCoreLibrary
 
         [DllImport("ole32.dll")]
         internal static extern int StgCreateStorageEx([MarshalAs(UnmanagedType.LPWStr)] string pwcsName, int grfMode, int stgfmt, int grfAttrs, void* pStgOptions, void* reserved2, ref Guid riid, out IStorage ppObjectOpen);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern int MessageBoxTimeout(void* hwnd, string text, string title, uint type, short wLanguageId, int milliseconds);
     }
 
     public static class AsyncHelper

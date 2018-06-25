@@ -80,6 +80,7 @@
         [ ] Compiler robustness
         [ ] Syntax highlightner
 [-] fix variable scoping
+[-] fix switch...case
 [-] IDE
     [x] syntax highlightning
     [ ] UI

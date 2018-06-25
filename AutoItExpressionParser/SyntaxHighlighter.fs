@@ -252,6 +252,7 @@ module SyntaxHighlighter =
                 processlines (acc @ x) ls is bc
             | _ -> acc
         processlines [] lines [1..lines.Length] false
+        |> List.toArray
     
     let ParseLine line lnr isblockcomment : Section[] * bool =
         let ps, ibc = __internal_parseline (__internal_preprocline line) lnr isblockcomment

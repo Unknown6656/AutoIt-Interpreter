@@ -36,10 +36,20 @@ namespace AutoItInterpreter.PartialAST
     public class AST_SCOPE
         : AST_STATEMENT
     {
+        private AST_STATEMENT[] _st = new AST_STATEMENT[0];
+
         public List<AST_LOCAL_VARIABLE> ExplicitLocalVariables { get; } = new List<AST_LOCAL_VARIABLE>();
-        public override bool IsEmpty => Statements.Length == 0;
+        public override bool IsEmpty => (Statements?.Length ?? 0) == 0;
         public bool UseExplicitLocalScoping { set; get; }
-        public AST_STATEMENT[] Statements { set; get; }
+        public AST_STATEMENT[] Statements
+        {
+            set
+            {
+                if (value is AST_STATEMENT[] arr)
+                    _st = arr;
+            }
+            get => _st;
+        }
 
         public AST_LOCAL_VARIABLE this[string name] => ExplicitLocalVariables.Find(lv => lv.Variable.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
     }

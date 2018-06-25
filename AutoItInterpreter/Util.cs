@@ -226,6 +226,8 @@ namespace AutoItInterpreter
             else
                 return SystemFonts.Families.AsParallel().FirstOrDefault(ff => ff.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
+
+        public static int CountOccurences(this string input, string search) => (input.Length - input.Replace(search, "").Length) / search.Length;
     }
 
     internal static class DebugPrintUtil
@@ -716,8 +718,11 @@ namespace AutoItInterpreter
                           select ec > 0 ? 2 + ec : 1).Sum() + (filesources.Length * 4) + voffs - 1;
             int width = Math.Max(50, (from source in filesources
                                       from line in source.Lines
-                                      from ll in new int[] { line.Content.Length, source.Path.FullName.Length, line.Errors.Length > 0 ? line.Errors.Max(err => err.Error.ErrorMessage.Length) : 0 }
-                                      select ll).Max() + 32);
+                                      from ll in new int[] {
+                                          line.Content.Length,
+                                          source.Path.FullName.Length,
+                                      }.Concat(line.Errors.SelectMany(err => err.Error.ErrorMessage.SplitIntoLines()).Select(s => s.Length))
+                                      select ll).Max() + 12);
 
             if (sourcelesserrors.Length > 0)
                 height += 3 + sourcelesserrors.Length;

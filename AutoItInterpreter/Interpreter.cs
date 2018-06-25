@@ -577,10 +577,17 @@ namespace AutoItInterpreter
                         if (tline.Contains(';'))
                             if (tline.Match(@"\;[^\""\']*$", out m))
                                 tline = tline.Remove(m.Index).Trim();
-                            else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
-                                tline = tline.Remove(m.Groups["cmt"].Index).Trim();
-                            else if (tline.Match(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", out m))
-                                tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+                            else
+                            {
+                                string before = tline.Remove(tline.IndexOf(';'));
+
+                                if (!tline.Contains("$\"") && ((before.CountOccurences("\"") % 2) == 0) && (before.CountOccurences("'") % 2) == 0)
+                                    tline = before.Trim();
+                                else if (tline.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
+                                    tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+                                else if (tline.Match(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", out m))
+                                    tline = tline.Remove(m.Groups["cmt"].Index).Trim();
+                            }
 
                         if (tline.Match(@"\s+_\s*$", out m))
                         {
@@ -1362,10 +1369,11 @@ namespace AutoItInterpreter
                 ExpressionParser p_delcaration = new ExpressionParser(ExpressionParserMode.Declaration);
                 ExpressionParser p_assignment = new ExpressionParser(ExpressionParserMode.Assignment);
                 ExpressionParser p_expression = new ExpressionParser(ExpressionParserMode.Regular);
+                ExpressionParser p_range = new ExpressionParser(ExpressionParserMode.ToRange);
                 Stack<List<string>> constants = new Stack<List<string>>();
                 AST_FUNCTION _currfunc = null;
 
-                foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration })
+                foreach (dynamic parser in new dynamic[] { p_funcparam, p_expression, p_assignment, p_delcaration, p_range })
                     parser.Initialize();
 
                 foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(state.Functions.WhereSelect(x => x.Key != GLOBAL_FUNC_NAME, x => (x.Key, x.Value))))
@@ -1662,7 +1670,8 @@ namespace AutoItInterpreter
                                                 break;
                                         }
 
-                                        cblock.ExplicitLocalVariables.AddRange(x.ExplicitLocalsVariables);
+                                        if (x is AST_SCOPE scp)
+                                            cblock.ExplicitLocalVariables.AddRange(scp.ExplicitLocalVariables);
 
                                         return cblock;
                                     });
@@ -1705,7 +1714,7 @@ namespace AutoItInterpreter
                                         return new AST_SWITCH_CASE_EXPRESSION
                                         {
                                             Statements = process_lines(),
-                                            Expressions = parse_multi_expressions(expr, p_expression)?.ToArray() ?? new MULTI_EXPRESSION[0]
+                                            Expressions = parse_multi_expressions(expr, p_range)?.ToArray() ?? new MULTI_EXPRESSION[0]
                                         };
                                 }
                             case RETURN i:

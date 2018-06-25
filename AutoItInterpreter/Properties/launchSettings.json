@@ -2,7 +2,7 @@
   "profiles": {
     "CSAutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-v -g -c -u -r -d -i=c:/users/unknown6656/documents/autoit/bitmap -vv=output.png"
+      "commandLineArgs": "-v -g -c -u -r -d -i=c:/users/unknown6656/documents/autoit/pointer"
     }
   }
 }
