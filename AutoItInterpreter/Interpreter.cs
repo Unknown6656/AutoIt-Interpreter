@@ -1709,7 +1709,10 @@ namespace AutoItInterpreter
                                     string expr = i.RawCondition;
 
                                     if (expr.ToLower() == "else")
-                                        return new AST_SWITCH_CASE_ELSE();
+                                        return new AST_SWITCH_CASE_ELSE
+                                        {
+                                            Statements = process_lines()
+                                        };
                                     else
                                         return new AST_SWITCH_CASE_EXPRESSION
                                         {

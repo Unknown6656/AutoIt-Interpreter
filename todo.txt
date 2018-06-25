@@ -40,6 +40,7 @@
     [x] fix array indices
     [x] fix @|.. and @.. operators
     [x] fix ?: operator
+[x] fix switch...case
 ----------------------------------------- UNFINISHED -----------------------------------------
 [-] COM-interop
 [-] unit tests
@@ -80,7 +81,6 @@
         [ ] Compiler robustness
         [ ] Syntax highlightner
 [-] fix variable scoping
-[-] fix switch...case
 [-] IDE
     [x] syntax highlightning
     [ ] UI
