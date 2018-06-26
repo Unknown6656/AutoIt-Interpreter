@@ -58,15 +58,6 @@ namespace AutoItInterpreter
 
         public static string Get(this Match m, string g) => m.Groups[g]?.ToString() ?? "";
 
-        public static IEnumerable<T> DistinctBy<T, U>(this IEnumerable<T> e, Func<T, U> sel)
-        {
-            HashSet<U> keys = new HashSet<U>();
-
-            foreach (T x in e)
-                if (keys.Add(sel(x)))
-                    yield return x;
-        }
-
         public static U Switch<T, U>(this T t, Dictionary<T, Func<U>> d, Func<U> n) => d.Switch(t, n);
 
         public static void Switch<T>(this T t, Dictionary<T, Action> d, Action n) => d.Switch(t, n);
@@ -80,6 +71,24 @@ namespace AutoItInterpreter
             else
                 n();
         }
+
+        public static IEnumerable<T> Concat<T>(this IEnumerable<T> e, params T[] args) => e.Concat((args ?? new T[0]) as IEnumerable<T>);
+
+        public static IEnumerable<T> DistinctBy<T, U>(this IEnumerable<T> e, Func<T, U> sel)
+        {
+            HashSet<U> keys = new HashSet<U>();
+
+            foreach (T x in e)
+                if (keys.Add(sel(x)))
+                    yield return x;
+        }
+
+        public static IEnumerable<U> SelectWhere<T, U>(this IEnumerable<T> e, Func<T, (bool, U)> f) => from x in e
+                                                                                                       let r = f(x)
+                                                                                                       where r.Item1
+                                                                                                       select r.Item2;
+
+        public static IEnumerable<U> WhereSelect<T, U>(this IEnumerable<T> e, Func<T, (bool, U)> f) => SelectWhere(e, f);
 
         public static IEnumerable<U> SelectWhere<T, U>(this IEnumerable<T> e, Func<T, U> s, Func<U, bool> w) => e.Select(s).Where(w);
 

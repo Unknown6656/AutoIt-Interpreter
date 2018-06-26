@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using System.IO;
+using System;
 
 using Newtonsoft.Json;
 
@@ -56,8 +57,32 @@ namespace AutoItInterpreter
             }
         }
 
-        public string this[string name, params object[] args] => args?.Length > 0 ? this[name].Format(args) : this[name];
+        public string this[string name, params object[] args]
+        {
+            get
+            {
+                string s = this[name];
 
+                if (args?.Length > 0)
+                {
+                    int cnt = Regex.Matches(s, @"\{\s*(?<num>\d+)\s*(\:[^\}]+)?\}").SelectWhere(m => (int.TryParse(m.Get("num"), out int i), i + 1)).Concat(args.Length).Max();
+
+                    if (cnt > args.Length)
+                    {
+                        int l = args.Length;
+
+                        Array.Resize(ref args, cnt);
+
+                        for (int i = 0; i < l; ++i)
+                            args[i] = "[UNKNOWN_VALUE]";
+                    }
+
+                    return s.Format(args);
+                }
+                else
+                    return s;
+            }
+        }
 
         static Language()
         {

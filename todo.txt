@@ -47,7 +47,7 @@
 [-] fix nested/chained references (e.g. ref of ref-variables)
 [-] unit tests
     [x] improve test framework
-    [ ] IMPL boolean optimization
+    [-] IMPL boolean optimization
     [-] informal tests
         [x] λ-functionality
         [x] arrays / matrices
