@@ -44,6 +44,8 @@
 [x] fix variable scoping
 ----------------------------------------- UNFINISHED -----------------------------------------
 [-] COM-interop
+[ ] fix const passing byref
+[ ] fix global const being accessed from functions or λs
 [-] fix nested/chained references (e.g. ref of ref-variables)
 [-] unit tests
     [x] improve test framework

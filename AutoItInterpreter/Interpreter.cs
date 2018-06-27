@@ -1377,7 +1377,11 @@ namespace AutoItInterpreter
                     parser.Initialize();
 
                 foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(state.Functions.WhereSelect(x => x.Key != GLOBAL_FUNC_NAME, x => (x.Key, x.Value))))
+                {
+                    constants.Push(new List<string>());
                     state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
+                    constants.Clear();
+                }
 
                 state.PInvokeSignatures = ParsePinvokeFunctions(state, funccalls.Where(call => call.Item2.ToLower() == "dllcall").ToArray()).ToArray();
 
@@ -1488,7 +1492,8 @@ namespace AutoItInterpreter
                                                   where x.Equals(v, StringComparison.InvariantCultureIgnoreCase)
                                                   select x).Any();
 
-                    constants.Push(new List<string>());
+                    if (e.CanBeNested)
+                        constants.Push(new List<string>());
 
                     dynamic res = null;
                     dynamic __inner()
@@ -1995,7 +2000,7 @@ namespace AutoItInterpreter
                                                     VARIABLE var = scaexpr.Item2;
 
                                                     if (targetfunc.ExplicitLocalVariables.Find(lv => lv.Variable.Equals(var)) is AST_LOCAL_VARIABLE prev)
-                                                        err("errors.astproc.variable_exists", prev);
+                                                        err("errors.astproc.variable_exists", prev.Variable, prev.Context);
                                                     else
                                                     {
                                                         if (scaexpr.Item3 is EXPRESSION.ArrayInitExpression arrinit)
@@ -2047,8 +2052,6 @@ namespace AutoItInterpreter
                                                             }
                                                         }
 
-                                                        addconstants(new[] { var.Name });
-
                                                         targetfunc.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE
                                                         {
                                                             Context = i.DefinitionContext,
@@ -2079,6 +2082,9 @@ namespace AutoItInterpreter
                                         })
                                         .Where(expr => expr != null)
                                         .ToArray();
+
+                                        if (@const)
+                                            addconstants(vars.Select(var => var.Name));
 
                                         return new AST_SCOPE
                                         {
@@ -2263,7 +2269,8 @@ namespace AutoItInterpreter
                         state.ReportKnownError("errors.astproc.ast_error", e.DefinitionContext, ex.Print());
                     }
 
-                    constants.Pop();
+                    if (e.CanBeNested)
+                        constants.Pop();
 
                     return res is AST_CONDITIONAL_BLOCK cb ? (dynamic)cb : res is IEnumerable<AST_STATEMENT> @enum ? @enum.ToArray() : new AST_STATEMENT[] { res };
                 }

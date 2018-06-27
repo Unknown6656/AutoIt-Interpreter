@@ -78,10 +78,6 @@ $b %= $""this is $b inside a text, e.g. '$x' or $a"" & ""test\n""
             Console.WriteLine();
             Console.ReadKey(true);
             return;
-
-
-
-
             v mat = v.NewMatrix(3, 3, 3);
 
             for (int z = 0; z < 3; ++z)

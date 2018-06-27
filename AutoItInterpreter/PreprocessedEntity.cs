@@ -1,10 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System;
 
 using AutoItCoreLibrary;
 
 namespace AutoItInterpreter.Preprocessed
 {
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    public sealed class NestedAttribute
+        : Attribute
+    {
+    }
+
     public abstract class Entity
     {
         private protected List<Entity> _lines;
@@ -13,6 +20,7 @@ namespace AutoItInterpreter.Preprocessed
         public Entity Parent { internal set; get; }
         public DefinitionContext DefinitionContext { get; set; }
         public Entity LastChild => _lines.Last();
+        public bool CanBeNested => GetType().GetCustomAttributes(true).Any(attr => attr is NestedAttribute);
 
 
         protected Entity(Entity parent)
@@ -74,6 +82,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => "if ... (elif) ... (else) ...";
     }
 
+    [Nested]
     public sealed class IF_BLOCK
         : ConditionalEntity
     {
@@ -83,6 +92,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"if ({RawCondition}) {{ ... }}";
     }
 
+    [Nested]
     public sealed class ELSEIF_BLOCK
         : ConditionalEntity
     {
@@ -92,6 +102,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"else if ({RawCondition}) {{ ... }}";
     }
 
+    [Nested]
     public sealed class ELSE_BLOCK
         : Entity
     {
@@ -103,6 +114,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => "else { ... }";
     }
 
+    [Nested]
     public sealed class WHILE
         : ConditionalEntity
     {
@@ -112,6 +124,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"while ({RawCondition}) {{ ... }}";
     }
 
+    [Nested]
     public sealed class DO_UNTIL
         : ConditionalEntity
     {
@@ -143,6 +156,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => "select ...";
     }
 
+    [Nested]
     public sealed class SELECT_CASE
         : ConditionalEntity
     {
@@ -175,6 +189,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"switch ({Expression}) ...";
     }
 
+    [Nested]
     public sealed class SWITCH_CASE
         : ConditionalEntity
     {
@@ -184,6 +199,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"case {RawCondition} {{ ... }}";
     }
 
+    [Nested]
     public sealed class FUNCTION
         : Entity
     {
@@ -261,6 +277,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"break {Level};";
     }
 
+    [Nested]
     public sealed class WITH
         : Entity
     {
@@ -273,6 +290,7 @@ namespace AutoItInterpreter.Preprocessed
         public override string ToString() => $"with ({Expression}) {{ ... }}";
     }
 
+    [Nested]
     public sealed class FOR
         : Entity
     {
@@ -292,6 +310,7 @@ namespace AutoItInterpreter.Preprocessed
         }
     }
 
+    [Nested]
     public sealed class FOREACH
         : Entity
     {

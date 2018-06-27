@@ -186,11 +186,12 @@ type Serializer (settings : SerializerSettings) =
                                    sprintf "%s(%s)" (rf.Name) (printparams (rf.Name) es (rf.Parameters))
                       | ΛFunctionCall (e, es) -> sprintf "(%s).Call(%s)" (printexpr e) (printparams "<anonymous>" es null)
                       | ArrayAccess (e, i) -> sprintf "(%s)[%s]" (printexpr e) (printexpr i)
-                      | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) // TODO
-                                                                         (m
-                                                                          |> List.map (fun m -> "." + match m with
-                                                                                                      | Method f -> printexpr (FunctionCall f)
-                                                                                                      | Field f -> f)
+                      | DotAccess (e, m) -> sprintf "%s%s" (printexpr e) (m
+                                                                          |> List.map (function
+                                                                                       | Method (f, es) ->
+                                                                                                let rf = x.Settings.FunctionResolver.Invoke(f, List.toArray es)
+                                                                                                sprintf ".GetCOM().Invoke(\"%s\", %s)" (rf.Name) (printparams (rf.Name) es (rf.Parameters))
+                                                                                       | Field f -> sprintf ".GetCOM().Invoke(\"%s\")" f)
                                                                           |> String.Concat)
                       | AssignmentExpression ae -> match ae with
                                                    | ScalarAssignment (o, v, e) -> printass (printvar v) [] o e

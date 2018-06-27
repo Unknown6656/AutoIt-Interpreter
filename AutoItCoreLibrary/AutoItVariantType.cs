@@ -203,13 +203,8 @@ namespace AutoItCoreLibrary
 
         public int CompareTo(AutoItVariantType other) => this == other ? 0 : this > other ? -1 : 1;
 
-        public IEnumerator<AutoItVariantType> GetEnumerator()
-        {
-            if (IsArray)
-                return ((AutoItVariantType[])_data.VariantData).Cast<AutoItVariantType>().GetEnumerator();
-            else
-                throw new InvalidArrayAccessExcpetion();
-        }
+        public IEnumerator<AutoItVariantType> GetEnumerator() =>
+            _data.VariantData.Match<IEnumerable>(_ => null, a => a, o => o is IEnumerable i ? NewArray(i.Cast<object>().Select(FromCOMObject).ToArray()) : Empty) is IEnumerable iter ? iter.Cast<AutoItVariantType>().GetEnumerator() : throw new InvalidArrayAccessExcpetion();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

@@ -393,5 +393,5 @@ type ExpressionParser(mode : ExpressionParserMode) =
         reduce0 nt_literal t_bin
 
 
-        x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+" |]
+        x.Configuration.LexerSettings.Ignore <- [| @"[\r\n\s]+"; @";[^\n]*\n" |]
         x.Configuration.LexerSettings.IgnoreCase <- true
