@@ -141,12 +141,12 @@ type Serializer (settings : SerializerSettings) =
                                      | Null
                                      | Number 0m -> !/"Zero"
                                      | Number 1m -> !/"One"
-                                     //| Number d -> sprintf "(%s)%.29fm" varn d
                                      | Number d ->
                                         if (d % 1m) = 0m && abs(d) < decimal long.MaxValue then
-                                            sprintf "(%s)0x%XL" varn (System.Convert.ToInt64 d)
+                                            sprintf (if d > 0m then "(%s)0x%XL" else "(%s)(%dL)") varn (System.Convert.ToInt64 d)
                                         else
-                                            sprintf "(%s)%sm" varn <| (AutoItVariantType.FromDecimal d).ToString()
+                                            sprintf "(%s)(%sm)" varn <| (AutoItVariantType.FromDecimal d).ToString()
+                                         // sprintf "(%s)%.29fm" varn d
                                      | String s -> sprintf "(%s)\"%s\"" varn (s
                                                                               |> Seq.map (fun c -> if c > 'ÿ' then
                                                                                                        sprintf @"\u%04x" <| uint16 c

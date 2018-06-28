@@ -505,8 +505,13 @@ namespace {NAMESPACE}
 
                 DefinitionContext context = e.Context;
 
-                if (options.IncludeDebugSymbols && !(e is AST_EXPRESSION_STATEMENT))
-                    println($"{SYMBOL} = {adddbgsymbol(e.Context)};");
+                if (options.IncludeDebugSymbols)
+                {
+                    if (!(e is AST_EXPRESSION_STATEMENT))
+                        println($"{SYMBOL} = {adddbgsymbol(e.Context)};");
+
+                    println($"// {e.GetType().Name.ToLower()}");
+                }
 
                 switch (e)
                 {
@@ -528,10 +533,10 @@ namespace {NAMESPACE}
                         string tmpcs = tmpcsvar();
                         EXPRESSION collexpr = EXPRESSION.NewVariableExpression(s.CollectionVariable.Variable);
 
-                        println($"{tstr(collexpr, s.Context)} = {tstr(s.CollectionVariable.InitExpression, s.Context)};");
+                        // println($"{tstr(collexpr, s.Context, false)} = {tstr(s.CollectionVariable.InitExpression, s.Context)};");
                         println($"foreach ({TYPE} {tmpcs} in {tstr(collexpr, s.Context)})");
                         println("{");
-                        println($"{tstr(EXPRESSION.NewVariableExpression(s.ElementVariable.Variable), s.Context)} = {tmpcs};", indent + 1);
+                        println($"{tstr(EXPRESSION.NewVariableExpression(s.ElementVariable.Variable), s.Context, false)} = {tmpcs};", indent + 1);
 
                         foreach (AST_STATEMENT st in s.Statements)
                             _print(st, indent + 1);
