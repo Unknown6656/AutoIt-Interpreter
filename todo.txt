@@ -42,8 +42,8 @@
     [x] fix ?: operator
 [x] fix switch...case
 [x] fix variable scoping
+[x] COM-interop
 ----------------------------------------- UNFINISHED -----------------------------------------
-[-] COM-interop
 [ ] fix const passing byref
 [ ] fix global const being accessed from functions or λs
 [-] fix nested/chained references (e.g. ref of ref-variables)

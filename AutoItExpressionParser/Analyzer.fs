@@ -30,6 +30,7 @@ let rec IsCompiletimeStatic =
 
 let rec IsStatic =
     function
+    | DotAccess _
     | FunctionCall _
     | ΛFunctionCall _
     | ToExpression _
@@ -43,11 +44,6 @@ let rec IsStatic =
                                      |> List.map IsStatic
                                      |> List.fold (&&) true
     | ArrayAccess (e, i) -> (IsStatic i) && (IsStatic e)
-    | DotAccess (e, m) -> m
-                          |> List.map (function
-                                      | Method _ -> false
-                                      | Field _ -> true)
-                          |> List.fold (&&) (IsStatic e)
     | _ -> true
 
 let rec ProcessConstants e =

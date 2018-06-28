@@ -61,8 +61,8 @@ namespace AutoItEditor.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 0.0.1.20180624
-        ///9cb26f473db44d9c42724071bc29ecd524c3a5c8.
+        ///   Looks up a localized string similar to 0.0.34.20180628
+        ///a49c82a680a94a9e0cfd43c3c66ae3fa38e23f10.
         /// </summary>
         internal static string version {
             get {
