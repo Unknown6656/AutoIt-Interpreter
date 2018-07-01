@@ -1617,15 +1617,15 @@ namespace AutoItInterpreter
                                         if (Analyzer.EvaluatesToTrue(expr))
                                             @true.Add(ctx);
                                         else if (Analyzer.EvaluatesToFalse(expr))
-                                            ; // TODO : warn unreacheable code
+                                            state.ReportKnownNote("notes.optimized_away", ctx);
                                         else if (empty)
-                                            ; // TODO : warn empty select case
+                                            state.ReportKnownNote("notes.empty_block", ctx);
 
                                     if (@true.Count > 1)
-                                        ; // TODO : multiple default or pseudo-default cases
+                                        warn("warnings.astproc.multiple_select_default");
 
                                     if (!cases.Any())
-                                        ; // TODO : warn empty select
+                                        note("notes.empty_block");
 
                                     return new AST_SWITCH_TRUE_STATEMENT
                                     {
@@ -2576,6 +2576,23 @@ namespace AutoItInterpreter
                     {
                         switch (e)
                         {
+
+
+
+                            ///////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////
+
+                            case AST_SWITCH_CASE_EXPRESSION s:
+                                s.Cases = procas(s.Cases);
+                                return s;
+                            case AST_CONTINUECASE_STATEMENT s:
+                                return s;
+                            case AST_SWITCH_TRUE_STATEMENT s:
+                                return s;
+
+                            ////////////////////////////////////////////////////////////// END OF TODO //////////////////////////////////////////////////////////////
+
+
+
                             case AST_CONTINUE_STATEMENT s:
                                 return new AST_GOTO_STATEMENT { Label = ls_cont[s.Level] };
                             case AST_BREAK_STATEMENT s:
@@ -2708,18 +2725,6 @@ namespace AutoItInterpreter
                                 s.WithLines = procas(s.WithLines);
 
                                 return s;
-
-
-
-                            case AST_SWITCH_CASE_EXPRESSION s:
-                                s.Cases = procas(s.Cases);
-                                return s;
-                            case AST_CONTINUECASE_STATEMENT s:
-                                return s;
-                            case AST_SWITCH_TRUE_STATEMENT s:
-                                return s;
-
-
                             default:
                                 return e;
                         }

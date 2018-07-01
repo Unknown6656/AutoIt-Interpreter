@@ -106,7 +106,8 @@
         },
         "astproc": {
             "expression_result_discarded": 2101,
-            "pinvoke_already_declared": 2102
+            "pinvoke_already_declared": 2102,
+            "multiple_select_default": 2103
         },
         "generator": {
             "failed_clean_output": 2201,

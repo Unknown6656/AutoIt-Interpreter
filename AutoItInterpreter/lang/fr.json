@@ -147,7 +147,8 @@
         },
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. Consider assigning the expression to a local or global variable.",
-            "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code."
+            "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code.",
+            "multiple_select_default": "Multiple 'Case Else'- or pseudo-'Case Else'-statements are defined. Consider optimizing or refactoring your code."
         },
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",
@@ -157,7 +158,7 @@
             "zero_div": "The expression '{0}' will result in a division-by-zero error at runtime."
         },
         "func_not_impl": "This function is currently not yet implemented.",
-        "not_impl": "This feature is currently not yet implemented.   Sorry, mate :/"
+        "not_impl": "This feature is currently not yet implemented."
     },
     "notes": {
         "optimized_away": "This statement or block has been optimized away be the compiler, as it does not have any effect on the execution flow. Consider removing it from the source code.",
