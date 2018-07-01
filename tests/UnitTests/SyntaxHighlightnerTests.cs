@@ -26,12 +26,12 @@ namespace UnitTests
         internal static Section[] ParseMultiLine(string code) => SyntaxHighlighter.Optimize.Invoke(SyntaxHighlighter.ParseCode(code));
 
         internal static void IsMultiLine(string code, params (HighlightningStyle, string)[] expected) =>
-            Assert.IsTrue(ParseMultiLine(code).Select(s => (s.Style, s.StringContent)).SequenceEqual(expected));
+            AssertSequencialEquals(ParseMultiLine(code).Select(s => (s.Style, s.StringContent)), expected);
 
         internal static void IsSingleLine(string code, params (HighlightningStyle, string)[] expected) => IsSingleLine(code, false, expected);
 
         internal static void IsSingleLine(string code, bool IsBlockComment, params (HighlightningStyle, string)[] expected) =>
-            Assert.IsTrue(ParseSingleLine(code, IsBlockComment).Sections.Select(s => (s.Style, s.StringContent)).SequenceEqual(expected));
+            AssertSequencialEquals(ParseSingleLine(code, IsBlockComment).Sections.Select(s => (s.Style, s.StringContent)), expected);
 
 
         [TestMethod]
@@ -61,11 +61,32 @@ namespace UnitTests
             (Operator, " += "),
             (Symbol, "("),
             (Number, "315"),
-            (Code, " - "),
+            (Operator, " - "),
             (Macro, "@b"),
             (Symbol, ")"),
             (Code, " "),
             (Comment, "; comment"),
+        });
+
+        [TestMethod]
+        public void Test_07() => Assert.AreEqual("$var", string.Concat(ParseSingleLine("$\"test $var\" text").Sections.Where(s => s.Style == StringEscapeSequence).Select(s => s.StringContent)));
+
+        [TestMethod]
+        public void Test_08() => Assert.AreEqual("\"string\"", string.Concat(ParseSingleLine("7 + test(\"string\")").Sections.Where(s => s.Style == String).Select(s => s.StringContent)));
+
+        [TestMethod]
+        public void Test_09() => IsSingleLine("func beep as \"int beep(int, int)\" from \"kernel32.dll\"".Trim(), new[] {
+            (Keyword, "func"),
+            (Code, " "),
+            (Function, "beep"),
+            (Code, " "),
+            (Keyword, "as"),
+            (Code, " "),
+            (String, "\"int beep(int, int)\""),
+            (Code, " "),
+            (Keyword, "from"),
+            (Code, " "),
+            (String, "\"kernel32.dll\""),
         });
     }
 }

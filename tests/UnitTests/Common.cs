@@ -418,6 +418,38 @@ Testing {types.Length} types:
 
         public static void AssertEqualProcessedExpressions(string e1, string e2, bool assign) => Assert.IsTrue(AreEqual(ProcessExpression(ParseExpression(e1, assign)), ProcessExpression(ParseExpression(e2, assign))));
 
+        public static void AssertSequencialEquals<T>(IEnumerable<T> t1, IEnumerable<T> t2)
+        {
+            if (t1 != t2)
+            {
+                Assert.IsNotNull(t1);
+                Assert.IsNotNull(t2);
+
+                List<string> failures = new List<string>();
+                int index = 0;
+
+                if (t1.Count() == t2.Count())
+                    foreach ((T e1, T e2) in t1.Zip(t2, (e1, e2) => (e1, e2)))
+                    {
+                        if (!(e1?.Equals(e2) ?? false))
+                            failures.Add($"Differing elements at index {index}: {{{e1}}} and {{{e2}}}");
+
+                        ++index;
+                    }
+                else
+                {
+                    failures.Add($"Both sequences have different lengths: {t1.Count()} and {t2.Count()}");
+                    failures.Add("Element(s) in the first collection:");
+                    failures.AddRange(t1.Select(e1 => $"\t{{{e1}}}"));
+                    failures.Add("Element(s) in the second collection:");
+                    failures.AddRange(t2.Select(e2 => $"\t{{{e2}}}"));
+                }
+
+                if (failures.Count > 0)
+                    Assert.Fail(string.Concat(failures.Select(f => "\n\t\t\t" + f)));
+            }
+        }
+
         public static U AssertIs<T, U>(T t)
             where U : T
         {
