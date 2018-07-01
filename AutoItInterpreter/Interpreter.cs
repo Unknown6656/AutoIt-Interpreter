@@ -1379,7 +1379,7 @@ namespace AutoItInterpreter
                 foreach ((string name, FUNCTION func) in new[] { (GLOBAL_FUNC_NAME, state.Functions[GLOBAL_FUNC_NAME]) }.Concat(state.Functions.WhereSelect(x => x.Key != GLOBAL_FUNC_NAME, x => (x.Key, x.Value))))
                 {
                     constants.Push(new List<string>());
-                    state.ASTFunctions[name] = ProcessWhileBlocks(state, process(func)[0]);
+                    state.ASTFunctions[name] = PastProcessBlocks(state, process(func)[0]);
                     constants.Clear();
                 }
 
@@ -1610,16 +1610,28 @@ namespace AutoItInterpreter
                                 };
                             case SELECT i:
                                 {
-                                    IEnumerable<AST_CONDITIONAL_BLOCK> cases = i.Cases.Select(x => (process(x)[0] as AST_SELECT_CASE)?.CaseBlock);
+                                    IEnumerable<AST_SWITCH_CASE_EXPRESSION> cases = i.Cases.Select(x => process(x)[0] as AST_SWITCH_CASE_EXPRESSION);
+                                    List<DefinitionContext> @true = new List<DefinitionContext>();
 
-                                    if (cases.Any())
-                                        return new AST_IF_STATEMENT
-                                        {
-                                            If = cases.First(),
-                                            ElseIf = cases.Skip(1).ToArray()
-                                        };
-                                    else
-                                        break;
+                                    foreach ((var expr, var ctx, var empty) in cases.Select(x => ((x.Expressions[0] as MULTI_EXPRESSION.SingleValue)?.Item, x.Context, x.Statements.Length == 0)))
+                                        if (Analyzer.EvaluatesToTrue(expr))
+                                            @true.Add(ctx);
+                                        else if (Analyzer.EvaluatesToFalse(expr))
+                                            ; // TODO : warn unreacheable code
+                                        else if (empty)
+                                            ; // TODO : warn empty select case
+
+                                    if (@true.Count > 1)
+                                        ; // TODO : multiple default or pseudo-default cases
+
+                                    if (!cases.Any())
+                                        ; // TODO : warn empty select
+
+                                    return new AST_SWITCH_TRUE_STATEMENT
+                                    {
+                                        Cases = cases.ToArray(),
+                                        Context = i.DefinitionContext
+                                    };
                                 }
                             case SWITCH i:
                                 {
@@ -1685,11 +1697,22 @@ namespace AutoItInterpreter
                                     if (condcases.Any())
                                         scope.Statements = new AST_STATEMENT[]
                                         {
-                                            new AST_IF_STATEMENT
+                                            new AST_SWITCH_TRUE_STATEMENT
                                             {
                                                 Context = i.DefinitionContext,
-                                                If = condcases.First(),
-                                                ElseIf = condcases.Skip(1).ToArray()
+                                                Cases = condcases.Select(cc =>
+                                                {
+                                                    AST_SWITCH_CASE_EXPRESSION @case = new AST_SWITCH_CASE_EXPRESSION
+                                                    {
+                                                        Context = cc.Context,
+                                                        Statements = cc.Statements,
+                                                        UseExplicitLocalScoping = cc.UseExplicitLocalScoping,
+                                                        Expressions = new[] { MULTI_EXPRESSION.NewSingleValue(cc.Condition) }
+                                                    };
+                                                    @case.ExplicitLocalVariables.AddRange(cc.ExplicitLocalVariables);
+
+                                                    return @case;
+                                                }).ToArray()
                                             }
                                         };
 
@@ -1703,9 +1726,9 @@ namespace AutoItInterpreter
                                     return scope;
                                 }
                             case SELECT_CASE i:
-                                return (AST_SELECT_CASE)new AST_CONDITIONAL_BLOCK
+                                return new AST_SWITCH_CASE_EXPRESSION
                                 {
-                                    Condition = i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parse_expression(i.RawCondition, false),
+                                    Expressions = new[] { MULTI_EXPRESSION.NewSingleValue(i.RawCondition.ToLower() == "else" ? EXPRESSION.NewLiteral(LITERAL.True) : parse_expression(i.RawCondition, false)) },
                                     Statements = process_lines(),
                                     Context = i.DefinitionContext
                                 };
@@ -1736,8 +1759,6 @@ namespace AutoItInterpreter
                                     };
                                 }
                             case CONTINUECASE _:
-                                warn("warnings.not_impl"); // TODO
-
                                 return new AST_CONTINUECASE_STATEMENT();
                             case CONTINUE i:
                                 return new AST_CONTINUE_STATEMENT
@@ -2536,8 +2557,9 @@ namespace AutoItInterpreter
                         state.ReportKnownNote("notes.uncalled_function", state.ASTFunctions[uncalled].Context, uncalled);
             }
 
-            private static AST_FUNCTION ProcessWhileBlocks(InterpreterState state, AST_FUNCTION func)
+            private static AST_FUNCTION PastProcessBlocks(InterpreterState state, AST_FUNCTION func)
             {
+                ReversedLabelStack ls_switch = new ReversedLabelStack();
                 ReversedLabelStack ls_cont = new ReversedLabelStack();
                 ReversedLabelStack ls_exit = new ReversedLabelStack();
 
@@ -2686,10 +2708,18 @@ namespace AutoItInterpreter
                                 s.WithLines = procas(s.WithLines);
 
                                 return s;
-                            case AST_SWITCH_STATEMENT s:
-                                s.Cases = procas(s.Cases);
 
+
+
+                            case AST_SWITCH_CASE_EXPRESSION s:
+                                s.Cases = procas(s.Cases);
                                 return s;
+                            case AST_CONTINUECASE_STATEMENT s:
+                                return s;
+                            case AST_SWITCH_TRUE_STATEMENT s:
+                                return s;
+
+
                             default:
                                 return e;
                         }
@@ -2704,7 +2734,6 @@ namespace AutoItInterpreter
         }
     }
 }
-
 
 
 

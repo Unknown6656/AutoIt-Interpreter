@@ -174,12 +174,11 @@ namespace AutoItInterpreter.PartialAST
         public AST_LABEL Label { set; get; }
     }
 
-    public sealed class AST_SWITCH_STATEMENT
+    public sealed class AST_SWITCH_TRUE_STATEMENT
         : AST_STATEMENT
     {
-        public override bool IsEmpty => (Cases?.Length ?? 0) == 0 && Analyzer.IsStatic(Expression);
+        public override bool IsEmpty => (Cases?.Length ?? 0) == 0;
         public AST_SWITCH_CASE[] Cases { set; get; }
-        public EXPRESSION Expression { get; set; }
     }
 
     public abstract class AST_SWITCH_CASE
@@ -196,16 +195,6 @@ namespace AutoItInterpreter.PartialAST
     public sealed class AST_SWITCH_CASE_ELSE
         : AST_SWITCH_CASE
     {
-    }
-
-    public sealed class AST_SELECT_CASE
-        : AST_STATEMENT
-    {
-        public override bool IsEmpty => CaseBlock.IsEmpty;
-        public AST_CONDITIONAL_BLOCK CaseBlock { set; get; }
-
-
-        public static implicit operator AST_SELECT_CASE(AST_CONDITIONAL_BLOCK b) => new AST_SELECT_CASE { CaseBlock = b };
     }
 
     public abstract class AST_EXPR_STATEMENT
