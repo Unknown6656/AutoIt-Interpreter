@@ -93,7 +93,9 @@ namespace UnitTests
 
             WriteLine($@"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNIT TESTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     Unit Test Runner verison: {Module.Version}
     Expression Parser verison: {AutoItExpressionParser.Module.Version}
+          Interpreter verison: {AutoItInterpreter.Module.InterpreterVersion}
          Core Library version: {AutoItCoreLibrary.Module.LibraryVersion}
                                {AutoItCoreLibrary.Module.GitHash}
 

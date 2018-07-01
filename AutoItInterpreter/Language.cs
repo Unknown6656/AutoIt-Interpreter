@@ -84,6 +84,7 @@ namespace AutoItInterpreter
             }
         }
 
+
         static Language()
         {
             Assembly asm = typeof(Language).Assembly;

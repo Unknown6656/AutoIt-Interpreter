@@ -2559,7 +2559,7 @@ namespace AutoItInterpreter
 
             private static AST_FUNCTION PastProcessBlocks(InterpreterState state, AST_FUNCTION func)
             {
-                ReversedLabelStack ls_switch = new ReversedLabelStack();
+                Stack<(AST_LABEL Label, VARIABLE ForceVar, VARIABLE ContinueVar)> switch_stack = new Stack<(AST_LABEL, VARIABLE, VARIABLE)>();
                 ReversedLabelStack ls_cont = new ReversedLabelStack();
                 ReversedLabelStack ls_exit = new ReversedLabelStack();
 
@@ -2576,23 +2576,105 @@ namespace AutoItInterpreter
                     {
                         switch (e)
                         {
-
-
-
-                            ///////////////////////////////////////////////////////////////// TODO /////////////////////////////////////////////////////////////////
-
-                            case AST_SWITCH_CASE_EXPRESSION s:
-                                s.Cases = procas(s.Cases);
-                                return s;
-                            case AST_CONTINUECASE_STATEMENT s:
-                                return s;
                             case AST_SWITCH_TRUE_STATEMENT s:
-                                return s;
+                                {
+                                    VARIABLE force = VARIABLE.NewTemporary;
+                                    VARIABLE cont = VARIABLE.NewTemporary;
 
-                            ////////////////////////////////////////////////////////////// END OF TODO //////////////////////////////////////////////////////////////
+                                    switch_stack.Push((null, force, cont));
 
+                                    AST_SCOPE scope = new AST_SCOPE
+                                    {
+                                        Context = s.Context,
+                                        Statements = procas<AST_STATEMENT>(s.Cases)
+                                    };
 
+                                    scope.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE { Variable = force, InitExpression = EXPRESSION.NewLiteral(LITERAL.False), Context = s.Context });
+                                    scope.ExplicitLocalVariables.Add(new AST_LOCAL_VARIABLE { Variable = cont, InitExpression = EXPRESSION.NewLiteral(LITERAL.True), Context = s.Context });
+                                    scope.UseExplicitLocalScoping = true;
 
+                                    switch_stack.Pop();
+
+                                    return scope;
+                                }
+                            case AST_SWITCH_CASE_EXPRESSION s:
+                                {
+                                    (_, VARIABLE force, VARIABLE cont) = switch_stack.Pop();
+                                    AST_LABEL lbl = AST_LABEL.NewLabel;
+
+                                    switch_stack.Push((lbl, force, cont));
+
+                                    return new AST_IF_STATEMENT
+                                    {
+                                        Context = s.Context,
+                                        If = new AST_CONDITIONAL_BLOCK
+                                        {
+                                            Context = s.Context,
+                                            Condition = EXPRESSION.NewBinaryExpression(
+                                                OPERATOR_BINARY.Or,
+                                                EXPRESSION.NewVariableExpression(force),
+                                                EXPRESSION.NewBinaryExpression(
+                                                    OPERATOR_BINARY.And,
+                                                    EXPRESSION.NewVariableExpression(cont),
+                                                    (s.Expressions[0] as MULTI_EXPRESSION.SingleValue).Item
+                                                )
+                                            ),
+                                            Statements = new AST_STATEMENT[]
+                                                         {
+                                                             new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                             {
+                                                                 Context = s.Context,
+                                                                 Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                                                     OPERATOR_ASSIGNMENT.Assign,
+                                                                     force,
+                                                                     EXPRESSION.NewLiteral(LITERAL.False)
+                                                                 )
+                                                             }
+                                                         }
+                                                         .Concat(s.Statements)
+                                                         .Concat(
+                                                             lbl,
+                                                             new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                                             {
+                                                                 Context = s.Context,
+                                                                 Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                                                     OPERATOR_ASSIGNMENT.Assign,
+                                                                     cont,
+                                                                     EXPRESSION.NewLiteral(LITERAL.False)
+                                                                 )
+                                                             }
+                                                         )
+                                                         .ToArray(),
+                                            UseExplicitLocalScoping = false
+                                        }
+                                    };
+                                }
+                            case AST_CONTINUECASE_STATEMENT s:
+                                {
+                                    (AST_LABEL Label, VARIABLE force, _) = switch_stack.Peek();
+
+                                    return new AST_SCOPE
+                                    {
+                                        Context = s.Context,
+                                        Statements = new AST_STATEMENT[]
+                                        {
+                                            new AST_ASSIGNMENT_EXPRESSION_STATEMENT
+                                            {
+                                                Context = s.Context,
+                                                Expression = ASSIGNMENT_EXPRESSION.NewScalarAssignment(
+                                                    OPERATOR_ASSIGNMENT.Assign,
+                                                    force,
+                                                    EXPRESSION.NewLiteral(LITERAL.True)
+                                                )
+                                            },
+                                            new AST_GOTO_STATEMENT
+                                            {
+                                                Context = s.Context,
+                                                Label = Label
+                                            }
+                                        }
+                                    };
+                                }
                             case AST_CONTINUE_STATEMENT s:
                                 return new AST_GOTO_STATEMENT { Label = ls_cont[s.Level] };
                             case AST_BREAK_STATEMENT s:

@@ -112,5 +112,5 @@
     [ ] ftp API
     [x] ssh/sftp API
     [-] graphics API
-[-] implement "continuecase"
+[x] implement "continuecase"
 [ ] implement "with ..."-statements
