@@ -21,6 +21,8 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public string[] Lines { get; }
 
+        public Location CurrentLocation => new Location(File, _line_number, -1);
+
         public string? CurrentLine => _line_number < Lines.Length ? Lines[_line_number] : null;
 
         string? IEnumerator<string?>.Current => CurrentLine;

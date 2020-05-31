@@ -37,7 +37,6 @@ namespace Unknown6656.AutoIt3.Interpreter
 
 
 
-
         private ScopeStack _scopestack = new ScopeStack();
 
         private InterpreterResult? ParseCurrentLine(string? line)
@@ -64,7 +63,7 @@ namespace Unknown6656.AutoIt3.Interpreter
                 return interpreter.Run();
             }
             else
-                return new InterpreterResult(-1, new InterpreterError(input, -1, $"The script file '{opt.FilePath}' could not be found."));
+                return new InterpreterResult(-1, new InterpreterError(new Location(input, -1), $"The script file '{opt.FilePath}' could not be found."));
         }
     }
 
@@ -85,15 +84,13 @@ namespace Unknown6656.AutoIt3.Interpreter
 
     public sealed class InterpreterError
     {
-        public int Line { get; }
-        public FileInfo File { get; }
+        public Location Location { get; }
         public string Message { get; }
 
 
-        public InterpreterError(FileInfo file, int line, string message)
+        public InterpreterError(Location location, string message)
         {
-            File = file;
-            Line = line;
+            Location = location;
             Message = message;
         }
     }

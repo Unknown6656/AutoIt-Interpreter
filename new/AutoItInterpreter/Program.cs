@@ -51,7 +51,7 @@ namespace Unknown6656.AutoIt3
                     InterpreterResult result = Interpreter.Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
-                        PrintError($"ERROR in \"{err.File}\" on Line {err.Line + 1}:\n    {err.Message}");
+                        PrintError($"ERROR in {err.Location}:\n    {err.Message}");
 
                     code = result.ProgramExitCode;
                 }).WithNotParsed(errs => code = -1);
