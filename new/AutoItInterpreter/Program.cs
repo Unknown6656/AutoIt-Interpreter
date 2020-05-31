@@ -1,4 +1,13 @@
-﻿using CommandLine;
+﻿using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+
+using CommandLine;
+
+using Unknown6656.Controls.Console;
+using Unknown6656.Imaging;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3
 {
@@ -22,22 +31,85 @@ namespace Unknown6656.AutoIt3
     {
         public static int Main(string[] argv)
         {
+            ConsoleState state = ConsoleExtensions.SaveConsoleState();
             int code = 0;
 
-            Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
+            try
             {
-                if (!opt.HideBanner)
-                    PrintBanner();
+                Console.OutputEncoding = Encoding.Unicode;
+                Console.InputEncoding = Encoding.Unicode;
 
-                code = Interpreter.Interpreter.Run(opt);
-            }).WithNotParsed(errs => code = -1);
+                Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
+                {
+                    if (!opt.HideBanner)
+                        PrintBanner();
+
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+                    ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
+
+                    code = Interpreter.Interpreter.Run(opt);
+                }).WithNotParsed(errs => code = -1);
+            }
+            catch (Exception ex)
+            when (!Debugger.IsAttached)
+            {
+                code = ex.HResult;
+
+                // TODO : print exception
+            }
+            finally
+            {
+                ConsoleExtensions.RestoreConsoleState(state);
+            }
 
             return code;
         }
 
         private static void PrintBanner()
         {
-            Conosle.
+            ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine($@"
+                       _       _____ _   ____
+            /\        | |     |_   _| | |___ \
+           /  \  _   _| |_ ___  | | | |_  __) |
+          / /\ \| | | | __/ _ \ | | | __||__ <
+         / ____ \ |_| | || (_) || |_| |_ ___) |
+        /_/    \_\__,_|\__\___/_____|\__|____/
+  _____       _                           _
+ |_   _|     | |                         | |
+   | |  _ __ | |_ ___ _ __ _ __  _ __ ___| |_ ___ _ __
+   | | | '_ \| __/ _ \ '__| '_ \| '__/ _ \ __/ _ \ '__|
+  _| |_| | | | ||  __/ |  | |_) | | |  __/ ||  __/ |
+ |_____|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|
+                          | |
+                          |_|  Written by Unknown6656, 2020
+
+Version v.{Module.InterpreterVersion} ({Module.GitHash})
+");
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
+            ConsoleExtensions.WriteUnderlined("    WARNING! ");
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
+            ConsoleExtensions.WriteUnderlined("This may panic your CPU.\n");
+        }
+    }
+
+
+    public static class Module
+    {
+        public static Version? InterpreterVersion { get; }
+        public static string GitHash { get; }
+
+
+        static Module()
+        {
+            string[] lines = Properties.Resources.version.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray(s => s.Trim());
+
+            InterpreterVersion = Version.TryParse(lines[0], out Version? v) ? v : null;
+            GitHash = lines.Length > 0 ? lines[1] : "";
+
+            if ((GitHash?.Length ?? 0) == 0)
+                GitHash = "<unknown git commit hash>";
         }
     }
 }

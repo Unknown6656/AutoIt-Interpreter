@@ -29,6 +29,9 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <EmbeddedResource Include="version.txt" />
+    </ItemGroup>
+    <ItemGroup>
         <None Include="..\..\LICENSE.md">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
@@ -42,4 +45,20 @@
         </PackageReference>
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     </ItemGroup>
+    <ItemGroup>
+      <Compile Update="Properties\Resources.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Resources.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+    <ItemGroup>
+      <EmbeddedResource Update="Properties\Resources.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <Exec Command="dotnet &quot;$(OutDir)incr.dll&quot; &quot;$(ProjectPath)&quot;" />
+    </Target>
 </Project>

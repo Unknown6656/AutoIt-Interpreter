@@ -30,6 +30,8 @@ namespace Unknown6656.AutoIt3.Interpreter
                 // TODO
             }
 
+
+            return -1;
         }
     }
 }
