@@ -19,12 +19,37 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public InterpreterResult Run()
         {
+            InterpreterResult? result = null;
 
+            while (Parser.MoveNext())
+            {
+                result = ParseCurrentLine(Parser.CurrentLine);
 
+                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
+                    break;
+            }
 
-
-            throw new NotImplementedException();
+            return result ?? InterpreterResult.OK;
         }
+
+
+
+
+
+
+
+        private ScopeStack _scopestack = new ScopeStack();
+
+        private InterpreterResult? ParseCurrentLine(string? line)
+        {
+
+
+
+
+
+        }
+
+
 
 
         public static InterpreterResult Run(CommandLineOptions opt)
@@ -45,6 +70,8 @@ namespace Unknown6656.AutoIt3.Interpreter
 
     public sealed class InterpreterResult
     {
+        public static InterpreterResult OK { get; } = new InterpreterResult(0, null);
+
         public int ProgramExitCode { get; }
         public InterpreterError? OptionalError { get; }
 
