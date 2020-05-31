@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <LangVersion>preview</LangVersion>
+        <Deterministic>true</Deterministic>
+        <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+        <Authors>Unknown6656</Authors>
+        <Company>Unknown6656</Company>
+        <Copyright>Copyright © 2014, Unknown6656</Copyright>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Product>Unknown6656 AutoIt3 Interpreter</Product>
+        <PackageId>Unknown6656.AutoIt3</PackageId>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+
+</Project>
