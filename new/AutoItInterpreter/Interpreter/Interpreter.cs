@@ -17,21 +17,58 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public void Dispose() => Parser.Dispose();
 
-
-
-
-        public static int Run(CommandLineOptions opt)
+        public InterpreterResult Run()
         {
-            if (new FileInfo(opt.FilePath) is { Exists: true } input)
+
+
+
+
+            throw new NotImplementedException();
+        }
+
+
+        public static InterpreterResult Run(CommandLineOptions opt)
+        {
+            FileInfo input = new FileInfo(opt.FilePath);
+
+            if (input.Exists)
             {
                 using LineParser parser = new LineParser(input);
-                using Interpreter interpeter = new Interpreter(parser);
+                using Interpreter interpreter = new Interpreter(parser);
 
-                // TODO
+                return interpreter.Run();
             }
+            else
+                return new InterpreterResult(-1, new InterpreterError(input, -1, $"The script file '{opt.FilePath}' could not be found."));
+        }
+    }
+
+    public sealed class InterpreterResult
+    {
+        public int ProgramExitCode { get; }
+        public InterpreterError? OptionalError { get; }
 
 
-            return -1;
+        public InterpreterResult(int programExitCode, InterpreterError? err = null)
+        {
+            ProgramExitCode = programExitCode;
+            OptionalError = err;
+        }
+    }
+
+    public sealed class InterpreterError
+    {
+        public int Line { get; }
+        public FileInfo File { get; }
+        public string Message { get; }
+
+
+        public InterpreterError(FileInfo file, int line, string message)
+        {
+            File = file;
+            Line = line;
+            Message = message;
         }
     }
 }
+

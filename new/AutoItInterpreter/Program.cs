@@ -5,6 +5,7 @@ using System.Text;
 
 using CommandLine;
 
+using Unknown6656.AutoIt3.Interpreter;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
@@ -47,7 +48,12 @@ namespace Unknown6656.AutoIt3
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
 
-                    code = Interpreter.Interpreter.Run(opt);
+                    InterpreterResult result = Interpreter.Interpreter.Run(opt);
+
+                    if (result.OptionalError is { } err)
+                        PrintError($"ERROR in \"{err.File}\" on Line {err.Line + 1}:\n    {err.Message}");
+
+                    code = result.ProgramExitCode;
                 }).WithNotParsed(errs => code = -1);
             }
             catch (Exception ex)
@@ -55,7 +61,7 @@ namespace Unknown6656.AutoIt3
             {
                 code = ex.HResult;
 
-                // TODO : print exception
+                PrintException(ex);
             }
             finally
             {
@@ -65,17 +71,40 @@ namespace Unknown6656.AutoIt3
             return code;
         }
 
+        internal static void PrintException(this Exception? ex)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            while (ex is { })
+            {
+                sb.Insert(0, $"[{ex.GetType()}] \"{ex.Message}\":\n{ex.StackTrace}\n");
+                ex = ex.InnerException;
+            }
+
+            PrintError(sb.ToString());
+        }
+
+        internal static void PrintError(this string message)
+        {
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Red;
+            Console.WriteLine(message.TrimEnd());
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine(new string('_', Console.WindowWidth - 1));
+        }
+
         private static void PrintBanner()
         {
             ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine($@"
-                       _       _____ _   ____
-            /\        | |     |_   _| | |___ \
-           /  \  _   _| |_ ___  | | | |_  __) |
-          / /\ \| | | | __/ _ \ | | | __||__ <
-         / ____ \ |_| | || (_) || |_| |_ ___) |
-        /_/    \_\__,_|\__\___/_____|\__|____/
+                        _       _____ _   ____
+             /\        | |     |_   _| | |___ \
+            /  \  _   _| |_ ___  | | | |_  __) |
+           / /\ \| | | | __/ _ \ | | | __||__ <
+          / ____ \ |_| | || (_) || |_| |_ ___) |
+         /_/    \_\__,_|\__\___/_____|\__|____/
   _____       _                           _
  |_   _|     | |                         | |
    | |  _ __ | |_ ___ _ __ _ __  _ __ ___| |_ ___ _ __
@@ -84,16 +113,15 @@ namespace Unknown6656.AutoIt3
  |_____|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|
                           | |
                           |_|  Written by Unknown6656, 2020
-
 Version v.{Module.InterpreterVersion} ({Module.GitHash})
 ");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
-            ConsoleExtensions.WriteUnderlined("    WARNING! ");
+            Console.Write("    ");
+            ConsoleExtensions.WriteUnderlined("WARNING!");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
-            ConsoleExtensions.WriteUnderlined("This may panic your CPU.\n");
+            Console.Write(" This may panic your CPU.\n");
         }
     }
-
 
     public static class Module
     {
