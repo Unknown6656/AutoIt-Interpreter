@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
@@ -7,17 +6,38 @@
         <OutDir>$(SolutionDir)bin</OutDir>
         <LangVersion>preview</LangVersion>
         <Deterministic>true</Deterministic>
+        <PublishTrimmed>true</PublishTrimmed>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
         <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
         <Authors>Unknown6656</Authors>
         <Company>Unknown6656</Company>
-        <Copyright>Copyright © 2014, Unknown6656</Copyright>
+        <Copyright>Copyright © 2020, Unknown6656</Copyright>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Product>Unknown6656 AutoIt3 Interpreter</Product>
         <PackageId>Unknown6656.AutoIt3</PackageId>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <StartupObject>Unknown6656.AutoIt3.Program</StartupObject>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
     </PropertyGroup>
-
+    <ItemGroup>
+        <Reference Include="unknown6656.core">
+            <HintPath>..\lib\unknown6656.core.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="..\..\LICENSE.md">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.6">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
 </Project>
