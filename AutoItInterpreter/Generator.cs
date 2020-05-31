@@ -505,13 +505,8 @@ namespace {NAMESPACE}
 
                 DefinitionContext context = e.Context;
 
-                if (options.IncludeDebugSymbols)
-                {
-                    if (!(e is AST_EXPRESSION_STATEMENT))
-                        println($"{SYMBOL} = {adddbgsymbol(e.Context)};");
-
-                    println($"// {e.GetType().Name.ToLower()}");
-                }
+                if (options.IncludeDebugSymbols && !(e is AST_EXPRESSION_STATEMENT))
+                    println($"{SYMBOL} = {adddbgsymbol(e.Context)};");
 
                 switch (e)
                 {

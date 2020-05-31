@@ -2631,7 +2631,7 @@ namespace AutoItInterpreter
                                                                  )
                                                              }
                                                          }
-                                                         .Concat(s.Statements)
+                                                         .Concat(procas<AST_STATEMENT>(s.Statements))
                                                          .Concat(
                                                              lbl,
                                                              new AST_ASSIGNMENT_EXPRESSION_STATEMENT

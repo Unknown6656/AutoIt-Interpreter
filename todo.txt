@@ -43,6 +43,7 @@
 [x] fix switch...case
 [x] fix variable scoping
 [x] COM-interop
+[x] implement "continuecase"
 ----------------------------------------- UNFINISHED -----------------------------------------
 [ ] fix const passing byref
 [ ] fix global const being accessed from functions or λs
@@ -112,5 +113,4 @@
     [ ] ftp API
     [x] ssh/sftp API
     [-] graphics API
-[x] implement "continuecase"
 [ ] implement "with ..."-statements

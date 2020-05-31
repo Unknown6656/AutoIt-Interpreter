@@ -148,7 +148,7 @@
         "astproc": {
             "expression_result_discarded": "The result of this expression is implicitly discarded. Consider assigning the expression to a local or global variable.",
             "pinvoke_already_declared": "The P/Invoke function accessing the function '{0}' in '{1}' has already been declared preivously. Consider removing the current line from the code.",
-            "multiple_select_default": "Multiple 'Case Else'- or pseudo-'Case Else'-statements are defined. Consider optimizing or refactoring your code."
+            "multiple_select_default": "Multiple 'Case Else'- or pseudo-'Case Else'-statements ('Case'-statements with constant 'true'-expressions) are defined. Consider optimizing or refactoring your code."
         },
         "generator": {
             "failed_clean_output": "The non-empty output folder '{0}' could not be cleaned, as the compiler-flag '--clean-output' or '-c' was not given.",

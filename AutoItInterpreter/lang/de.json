@@ -145,7 +145,7 @@
         "astproc": {
             "expression_result_discarded": "Das Ergebnis dieses Ausdrucks wird implizit verworfen. Erwägen Sie, den Ausdruck einer lokalen oder globalen Variablen zuzuweisen.",
             "pinvoke_already_declared": "Die P/Invoke-Funktion, welche auf die Funktion '{0}' in '{1}' zugreift, wurde bereits zuvor deklariert. Erwägen Sie, die aktuelle Zeile aus dem Code zu entfernen, um Redundanz zu vermeiden.",
-            "multiple_select_default": "Es wurden mehrere 'Case Else'- oder Pseudo-'Case Else'-Blöcke definitiert. Ziehen Sie eine Code-Optimierung in Erwägung."
+            "multiple_select_default": "Es wurden mehrere 'Case Else'- oder Pseudo-'Case Else'-Blöcke ('Case'-Blöcke mit konstanten 'True'-Bedingungen) definitiert. Ziehen Sie eine Code-Optimierung in Erwägung."
         },
         "generator": {
             "failed_clean_output": "Das nicht-leere Ausgabeverzeichnis '{0}' konnte nicht bereinigt werden, da die Compileroption '--clean-output' oder '-c' nicht angegeben wurde.",
