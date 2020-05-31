@@ -1,4 +1,4 @@
-![Banner image](Artwork/banner.png)
+![Banner image](artwork/banner.png)
 
 # Preamble
 

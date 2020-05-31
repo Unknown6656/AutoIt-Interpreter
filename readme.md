@@ -1,4 +1,4 @@
-﻿![Banner image](old/Artwork/banner.png)
+﻿![Banner image](old/artwork/banner.png)
 
 # The AutoIt Interpreter
 
