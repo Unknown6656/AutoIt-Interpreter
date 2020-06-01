@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System;
 
 namespace Unknown6656.AutoIt3.Interpreter
@@ -6,12 +7,29 @@ namespace Unknown6656.AutoIt3.Interpreter
     public sealed class Interpreter
         : IDisposable
     {
+        private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
+        private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
+        private readonly List<IIncludeResolver> _resolvers = new List<IIncludeResolver>();
+
+
         public LineParser Parser { get; }
+
+        public IReadOnlyList<ILineProcessor> LineProcessors => _line_processors;
+
+        public IReadOnlyList<IDirectiveProcessor> DirectiveProcessors => _directive_processors;
+
+        public IReadOnlyList<IIncludeResolver> IncludeResolvers => _resolvers;
 
 
         public Interpreter(LineParser parser) => Parser = parser;
 
         public void Dispose() => Parser.Dispose();
+
+        public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
+
+        public void RegisterDirectiveProcessor(IDirectiveProcessor proc) => _directive_processors.Add(proc);
+
+        public void RegisterIncludeResolver(IIncludeResolver resolver) => _resolvers.Add(resolver);
 
         public InterpreterResult Run()
         {
@@ -30,15 +48,6 @@ namespace Unknown6656.AutoIt3.Interpreter
 
             return result ?? InterpreterResult.OK;
         }
-
-
-
-
-
-
-        private ScopeStack _scopestack = new ScopeStack();
-
-
 
         public static InterpreterResult Run(CommandLineOptions opt)
         {

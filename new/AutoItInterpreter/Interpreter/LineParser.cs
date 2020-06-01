@@ -8,6 +8,7 @@ using System;
 using Unknown6656.Common;
 using Unknown6656.IO;
 using Unknown6656.Imaging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Unknown6656.AutoIt3.Interpreter
 {
@@ -15,8 +16,6 @@ namespace Unknown6656.AutoIt3.Interpreter
         : IEnumerator<string?>
         , IEnumerable<string?>
     {
-        private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
-        private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
         private int _line_number;
 
 
@@ -56,13 +55,12 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         IEnumerator IEnumerable.GetEnumerator() => this;
 
-        public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
 
-        public void RegisterDirectiveProcessor(IDirectiveProcessor proc) => _directive_processors.Add(proc);
 
 
         private LineParserState _state;
         private int _blockcomment_level;
+        private ScopeStack _scopestack = new ScopeStack();
 
 
         public void ResetParser()
@@ -74,7 +72,7 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
 
-        public InterpreterResult? ParseCurrentLine()
+        public InterpreterResult? ParseCurrentLine(Interpreter interpreter)
         {
             string? line = CurrentLine;
             InterpreterResult? result = null;
@@ -116,7 +114,7 @@ namespace Unknown6656.AutoIt3.Interpreter
             result ??= ProcessStatement(line);
             result ??= ProcessExpressionStatement(line);
 
-            foreach (ILineProcessor? proc in _line_processors)
+            foreach (ILineProcessor? proc in Interpreter.LineProcessors)
                 if (result is { })
                     return result;
                 else if (proc?.CanProcessLine(line) ?? false)
@@ -242,6 +240,11 @@ namespace Unknown6656.AutoIt3.Interpreter
 
             public InterpreterResult? ProcessLine(LineParser parser, string line) => _process(parser, line);
         }
+    }
+
+    public interface IIncludeResolver
+    {
+        bool TryResolve(string path, [MaybeNullWhen(false), NotNullWhen(true)] out (FileInfo physical_file, string content)? resolved);
     }
 
     [Flags]
