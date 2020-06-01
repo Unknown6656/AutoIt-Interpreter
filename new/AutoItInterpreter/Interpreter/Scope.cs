@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
 namespace Unknown6656.AutoIt3.Interpreter
 {
+    using static Program;
+
+
     public readonly struct Location
         : IEquatable<Location>
     {
@@ -38,7 +37,7 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public override int GetHashCode() => HashCode.Combine(LineNumber, CharIndex, FileName?.FullName);
 
-        public override string ToString() => $"\"{FileName}\", Line {LineNumber + 1}:{CharIndex + 1}";
+        public override string ToString() => $"\"{FileName}\", {CurrentLanguage["general.line"]} {LineNumber + 1}:{CharIndex + 1}";
 
         public static bool operator ==(Location left, Location right) => left.Equals(right);
 

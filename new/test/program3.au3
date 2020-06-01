@@ -1,11 +1,13 @@
 
+   ConsoleWrite("0")
+if True Then
+   ConsoleWrite("b")
+   #OnAutoItStartRegister "test"
+   ConsoleWrite("a")
+EndIf
+   ConsoleWrite("1")
 
 
-#ce
-#cs
-#cs
-#ce
-
-#ce
-
-
+Func test()
+   ConsoleWrite("test")
+EndFunc

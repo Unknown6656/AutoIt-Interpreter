@@ -9,13 +9,13 @@
             "written_by": "Written by {0}",
             "version": "Version"
         },
-
-        // TODO
-
-
-
+        "general": {
+            "line": "Line"
+        },
         "error": {
-            "lol": "kay"
+            "error_in": "ERROR in {0}",
+            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed.",
+            "unparsable_line": "The line '{0}' could not be parsed. The syntax is either (currently) unsupported, or no parser has been registered for this kind of statement/expression."
         }
     }
 }

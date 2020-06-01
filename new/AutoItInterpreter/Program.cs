@@ -6,10 +6,10 @@ using System.Text;
 using CommandLine;
 
 using Unknown6656.AutoIt3.Interpreter;
+using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using Unknown6656.AutoIt3.Localization;
 
 namespace Unknown6656.AutoIt3
 {
@@ -71,7 +71,7 @@ namespace Unknown6656.AutoIt3
                     InterpreterResult result = Interpreter.Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
-                        PrintError($"ERROR in {err.Location}:\n    {err.Message}");
+                        PrintError($"{CurrentLanguage["error.error_in", err.Location]}:\n    {err.Message}");
 
                     code = result.ProgramExitCode;
                 }).WithNotParsed(errs => code = -1);

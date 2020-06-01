@@ -15,6 +15,8 @@ namespace Unknown6656.AutoIt3.Interpreter
         : IEnumerator<string?>
         , IEnumerable<string?>
     {
+        private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
+        private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
         private int _line_number;
 
 
@@ -29,7 +31,6 @@ namespace Unknown6656.AutoIt3.Interpreter
         string? IEnumerator<string?>.Current => CurrentLine;
 
         object? IEnumerator.Current => (this as IEnumerator<string?>).Current;
-
 
 
         public LineParser(FileInfo file)
@@ -52,10 +53,12 @@ namespace Unknown6656.AutoIt3.Interpreter
         public void Reset() => _line_number = 0;
 
         public IEnumerator<string?> GetEnumerator() => this;
-        
+
         IEnumerator IEnumerable.GetEnumerator() => this;
 
+        public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
 
+        public void RegisterDirectiveProcessor(IDirectiveProcessor proc) => _directive_processors.Add(proc);
 
 
         private LineParserState _state;
@@ -69,19 +72,15 @@ namespace Unknown6656.AutoIt3.Interpreter
             MoveToStart();
         }
 
+        private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+
         public InterpreterResult? ParseCurrentLine()
         {
             string? line = CurrentLine;
             InterpreterResult? result = null;
 
-            if (string.IsNullOrEmpty(line))
-                if (!_state.HasFlag(LineParserState.LineContinuation))
-                    return InterpreterResult.OK;
-                else
-                {
-
-                    // TODO : line continuation
-                }
+            if (string.IsNullOrWhiteSpace(line) && !_state.HasFlag(LineParserState.LineContinuation))
+                return InterpreterResult.OK;
 
             line = TrimComment(line);
 
@@ -90,23 +89,49 @@ namespace Unknown6656.AutoIt3.Interpreter
             line = line.TrimStart();
             index -= line.Length;
 
+            if (line.Match(@"(\s|^)_$", out Match m))
+            {
+                _state |= LineParserState.LineContinuation;
+                line = line[..m.Index];
+
+                // TODO : line continuation
+            }
+            else
+                _state &= ~LineParserState.LineContinuation;
+
+            if (_state.HasFlag(LineParserState.LineContinuation))
+            {
+                // TODO : line continuation
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+                return InterpreterResult.OK;
+
             if (line.StartsWith('#'))
                 result ??= ProcessDirective(line[1..]);
 
             if (_state.HasFlag(LineParserState.InsideBlockComment))
                 return InterpreterResult.OK;
 
-            // TODO : parse statement
-            // TODO : parse expression
+            result ??= ProcessStatement(line);
+            result ??= ProcessExpressionStatement(line);
 
-            throw new NotImplementedException();
+            foreach (ILineProcessor? proc in _line_processors)
+                if (result is { })
+                    return result;
+                else if (proc?.CanProcessLine(line) ?? false)
+                    result ??= proc?.ProcessLine(this, line);
+
+            return result ?? WellKnownError("error.unparsable_line");
         }
 
-        private string TrimComment(string line)
+        private string TrimComment(string? line)
         {
             Match m;
 
-            if (line.Contains(';'))
+            if (string.IsNullOrWhiteSpace(line))
+                return "";
+            else if (line.Contains(';'))
                 if (line.Match(@"\;[^\""\']*$", out m))
                     line = line[..m.Index];
                 else
@@ -124,36 +149,98 @@ namespace Unknown6656.AutoIt3.Interpreter
             return line.TrimEnd();
         }
 
+        private InterpreterResult ProcessInclude(string path, bool relative, bool once)
+        {
+            throw new NotImplementedException();
+        }
+
         private InterpreterResult? ProcessDirective(string directive)
         {
+            InterpreterResult? result = null;
+
+            directive = directive[1..];
+
             if (directive.Match(
                 (@"^(comments\-start|cs)(\b|$)", _ =>
                 {
                     _state |= LineParserState.InsideBlockComment;
                     ++_blockcomment_level;
-                }),
-                (@"^(comments\-end|ce)(\b|$)", _ =>
+                }), (@"^(comments\-end|ce)(\b|$)", _ =>
                 {
                     _blockcomment_level = Math.Max(0, _blockcomment_level - 1);
 
                     if (_blockcomment_level <= 0)
                         _state &= ~LineParserState.InsideBlockComment;
-                })
-            ) || _state.HasFlag(LineParserState.InsideBlockComment))
-                return InterpreterResult.OK;
+                }
+            )) || _state.HasFlag(LineParserState.InsideBlockComment))
+                result = InterpreterResult.OK;
 
-            return directive.Match(
-                null, // InterpreterResult.WellKnownError,
+            result ??= directive.Match(
+                null,
                 (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
                 (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
                 (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
-                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true))
+                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
+                (@"^notrayicon", (Match m) => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
+                (@"^onautoitstartregister\s+""(?<func>[^""]+)""", (Match m) => ProcessExpressionStatement(m.Groups["func"] + "()")),
+                (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
+                {
+                    string opt = m.Groups["option"].Value;
+                    string pars = m.Groups["params"].Value;
+
+                    // compiler opt
+
+                    throw new NotImplementedException();
+                }),
+                (@"^requireadmin", (Match m) =>
+                {
+                    // compiler opt
+
+                    throw new NotImplementedException();
+                })
             );
+
+            foreach (IDirectiveProcessor? proc in _directive_processors)
+                result ??= proc?.ProcessDirective(this, directive);
+
+            return result ?? WellKnownError("error.unparsable_dirctive", directive);
         }
 
-        private InterpreterResult ProcessInclude(string path, bool relative, bool once)
+        private InterpreterResult? ProcessStatement(string line) => throw new NotImplementedException();
+
+        private InterpreterResult? ProcessExpressionStatement(string line) => throw new NotImplementedException();
+    }
+
+    public interface IDirectiveProcessor
+    {
+        InterpreterResult? ProcessDirective(LineParser parser, string directive);
+    }
+
+    public interface ILineProcessor
+    {
+        bool CanProcessLine(string line);
+        
+        InterpreterResult? ProcessLine(LineParser parser, string line);
+
+
+        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<LineParser, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
+
+        private sealed class __from_delegate
+            : ILineProcessor
         {
-            throw new NotImplementedException();
+            private readonly Predicate<string> _canparse;
+            private readonly Func<LineParser, string, InterpreterResult?> _process;
+
+
+            public __from_delegate(Predicate<string> canparse, Func<LineParser, string, InterpreterResult?> process)
+            {
+                _canparse = canparse;
+                _process = process;
+            }
+
+            public bool CanProcessLine(string line) => _canparse(line);
+
+            public InterpreterResult? ProcessLine(LineParser parser, string line) => _process(parser, line);
         }
     }
 
