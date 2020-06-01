@@ -8,66 +8,56 @@ using System;
 
 using Unknown6656.Common;
 using Unknown6656.IO;
-using Unknown6656.Imaging;
-using Unknown6656.AutoIt3.Runtime;
 
-namespace Unknown6656.AutoIt3.Parser
+namespace Unknown6656.AutoIt3.Runtime
 {
-    public sealed class LineParser
-        : IEnumerator<string?>
-        , IEnumerable<string?>
+    public sealed class CallFrame
     {
-        private int _line_number;
+        private int _line_number = 0;
+        private int _char_index = -1;
 
 
         public FileInfo File { get; }
 
         public string[] Lines { get; }
 
-        public AU3Thread Thread { get; }
+        public AU3Thread CurrentThread { get; }
 
-        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number, -1);
+        public Interpreter Interpreter => CurrentThread.Interpreter;
 
-        public string? CurrentLine => _line_number < Lines.Length ? Lines[_line_number] : null;
+        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number, _char_index);
 
-        string? IEnumerator<string?>.Current => CurrentLine;
-
-        object? IEnumerator.Current => (this as IEnumerator<string?>).Current;
+        public string? CurrentLineContent => _line_number < Lines.Length ? Lines[_line_number] : null;
 
 
-        public LineParser(AU3Thread thread, SourceLocation start)
+        public CallFrame(AU3Thread thread, SourceLocation start)
         {
             File = start.FileName;
             _line_number = 0;
-            Thread = thread;
+            CurrentThread = thread;
             Lines = From.File(File).To.Lines();
 
             MoveTo(start.LineNumber);
-        }
-
-        public void Dispose()
-        {
         }
 
         public bool MoveNext() => ++_line_number < Lines.Length;
 
         public void MoveToStart() => MoveTo(0);
 
-        public bool MoveTo(int line) => (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
+        public bool MoveTo(int line)
+        {
+            bool cm = (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
 
-        public IEnumerator<string?> GetEnumerator() => this;
+            _char_index = 0;
 
-        IEnumerator IEnumerable.GetEnumerator() => this;
-
+            return cm;
+        }
 
 
 
         private LineParserState _state;
         private int _blockcomment_level;
-        private ScopeStack _scopestack = new ScopeStack();
 
-
-        void IEnumerator.Reset() => ResetParser();
 
         public void ResetParser()
         {
@@ -80,7 +70,7 @@ namespace Unknown6656.AutoIt3.Parser
 
         public InterpreterResult? ParseCurrentLine(Interpreter interpreter)
         {
-            string? line = CurrentLine;
+            string? line = CurrentLineContent;
             InterpreterResult? result = null;
 
             if (string.IsNullOrWhiteSpace(line) && !_state.HasFlag(LineParserState.LineContinuation))
@@ -217,26 +207,26 @@ namespace Unknown6656.AutoIt3.Parser
 
     public interface IDirectiveProcessor
     {
-        InterpreterResult? ProcessDirective(LineParser parser, string directive);
+        InterpreterResult? ProcessDirective(CallFrame parser, string directive);
     }
 
     public interface ILineProcessor
     {
         bool CanProcessLine(string line);
         
-        InterpreterResult? ProcessLine(LineParser parser, string line);
+        InterpreterResult? ProcessLine(CallFrame parser, string line);
 
 
-        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<LineParser, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
+        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
 
         private sealed class __from_delegate
             : ILineProcessor
         {
             private readonly Predicate<string> _canparse;
-            private readonly Func<LineParser, string, InterpreterResult?> _process;
+            private readonly Func<CallFrame, string, InterpreterResult?> _process;
 
 
-            public __from_delegate(Predicate<string> canparse, Func<LineParser, string, InterpreterResult?> process)
+            public __from_delegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process)
             {
                 _canparse = canparse;
                 _process = process;
@@ -244,7 +234,7 @@ namespace Unknown6656.AutoIt3.Parser
 
             public bool CanProcessLine(string line) => _canparse(line);
 
-            public InterpreterResult? ProcessLine(LineParser parser, string line) => _process(parser, line);
+            public InterpreterResult? ProcessLine(CallFrame parser, string line) => _process(parser, line);
         }
     }
 

@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System;
-
-using Unknown6656.AutoIt3.Parser;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -12,9 +12,12 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
         private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
         private readonly List<IIncludeResolver> _resolvers = new List<IIncludeResolver>();
+        private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
 
 
-        public LineParser Parser { get; }
+        public AU3Thread? MainThread { get; private set; }
+
+        public AU3Thread[] Threads => _threads.Keys.ToArray();
 
         public IReadOnlyList<ILineProcessor> LineProcessors => _line_processors;
 
@@ -23,9 +26,15 @@ namespace Unknown6656.AutoIt3.Runtime
         public IReadOnlyList<IIncludeResolver> IncludeResolvers => _resolvers;
 
 
-        public Interpreter(LineParser parser) => Parser = parser;
 
-        public void Dispose() => Parser.Dispose();
+        public void Dispose()
+        {
+            foreach (AU3Thread thread in Threads)
+            {
+                thread.Dispose();
+                _threads.TryRemove(thread, out _);
+            }
+        }
 
         public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
 
@@ -33,22 +42,56 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void RegisterIncludeResolver(IIncludeResolver resolver) => _resolvers.Add(resolver);
 
-        public InterpreterResult Run()
+        public AU3Thread StartNewThread(SourceLocation location)
         {
-            InterpreterResult? result = null;
+            AU3Thread thread = new AU3Thread(this);
 
-            Parser.MoveToStart();
+            thread.Start(location);
 
-            do
+            return thread;
+        }
+
+        internal void AddThread(AU3Thread thread) => _threads.TryAdd(thread, default);
+
+        internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
+
+
+
+
+        public InterpreterResult Run(SourceLocation entry_point)
+        {
+            try
             {
-                result = Parser.ParseCurrentLine();
+                using AU3Thread thread = StartNewThread(entry_point);
 
-                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
-                    break;
+                lock (this)
+                    MainThread = thread;
+
+
+                // TODO
+
+
+
+                InterpreterResult? result = null;
+
+                Parser.MoveToStart();
+
+                do
+                {
+                    result = Parser.ParseCurrentLine();
+
+                    if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
+                        break;
+                }
+                while (Parser.MoveNext());
+
+                return result ?? InterpreterResult.OK;
             }
-            while (Parser.MoveNext());
-
-            return result ?? InterpreterResult.OK;
+            finally
+            {
+                lock (this)
+                    MainThread = null;
+            }
         }
 
         public static InterpreterResult Run(CommandLineOptions opt)
@@ -56,12 +99,8 @@ namespace Unknown6656.AutoIt3.Runtime
             FileInfo input = new FileInfo(opt.FilePath);
 
             if (input.Exists)
-            {
-                using LineParser parser = new LineParser(input);
-                using Interpreter interpreter = new Interpreter(parser);
-
-                return interpreter.Run();
-            }
+                using (Interpreter interpreter = new Interpreter())
+                    return interpreter.Run(new SourceLocation(input, 0));
             else
                 return new InterpreterResult(-1, new InterpreterError(new SourceLocation(input, -1), $"The script file '{opt.FilePath}' could not be found."));
         }

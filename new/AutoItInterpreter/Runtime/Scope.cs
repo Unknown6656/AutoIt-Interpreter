@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System;
-using Unknown6656.AutoIt3.Parser;
-using System.Collections.Concurrent;
+
+using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -65,25 +66,68 @@ namespace Unknown6656.AutoIt3.Runtime
     }
 
     public sealed class AU3Thread
+        : IDisposable
     {
-        public ConcurrentStack<LineParser> CallStack { get; }
+        public ConcurrentStack<CallFrame> CallStack { get; } = new ConcurrentStack<CallFrame>();
 
-        public SourceLocation? CurrentLocation => CallStack.TryPeek(out LineParser? lp) ? lp.CurrentLocation : (SourceLocation?)null;
+        private ScopeStack ScopeStack { get; } = new ScopeStack();
+
+        public Interpreter Interpreter { get; }
+
+        public SourceLocation? CurrentLocation => CallStack.TryPeek(out CallFrame? lp) ? lp.CurrentLocation : (SourceLocation?)null;
+
+        public bool IsDisposed { get; private set; }
+
+        public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
 
 
-        public void PushFrame(SourceLocation target)
+        internal AU3Thread(Interpreter interpreter) => Interpreter = interpreter;
+
+        public CallFrame Start(SourceLocation target)
         {
-            LineParser parser = new LineParser(this, target);
+            Interpreter.AddThread(this);
+
+            return Push(target, null, ScopeType.Global);
+        }
+
+        public CallFrame PushFrame(SourceLocation target, string? name) => Push(target, name, ScopeType.Func);
+
+        private CallFrame Push(SourceLocation target, string? name, ScopeType type)
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AU3Thread));
+
+            CallFrame parser = new CallFrame(this, target);
+
+            name ??= target.FileName.FullName;
 
             CallStack.Push(parser);
-            parser.
+            ScopeStack.Push(type, name, target);
+
+            return parser;
         }
 
         public SourceLocation? PopFrame()
         {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AU3Thread));
+
             CallStack.TryPop(out _);
+            ScopeStack.Pop(ScopeType.Func);
 
             return CurrentLocation;
+        }
+
+        public void Dispose()
+        {
+            if (IsDisposed)
+                return;
+            else
+                IsDisposed = true;
+
+            Interpreter.RemoveThread(this);
+            CallStack.TryPop(out _);
+            ScopeStack.Pop(ScopeType.Global);
         }
     }
 
