@@ -3,12 +3,21 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30114.128
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{510D487F-32FE-4255-9D73-075A628121B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{510D487F-32FE-4255-9D73-075A628121B4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{BB97AD38-978A-437C-AAFB-47CC9DD16FED} = {BB97AD38-978A-437C-AAFB-47CC9DD16FED}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{60D6A33F-BC91-4317-B552-6366DB4E2D6A}"
+	ProjectSection(SolutionItems) = preProject
+		test\.gitignore = test\.gitignore
+		test\header-1.au3 = test\header-1.au3
+		test\header-2.au3 = test\header-2.au3
+		test\NPCBrainibot.au3 = test\NPCBrainibot.au3
+		test\program1.au3 = test\program1.au3
+		test\program2.au3 = test\program2.au3
+		test\test.au3 = test\test.au3
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{FF40DCDE-4803-4B83-9E99-4859187CBC5A}"
 EndProject

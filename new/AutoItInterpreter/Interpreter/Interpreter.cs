@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Interpreter
 {
@@ -21,13 +24,16 @@ namespace Unknown6656.AutoIt3.Interpreter
         {
             InterpreterResult? result = null;
 
-            while (Parser.MoveNext())
+            Parser.MoveToStart();
+
+            do
             {
-                result = ParseCurrentLine(Parser.CurrentLine);
+                result = Parser.ParseCurrentLine();
 
                 if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
                     break;
             }
+            while (Parser.MoveNext());
 
             return result ?? InterpreterResult.OK;
         }
@@ -38,16 +44,6 @@ namespace Unknown6656.AutoIt3.Interpreter
 
 
         private ScopeStack _scopestack = new ScopeStack();
-
-        private InterpreterResult? ParseCurrentLine(string? line)
-        {
-
-
-
-
-
-        }
-
 
 
 
