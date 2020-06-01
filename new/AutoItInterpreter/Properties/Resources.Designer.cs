@@ -61,8 +61,18 @@ namespace Unknown6656.AutoIt3.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 0.0.2.200531
-        ///acf51831911f07ad81605c8262cb29ccb4ae5804.
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] lang_en {
+            get {
+                object obj = ResourceManager.GetObject("lang_en", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 0.0.13.200601
+        ///2eaf218a2a0f02198503b717de877f5e9ec42be6.
         /// </summary>
         internal static string version {
             get {

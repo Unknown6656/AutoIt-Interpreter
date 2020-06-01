@@ -98,6 +98,8 @@ namespace Unknown6656.AutoIt3.Interpreter
 
             // TODO : parse statement
             // TODO : parse expression
+
+            throw new NotImplementedException();
         }
 
         private string TrimComment(string line)
@@ -122,9 +124,6 @@ namespace Unknown6656.AutoIt3.Interpreter
             return line.TrimEnd();
         }
 
-
-
-        
         private InterpreterResult? ProcessDirective(string directive)
         {
             if (directive.Match(
@@ -144,7 +143,7 @@ namespace Unknown6656.AutoIt3.Interpreter
                 return InterpreterResult.OK;
 
             return directive.Match(
-                InterpreterResult.Error,
+                null, // InterpreterResult.WellKnownError,
                 (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
                 (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
                 (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
@@ -154,7 +153,7 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         private InterpreterResult ProcessInclude(string path, bool relative, bool once)
         {
-
+            throw new NotImplementedException();
         }
     }
 

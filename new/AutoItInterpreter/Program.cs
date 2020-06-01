@@ -9,6 +9,7 @@ using Unknown6656.AutoIt3.Interpreter;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using Unknown6656.AutoIt3.Localization;
 
 namespace Unknown6656.AutoIt3
 {
@@ -17,19 +18,28 @@ namespace Unknown6656.AutoIt3
         [Option('B', "nobanner", Default = false, HelpText = "Suppresses the banner.")]
         public bool HideBanner { get; }
 
+        [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
+        public string Language { get; }
+
         [Value(0, HelpText = "The file path to the AutoIt-3 srcript.", Required = true)]
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, string filePath)
+        public CommandLineOptions(bool hideBanner, string language, string filePath)
         {
             HideBanner = hideBanner;
+            Language = language;
             FilePath = filePath;
         }
     }
 
     public static class Program
     {
+#nullable disable
+        public static LanguagePack CurrentLanguage { get; private set; }
+#nullable enable
+
+
         public static int Main(string[] argv)
         {
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
@@ -42,6 +52,16 @@ namespace Unknown6656.AutoIt3
 
                 Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
                 {
+                    if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLower(), out LanguagePack? lang))
+                        CurrentLanguage = lang;
+                    else
+                    {
+                        code = -1;
+                        PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LanguagePacks.Values.Select(p => p.LanguageCode))}'");
+
+                        return;
+                    }
+
                     if (!opt.HideBanner)
                         PrintBanner();
 
@@ -112,8 +132,8 @@ namespace Unknown6656.AutoIt3
   _| |_| | | | ||  __/ |  | |_) | | |  __/ ||  __/ |
  |_____|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|
                           | |
-                          |_|  Written by Unknown6656, 2020
-Version v.{Module.InterpreterVersion} ({Module.GitHash})
+                          |_|  {CurrentLanguage["banner.written_by", "Unknown6656, 2020"]}
+{CurrentLanguage["banner.version"]} v.{Module.InterpreterVersion} ({Module.GitHash})
 ");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
             Console.Write("    ");

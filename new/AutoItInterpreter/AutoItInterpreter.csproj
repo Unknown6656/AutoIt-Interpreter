@@ -24,11 +24,15 @@
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
     </PropertyGroup>
     <ItemGroup>
+      <None Remove="Localization\lang-en.json" />
+    </ItemGroup>
+    <ItemGroup>
         <Reference Include="unknown6656.core">
             <HintPath>..\lib\unknown6656.core.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <EmbeddedResource Include="Localization\lang-en.json" />
         <EmbeddedResource Include="version.txt" />
     </ItemGroup>
     <ItemGroup>

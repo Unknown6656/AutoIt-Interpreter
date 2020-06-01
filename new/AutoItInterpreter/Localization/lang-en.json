@@ -1,0 +1,21 @@
+{
+    "meta": {
+        "code": "en",
+        "name": "english",
+        "beta": true
+    },
+    "strings": {
+        "banner": {
+            "written_by": "Written by {0}",
+            "version": "Version"
+        },
+
+        // TODO
+
+
+
+        "error": {
+            "lol": "kay"
+        }
+    }
+}

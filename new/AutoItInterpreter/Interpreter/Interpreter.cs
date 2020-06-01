@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
-using Unknown6656.Common;
+﻿using System.IO;
+using System;
 
 namespace Unknown6656.AutoIt3.Interpreter
 {
@@ -76,6 +69,8 @@ namespace Unknown6656.AutoIt3.Interpreter
             ProgramExitCode = programExitCode;
             OptionalError = err;
         }
+
+        public static implicit operator InterpreterResult(InterpreterError err) => new InterpreterResult(-1, err);
     }
 
     public sealed class InterpreterError
@@ -89,6 +84,8 @@ namespace Unknown6656.AutoIt3.Interpreter
             Location = location;
             Message = message;
         }
+
+        public static InterpreterError WellKnown(Location loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
     }
 }
 
