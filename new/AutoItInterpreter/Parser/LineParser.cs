@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
@@ -8,9 +9,9 @@ using System;
 using Unknown6656.Common;
 using Unknown6656.IO;
 using Unknown6656.Imaging;
-using System.Diagnostics.CodeAnalysis;
+using Unknown6656.AutoIt3.Runtime;
 
-namespace Unknown6656.AutoIt3.Interpreter
+namespace Unknown6656.AutoIt3.Parser
 {
     public sealed class LineParser
         : IEnumerator<string?>
@@ -23,7 +24,9 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public string[] Lines { get; }
 
-        public Location CurrentLocation => new Location(File, _line_number, -1);
+        public AU3Thread Thread { get; }
+
+        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number, -1);
 
         public string? CurrentLine => _line_number < Lines.Length ? Lines[_line_number] : null;
 
@@ -32,11 +35,14 @@ namespace Unknown6656.AutoIt3.Interpreter
         object? IEnumerator.Current => (this as IEnumerator<string?>).Current;
 
 
-        public LineParser(FileInfo file)
+        public LineParser(AU3Thread thread, SourceLocation start)
         {
-            File = file;
+            File = start.FileName;
             _line_number = 0;
-            Lines = From.File(file).To.Lines();
+            Thread = thread;
+            Lines = From.File(File).To.Lines();
+
+            MoveTo(start.LineNumber);
         }
 
         public void Dispose()
@@ -47,9 +53,7 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public void MoveToStart() => MoveTo(0);
 
-        public bool MoveTo(int line) => (_line_number = Math.Min(line, Lines.Length)) < Lines.Length;
-
-        public void Reset() => _line_number = 0;
+        public bool MoveTo(int line) => (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
 
         public IEnumerator<string?> GetEnumerator() => this;
 
@@ -62,6 +66,8 @@ namespace Unknown6656.AutoIt3.Interpreter
         private int _blockcomment_level;
         private ScopeStack _scopestack = new ScopeStack();
 
+
+        void IEnumerator.Reset() => ResetParser();
 
         public void ResetParser()
         {

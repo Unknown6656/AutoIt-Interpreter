@@ -1,14 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System;
+using Unknown6656.AutoIt3.Parser;
+using System.Collections.Concurrent;
 
-namespace Unknown6656.AutoIt3.Interpreter
+namespace Unknown6656.AutoIt3.Runtime
 {
     using static Program;
 
 
-    public readonly struct Location
-        : IEquatable<Location>
+    public readonly struct SourceLocation
+        : IEquatable<SourceLocation>
     {
         /// <summary>
         /// The zero-based line number.
@@ -24,34 +26,34 @@ namespace Unknown6656.AutoIt3.Interpreter
         public readonly FileInfo FileName { get; }
 
 
-        public Location(FileInfo file, int line, int index = -1)
+        public SourceLocation(FileInfo file, int line, int index = -1)
         {
             FileName = file;
             LineNumber = line;
             CharIndex = index;
         }
 
-        public bool Equals(Location other) => Equals(LineNumber, other.LineNumber) && Equals(CharIndex, other.CharIndex) && Equals(FileName?.FullName, other.FileName?.FullName);
+        public bool Equals(SourceLocation other) => Equals(LineNumber, other.LineNumber) && Equals(CharIndex, other.CharIndex) && Equals(FileName?.FullName, other.FileName?.FullName);
 
-        public override bool Equals(object? obj) => obj is Location loc && Equals(loc);
+        public override bool Equals(object? obj) => obj is SourceLocation loc && Equals(loc);
 
         public override int GetHashCode() => HashCode.Combine(LineNumber, CharIndex, FileName?.FullName);
 
         public override string ToString() => $"\"{FileName}\", {CurrentLanguage["general.line"]} {LineNumber + 1}:{CharIndex + 1}";
 
-        public static bool operator ==(Location left, Location right) => left.Equals(right);
+        public static bool operator ==(SourceLocation left, SourceLocation right) => left.Equals(right);
 
-        public static bool operator !=(Location left, Location right) => !(left == right);
+        public static bool operator !=(SourceLocation left, SourceLocation right) => !(left == right);
     }
 
     public sealed class Variable
     {
         public string FullName { get; }
-        public Location DeclaredAt { get; }
         public object? Value { set; get; }
+        public SourceLocation DeclaredAt { get; }
 
 
-        public Variable(Location declaredAt, string full_name)
+        public Variable(SourceLocation declaredAt, string full_name)
         {
             DeclaredAt = declaredAt;
             FullName = full_name;
@@ -62,16 +64,39 @@ namespace Unknown6656.AutoIt3.Interpreter
         public override bool Equals(object? obj) => obj is Variable { FullName: string n } && string.Equals(FullName, n, StringComparison.InvariantCultureIgnoreCase);
     }
 
+    public sealed class AU3Thread
+    {
+        public ConcurrentStack<LineParser> CallStack { get; }
+
+        public SourceLocation? CurrentLocation => CallStack.TryPeek(out LineParser? lp) ? lp.CurrentLocation : (SourceLocation?)null;
+
+
+        public void PushFrame(SourceLocation target)
+        {
+            LineParser parser = new LineParser(this, target);
+
+            CallStack.Push(parser);
+            parser.
+        }
+
+        public SourceLocation? PopFrame()
+        {
+            CallStack.TryPop(out _);
+
+            return CurrentLocation;
+        }
+    }
+
     public sealed class ScopeStack
     {
-        private readonly Stack<Scope> _scopes = new Stack<Scope>();
+        private readonly ConcurrentStack<Scope> _scopes = new ConcurrentStack<Scope>();
         private readonly HashSet<Variable> _variables = new HashSet<Variable>();
 
 
 
-        public Scope? CurrentScope => _scopes.Count > 0 ? _scopes.Peek() : null;
+        public Scope? CurrentScope => _scopes.TryPeek(out Scope? scope) ? scope : null;
 
-        public Scope Push(ScopeType type, string name, Location location)
+        public Scope Push(ScopeType type, string name, SourceLocation location)
         {
             Scope scope = new Scope(this, CurrentScope, type, name, location);
 
@@ -87,7 +112,7 @@ namespace Unknown6656.AutoIt3.Interpreter
             else if (_scopes.Count == 0)
                 ; // error
             else
-                _scopes.Pop();
+                _scopes.TryPop(out _);
         }
     }
 
@@ -106,11 +131,11 @@ namespace Unknown6656.AutoIt3.Interpreter
 
         public string FullName => string.Concat(Parent?.FullName, DELIMITER, Name.ToLower());
 
-        public Location OpeningLocation { get; }
+        public SourceLocation OpeningLocation { get; }
 
 
 
-        internal Scope(ScopeStack stack, Scope? parent, ScopeType type, string name, Location openingLocation)
+        internal Scope(ScopeStack stack, Scope? parent, ScopeType type, string name, SourceLocation openingLocation)
         {
             Name = name;
             Type = type;

@@ -5,7 +5,7 @@ using System.Text;
 
 using CommandLine;
 
-using Unknown6656.AutoIt3.Interpreter;
+using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
@@ -68,7 +68,7 @@ namespace Unknown6656.AutoIt3
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
 
-                    InterpreterResult result = Interpreter.Interpreter.Run(opt);
+                    InterpreterResult result = Runtime.Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
                         PrintError($"{CurrentLanguage["error.error_in", err.Location]}:\n    {err.Message}");

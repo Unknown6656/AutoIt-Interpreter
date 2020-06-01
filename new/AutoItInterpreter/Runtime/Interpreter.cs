@@ -2,7 +2,9 @@
 using System.IO;
 using System;
 
-namespace Unknown6656.AutoIt3.Interpreter
+using Unknown6656.AutoIt3.Parser;
+
+namespace Unknown6656.AutoIt3.Runtime
 {
     public sealed class Interpreter
         : IDisposable
@@ -61,7 +63,7 @@ namespace Unknown6656.AutoIt3.Interpreter
                 return interpreter.Run();
             }
             else
-                return new InterpreterResult(-1, new InterpreterError(new Location(input, -1), $"The script file '{opt.FilePath}' could not be found."));
+                return new InterpreterResult(-1, new InterpreterError(new SourceLocation(input, -1), $"The script file '{opt.FilePath}' could not be found."));
         }
     }
 
@@ -84,17 +86,17 @@ namespace Unknown6656.AutoIt3.Interpreter
 
     public sealed class InterpreterError
     {
-        public Location Location { get; }
+        public SourceLocation Location { get; }
         public string Message { get; }
 
 
-        public InterpreterError(Location location, string message)
+        public InterpreterError(SourceLocation location, string message)
         {
             Location = location;
             Message = message;
         }
 
-        public static InterpreterError WellKnown(Location loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
     }
 }
 
