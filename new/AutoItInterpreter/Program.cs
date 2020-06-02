@@ -10,6 +10,7 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.IO;
 
 namespace Unknown6656.AutoIt3
 {
@@ -18,6 +19,12 @@ namespace Unknown6656.AutoIt3
         [Option('B', "nobanner", Default = false, HelpText = "Suppresses the banner.")]
         public bool HideBanner { get; }
 
+        [Option('N', "no-plugins", Default = false, HelpText = "Prevents the loading of interpreter plugins.")]
+        public bool DontLoadPlugins { get; }
+
+        [Option('q', "quiet", Default = false, HelpText = "Displays only the script's output.")]
+        public bool Quiet { get; }
+
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
         public string Language { get; }
 
@@ -25,9 +32,11 @@ namespace Unknown6656.AutoIt3
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, string language, string filePath)
+        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool quiet, string language, string filePath)
         {
             HideBanner = hideBanner;
+            DontLoadPlugins = dontLoadPlugins;
+            Quiet = quiet;
             Language = language;
             FilePath = filePath;
         }
@@ -35,8 +44,11 @@ namespace Unknown6656.AutoIt3
 
     public static class Program
     {
+        public const string PLUGIN_DIR = "./plugins/";
+        public const string LANG_DIR = "./lang/";
 #nullable disable
         public static LanguagePack CurrentLanguage { get; private set; }
+        public static CommandLineOptions CommandLineOptions { get; private set; }
 #nullable enable
 
 
@@ -52,6 +64,8 @@ namespace Unknown6656.AutoIt3
 
                 Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
                 {
+                    CommandLineOptions = opt;
+
                     if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLower(), out LanguagePack? lang))
                         CurrentLanguage = lang;
                     else
@@ -62,11 +76,14 @@ namespace Unknown6656.AutoIt3
                         return;
                     }
 
-                    if (!opt.HideBanner)
+                    if (!opt.HideBanner || opt.Quiet)
                         PrintBanner();
 
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
+
+                    if (!opt.Quiet)
+                        PrintInterpreterMessage($"Loaded language pack: {CurrentLanguage}");
 
                     InterpreterResult result = Runtime.Interpreter.Run(opt);
 
@@ -77,7 +94,7 @@ namespace Unknown6656.AutoIt3
                 }).WithNotParsed(errs => code = -1);
             }
             catch (Exception ex)
-            when (!Debugger.IsAttached)
+            // when (!Debugger.IsAttached)
             {
                 code = ex.HResult;
 
@@ -108,10 +125,53 @@ namespace Unknown6656.AutoIt3
         {
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Red;
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+
+            if (!CommandLineOptions.Quiet)
+            {
+                Console.WriteLine(@"
+                               ____
+                       __,-~~/~    `---.
+                     _/_,---(      ,    )
+                 __ /        <    /   )  \___
+  - ------===;;;'====------------------===;;;===----- -  -
+                    \/  ~:~'~^~'~ ~\~'~)~^/
+                    (_ (   \  (     >    \)
+                     \_( _ <         >_>'
+                        ~ `-i' ::>|--`'
+                            I;|.|.|
+                            | |: :|`
+                         .-=||  | |=-.       ___  ____  ____  __  ___  __
+                         `-=#$%&%$#=-'      / _ )/ __ \/ __ \/  |/  / / /
+                           .| ;  :|        / _  / /_/ / /_/ / /|_/ / /_/
+                          (`^':`-'.)      /____/\____/\____/_/  /_/ (_)
+______________________.,-#%&$@#&@%#&#~,.___________________________________");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
+                Console.WriteLine("            AW SHIT -- THE INTERPRETER JUST BLEW UP!\n");
+            }
+
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', Console.WindowWidth - 1));
+        }
+
+        internal static void PrintInterpreterMessage(string message)
+        {
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+            Console.Write($"[Interpreter]  ");
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+            Console.WriteLine(message);
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+        }
+
+        internal static void PrintScriptMessage(FileInfo script, string message)
+        {
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+            Console.Write($"[{script.Name}]  ");
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+            Console.WriteLine(message);
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
         }
 
         private static void PrintBanner()
@@ -139,7 +199,7 @@ namespace Unknown6656.AutoIt3
             Console.Write("    ");
             ConsoleExtensions.WriteUnderlined("WARNING!");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
-            Console.Write(" This may panic your CPU.\n");
+            Console.WriteLine(" This may panic your CPU.\n");
         }
     }
 

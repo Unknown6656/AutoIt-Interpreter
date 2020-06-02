@@ -1,10 +1,11 @@
 ﻿using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -108,7 +109,7 @@ namespace Unknown6656.AutoIt3.Runtime
             result ??= ProcessStatement(line);
             result ??= ProcessExpressionStatement(line);
 
-            foreach (ILineProcessor? proc in Interpreter.LineProcessors)
+            foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
                 if (result is { })
                     return result;
                 else if (proc?.CanProcessLine(line) ?? false)
@@ -195,7 +196,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 })
             );
 
-            foreach (IDirectiveProcessor? proc in Interpreter.DirectiveProcessors)
+            foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
                 result ??= proc?.ProcessDirective(this, directive);
 
             return result ?? WellKnownError("error.unparsable_dirctive", directive);
@@ -242,7 +243,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
             });
 
-            foreach (IStatementProcessor? proc in Interpreter.StatementProcessors)
+            foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
                     result ??= sp.ProcessStatement(this, line);
 

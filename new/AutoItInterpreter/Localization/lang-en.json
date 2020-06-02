@@ -11,10 +11,13 @@
         },
         "general": {
             "line": "Line",
-            "unknown": "unknown"
+            "unknown": "unknown",
+            "no_plugins_loaded": "No plugins have been loaded.",
+            "plugins_loaded": "{0} plugins have been loaded from the directory '{1}'."
         },
         "error": {
             "error_in": "ERROR in {0}",
+            "script_not_found": "The script file '{0}' could not be found.",
             "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed.",
             "unparsable_line": "The line '{0}' could not be parsed. The syntax is either (currently) unsupported, or no parser has been registered for this kind of statement/expression.",
             "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement.",

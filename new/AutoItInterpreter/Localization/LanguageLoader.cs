@@ -15,6 +15,8 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Localization
 {
+    using static Program;
+
     public sealed class LanguageLoader
     {
         public static ImmutableDictionary<string, LanguagePack> LanguagePacks { get; }
@@ -22,14 +24,13 @@ namespace Unknown6656.AutoIt3.Localization
 
         static LanguageLoader()
         {
-            const string dirname = nameof(Localization);
+            const string @namespace = nameof(Localization);
             Assembly asm = typeof(LanguageLoader).Assembly;
-            DirectoryInfo dir = new DirectoryInfo(asm.Location + "/../" + dirname);
             Dictionary<string, LanguagePack> langs = new Dictionary<string, LanguagePack>();
             Match? m = null;
 
             foreach ((string? code, string name) in from r in asm.GetManifestResourceNames()
-                                                   where r.Match($@"^.+\.{dirname}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", out m)
+                                                   where r.Match($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", out m)
                                                    select (m?.Groups["code"].Value.ToLower(), r))
                 try
                 {
@@ -43,7 +44,11 @@ namespace Unknown6656.AutoIt3.Localization
                 {
                 }
 
-            if (dir.Exists)
+            DirectoryInfo dir = new DirectoryInfo(asm.Location + "/../" + LANG_DIR);
+
+            if (!dir.Exists)
+                dir.Create();
+            else
                 foreach (FileInfo nfo in dir.EnumerateFiles("./*.json"))
                     try
                     {
