@@ -94,7 +94,7 @@ namespace Unknown6656.AutoIt3
                 }).WithNotParsed(errs => code = -1);
             }
             catch (Exception ex)
-            // when (!Debugger.IsAttached)
+            when (!Debugger.IsAttached)
             {
                 code = ex.HResult;
 
