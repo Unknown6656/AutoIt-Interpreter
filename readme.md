@@ -9,18 +9,19 @@ This repository contains _two_ AutoIt-Interpreters:
     This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be exceuted on any platform supporting .NET.
     <br/>
     Truth be told, the interpiler is not super stable on non-Windows platforms. That is why I am working on a ...
- 2. [The "new" (.net5-based) **AutoIt Interpreter**.](new/readme.md)
+ 2. [The "new" (.net5-based) **AutoIt3 Interpreter**.](new/readme.md)
     <br/>
     This will primarily only support the AutoIt3-specification (without all the fancy AutoIt++-sh█t).
 
 
 #### Comparison:
 
-Category | [AutoIt++ Interpiler](old/readme.md)| [AutoIt Interpreter](new/readme.md)
+Category | [AutoIt++ Interpiler](old/readme.md)| [AutoIt3 Interpreter](new/readme.md)
 ---------|---------------------|--------------------
 Supported Language | AutoIt++ | Strict AutoIt 3
 Works as an ... | Interpiler:<br/>60% compiler, 30% interpreter, 10% magic | Interpreter
 Written in | F#, C#|C#
+Target Framework | .NET Core 2.1 | .NET 5
 Works on Windows | Yup | Hopefully
 Works on Linux | Kinda | Hopefully
 Works on MacOs | Kinda | Hopefully
