@@ -10,8 +10,10 @@
             "version": "Version"
         },
         "general": {
-            "line": "Line",
+            "line": "line",
             "unknown": "unknown",
+            "langpack_found": "{0} language pack(s) found.",
+            "loaded_langpack": "Loaded language pack: {0}",
             "no_plugins_loaded": "No plugins have been loaded.",
             "plugins_loaded": "{0} plugins have been loaded from the directory '{1}'."
         },

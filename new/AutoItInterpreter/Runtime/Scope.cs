@@ -19,10 +19,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         public readonly int LineNumber { get; }
         /// <summary>
-        /// The zero-based char index.
-        /// </summary>
-        public readonly int CharIndex { get; }
-        /// <summary>
         /// The source file path.
         /// </summary>
         public readonly FileInfo FileName { get; }
@@ -30,20 +26,19 @@ namespace Unknown6656.AutoIt3.Runtime
         public bool IsUnknown => Equals(Unknown);
 
 
-        public SourceLocation(FileInfo file, int line, int index = -1)
+        public SourceLocation(FileInfo file, int line)
         {
             FileName = file;
             LineNumber = line;
-            CharIndex = index;
         }
 
-        public bool Equals(SourceLocation other) => Equals(LineNumber, other.LineNumber) && Equals(CharIndex, other.CharIndex) && Equals(FileName?.FullName, other.FileName?.FullName);
+        public bool Equals(SourceLocation other) => Equals(LineNumber, other.LineNumber) && Equals(FileName?.FullName, other.FileName?.FullName);
 
         public override bool Equals(object? obj) => obj is SourceLocation loc && Equals(loc);
 
-        public override int GetHashCode() => HashCode.Combine(LineNumber, CharIndex, FileName?.FullName);
+        public override int GetHashCode() => HashCode.Combine(LineNumber, FileName?.FullName);
 
-        public override string ToString() => $"\"{FileName}\", {CurrentLanguage["general.line"]} {LineNumber + 1}:{CharIndex + 1}";
+        public override string ToString() => $"\"{FileName}\", {CurrentLanguage["general.line"]} {LineNumber + 1}";
 
         public static bool operator ==(SourceLocation left, SourceLocation right) => left.Equals(right);
 
@@ -66,104 +61,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public override int GetHashCode() => FullName.ToLower().GetHashCode();
 
         public override bool Equals(object? obj) => obj is Variable { FullName: string n } && string.Equals(FullName, n, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    public sealed class AU3Thread
-        : IDisposable
-    {
-        private static int _tid = 0;
-        private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
-
-
-        public ScopeStack ScopeStack { get; }
-
-        public Interpreter Interpreter { get; }
-
-        public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
-
-        public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
-
-        public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
-
-        public bool IsDisposed { get; private set; }
-
-        public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
-
-        public int ThreadID { get; }
-
-
-        internal AU3Thread(Interpreter interpreter)
-        {
-            ThreadID = ++_tid;
-            Interpreter = interpreter;
-            ScopeStack = new ScopeStack(this);
-        }
-
-        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
-
-        public CallFrame Create(SourceLocation target)
-        {
-            Interpreter.AddThread(this);
-
-            return Push(target, null, ScopeType.Global);
-        }
-
-        public CallFrame PushFrame(SourceLocation target, string? name) => Push(target, name, ScopeType.Func);
-
-        private CallFrame Push(SourceLocation target, string? name, ScopeType type)
-        {
-            if (IsDisposed)
-                throw new ObjectDisposedException(nameof(AU3Thread));
-
-            CallFrame parser = new CallFrame(this, target);
-
-            name ??= target.FileName.FullName;
-
-            _callstack.Push(parser);
-            ScopeStack.Push(type, name, target);
-
-            return parser;
-        }
-
-        public SourceLocation? PopFrame()
-        {
-            if (IsDisposed)
-                throw new ObjectDisposedException(nameof(AU3Thread));
-
-            _callstack.TryPop(out _);
-            ScopeStack.Pop(ScopeType.Func);
-
-            return CurrentLocation;
-        }
-
-        public InterpreterResult Run()
-        {
-            InterpreterResult? result = null;
-
-            while (CurrentFrame is CallFrame frame)
-            {
-                result = frame.ParseCurrentLine();
-
-                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
-                    break;
-                else if (!frame.MoveNext())
-                    break;
-            }
-
-            return result ?? InterpreterResult.OK;
-        }
-
-        public void Dispose()
-        {
-            if (IsDisposed)
-                return;
-            else
-                IsDisposed = true;
-
-            Interpreter.RemoveThread(this);
-            _callstack.TryPop(out _);
-            ScopeStack.Pop(ScopeType.Global);
-        }
     }
 
     public sealed class ScopeStack

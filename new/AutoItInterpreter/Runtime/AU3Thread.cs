@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System;
@@ -9,10 +10,104 @@ using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
+    public sealed class AU3Thread
+        : IDisposable
+    {
+        private static int _tid = 0;
+        private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
+
+
+        public ScopeStack ScopeStack { get; }
+
+        public Interpreter Interpreter { get; }
+
+        public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
+
+        public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
+
+        public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
+
+        public bool IsDisposed { get; private set; }
+
+        public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
+
+        public int ThreadID { get; }
+
+
+        internal AU3Thread(Interpreter interpreter, SourceLocation target)
+        {
+            ThreadID = ++_tid;
+            Interpreter = interpreter;
+            ScopeStack = new ScopeStack(this);
+
+            Interpreter.AddThread(this);
+
+            Push(target, null, ScopeType.Global);
+        }
+
+        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
+
+        public CallFrame PushFrame(SourceLocation target, string? name) => Push(target, name, ScopeType.Func);
+
+        private CallFrame Push(SourceLocation target, string? name, ScopeType type)
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AU3Thread));
+
+            CallFrame parser = new CallFrame(this, target);
+
+            name ??= target.FileName.FullName;
+
+            _callstack.Push(parser);
+            ScopeStack.Push(type, name, target);
+
+            return parser;
+        }
+
+        public SourceLocation? PopFrame()
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AU3Thread));
+
+            _callstack.TryPop(out _);
+            ScopeStack.Pop(ScopeType.Func);
+
+            return CurrentLocation;
+        }
+
+        public InterpreterResult Run()
+        {
+            InterpreterResult? result = null;
+
+            while (CurrentFrame is CallFrame frame)
+            {
+                result = frame.ParseCurrentLine();
+
+                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
+                    break;
+                else if (!frame.MoveNext())
+                    break;
+            }
+
+            return result ?? InterpreterResult.OK;
+        }
+
+        public void Dispose()
+        {
+            if (IsDisposed)
+                return;
+            else
+                IsDisposed = true;
+
+            Interpreter.RemoveThread(this);
+            _callstack.TryPop(out _);
+            ScopeStack.Pop(ScopeType.Global);
+        }
+    }
+
     public sealed class CallFrame
     {
         private int _line_number = 0;
-        private int _char_index = -1;
 
 
         public FileInfo File { get; }
@@ -25,7 +120,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
-        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number, _char_index);
+        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number);
 
         public string? CurrentLineContent => _line_number < Lines.Length ? Lines[_line_number] : null;
 
@@ -37,21 +132,14 @@ namespace Unknown6656.AutoIt3.Runtime
             CurrentThread = thread;
             Lines = From.File(File).To.Lines();
 
-            MoveTo(start.LineNumber);
+            _line_number = start.LineNumber;
         }
 
         public bool MoveNext() => ++_line_number < Lines.Length;
 
-        public void MoveToStart() => MoveTo(0);
+        // public void MoveToStart() => MoveTo(0);
 
-        public bool MoveTo(int line)
-        {
-            bool cm = (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
-
-            _char_index = 0;
-
-            return cm;
-        }
+        // public bool MoveTo(int line) => (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
 
 
 
@@ -59,12 +147,11 @@ namespace Unknown6656.AutoIt3.Runtime
         private int _blockcomment_level;
 
 
-        public void ResetParser()
-        {
-            _state = LineParserState.Regular;
-
-            MoveToStart();
-        }
+        // public void ResetParser()
+        // {
+        //     _state = LineParserState.Regular;
+        //     _line_number = 0;
+        // }
 
         private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
 
@@ -206,11 +293,12 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
             {
-                [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>)\s*\)\s*$"] = m =>
+                [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
                 {
                     string name = m.Groups["name"].Value;
                     string args = m.Groups["args"].Value;
 
+                    _state |= LineParserState.InsideBlockComment;
 
 
                     throw new NotImplementedException();
@@ -260,5 +348,6 @@ namespace Unknown6656.AutoIt3.Runtime
         Regular = 0,
         InsideBlockComment = 1,
         LineContinuation = 2,
+        InsideFunc = 4,
     }
 }

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 using CommandLine;
 
@@ -10,7 +11,6 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.IO;
 
 namespace Unknown6656.AutoIt3
 {
@@ -83,7 +83,10 @@ namespace Unknown6656.AutoIt3
                     ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
 
                     if (!opt.Quiet)
-                        PrintInterpreterMessage($"Loaded language pack: {CurrentLanguage}");
+                    {
+                        PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
+                        PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
+                    }
 
                     InterpreterResult result = Runtime.Interpreter.Run(opt);
 

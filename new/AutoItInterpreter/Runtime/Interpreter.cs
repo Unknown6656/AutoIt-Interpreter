@@ -23,10 +23,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public PluginLoader PluginLoader { get; }
 
+        public ScriptCache ScriptCache { get; }
+
 
         public Interpreter(CommandLineOptions opt)
         {
             CommandLineOptions = opt;
+            ScriptCache = new ScriptCache(this);
             PluginLoader = new PluginLoader(new DirectoryInfo(PLUGIN_DIR));
 
             if (!opt.DontLoadPlugins)
@@ -50,9 +53,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread CreateNewThread(SourceLocation location)
         {
-            AU3Thread thread = new AU3Thread(this);
-
-            thread.Create(location);
+            AU3Thread thread = new AU3Thread(this, location);
 
             return thread;
         }
