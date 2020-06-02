@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -42,11 +43,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void RegisterIncludeResolver(IIncludeResolver resolver) => _resolvers.Add(resolver);
 
-        public AU3Thread StartNewThread(SourceLocation location)
+        public AU3Thread CreateNewThread(SourceLocation location)
         {
             AU3Thread thread = new AU3Thread(this);
 
-            thread.Start(location);
+            thread.Create(location);
 
             return thread;
         }
@@ -55,37 +56,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-
-
-
         public InterpreterResult Run(SourceLocation entry_point)
         {
             try
             {
-                using AU3Thread thread = StartNewThread(entry_point);
+                using AU3Thread thread = CreateNewThread(entry_point);
 
                 lock (this)
                     MainThread = thread;
 
-
-                // TODO
-
-
-
-                InterpreterResult? result = null;
-
-                Parser.MoveToStart();
-
-                do
-                {
-                    result = Parser.ParseCurrentLine();
-
-                    if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
-                        break;
-                }
-                while (Parser.MoveNext());
-
-                return result ?? InterpreterResult.OK;
+                return thread.Run();
             }
             finally
             {
@@ -125,17 +105,55 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class InterpreterError
     {
-        public SourceLocation Location { get; }
+        public SourceLocation? Location { get; }
         public string Message { get; }
 
 
-        public InterpreterError(SourceLocation location, string message)
+        public InterpreterError(SourceLocation? location, string message)
         {
             Location = location;
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+    }
+
+    public interface IDirectiveProcessor
+    {
+        InterpreterResult? ProcessDirective(CallFrame parser, string directive);
+    }
+
+    public interface ILineProcessor
+    {
+        bool CanProcessLine(string line);
+
+        InterpreterResult? ProcessLine(CallFrame parser, string line);
+
+
+        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
+
+        private sealed class __from_delegate
+            : ILineProcessor
+        {
+            private readonly Predicate<string> _canparse;
+            private readonly Func<CallFrame, string, InterpreterResult?> _process;
+
+
+            public __from_delegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process)
+            {
+                _canparse = canparse;
+                _process = process;
+            }
+
+            public bool CanProcessLine(string line) => _canparse(line);
+
+            public InterpreterResult? ProcessLine(CallFrame parser, string line) => _process(parser, line);
+        }
+    }
+
+    public interface IIncludeResolver
+    {
+        bool TryResolve(string path, [MaybeNullWhen(false), NotNullWhen(true)] out (FileInfo physical_file, string content)? resolved);
     }
 }
 

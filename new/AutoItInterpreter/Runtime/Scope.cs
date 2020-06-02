@@ -1,9 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System;
-
-using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -13,6 +12,8 @@ namespace Unknown6656.AutoIt3.Runtime
     public readonly struct SourceLocation
         : IEquatable<SourceLocation>
     {
+        public static SourceLocation Unknown { get; } = new SourceLocation(new FileInfo($"<{CurrentLanguage["general.unknown"]}>"), 0);
+
         /// <summary>
         /// The zero-based line number.
         /// </summary>
@@ -25,6 +26,8 @@ namespace Unknown6656.AutoIt3.Runtime
         /// The source file path.
         /// </summary>
         public readonly FileInfo FileName { get; }
+
+        public bool IsUnknown => Equals(Unknown);
 
 
         public SourceLocation(FileInfo file, int line, int index = -1)
@@ -68,22 +71,35 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class AU3Thread
         : IDisposable
     {
-        public ConcurrentStack<CallFrame> CallStack { get; } = new ConcurrentStack<CallFrame>();
+        private static int _tid = 0;
+        private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
 
-        private ScopeStack ScopeStack { get; } = new ScopeStack();
+
+        public ScopeStack ScopeStack { get; }
 
         public Interpreter Interpreter { get; }
 
-        public SourceLocation? CurrentLocation => CallStack.TryPeek(out CallFrame? lp) ? lp.CurrentLocation : (SourceLocation?)null;
+        public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
+
+        public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
 
         public bool IsDisposed { get; private set; }
 
         public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
 
+        public int ThreadID { get; }
 
-        internal AU3Thread(Interpreter interpreter) => Interpreter = interpreter;
 
-        public CallFrame Start(SourceLocation target)
+        internal AU3Thread(Interpreter interpreter)
+        {
+            ThreadID = ++_tid;
+            Interpreter = interpreter;
+            ScopeStack = new ScopeStack(this);
+        }
+
+        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
+
+        public CallFrame Create(SourceLocation target)
         {
             Interpreter.AddThread(this);
 
@@ -101,7 +117,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             name ??= target.FileName.FullName;
 
-            CallStack.Push(parser);
+            _callstack.Push(parser);
             ScopeStack.Push(type, name, target);
 
             return parser;
@@ -112,10 +128,27 @@ namespace Unknown6656.AutoIt3.Runtime
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
-            CallStack.TryPop(out _);
+            _callstack.TryPop(out _);
             ScopeStack.Pop(ScopeType.Func);
 
             return CurrentLocation;
+        }
+
+        public InterpreterResult Run()
+        {
+            InterpreterResult? result = null;
+
+            while (CurrentFrame is CallFrame frame)
+            {
+                result = frame.ParseCurrentLine();
+
+                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
+                    break;
+                else if (!frame.MoveNext())
+                    break;
+            }
+
+            return result ?? InterpreterResult.OK;
         }
 
         public void Dispose()
@@ -126,7 +159,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 IsDisposed = true;
 
             Interpreter.RemoveThread(this);
-            CallStack.TryPop(out _);
+            _callstack.TryPop(out _);
             ScopeStack.Pop(ScopeType.Global);
         }
     }
@@ -137,8 +170,14 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly HashSet<Variable> _variables = new HashSet<Variable>();
 
 
+        // TODO : var resolving
 
         public Scope? CurrentScope => _scopes.TryPeek(out Scope? scope) ? scope : null;
+
+        public AU3Thread Thread { get; }
+
+
+        internal ScopeStack(AU3Thread thread) => Thread = thread;
 
         public Scope Push(ScopeType type, string name, SourceLocation location)
         {
@@ -149,14 +188,23 @@ namespace Unknown6656.AutoIt3.Runtime
             return scope;
         }
 
-        public void Pop(ScopeType type)
+        public InterpreterResult Pop(params ScopeType[] types)
         {
-            if (CurrentScope?.Type != type)
-                ; // error
+            if (types.Length == 0)
+                throw new ArgumentException("The collection of scope types must not be empty.", nameof(types));
+
+            ScopeType curr = CurrentScope?.Type ?? ScopeType.Global;
+
+            if (!types.Contains(curr))
+                return InterpreterError.WellKnown(Thread.CurrentLocation, "error.no_matching_close", curr, CurrentScope?.OpeningLocation ?? SourceLocation.Unknown);
             else if (_scopes.Count == 0)
                 ; // error
             else
+            {
                 _scopes.TryPop(out _);
+
+                return InterpreterResult.OK;
+            }
         }
     }
 
@@ -203,5 +251,6 @@ namespace Unknown6656.AutoIt3.Runtime
         Else,
         Select,
         Switch,
+        Case,
     }
 }

@@ -1,13 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
+﻿using System.Text.RegularExpressions;
 using System.IO;
 using System;
 
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -23,6 +20,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread CurrentThread { get; }
 
+        public ScopeStack ScopeStack => CurrentThread.ScopeStack;
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
         public SourceLocation CurrentLocation => new SourceLocation(File, _line_number, _char_index);
@@ -30,7 +29,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public string? CurrentLineContent => _line_number < Lines.Length ? Lines[_line_number] : null;
 
 
-        public CallFrame(AU3Thread thread, SourceLocation start)
+        internal CallFrame(AU3Thread thread, SourceLocation start)
         {
             File = start.FileName;
             _line_number = 0;
@@ -68,7 +67,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
 
-        public InterpreterResult? ParseCurrentLine(Interpreter interpreter)
+        public InterpreterResult? ParseCurrentLine()
         {
             string? line = CurrentLineContent;
             InterpreterResult? result = null;
@@ -175,7 +174,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
                 (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
                 (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
-                (@"^notrayicon", (Match m) => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
+                (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
                 (@"^onautoitstartregister\s+""(?<func>[^""]+)""", (Match m) => ProcessExpressionStatement(m.Groups["func"] + "()")),
                 (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
                 {
@@ -186,7 +185,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     throw new NotImplementedException();
                 }),
-                (@"^requireadmin", (Match m) =>
+                (@"^requireadmin", _ =>
                 {
                     // compiler opt
 
@@ -194,53 +193,53 @@ namespace Unknown6656.AutoIt3.Runtime
                 })
             );
 
-            foreach (IDirectiveProcessor? proc in _directive_processors)
+            foreach (IDirectiveProcessor? proc in Interpreter.DirectiveProcessors)
                 result ??= proc?.ProcessDirective(this, directive);
 
             return result ?? WellKnownError("error.unparsable_dirctive", directive);
         }
 
-        private InterpreterResult? ProcessStatement(string line) => throw new NotImplementedException();
+        private InterpreterResult? ProcessStatement(string line)
+        {
+            InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            {
+                [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>)\s*\)\s*$"] = m =>
+                {
+                    string name = m.Groups["name"].Value;
+                    string args = m.Groups["args"].Value;
+
+
+
+                },
+                ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
+                ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
+                ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
+                [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+                {
+                    int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
+                    InterpreterResult? result = InterpreterResult.OK;
+
+                    while (level-- > 1)
+                        result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+
+                    // TODO : continue
+
+
+                },
+                [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+                {
+                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+                    InterpreterResult? result = InterpreterResult.OK;
+
+                    while (level-- > 0)
+                        result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+
+                    return result;
+                },
+            });
+        }
 
         private InterpreterResult? ProcessExpressionStatement(string line) => throw new NotImplementedException();
-    }
-
-    public interface IDirectiveProcessor
-    {
-        InterpreterResult? ProcessDirective(CallFrame parser, string directive);
-    }
-
-    public interface ILineProcessor
-    {
-        bool CanProcessLine(string line);
-        
-        InterpreterResult? ProcessLine(CallFrame parser, string line);
-
-
-        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
-
-        private sealed class __from_delegate
-            : ILineProcessor
-        {
-            private readonly Predicate<string> _canparse;
-            private readonly Func<CallFrame, string, InterpreterResult?> _process;
-
-
-            public __from_delegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process)
-            {
-                _canparse = canparse;
-                _process = process;
-            }
-
-            public bool CanProcessLine(string line) => _canparse(line);
-
-            public InterpreterResult? ProcessLine(CallFrame parser, string line) => _process(parser, line);
-        }
-    }
-
-    public interface IIncludeResolver
-    {
-        bool TryResolve(string path, [MaybeNullWhen(false), NotNullWhen(true)] out (FileInfo physical_file, string content)? resolved);
     }
 
     [Flags]

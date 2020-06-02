@@ -71,7 +71,7 @@ namespace Unknown6656.AutoIt3
                     InterpreterResult result = Runtime.Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
-                        PrintError($"{CurrentLanguage["error.error_in", err.Location]}:\n    {err.Message}");
+                        PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
 
                     code = result.ProgramExitCode;
                 }).WithNotParsed(errs => code = -1);
