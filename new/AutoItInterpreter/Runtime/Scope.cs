@@ -83,6 +83,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
 
+        public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
+
         public bool IsDisposed { get; private set; }
 
         public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
@@ -198,7 +200,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (!types.Contains(curr))
                 return InterpreterError.WellKnown(Thread.CurrentLocation, "error.no_matching_close", curr, CurrentScope?.OpeningLocation ?? SourceLocation.Unknown);
             else if (_scopes.Count == 0)
-                ; // error
+                return InterpreterError.WellKnown(Thread.CurrentLocation, "error.unexpected_close", Thread.CurrentLineContent, curr);
             else
             {
                 _scopes.TryPop(out _);

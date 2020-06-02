@@ -12,9 +12,10 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
         private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
+        private readonly List<IStatementProcessor> _statement_processors = new List<IStatementProcessor>();
         private readonly List<IIncludeResolver> _resolvers = new List<IIncludeResolver>();
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
-
+        private readonly object _main_thread_mutex = new object();
 
         public AU3Thread? MainThread { get; private set; }
 
@@ -23,6 +24,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public IReadOnlyList<ILineProcessor> LineProcessors => _line_processors;
 
         public IReadOnlyList<IDirectiveProcessor> DirectiveProcessors => _directive_processors;
+
+        public IReadOnlyList<IStatementProcessor> StatementProcessors => _statement_processors;
 
         public IReadOnlyList<IIncludeResolver> IncludeResolvers => _resolvers;
 
@@ -40,6 +43,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
 
         public void RegisterDirectiveProcessor(IDirectiveProcessor proc) => _directive_processors.Add(proc);
+
+        public void RegisterStatementProcessor(IStatementProcessor proc) => _statement_processors.Add(proc);
 
         public void RegisterIncludeResolver(IIncludeResolver resolver) => _resolvers.Add(resolver);
 
@@ -62,14 +67,14 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 using AU3Thread thread = CreateNewThread(entry_point);
 
-                lock (this)
+                lock (_main_thread_mutex)
                     MainThread = thread;
 
                 return thread.Run();
             }
             finally
             {
-                lock (this)
+                lock (_main_thread_mutex)
                     MainThread = null;
             }
         }
@@ -115,19 +120,26 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
     }
 
     public interface IDirectiveProcessor
     {
-        InterpreterResult? ProcessDirective(CallFrame parser, string directive);
+        InterpreterResult? ProcessDirective(CallFrame frame, string directive);
+    }
+
+    public interface IStatementProcessor
+    {
+        string Regex { get; }
+
+        InterpreterResult? ProcessStatement(CallFrame frame, string directive);
     }
 
     public interface ILineProcessor
     {
         bool CanProcessLine(string line);
 
-        InterpreterResult? ProcessLine(CallFrame parser, string line);
+        InterpreterResult? ProcessLine(CallFrame frame, string line);
 
 
         public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process) => new __from_delegate(canparse, process);

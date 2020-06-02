@@ -17,7 +17,8 @@
             "error_in": "ERROR in {0}",
             "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed.",
             "unparsable_line": "The line '{0}' could not be parsed. The syntax is either (currently) unsupported, or no parser has been registered for this kind of statement/expression.",
-            "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement."
+            "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement.",
+            "unexpected_close": "Unexpected statement '{0}': A {1}-statement must be opened before it can be closed."
         }
     }
 }

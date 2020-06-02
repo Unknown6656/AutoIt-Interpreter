@@ -50,7 +50,7 @@ namespace Unknown6656.AutoIt3
                 Console.OutputEncoding = Encoding.Unicode;
                 Console.InputEncoding = Encoding.Unicode;
 
-                Runtime.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
+                Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
                 {
                     if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLower(), out LanguagePack? lang))
                         CurrentLanguage = lang;

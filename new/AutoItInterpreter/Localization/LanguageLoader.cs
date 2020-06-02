@@ -71,7 +71,7 @@ namespace Unknown6656.AutoIt3.Localization
 
         public string this[string key] => _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpper()}]";
 
-        public string this[string key, params object[] args] => string.Format(this[key], args);
+        public string this[string key, params object?[] args] => string.Format(this[key], args);
 
         [JsonProperty("meta.code")]
         public string LanguageCode { get; private set; } = "";

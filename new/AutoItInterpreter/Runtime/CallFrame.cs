@@ -100,8 +100,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (string.IsNullOrWhiteSpace(line))
                 return InterpreterResult.OK;
 
-            if (line.StartsWith('#'))
-                result ??= ProcessDirective(line[1..]);
+            result ??= ProcessDirective(line);
 
             if (_state.HasFlag(LineParserState.InsideBlockComment))
                 return InterpreterResult.OK;
@@ -151,7 +150,10 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             InterpreterResult? result = null;
 
-            directive = directive[1..];
+            if (!directive.StartsWith('#'))
+                return result;
+            else
+                directive = directive[1..];
 
             if (directive.Match(
                 (@"^(comments\-start|cs)(\b|$)", _ =>
@@ -210,6 +212,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
 
+                    throw new NotImplementedException();
                 },
                 ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
                 ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
@@ -225,6 +228,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     // TODO : continue
 
 
+                    throw new NotImplementedException();
                 },
                 [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
                 {
@@ -237,6 +241,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     return result;
                 },
             });
+
+            foreach (IStatementProcessor? proc in Interpreter.StatementProcessors)
+                if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
+                    result ??= sp.ProcessStatement(this, line);
+
+            return result;
         }
 
         private InterpreterResult? ProcessExpressionStatement(string line) => throw new NotImplementedException();
