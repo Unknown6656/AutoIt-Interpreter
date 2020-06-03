@@ -17,8 +17,6 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
 
 
-        public ScopeStack ScopeStack { get; }
-
         public Interpreter Interpreter { get; }
 
         public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
@@ -38,39 +36,34 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             ThreadID = ++_tid;
             Interpreter = interpreter;
-            ScopeStack = new ScopeStack(this);
-
             Interpreter.AddThread(this);
 
-            Push(target, null, ScopeType.Global);
+            CreateCallFrame(target);
         }
 
         public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
 
-        public CallFrame PushFrame(SourceLocation target, string? name) => Push(target, name, ScopeType.Func);
-
-        private CallFrame Push(SourceLocation target, string? name, ScopeType type)
+        private CallFrame CreateCallFrame(SourceLocation target)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
-            CallFrame parser = new CallFrame(this, target);
+            CallFrame frame = new CallFrame(this, target);
 
-            name ??= target.FileName.FullName;
+            Interpreter.ScriptCache.;
+            // TODO :
 
-            _callstack.Push(parser);
-            ScopeStack.Push(type, name, target);
+            _callstack.Push(frame);
 
-            return parser;
+            return frame;
         }
 
-        public SourceLocation? PopFrame()
+        public SourceLocation? PopCallFrame()
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
             _callstack.TryPop(out _);
-            ScopeStack.Pop(ScopeType.Func);
 
             return CurrentLocation;
         }
@@ -84,8 +77,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 result = frame.ParseCurrentLine();
 
                 if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
-                    break;
-                else if (!frame.MoveNext())
                     break;
             }
 
@@ -116,8 +107,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread CurrentThread { get; }
 
-        public ScopeStack ScopeStack => CurrentThread.ScopeStack;
-
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
         public SourceLocation CurrentLocation => new SourceLocation(File, _line_number);
@@ -136,10 +125,6 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public bool MoveNext() => ++_line_number < Lines.Length;
-
-        // public void MoveToStart() => MoveTo(0);
-
-        // public bool MoveTo(int line) => (_line_number = Math.Max(0, Math.Min(line, Lines.Length))) < Lines.Length;
 
 
 
@@ -205,29 +190,6 @@ namespace Unknown6656.AutoIt3.Runtime
             return result ?? WellKnownError("error.unparsable_line");
         }
 
-        private string TrimComment(string? line)
-        {
-            Match m;
-
-            if (string.IsNullOrWhiteSpace(line))
-                return "";
-            else if (line.Contains(';'))
-                if (line.Match(@"\;[^\""\']*$", out m))
-                    line = line[..m.Index];
-                else
-                {
-                    string before = line[..line.IndexOf(';')];
-
-                    if (!line.Contains("$\"") && ((before.CountOccurences("\"") % 2) == 0) && (before.CountOccurences("'") % 2) == 0)
-                        line = before.Trim();
-                    else if (line.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
-                        line = line[..m.Groups["cmt"].Index];
-                    else if (line.Match(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", out m))
-                        line = line[..m.Groups["cmt"].Index];
-                }
-
-            return line.TrimEnd();
-        }
 
         private InterpreterResult ProcessInclude(string path, bool relative, bool once)
         {

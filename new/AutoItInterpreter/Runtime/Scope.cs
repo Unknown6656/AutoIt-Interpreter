@@ -45,111 +45,111 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator !=(SourceLocation left, SourceLocation right) => !(left == right);
     }
 
-    public sealed class Variable
-    {
-        public string FullName { get; }
-        public object? Value { set; get; }
-        public SourceLocation DeclaredAt { get; }
+    //public sealed class Variable
+    //{
+    //    public string FullName { get; }
+    //    public object? Value { set; get; }
+    //    public SourceLocation DeclaredAt { get; }
 
 
-        public Variable(SourceLocation declaredAt, string full_name)
-        {
-            DeclaredAt = declaredAt;
-            FullName = full_name;
-        }
+    //    public Variable(SourceLocation declaredAt, string full_name)
+    //    {
+    //        DeclaredAt = declaredAt;
+    //        FullName = full_name;
+    //    }
 
-        public override int GetHashCode() => FullName.ToLower().GetHashCode();
+    //    public override int GetHashCode() => FullName.ToLower().GetHashCode();
 
-        public override bool Equals(object? obj) => obj is Variable { FullName: string n } && string.Equals(FullName, n, StringComparison.InvariantCultureIgnoreCase);
-    }
+    //    public override bool Equals(object? obj) => obj is Variable { FullName: string n } && string.Equals(FullName, n, StringComparison.InvariantCultureIgnoreCase);
+    //}
 
-    public sealed class ScopeStack
-    {
-        private readonly ConcurrentStack<Scope> _scopes = new ConcurrentStack<Scope>();
-        private readonly HashSet<Variable> _variables = new HashSet<Variable>();
-
-
-        // TODO : var resolving
-
-        public Scope? CurrentScope => _scopes.TryPeek(out Scope? scope) ? scope : null;
-
-        public AU3Thread Thread { get; }
+    //public sealed class ScopeStack
+    //{
+    //    private readonly ConcurrentStack<Scope> _scopes = new ConcurrentStack<Scope>();
+    //    private readonly HashSet<Variable> _variables = new HashSet<Variable>();
 
 
-        internal ScopeStack(AU3Thread thread) => Thread = thread;
+    //    // TODO : var resolving
 
-        public Scope Push(ScopeType type, string name, SourceLocation location)
-        {
-            Scope scope = new Scope(this, CurrentScope, type, name, location);
+    //    public Scope? CurrentScope => _scopes.TryPeek(out Scope? scope) ? scope : null;
 
-            _scopes.Push(scope);
-
-            return scope;
-        }
-
-        public InterpreterResult Pop(params ScopeType[] types)
-        {
-            if (types.Length == 0)
-                throw new ArgumentException("The collection of scope types must not be empty.", nameof(types));
-
-            ScopeType curr = CurrentScope?.Type ?? ScopeType.Global;
-
-            if (!types.Contains(curr))
-                return InterpreterError.WellKnown(Thread.CurrentLocation, "error.no_matching_close", curr, CurrentScope?.OpeningLocation ?? SourceLocation.Unknown);
-            else if (_scopes.Count == 0)
-                return InterpreterError.WellKnown(Thread.CurrentLocation, "error.unexpected_close", Thread.CurrentLineContent, curr);
-            else
-            {
-                _scopes.TryPop(out _);
-
-                return InterpreterResult.OK;
-            }
-        }
-    }
-
-    public sealed class Scope
-    {
-        public const string DELIMITER = "::";
+    //    public AU3Thread Thread { get; }
 
 
-        public string Name { get; }
+    //    internal ScopeStack(AU3Thread thread) => Thread = thread;
 
-        public ScopeType Type { get; }
+    //    public Scope Push(ScopeType type, string name, SourceLocation location)
+    //    {
+    //        Scope scope = new Scope(this, CurrentScope, type, name, location);
 
-        public ScopeStack Stack { get; }
+    //        _scopes.Push(scope);
 
-        public Scope? Parent { get; }
+    //        return scope;
+    //    }
 
-        public string FullName => string.Concat(Parent?.FullName, DELIMITER, Name.ToLower());
+    //    public InterpreterResult Pop(params ScopeType[] types)
+    //    {
+    //        if (types.Length == 0)
+    //            throw new ArgumentException("The collection of scope types must not be empty.", nameof(types));
 
-        public SourceLocation OpeningLocation { get; }
+    //        ScopeType curr = CurrentScope?.Type ?? ScopeType.Global;
+
+    //        if (!types.Contains(curr))
+    //            return InterpreterError.WellKnown(Thread.CurrentLocation, "error.no_matching_close", curr, CurrentScope?.OpeningLocation ?? SourceLocation.Unknown);
+    //        else if (_scopes.Count == 0)
+    //            return InterpreterError.WellKnown(Thread.CurrentLocation, "error.unexpected_close", Thread.CurrentLineContent, curr);
+    //        else
+    //        {
+    //            _scopes.TryPop(out _);
+
+    //            return InterpreterResult.OK;
+    //        }
+    //    }
+    //}
+
+    //public sealed class Scope
+    //{
+    //    public const string DELIMITER = "::";
+
+
+    //    public string Name { get; }
+
+    //    public ScopeType Type { get; }
+
+    //    public ScopeStack Stack { get; }
+
+    //    public Scope? Parent { get; }
+
+    //    public string FullName => string.Concat(Parent?.FullName, DELIMITER, Name.ToLower());
+
+    //    public SourceLocation OpeningLocation { get; }
 
 
 
-        internal Scope(ScopeStack stack, Scope? parent, ScopeType type, string name, SourceLocation openingLocation)
-        {
-            Name = name;
-            Type = type;
-            Stack = stack;
-            Parent = parent;
-            OpeningLocation = openingLocation;
-        }
-    }
+    //    internal Scope(ScopeStack stack, Scope? parent, ScopeType type, string name, SourceLocation openingLocation)
+    //    {
+    //        Name = name;
+    //        Type = type;
+    //        Stack = stack;
+    //        Parent = parent;
+    //        OpeningLocation = openingLocation;
+    //    }
+    //}
 
-    public enum ScopeType
-    {
-        Global,
-        Func,
-        With,
-        For,
-        ForIn,
-        While,
-        Do,
-        If,
-        ElseIf,
-        Else,
-        Select,
-        Switch,
-        Case,
-    }
+    //public enum ScopeType
+    //{
+    //    Global,
+    //    Func,
+    //    With,
+    //    For,
+    //    ForIn,
+    //    While,
+    //    Do,
+    //    If,
+    //    ElseIf,
+    //    Else,
+    //    Select,
+    //    Switch,
+    //    Case,
+    //}
 }
