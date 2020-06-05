@@ -4,6 +4,7 @@ using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -21,15 +22,15 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CommandLineOptions CommandLineOptions { get; }
 
-        public PluginLoader PluginLoader { get; }
+        public ScriptScanner ScriptScanner { get; }
 
-        public ScriptCache ScriptCache { get; }
+        public PluginLoader PluginLoader { get; }
 
 
         public Interpreter(CommandLineOptions opt)
         {
             CommandLineOptions = opt;
-            ScriptCache = new ScriptCache(this);
+            ScriptScanner = new ScriptScanner(this);
             PluginLoader = new PluginLoader(new DirectoryInfo(PLUGIN_DIR));
 
             if (!opt.DontLoadPlugins)
@@ -51,9 +52,9 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        public AU3Thread CreateNewThread(SourceLocation location)
+        public AU3Thread CreateNewThread(ScannedFunction function)
         {
-            AU3Thread thread = new AU3Thread(this, location);
+            AU3Thread thread = new AU3Thread(this, function);
 
             return thread;
         }
@@ -62,7 +63,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-        public InterpreterResult Run(SourceLocation entry_point)
+        public InterpreterResult Run(ScannedFunction entry_point)
         {
             try
             {
@@ -80,13 +81,17 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction);
+
+        public InterpreterResult Run(FileInfo script) => ScriptScanner.ScanScriptFile(script).Match(err => err, Run);
+
         public static InterpreterResult Run(CommandLineOptions opt)
         {
             FileInfo input = new FileInfo(opt.FilePath);
 
             if (input.Exists)
                 using (Interpreter interpreter = new Interpreter(opt))
-                    return interpreter.Run(new SourceLocation(input, 0));
+                    return interpreter.Run(input);
             else
                 return InterpreterError.WellKnown(new SourceLocation(input, -1), "error.script_not_found", opt.FilePath);
         }
@@ -97,7 +102,10 @@ namespace Unknown6656.AutoIt3.Runtime
         public static InterpreterResult OK { get; } = new InterpreterResult(0, null);
 
         public int ProgramExitCode { get; }
+
         public InterpreterError? OptionalError { get; }
+
+        public bool IsOK => OptionalError is null && ProgramExitCode == 0;
 
 
         public InterpreterResult(int programExitCode, InterpreterError? err = null)

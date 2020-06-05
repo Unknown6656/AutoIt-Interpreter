@@ -7,4 +7,6 @@ ConsoleWrite($b & @CRLF);
 
 func test($b)
    $b = 42
-endfunc
+endfunc _
+#cs
+#ce

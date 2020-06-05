@@ -23,6 +23,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
 
+        public ScannedFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
+
         public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
 
         public bool IsDisposed { get; private set; }
@@ -32,33 +34,30 @@ namespace Unknown6656.AutoIt3.Runtime
         public int ThreadID { get; }
 
 
-        internal AU3Thread(Interpreter interpreter, SourceLocation target)
+        internal AU3Thread(Interpreter interpreter)
         {
             ThreadID = ++_tid;
             Interpreter = interpreter;
             Interpreter.AddThread(this);
-
-            CreateCallFrame(target);
         }
 
-        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
-
-        private CallFrame CreateCallFrame(SourceLocation target)
+        public InterpreterResult? Start(ScannedFunction function)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
-            CallFrame frame = new CallFrame(this, target);
-
-            Interpreter.ScriptCache.;
-            // TODO :
+            CallFrame frame = new CallFrame(this, function);
 
             _callstack.Push(frame);
 
-            return frame;
+            InterpreterResult? result = frame.Exec();
+
+            _callstack.TryPop(out _);
+
+            return result;
         }
 
-        public SourceLocation? PopCallFrame()
+        internal SourceLocation? ExitCall()
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -68,20 +67,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return CurrentLocation;
         }
 
-        public InterpreterResult Run()
-        {
-            InterpreterResult? result = null;
-
-            while (CurrentFrame is CallFrame frame)
-            {
-                result = frame.ParseCurrentLine();
-
-                if (result?.OptionalError is { } || (result?.ProgramExitCode ?? 0) != 0)
-                    break;
-            }
-
-            return result ?? InterpreterResult.OK;
-        }
+        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
 
         public void Dispose()
         {
@@ -92,104 +78,119 @@ namespace Unknown6656.AutoIt3.Runtime
 
             Interpreter.RemoveThread(this);
             _callstack.TryPop(out _);
-            ScopeStack.Pop(ScopeType.Global);
+
+            if (!_callstack.IsEmpty)
+                throw new InvalidOperationException("The execution stack is not empty.");
         }
     }
 
     public sealed class CallFrame
     {
-        private int _line_number = 0;
+        private volatile int _instruction_pointer = 0;
+        private (SourceLocation LineLocation, string LineContent)[] _line_cache;
 
-
-        public FileInfo File { get; }
-
-        public string[] Lines { get; }
 
         public AU3Thread CurrentThread { get; }
 
+        public ScannedFunction CurrentFunction { get; }
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
-        public SourceLocation CurrentLocation => new SourceLocation(File, _line_number);
+        public SourceLocation CurrentLocation => _line_cache[_instruction_pointer].LineLocation;
 
-        public string? CurrentLineContent => _line_number < Lines.Length ? Lines[_line_number] : null;
+        public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
 
 
-        internal CallFrame(AU3Thread thread, SourceLocation start)
+        internal CallFrame(AU3Thread thread, ScannedFunction function)
         {
-            File = start.FileName;
-            _line_number = 0;
             CurrentThread = thread;
-            Lines = From.File(File).To.Lines();
-
-            _line_number = start.LineNumber;
+            CurrentFunction = function;
+            _line_cache = function.Lines;
+            _instruction_pointer = 0;
         }
 
-        public bool MoveNext() => ++_line_number < Lines.Length;
 
 
 
-        private LineParserState _state;
-        private int _blockcomment_level;
 
 
-        // public void ResetParser()
-        // {
-        //     _state = LineParserState.Regular;
-        //     _line_number = 0;
-        // }
+        private bool MoveNext()
+        {
+            if (_instruction_pointer < _line_cache.Length)
+            {
+                ++_instruction_pointer;
+        
+                return true;
+            }
+            else
+                return false;
+        }
 
-        private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+        internal InterpreterResult? Exec()
+        {
+
+        }
+
+        public SourceLocation Call(ScannedFunction function)
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AU3Thread));
+
+            CallFrame frame = new CallFrame(this, function);
+
+            _callstack.Push(frame);
+
+            // exec frame
+            // TODO : check if script init
+
+
+
+            InterpreterResult? result = null;
+
+            while (CurrentFrame is CallFrame frame)
+            {
+                Interpreter.ScriptScanner.;
+                frame.CurrentFunction.Script;
+
+
+                result = frame.ParseCurrentLine();
+
+                if (!(result?.IsOK ?? true))
+                    break;
+            }
+
+            return result ?? InterpreterResult.OK;
+        }
+
+
+
 
         public InterpreterResult? ParseCurrentLine()
         {
-            string? line = CurrentLineContent;
-            InterpreterResult? result = null;
+            //(SourceLocation loc, string line) = _line_cache[_instruction_pointer];
+            //InterpreterResult? result = null;
 
-            if (string.IsNullOrWhiteSpace(line) && !_state.HasFlag(LineParserState.LineContinuation))
-                return InterpreterResult.OK;
+            //if (string.IsNullOrWhiteSpace(line))
+            //    return InterpreterResult.OK;
 
-            line = TrimComment(line);
+            //result ??= ProcessDirective(line);
 
-            int index = line.Length;
+            //if (_state.HasFlag(LineParserState.InsideBlockComment))
+            //    return InterpreterResult.OK;
 
-            line = line.TrimStart();
-            index -= line.Length;
+            //result ??= ProcessStatement(line);
+            //result ??= ProcessExpressionStatement(line);
 
-            if (line.Match(@"(\s|^)_$", out Match m))
-            {
-                _state |= LineParserState.LineContinuation;
-                line = line[..m.Index];
+            //foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
+            //    if (result is { })
+            //        return result;
+            //    else if (proc?.CanProcessLine(line) ?? false)
+            //        result ??= proc?.ProcessLine(this, line);
 
-                // TODO : line continuation
-            }
-            else
-                _state &= ~LineParserState.LineContinuation;
+            //return result ?? WellKnownError("error.unparsable_line");
 
-            if (_state.HasFlag(LineParserState.LineContinuation))
-            {
-                // TODO : line continuation
-            }
-
-            if (string.IsNullOrWhiteSpace(line))
-                return InterpreterResult.OK;
-
-            result ??= ProcessDirective(line);
-
-            if (_state.HasFlag(LineParserState.InsideBlockComment))
-                return InterpreterResult.OK;
-
-            result ??= ProcessStatement(line);
-            result ??= ProcessExpressionStatement(line);
-
-            foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
-                if (result is { })
-                    return result;
-                else if (proc?.CanProcessLine(line) ?? false)
-                    result ??= proc?.ProcessLine(this, line);
-
-            return result ?? WellKnownError("error.unparsable_line");
+            throw new NotImplementedException();
         }
-
 
         private InterpreterResult ProcessInclude(string path, bool relative, bool once)
         {
@@ -198,118 +199,118 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult? ProcessDirective(string directive)
         {
-            InterpreterResult? result = null;
+            //InterpreterResult? result = null;
 
-            if (!directive.StartsWith('#'))
-                return result;
-            else
-                directive = directive[1..];
+            //if (!directive.StartsWith('#'))
+            //    return result;
+            //else
+            //    directive = directive[1..];
 
-            if (directive.Match(
-                (@"^(comments\-start|cs)(\b|$)", _ =>
-                {
-                    _state |= LineParserState.InsideBlockComment;
-                    ++_blockcomment_level;
-                }), (@"^(comments\-end|ce)(\b|$)", _ =>
-                {
-                    _blockcomment_level = Math.Max(0, _blockcomment_level - 1);
+            //if (directive.Match(
+            //    (@"^(comments\-start|cs)(\b|$)", _ =>
+            //    {
+            //        _state |= LineParserState.InsideBlockComment;
+            //        ++_blockcomment_level;
+            //    }), (@"^(comments\-end|ce)(\b|$)", _ =>
+            //    {
+            //        _blockcomment_level = Math.Max(0, _blockcomment_level - 1);
 
-                    if (_blockcomment_level <= 0)
-                        _state &= ~LineParserState.InsideBlockComment;
-                }
-            )) || _state.HasFlag(LineParserState.InsideBlockComment))
-                result = InterpreterResult.OK;
+            //        if (_blockcomment_level <= 0)
+            //            _state &= ~LineParserState.InsideBlockComment;
+            //    }
+            //)) || _state.HasFlag(LineParserState.InsideBlockComment))
+            //    result = InterpreterResult.OK;
 
-            result ??= directive.Match(
-                null,
-                (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
-                (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
-                (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
-                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
-                (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
-                (@"^onautoitstartregister\s+""(?<func>[^""]+)""", (Match m) => ProcessExpressionStatement(m.Groups["func"] + "()")),
-                (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
-                {
-                    string opt = m.Groups["option"].Value;
-                    string pars = m.Groups["params"].Value;
+            //result ??= directive.Match(
+            //    null,
+            //    (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
+            //    (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
+            //    (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
+            //    (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
+            //    (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
+            //    (@"^onautoitstartregister\s+""(?<func>[^""]+)""", (Match m) => ProcessExpressionStatement(m.Groups["func"] + "()")),
+            //    (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
+            //    {
+            //        string opt = m.Groups["option"].Value;
+            //        string pars = m.Groups["params"].Value;
 
-                    // compiler opt
+            //        // compiler opt
 
-                    throw new NotImplementedException();
-                }),
-                (@"^requireadmin", _ =>
-                {
-                    // compiler opt
+            //        throw new NotImplementedException();
+            //    }),
+            //    (@"^requireadmin", _ =>
+            //    {
+            //        // compiler opt
 
-                    throw new NotImplementedException();
-                })
-            );
+            //        throw new NotImplementedException();
+            //    })
+            //);
 
-            foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
-                result ??= proc?.ProcessDirective(this, directive);
+            //foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
+            //    result ??= proc?.ProcessDirective(this, directive);
 
-            return result ?? WellKnownError("error.unparsable_dirctive", directive);
+            //return result ?? WellKnownError("error.unparsable_dirctive", directive);
+
+            throw new NotImplementedException();
         }
 
         private InterpreterResult? ProcessStatement(string line)
         {
-            InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
-            {
-                [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
-                {
-                    string name = m.Groups["name"].Value;
-                    string args = m.Groups["args"].Value;
+            //InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            //{
+            //    [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
+            //    {
+            //        string name = m.Groups["name"].Value;
+            //        string args = m.Groups["args"].Value;
 
-                    _state |= LineParserState.InsideBlockComment;
-
-
-                    throw new NotImplementedException();
-                },
-                ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
-                ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
-                ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
-                [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
-                {
-                    int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
-                    InterpreterResult? result = InterpreterResult.OK;
-
-                    while (level-- > 1)
-                        result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
-
-                    // TODO : continue
+            //        _state |= LineParserState.InsideBlockComment;
 
 
-                    throw new NotImplementedException();
-                },
-                [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-                {
-                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-                    InterpreterResult? result = InterpreterResult.OK;
+            //        throw new NotImplementedException();
+            //    },
+            //    ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
+            //    ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
+            //    ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
+            //    [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+            //    {
+            //        int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
+            //        InterpreterResult? result = InterpreterResult.OK;
 
-                    while (level-- > 0)
-                        result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+            //        while (level-- > 1)
+            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
 
-                    return result;
-                },
-            });
+            //        // TODO : continue
 
-            foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
-                if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
-                    result ??= sp.ProcessStatement(this, line);
 
-            return result;
+            //        throw new NotImplementedException();
+            //    },
+            //    [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+            //    {
+            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+            //        InterpreterResult? result = InterpreterResult.OK;
+
+            //        while (level-- > 0)
+            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+
+            //        return result;
+            //    },
+            //});
+
+            //foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
+            //    if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
+            //        result ??= sp.ProcessStatement(this, line);
+
+            //return result;
+
+            throw new NotImplementedException();
         }
 
-        private InterpreterResult? ProcessExpressionStatement(string line) => throw new NotImplementedException();
-    }
+        private InterpreterResult? ProcessExpressionStatement(string line)
+        {
+            throw new NotImplementedException();
+        }
 
-    [Flags]
-    internal enum LineParserState
-         : uint
-    {
-        Regular = 0,
-        InsideBlockComment = 1,
-        LineContinuation = 2,
-        InsideFunc = 4,
+
+        private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
     }
 }
