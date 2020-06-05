@@ -41,7 +41,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     bool handled = line.Match(
                         (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
                         (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                        (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value))
+                        (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                        (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
                     );
 
                     if (handled || comment_lvl > 0)
@@ -90,7 +91,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private static string TrimComment(string? line)
         {
-
             if (string.IsNullOrWhiteSpace(line))
                 return "";
             else if (line.Contains(';'))
@@ -116,14 +116,17 @@ namespace Unknown6656.AutoIt3.Runtime
         : IEquatable<ScannedScript>
     {
         private readonly Dictionary<string, ScannedFunction> _functions = new Dictionary<string, ScannedFunction>();
-        private readonly List<string> _startup = new List<string>();
+        private readonly List<(string func, SourceLocation decl)> _startup = new List<(string, SourceLocation)>();
+        private readonly List<(string func, SourceLocation decl)> _exit = new List<(string, SourceLocation)>();
 
 
         public ImmutableDictionary<string, ScannedFunction> Functions => _functions.ToImmutableDictionary();
 
         public ScannedFunction MainFunction => _functions[ScannedFunction.GLOBAL_FUNC];
 
-        public ScannedFunction[] StartupFunctions => _startup.ToArray(GetOrCreateFunction);
+        public ScannedScriptState State { get; private set; } = ScannedScriptState.Unloaded;
+
+        public bool IsLoaded => State == ScannedScriptState.Loaded;
 
         public FileInfo Location { get; }
 
@@ -135,7 +138,55 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal ScannedFunction AddFunction(ScannedFunction function) => _functions[function.Name.ToLower()] = function;
 
-        internal void AddStartupFunction(string name) => _startup.Add(name.ToLower());
+        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToLower(), decl));
+
+        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToLower(), decl));
+
+        public InterpreterResult LoadScript(CallFrame frame)
+        {
+            if (State == ScannedScriptState.Loaded)
+                return InterpreterResult.OK;
+
+            State = ScannedScriptState.Loaded;
+
+            InterpreterResult? result = null;
+
+            foreach ((string name, SourceLocation loc) in _startup)
+                if (_functions.TryGetValue(name, out ScannedFunction? func))
+                {
+                    if (result?.IsOK ?? false)
+                        result = null;
+
+                    result ??= frame.Call(func);
+                }
+                else
+                    return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
+
+            return result ?? InterpreterResult.OK;
+        }
+
+        public InterpreterResult UnLoadScript(CallFrame frame)
+        {
+            if (State == ScannedScriptState.Unloaded)
+                return InterpreterResult.OK;
+
+            State = ScannedScriptState.Unloaded;
+
+            InterpreterResult? result = null;
+
+            foreach ((string name, SourceLocation loc) in _exit)
+                if (_functions.TryGetValue(name, out ScannedFunction? func))
+                {
+                    if (result?.IsOK ?? false)
+                        result = null;
+
+                    result ??= frame.Call(func);
+                }
+                else
+                    return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
+
+            return result ?? InterpreterResult.OK;
+        }
 
         public override int GetHashCode() => Location.FullName.GetHashCode();
 
@@ -204,5 +255,11 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator ==(ScannedFunction? s1, ScannedFunction? s2) => s1?.Equals(s2) ?? s2 is null;
 
         public static bool operator !=(ScannedFunction? s1, ScannedFunction? s2) => !(s1 == s2);
+    }
+
+    public enum ScannedScriptState
+    {
+        Unloaded,
+        Loaded
     }
 }

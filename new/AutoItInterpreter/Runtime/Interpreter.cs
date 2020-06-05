@@ -36,11 +36,10 @@ namespace Unknown6656.AutoIt3.Runtime
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
 
-            if (!opt.Quiet)
-                Program.PrintInterpreterMessage(PluginLoader.LoadedPlugins.Count switch {
-                    0 => CurrentLanguage["general.no_plugins_loaded"],
-                    int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName],
-                });
+            PrintInterpreterMessage(PluginLoader.LoadedPlugins.Count switch {
+                0 => CurrentLanguage["general.no_plugins_loaded"],
+                int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName],
+            });
         }
 
         public void Dispose()
@@ -52,12 +51,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        public AU3Thread CreateNewThread(ScannedFunction function)
-        {
-            AU3Thread thread = new AU3Thread(this, function);
-
-            return thread;
-        }
+        public AU3Thread CreateNewThread() => new AU3Thread(this);
 
         internal void AddThread(AU3Thread thread) => _threads.TryAdd(thread, default);
 
@@ -67,12 +61,12 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             try
             {
-                using AU3Thread thread = CreateNewThread(entry_point);
+                using AU3Thread thread = CreateNewThread();
 
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                return thread.Run();
+                return thread.Start(entry_point);
             }
             finally
             {

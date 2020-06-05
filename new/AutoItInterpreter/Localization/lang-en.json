@@ -28,7 +28,9 @@
             "unexpected_line_cont": "Unexpected line continuation.",
             "unexpected_func": "Unexpected 'Func'-declaration. Did you mean 'EndFunc' to close the function '{0}'?",
             "unexpected_endfunc": "Unexpected 'EndFunc'-statement. Did you mean to declare a function?",
-            "duplicate_function": "Duplicate function declaration '{0}'. This function has already been declared on in {1}."
+            "duplicate_function": "Duplicate function declaration '{0}'. This function has already been declared on in {1}.",
+            "unresolved_func": "Unresolved function name '{0}'.",
+            "thread_already_running": "The thread 0x{0:x4} is already executing a function."
         }
     }
 }

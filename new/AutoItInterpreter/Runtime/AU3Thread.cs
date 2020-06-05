@@ -7,14 +7,16 @@ using System;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Threading;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
     public sealed class AU3Thread
         : IDisposable
     {
-        private static int _tid = 0;
+        private static volatile int _tid = 0;
         private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
+        private volatile bool _running = false;
 
 
         public Interpreter Interpreter { get; }
@@ -39,22 +41,40 @@ namespace Unknown6656.AutoIt3.Runtime
             ThreadID = ++_tid;
             Interpreter = interpreter;
             Interpreter.AddThread(this);
+
+            Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public InterpreterResult? Start(ScannedFunction function)
+        public InterpreterResult Start(ScannedFunction function)
+        {
+            if (_running)
+                return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
+            else
+                _running = true;
+
+            InterpreterResult res = Call(function);
+
+            _running = false;
+
+            return res;
+        }
+
+        internal InterpreterResult Call(ScannedFunction function)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
+            CallFrame? old = CurrentFrame;
             CallFrame frame = new CallFrame(this, function);
 
             _callstack.Push(frame);
 
             InterpreterResult? result = frame.Exec();
 
-            _callstack.TryPop(out _);
+            while (!ReferenceEquals(CurrentFrame, old))
+                _callstack.TryPop(out _);
 
-            return result;
+            return result ?? InterpreterResult.OK;
         }
 
         internal SourceLocation? ExitCall()
@@ -78,6 +98,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             Interpreter.RemoveThread(this);
             _callstack.TryPop(out _);
+
+            Program.PrintDebugMessage($"Disposed thread {this}");
 
             if (!_callstack.IsEmpty)
                 throw new InvalidOperationException("The execution stack is not empty.");
@@ -109,11 +131,6 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
-
-
-
-
-
         private bool MoveNext()
         {
             if (_instruction_pointer < _line_cache.Length)
@@ -128,66 +145,93 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal InterpreterResult? Exec()
         {
-
-        }
-
-        public SourceLocation Call(ScannedFunction function)
-        {
-            if (IsDisposed)
-                throw new ObjectDisposedException(nameof(AU3Thread));
-
-            CallFrame frame = new CallFrame(this, function);
-
-            _callstack.Push(frame);
-
-            // exec frame
-            // TODO : check if script init
-
-
-
+            ScannedScript script = CurrentFunction.Script;
             InterpreterResult? result = null;
 
-            while (CurrentFrame is CallFrame frame)
-            {
-                Interpreter.ScriptScanner.;
-                frame.CurrentFunction.Script;
+            if (CurrentFunction.IsMainFunction)
+                result = script.LoadScript(this);
 
+            Program.PrintDebugMessage($"Executing {CurrentFunction}");
 
-                result = frame.ParseCurrentLine();
+            while (_instruction_pointer < _line_cache.Length)
+                if (result?.IsOK ?? true)
+                {
+                    result = ParseCurrentLine();
 
-                if (!(result?.IsOK ?? true))
+                    if (!MoveNext())
+                        break;
+                }
+                else
                     break;
-            }
 
-            return result ?? InterpreterResult.OK;
+            if (CurrentFunction.IsMainFunction && (result?.IsOK ?? true))
+                result = script.UnLoadScript(this);
+
+            return result;
         }
 
-
-
+        public InterpreterResult Call(ScannedFunction function) => CurrentThread.Call(function);
 
         public InterpreterResult? ParseCurrentLine()
         {
-            //(SourceLocation loc, string line) = _line_cache[_instruction_pointer];
-            //InterpreterResult? result = null;
+            (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
+            InterpreterResult? result = null;
 
-            //if (string.IsNullOrWhiteSpace(line))
-            //    return InterpreterResult.OK;
+            if (string.IsNullOrWhiteSpace(line))
+                return InterpreterResult.OK;
 
-            //result ??= ProcessDirective(line);
+            Program.PrintDebugMessage($"({loc})  {line}");
 
-            //if (_state.HasFlag(LineParserState.InsideBlockComment))
-            //    return InterpreterResult.OK;
+            Func<string, InterpreterResult?>[] handlers =
+            {
+                ProcessDirective,
+                ProcessStatement,
+                ProcessExpressionStatement,
+                UseExternalLineProcessors,
+            };
 
-            //result ??= ProcessStatement(line);
-            //result ??= ProcessExpressionStatement(line);
+            foreach (Func<string, InterpreterResult?> func in handlers)
+                if (result?.IsOK ?? true)
+                    result = func(line);
 
-            //foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
-            //    if (result is { })
-            //        return result;
-            //    else if (proc?.CanProcessLine(line) ?? false)
-            //        result ??= proc?.ProcessLine(this, line);
+            return (result?.IsOK ?? true) ? result : WellKnownError("error.unparsable_line");
+        }
 
-            //return result ?? WellKnownError("error.unparsable_line");
+        private InterpreterResult? ProcessDirective(string directive)
+        {
+            if (!directive.StartsWith('#'))
+                return null;
+
+                directive = directive[1..];
+
+            InterpreterResult? result = directive.Match(
+                null,
+                (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
+                (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
+                (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
+                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
+                (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
+                (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
+                {
+                    string opt = m.Groups["option"].Value;
+                    string pars = m.Groups["params"].Value;
+
+                    // compiler opt
+
+                    throw new NotImplementedException();
+                }),
+                (@"^requireadmin", _ =>
+                {
+                    // compiler opt
+
+                    throw new NotImplementedException();
+                })
+            );
+
+            foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
+                result ??= proc?.ProcessDirective(this, directive);
+
+            return result ?? WellKnownError("error.unparsable_dirctive", directive);
 
             throw new NotImplementedException();
         }
@@ -197,112 +241,56 @@ namespace Unknown6656.AutoIt3.Runtime
             throw new NotImplementedException();
         }
 
-        private InterpreterResult? ProcessDirective(string directive)
-        {
-            //InterpreterResult? result = null;
-
-            //if (!directive.StartsWith('#'))
-            //    return result;
-            //else
-            //    directive = directive[1..];
-
-            //if (directive.Match(
-            //    (@"^(comments\-start|cs)(\b|$)", _ =>
-            //    {
-            //        _state |= LineParserState.InsideBlockComment;
-            //        ++_blockcomment_level;
-            //    }), (@"^(comments\-end|ce)(\b|$)", _ =>
-            //    {
-            //        _blockcomment_level = Math.Max(0, _blockcomment_level - 1);
-
-            //        if (_blockcomment_level <= 0)
-            //            _state &= ~LineParserState.InsideBlockComment;
-            //    }
-            //)) || _state.HasFlag(LineParserState.InsideBlockComment))
-            //    result = InterpreterResult.OK;
-
-            //result ??= directive.Match(
-            //    null,
-            //    (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
-            //    (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
-            //    (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
-            //    (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
-            //    (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
-            //    (@"^onautoitstartregister\s+""(?<func>[^""]+)""", (Match m) => ProcessExpressionStatement(m.Groups["func"] + "()")),
-            //    (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
-            //    {
-            //        string opt = m.Groups["option"].Value;
-            //        string pars = m.Groups["params"].Value;
-
-            //        // compiler opt
-
-            //        throw new NotImplementedException();
-            //    }),
-            //    (@"^requireadmin", _ =>
-            //    {
-            //        // compiler opt
-
-            //        throw new NotImplementedException();
-            //    })
-            //);
-
-            //foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
-            //    result ??= proc?.ProcessDirective(this, directive);
-
-            //return result ?? WellKnownError("error.unparsable_dirctive", directive);
-
-            throw new NotImplementedException();
-        }
-
         private InterpreterResult? ProcessStatement(string line)
         {
-            //InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
-            //{
-            //    [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
-            //    {
-            //        string name = m.Groups["name"].Value;
-            //        string args = m.Groups["args"].Value;
+            InterpreterResult? result = null;
 
-            //        _state |= LineParserState.InsideBlockComment;
+            // InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            // {
+            //     [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
+            //     {
+            //         string name = m.Groups["name"].Value;
+            //         string args = m.Groups["args"].Value;
+            // 
+            //         _state |= LineParserState.InsideBlockComment;
+            // 
+            // 
+            //         throw new NotImplementedException();
+            //     },
+            //     ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
+            //     ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
+            //     ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
+            //     [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+            //     {
+            //         int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
+            //         InterpreterResult? result = InterpreterResult.OK;
+            // 
+            //         while (level-- > 1)
+            //             result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+            // 
+            //         // TODO : continue
+            // 
+            // 
+            //         throw new NotImplementedException();
+            //     },
+            //     [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+            //     {
+            //         int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+            //         InterpreterResult? result = InterpreterResult.OK;
+            // 
+            //         while (level-- > 0)
+            //             result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+            // 
+            //         return result;
+            //     },
+            // });
+            // 
 
+            foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
+                if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
+                    result ??= sp.ProcessStatement(this, line);
 
-            //        throw new NotImplementedException();
-            //    },
-            //    ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
-            //    ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
-            //    ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
-            //    [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
-            //    {
-            //        int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
-            //        InterpreterResult? result = InterpreterResult.OK;
-
-            //        while (level-- > 1)
-            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
-
-            //        // TODO : continue
-
-
-            //        throw new NotImplementedException();
-            //    },
-            //    [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-            //    {
-            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-            //        InterpreterResult? result = InterpreterResult.OK;
-
-            //        while (level-- > 0)
-            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
-
-            //        return result;
-            //    },
-            //});
-
-            //foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
-            //    if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
-            //        result ??= sp.ProcessStatement(this, line);
-
-            //return result;
-
-            throw new NotImplementedException();
+            return result;
         }
 
         private InterpreterResult? ProcessExpressionStatement(string line)
@@ -310,6 +298,14 @@ namespace Unknown6656.AutoIt3.Runtime
             throw new NotImplementedException();
         }
 
+        private InterpreterResult? UseExternalLineProcessors(string line)
+        {
+            foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
+                if ((proc?.CanProcessLine(line) ?? false) && proc?.ProcessLine(this, line) is { } res)
+                    return res;
+
+            return null;
+        }
 
         private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
     }

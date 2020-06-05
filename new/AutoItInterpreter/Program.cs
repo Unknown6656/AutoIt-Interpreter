@@ -22,8 +22,8 @@ namespace Unknown6656.AutoIt3
         [Option('N', "no-plugins", Default = false, HelpText = "Prevents the loading of interpreter plugins.")]
         public bool DontLoadPlugins { get; }
 
-        [Option('q', "quiet", Default = false, HelpText = "Displays only the script's output.")]
-        public bool Quiet { get; }
+        [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
+        public Verbosity Verbosity { get; }
 
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
         public string Language { get; }
@@ -32,11 +32,11 @@ namespace Unknown6656.AutoIt3
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool quiet, string language, string filePath)
+        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, Verbosity verbosity, string language, string filePath)
         {
             HideBanner = hideBanner;
             DontLoadPlugins = dontLoadPlugins;
-            Quiet = quiet;
+            Verbosity = verbosity;
             Language = language;
             FilePath = filePath;
         }
@@ -76,17 +76,13 @@ namespace Unknown6656.AutoIt3
                         return;
                     }
 
-                    if (!opt.HideBanner || opt.Quiet)
-                        PrintBanner();
-
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
+                    Console.Clear();
 
-                    if (!opt.Quiet)
-                    {
-                        PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
-                        PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
-                    }
+                    PrintBanner();
+                    PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
+                    PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
                     InterpreterResult result = Runtime.Interpreter.Run(opt);
 
@@ -130,7 +126,7 @@ namespace Unknown6656.AutoIt3
             Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
 
-            if (!CommandLineOptions.Quiet)
+            if (CommandLineOptions.Verbosity > Verbosity.n)
             {
                 Console.WriteLine(@"
                                ____
@@ -161,6 +157,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
         internal static void PrintInterpreterMessage(string message)
         {
+            if (CommandLineOptions.Verbosity < Verbosity.n)
+                return;
+
             ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
             Console.Write($"[Interpreter]  ");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
@@ -168,17 +167,37 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
         }
 
-        internal static void PrintScriptMessage(FileInfo script, string message)
+        internal static void PrintDebugMessage(string message)
         {
+            if (CommandLineOptions.Verbosity < Verbosity.v)
+                return;
+
             ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
-            Console.Write($"[{script.Name}]  ");
+            Console.Write($"[Interpreter-Debug]  ");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
             Console.WriteLine(message);
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
         }
 
+        internal static void PrintScriptMessage(FileInfo script, string message)
+        {
+            if (CommandLineOptions.Verbosity < Verbosity.n)
+                Console.WriteLine(message);
+            else
+            {
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+                Console.Write($"[{script.Name}]  ");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+                Console.WriteLine(message);
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            }
+        }
+
         private static void PrintBanner()
         {
+            if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
+                return;
+
             ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine($@"
@@ -222,5 +241,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             if ((GitHash?.Length ?? 0) == 0)
                 GitHash = "<unknown git commit hash>";
         }
+    }
+
+    public enum Verbosity
+    {
+        q,
+        n,
+        v,
     }
 }
