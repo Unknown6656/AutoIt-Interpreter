@@ -182,19 +182,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
             Program.PrintDebugMessage($"({loc}) {line}");
 
-            Func<string, InterpreterResult?>[] handlers =
-            {
-                ProcessDirective,
-                ProcessStatement,
-                ProcessExpressionStatement,
-                UseExternalLineProcessors,
-            };
+            result ??= ProcessDirective(line);
+            result ??= ProcessStatement(line);
+            result ??= ProcessExpressionStatement(line);
+            result ??= UseExternalLineProcessors(line);
 
-            foreach (Func<string, InterpreterResult?> func in handlers)
-                if (result?.IsOK ?? true)
-                    result = func(line);
-
-            return (result?.IsOK ?? true) ? result : WellKnownError("error.unparsable_line", line);
+            return result ?? WellKnownError("error.unparsable_line", line);
         }
 
         private InterpreterResult? ProcessDirective(string directive)
@@ -202,7 +195,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (!directive.StartsWith('#'))
                 return null;
 
-                directive = directive[1..];
+            directive = directive[1..];
 
             InterpreterResult? result = directive.Match(
                 null,
@@ -216,8 +209,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 result ??= proc?.ProcessDirective(this, directive);
 
             return result ?? WellKnownError("error.unparsable_dirctive", directive);
-
-            throw new NotImplementedException();
         }
 
         private InterpreterResult ProcessInclude(string path, bool relative, bool once)

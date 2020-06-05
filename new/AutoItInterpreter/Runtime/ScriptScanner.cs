@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 using Unknown6656.AutoIt3.Extensibility;
@@ -23,100 +22,113 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScriptScanner(Interpreter interpreter) => Interpreter = interpreter;
 
-        public Union<InterpreterError, ScannedScript> ScanScriptFile(FileInfo file)
+        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path)
         {
-            string key = file.FullName;
+            // TODO : built-in
 
-            if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
+            foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
+                if (res.TryResolve(path, out (FileInfo fi, string ct)? file))
+                    return file;
+
+            return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
+        }
+
+        public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path) =>
+            ResolveScriptFile(include_loc, path).Match<Union<InterpreterError, ScannedScript>>(err => err, file =>
             {
-                script = new ScannedScript(file);
+                string key = file.physical_file.FullName;
 
-                ScannedFunction curr_func = script.GetOrCreateFunction(ScannedFunction.GLOBAL_FUNC);
-                string[] lines = From.File(file).To.Lines();
-                int comment_lvl = 0;
-                Match m;
-
-                for (int i = 0; i < lines.Length; ++i)
+                if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
                 {
-                    SourceLocation loc = new SourceLocation(file, i);
-                    string line = TrimComment(lines[i].TrimStart());
-                    bool handled = line.Match(
-                        (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
-                        (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                        (@"^#(end-?)?region\b", delegate { })
-                    );
+                    script = new ScannedScript(file.physical_file);
 
-                    if (handled || comment_lvl > 0)
-                        continue;
+                    ScannedFunction curr_func = script.GetOrCreateFunction(ScannedFunction.GLOBAL_FUNC);
+                    string[] lines = From.String(file.content).To.Lines();
+                    int comment_lvl = 0;
+                    Match m;
 
-                    if (line.Match(
-                        (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
-                        (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
-                    ))
-                        continue;
-                    else if (line.Match(@"^#requireadmin\b", out m))
-                        line = "#pragma compile(ExecLevel, requireAdministrator)";
-                    else if (line.Match(@"^#notrayicon\b", out m))
-                        line = @"Opt(""TrayIconHide"", 1)";
-
-                    if (line.Match(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
+                    for (int i = 0; i < lines.Length; ++i)
                     {
-                        string option = m.Groups["option"].Value.Trim();
-                        string @params = m.Groups["params"].Value;
-                        string? value = null;
+                        SourceLocation loc = new SourceLocation(file.physical_file, i);
+                        string line = TrimComment(lines[i].TrimStart());
+                        bool handled = line.Match(
+                            (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
+                            (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
+                            (@"^#(end-?)?region\b", delegate { }
+                        )
+                        );
 
-                        if (@params.IndexOf(',') is int idx && idx > 0)
-                        {
-                            @params = @params[..idx].ToLower().Trim();
-                            value = @params[(idx + 1)..].Trim();
-                        }
-
-                        if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
-                            return err;
-                        else
+                        if (handled || comment_lvl > 0)
                             continue;
-                    }
 
-                    while (line.Match(@"(\s|^)_$", out m))
-                        if (i == lines.Length - 1)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
-                        else
+                        if (line.Match(
+                            (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                            (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                        ))
+                            continue;
+                        else if (line.Match(@"^#requireadmin\b", out m))
+                            line = "#pragma compile(ExecLevel, requireAdministrator)";
+                        else if (line.Match(@"^#notrayicon\b", out m))
+                            line = @"Opt(""TrayIconHide"", 1)";
+
+                        if (line.Match(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
                         {
-                            line = line[..m.Index] + TrimComment(lines[++i].TrimStart());
-                            loc = new SourceLocation(loc.FileName, loc.StartLineNumber, i);
+                            string option = m.Groups["option"].Value.Trim();
+                            string @params = m.Groups["params"].Value;
+                            string? value = null;
+
+                            if (@params.IndexOf(',') is int idx && idx > 0)
+                            {
+                                @params = @params[..idx].ToLower().Trim();
+                                value = @params[(idx + 1)..].Trim();
+                            }
+
+                            if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
+                                return err;
+                            else
+                                continue;
                         }
 
-                    if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)\s*$", out m))
-                    {
-                        string name = m.Groups["name"].Value;
+                        while (line.Match(@"(\s|^)_$", out m))
+                            if (i == lines.Length - 1)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
+                            else
+                            {
+                                line = line[..m.Index] + TrimComment(lines[++i].TrimStart());
+                                loc = new SourceLocation(loc.FileName, loc.StartLineNumber, i);
+                            }
 
-                        if (!curr_func.IsMainFunction)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                        else if (script.HasFunction(name))
+                        if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)\s*$", out m))
                         {
-                            ScannedFunction existing = script.GetOrCreateFunction(name);
+                            string name = m.Groups["name"].Value;
 
-                            return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
+                            if (!curr_func.IsMainFunction)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
+                            else if (script.HasFunction(name))
+                            {
+                                ScannedFunction existing = script.GetOrCreateFunction(name);
+
+                                return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
+                            }
+
+                            curr_func = script.GetOrCreateFunction(name);
                         }
+                        else if (line.Match(@"^endfunc$", out Match _))
+                        {
+                            if (curr_func.IsMainFunction)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
 
-                        curr_func = script.GetOrCreateFunction(name);
+                            curr_func = script.MainFunction;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(line))
+                            curr_func.AddLine(loc, line);
                     }
-                    else if (line.Match(@"^endfunc$", out Match _))
-                    {
-                        if (curr_func.IsMainFunction)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
 
-                        curr_func = script.MainFunction;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(line))
-                        curr_func.AddLine(loc, line);
+                    _cached_scripts.TryAdd(key, script);
                 }
 
-                _cached_scripts.TryAdd(key, script);
-            }
-
-            return script;
-        }
+                return script;
+            });
 
         private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
         {

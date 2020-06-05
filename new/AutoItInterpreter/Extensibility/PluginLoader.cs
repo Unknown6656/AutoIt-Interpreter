@@ -1,9 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 using System.IO;
 using System;
 
+using Unknown6656.Mathematics.LinearAlgebra;
 using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Extensibility
@@ -38,7 +40,7 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public IReadOnlyList<AbstractPragmaProcessor> PragmaProcessors => _pragma_processors;
 
-        public IReadOnlyList<AbstractIncludeResolver> IncludeResolvers => _resolvers;
+        public IReadOnlyList<AbstractIncludeResolver> IncludeResolvers => _resolvers.OrderByDescending(r => ((Scalar)r.RelativeImportance).Clamp()).ToList();
 
 
         // TODO : mutex ?
@@ -67,7 +69,10 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
             ClearLoadedPlugins();
 
-            foreach (FileInfo file in PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory }))
+            List<Type> types = new List<Type>();
+
+            foreach (FileInfo file in PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory })
+                                                     .Append(new FileInfo(Assembly.GetExecutingAssembly().Location)))
                 try
                 {
                     Assembly asm = Assembly.LoadFrom(file.FullName);
@@ -75,26 +80,28 @@ namespace Unknown6656.AutoIt3.Extensibility
                     if (asm.GetCustomAttribute<AutoIt3Plugin>() is { })
                     {
                         _plugin_files.Add(file);
-
-                        foreach (Type type in asm.GetTypes())
-                        {
-                            TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
-                            TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
-                            TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
-                            TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
-                            TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
-                        }
+                        types.AddRange(asm.GetTypes());
                     }
                 }
                 catch
                 {
                 }
+
+            foreach (Type type in types)
+                if (!type.IsAbstract)
+                {
+                    TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
+                    TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
+                    TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
+                    TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
+                    TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
+                }
         }
 
         private void TryRegister<T>(Type type, Action<T> register_func)
         {
-            if (typeof(T).IsAssignableFrom(type))
-                register_func((T)Activator.CreateInstance(typeof(T), Interpreter));
+            if (typeof(T).IsAssignableFrom(type) && Activator.CreateInstance(typeof(T), Interpreter) is T t)
+                register_func(t);
         }
 
         public void RegisterLineProcessor(AbstractLineProcessor proc) => _line_processors.Add(proc);
@@ -154,6 +161,12 @@ namespace Unknown6656.AutoIt3.Extensibility
     public abstract class AbstractIncludeResolver
         : AbstractInterpreterPlugin
     {
+        /// <summary>
+        /// The resolver's relative importance between 0 and 1. (0 = low, 1 = high)
+        /// </summary>
+        public abstract float RelativeImportance { get; }
+
+
         protected AbstractIncludeResolver(Interpreter interpreter) : base(interpreter)
         {
         }

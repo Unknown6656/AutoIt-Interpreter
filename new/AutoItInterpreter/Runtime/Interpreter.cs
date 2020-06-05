@@ -77,17 +77,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction);
 
-        public InterpreterResult Run(FileInfo script) => ScriptScanner.ScanScriptFile(script).Match(err => err, Run);
+        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path).Match(err => err, Run);
 
         public static InterpreterResult Run(CommandLineOptions opt)
         {
-            FileInfo input = new FileInfo(opt.FilePath);
+            using Interpreter interpreter = new Interpreter(opt);
 
-            if (input.Exists)
-                using (Interpreter interpreter = new Interpreter(opt))
-                    return interpreter.Run(input);
-            else
-                return InterpreterError.WellKnown(new SourceLocation(input, -1), "error.script_not_found", opt.FilePath);
+            return interpreter.Run(opt.FilePath);
         }
     }
 
