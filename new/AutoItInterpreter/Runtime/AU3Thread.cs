@@ -197,23 +197,26 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            InterpreterResult? result = directive.Match(
-                null,
-                (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
-                (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
-                (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
-                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true))
-            );
+            if (directive.Match(@"^include(?<once>-once)?\s+(?<open>[""'<])(?<path>(?:(?!\5).)+)(?<close>[""'>])", out ReadOnlyIndexer<string, string>? g))
+            {
+                bool once = g["once"].Contains('-');
+                char open = g["open"][0];
+                char close = g["close"][0];
+
+                if (open != close && open != '<' && close != '>')
+                    return WellKnownError("error.mismatched_quotes", open, close);
+
+                bool relative = open != '<';
+
+                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script => Call(script.MainFunction));
+            }
+
+            InterpreterResult? result = null;
 
             foreach (AbstractDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
                 result ??= proc?.ProcessDirective(this, directive);
 
             return result ?? WellKnownError("error.unparsable_dirctive", directive);
-        }
-
-        private InterpreterResult ProcessInclude(string path, bool relative, bool once)
-        {
-            throw new NotImplementedException();
         }
 
         private InterpreterResult? ProcessStatement(string line)

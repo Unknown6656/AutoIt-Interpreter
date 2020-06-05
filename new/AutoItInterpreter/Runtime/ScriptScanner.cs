@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 
 using Unknown6656.AutoIt3.Extensibility;
@@ -15,6 +16,12 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class ScriptScanner
     {
         private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
+        private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
+        {
+            ResolveUNC,
+            ResolveHTTP,
+            ResolveFTP,
+        };
 
 
         public Interpreter Interpreter { get; }
@@ -24,10 +31,20 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path)
         {
-            // TODO : built-in
+            (FileInfo physical, string content)? file = null;
+
+            foreach (Func<string, (FileInfo, string)?> resolver in _existing_resolvers)
+                try
+                {
+                    if (resolver(path) is (FileInfo physical, string content))
+                        return (physical, content);
+                }
+                catch
+                {
+                }
 
             foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
-                if (res.TryResolve(path, out (FileInfo fi, string ct)? file))
+                if (res.TryResolve(path, out file))
                     return file;
 
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
@@ -194,6 +211,28 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return line.TrimEnd();
         }
+
+        private static (FileInfo physical, string content)? ResolveUNC(string path)
+        {
+            FileInfo? fi = null;
+
+            foreach (string ext in new[] { "", ".au3", ".au2", ".au" })
+                if (fi?.Exists ?? false)
+                    break;
+                else
+                    fi = new FileInfo(path + ext);
+
+            if (fi is { Exists: true })
+                return (fi, From.File(fi).To.String());
+
+            return null;
+        }
+
+        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(path).To.String());
+
+        private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).To.String());
+
+        private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).To.String());
     }
 
     public sealed class ScannedScript

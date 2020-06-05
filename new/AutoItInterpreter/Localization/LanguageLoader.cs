@@ -44,23 +44,18 @@ namespace Unknown6656.AutoIt3.Localization
                 {
                 }
 
-            DirectoryInfo dir = new DirectoryInfo(asm.Location + "/../" + LANG_DIR);
+            foreach (FileInfo nfo in LANG_DIR.EnumerateFiles("./*.json"))
+                try
+                {
+                    dynamic lang = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(nfo.FullName));
+                    string code = lang.meta.code.ToLower();
 
-            if (!dir.Exists)
-                dir.Create();
-            else
-                foreach (FileInfo nfo in dir.EnumerateFiles("./*.json"))
-                    try
-                    {
-                        dynamic lang = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(nfo.FullName));
-                        string code = lang.meta.code.ToLower();
-
-                        if (!langs.ContainsKey(code))
-                            langs[code] = lang;
-                    }
-                    catch
-                    {
-                    }
+                    if (!langs.ContainsKey(code))
+                        langs[code] = lang;
+                }
+                catch
+                {
+                }
 
             LanguagePacks = langs.ToImmutableDictionary();
         }

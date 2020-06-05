@@ -46,8 +46,9 @@ namespace Unknown6656.AutoIt3
 
     public static class Program
     {
-        public const string PLUGIN_DIR = "./plugins/";
-        public const string LANG_DIR = "./lang/";
+        public static readonly DirectoryInfo ASM_DIR = new FileInfo(typeof(Program).Assembly.Location).Directory!;
+        public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
+        public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
 
         private static readonly ConcurrentQueue<(string prefix, string message, DateTime time)> _msg_queue = new ConcurrentQueue<(string, string, DateTime)>();
         private static volatile bool _isrunning = true;
