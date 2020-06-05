@@ -16,30 +16,36 @@ namespace Unknown6656.AutoIt3.Extensibility
 
     public sealed class PluginLoader
     {
-        private readonly List<ILineProcessor> _line_processors = new List<ILineProcessor>();
-        private readonly List<IDirectiveProcessor> _directive_processors = new List<IDirectiveProcessor>();
-        private readonly List<IStatementProcessor> _statement_processors = new List<IStatementProcessor>();
-        private readonly List<IIncludeResolver> _resolvers = new List<IIncludeResolver>();
+        private readonly List<AbstractLineProcessor> _line_processors = new List<AbstractLineProcessor>();
+        private readonly List<AbstractDirectiveProcessor> _directive_processors = new List<AbstractDirectiveProcessor>();
+        private readonly List<AbstractStatementProcessor> _statement_processors = new List<AbstractStatementProcessor>();
+        private readonly List<AbstractPragmaProcessor> _pragma_processors = new List<AbstractPragmaProcessor>();
+        private readonly List<AbstractIncludeResolver> _resolvers = new List<AbstractIncludeResolver>();
         private readonly List<FileInfo> _plugin_files = new List<FileInfo>();
 
+
+        public Interpreter Interpreter { get; }
 
         public DirectoryInfo PluginDirectory { get; }
 
         public IReadOnlyList<FileInfo> LoadedPlugins => _plugin_files;
 
-        public IReadOnlyList<ILineProcessor> LineProcessors => _line_processors;
+        public IReadOnlyList<AbstractLineProcessor> LineProcessors => _line_processors;
 
-        public IReadOnlyList<IDirectiveProcessor> DirectiveProcessors => _directive_processors;
+        public IReadOnlyList<AbstractDirectiveProcessor> DirectiveProcessors => _directive_processors;
 
-        public IReadOnlyList<IStatementProcessor> StatementProcessors => _statement_processors;
+        public IReadOnlyList<AbstractStatementProcessor> StatementProcessors => _statement_processors;
 
-        public IReadOnlyList<IIncludeResolver> IncludeResolvers => _resolvers;
+        public IReadOnlyList<AbstractPragmaProcessor> PragmaProcessors => _pragma_processors;
+
+        public IReadOnlyList<AbstractIncludeResolver> IncludeResolvers => _resolvers;
 
 
         // TODO : mutex ?
 
-        public PluginLoader(DirectoryInfo dir)
+        public PluginLoader(Interpreter interpreter, DirectoryInfo dir)
         {
+            Interpreter = interpreter;
             PluginDirectory = dir;
 
             if (!dir.Exists)
@@ -72,10 +78,11 @@ namespace Unknown6656.AutoIt3.Extensibility
 
                         foreach (Type type in asm.GetTypes())
                         {
-                            TryRegister<ILineProcessor>(type, RegisterLineProcessor);
-                            TryRegister<IDirectiveProcessor>(type, RegisterDirectiveProcessor);
-                            TryRegister<IStatementProcessor>(type, RegisterStatementProcessor);
-                            TryRegister<IIncludeResolver>(type, RegisterIncludeResolver);
+                            TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
+                            TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
+                            TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
+                            TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
+                            TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
                         }
                     }
                 }
@@ -87,60 +94,85 @@ namespace Unknown6656.AutoIt3.Extensibility
         private void TryRegister<T>(Type type, Action<T> register_func)
         {
             if (typeof(T).IsAssignableFrom(type))
-                register_func(Activator.CreateInstance<T>());
+                register_func((T)Activator.CreateInstance(typeof(T), Interpreter));
         }
 
-        public void RegisterLineProcessor(ILineProcessor proc) => _line_processors.Add(proc);
+        public void RegisterLineProcessor(AbstractLineProcessor proc) => _line_processors.Add(proc);
 
-        public void RegisterDirectiveProcessor(IDirectiveProcessor proc) => _directive_processors.Add(proc);
+        public void RegisterDirectiveProcessor(AbstractDirectiveProcessor proc) => _directive_processors.Add(proc);
 
-        public void RegisterStatementProcessor(IStatementProcessor proc) => _statement_processors.Add(proc);
+        public void RegisterStatementProcessor(AbstractStatementProcessor proc) => _statement_processors.Add(proc);
 
-        public void RegisterIncludeResolver(IIncludeResolver resolver) => _resolvers.Add(resolver);
+        public void RegisterPragmaProcessors(AbstractPragmaProcessor proc) => _pragma_processors.Add(proc);
+
+        public void RegisterIncludeResolver(AbstractIncludeResolver resolver) => _resolvers.Add(resolver);
     }
 
-    public interface IDirectiveProcessor
+    public abstract class AbstractInterpreterPlugin
     {
-        InterpreterResult? ProcessDirective(CallFrame frame, string directive);
+        public Interpreter Interpreter { get; }
+
+
+        protected AbstractInterpreterPlugin(Interpreter interpreter) => Interpreter = interpreter;
     }
 
-    public interface IStatementProcessor
+    public abstract class AbstractDirectiveProcessor
+        : AbstractInterpreterPlugin
     {
-        string Regex { get; }
-
-        InterpreterResult? ProcessStatement(CallFrame frame, string directive);
-    }
-
-    public interface ILineProcessor
-    {
-        bool CanProcessLine(string line);
-
-        InterpreterResult? ProcessLine(CallFrame frame, string line);
-
-
-        public static ILineProcessor FromDelegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process) => new __from_delegate(canparse, process);
-
-        private sealed class __from_delegate
-            : ILineProcessor
+        protected AbstractDirectiveProcessor(Interpreter interpreter) : base(interpreter)
         {
-            private readonly Predicate<string> _canparse;
-            private readonly Func<CallFrame, string, InterpreterResult?> _process;
-
-
-            public __from_delegate(Predicate<string> canparse, Func<CallFrame, string, InterpreterResult?> process)
-            {
-                _canparse = canparse;
-                _process = process;
-            }
-
-            public bool CanProcessLine(string line) => _canparse(line);
-
-            public InterpreterResult? ProcessLine(CallFrame parser, string line) => _process(parser, line);
         }
+
+        public abstract InterpreterResult? ProcessDirective(CallFrame frame, string directive);
     }
 
-    public interface IIncludeResolver
+    public abstract class AbstractStatementProcessor
+        : AbstractInterpreterPlugin
     {
-        bool TryResolve(string path, [MaybeNullWhen(false), NotNullWhen(true)] out (FileInfo physical_file, string content)? resolved);
+        public abstract string Regex { get; }
+
+
+        protected AbstractStatementProcessor(Interpreter interpreter) : base(interpreter)
+        {
+        }
+
+        public abstract InterpreterResult? ProcessStatement(CallFrame frame, string directive);
+    }
+
+    public abstract class AbstractLineProcessor
+        : AbstractInterpreterPlugin
+    {
+        protected AbstractLineProcessor(Interpreter interpreter) : base(interpreter)
+        {
+        }
+
+        public abstract bool CanProcessLine(string line);
+
+        public abstract InterpreterResult? ProcessLine(CallFrame frame, string line);
+    }
+
+    public abstract class AbstractIncludeResolver
+        : AbstractInterpreterPlugin
+    {
+        protected AbstractIncludeResolver(Interpreter interpreter) : base(interpreter)
+        {
+        }
+
+        public abstract bool TryResolve(string path, [MaybeNullWhen(false), NotNullWhen(true)] out (FileInfo physical_file, string content)? resolved);
+    }
+
+    public abstract class AbstractPragmaProcessor
+        : AbstractInterpreterPlugin
+    {
+        public abstract string PragmaName { get; }
+
+
+        protected AbstractPragmaProcessor(Interpreter interpreter) : base(interpreter)
+        {
+        }
+
+        public abstract bool CanProcessPragmaKey(string key);
+
+        public abstract InterpreterError? ProcessPragma(SourceLocation loc, string key, string? value);
     }
 }

@@ -180,7 +180,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (string.IsNullOrWhiteSpace(line))
                 return InterpreterResult.OK;
 
-            Program.PrintDebugMessage($"({loc})  {line}");
+            Program.PrintDebugMessage($"({loc}) {line}");
 
             Func<string, InterpreterResult?>[] handlers =
             {
@@ -194,7 +194,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 if (result?.IsOK ?? true)
                     result = func(line);
 
-            return (result?.IsOK ?? true) ? result : WellKnownError("error.unparsable_line");
+            return (result?.IsOK ?? true) ? result : WellKnownError("error.unparsable_line", line);
         }
 
         private InterpreterResult? ProcessDirective(string directive)
@@ -209,26 +209,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 (@"^include\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, false)),
                 (@"^include\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, false)),
                 (@"^include-once\s+""(?<path>[^""]+)""", (Match m) => ProcessInclude(m.Groups["path"].Value, true, true)),
-                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true)),
-                (@"^notrayicon", _ => ProcessExpressionStatement(@"Opt(""TrayIconHide"", 1)")),
-                (@"^pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", (Match m) =>
-                {
-                    string opt = m.Groups["option"].Value;
-                    string pars = m.Groups["params"].Value;
-
-                    // compiler opt
-
-                    throw new NotImplementedException();
-                }),
-                (@"^requireadmin", _ =>
-                {
-                    // compiler opt
-
-                    throw new NotImplementedException();
-                })
+                (@"^include-once\s+<(?<path>[^>]+)>", (Match m) => ProcessInclude(m.Groups["path"].Value, false, true))
             );
 
-            foreach (IDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
+            foreach (AbstractDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
                 result ??= proc?.ProcessDirective(this, directive);
 
             return result ?? WellKnownError("error.unparsable_dirctive", directive);
@@ -286,7 +270,7 @@ namespace Unknown6656.AutoIt3.Runtime
             // });
             // 
 
-            foreach (IStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
+            foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
                     result ??= sp.ProcessStatement(this, line);
 
@@ -300,7 +284,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult? UseExternalLineProcessors(string line)
         {
-            foreach (ILineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
+            foreach (AbstractLineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
                 if ((proc?.CanProcessLine(line) ?? false) && proc?.ProcessLine(this, line) is { } res)
                     return res;
 

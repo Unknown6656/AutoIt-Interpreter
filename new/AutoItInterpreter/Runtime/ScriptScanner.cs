@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
+using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
 
@@ -41,12 +43,39 @@ namespace Unknown6656.AutoIt3.Runtime
                     bool handled = line.Match(
                         (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
                         (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                        (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
-                        (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                        (@"^#(end-?)?region\b", delegate { })
                     );
 
                     if (handled || comment_lvl > 0)
                         continue;
+
+                    if (line.Match(
+                        (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                        (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                    ))
+                        continue;
+                    else if (line.Match(@"^#requireadmin\b", out m))
+                        line = "#pragma compile(ExecLevel, requireAdministrator)";
+                    else if (line.Match(@"^#notrayicon\b", out m))
+                        line = @"Opt(""TrayIconHide"", 1)";
+
+                    if (line.Match(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
+                    {
+                        string option = m.Groups["option"].Value.Trim();
+                        string @params = m.Groups["params"].Value;
+                        string? value = null;
+
+                        if (@params.IndexOf(',') is int idx && idx > 0)
+                        {
+                            @params = @params[..idx].ToLower().Trim();
+                            value = @params[(idx + 1)..].Trim();
+                        }
+
+                        if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
+                            return err;
+                        else
+                            continue;
+                    }
 
                     while (line.Match(@"(\s|^)_$", out m))
                         if (i == lines.Length - 1)
@@ -79,7 +108,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                         curr_func = script.MainFunction;
                     }
-                    else
+                    else if (!string.IsNullOrWhiteSpace(line))
                         curr_func.AddLine(loc, line);
                 }
 
@@ -87,6 +116,49 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             return script;
+        }
+
+        private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
+        {
+            if (option == "compile")
+            {
+                switch (key)
+                {
+                    case "out": break;
+                    case "icon": break;
+                    case "execlevel": break;
+                    case "upx": break;
+                    case "autoitexecuteallowed": break;
+                    case "console": break;
+                    case "compression": break;
+                    case "compatibility": break;
+                    case "x64": break;
+                    case "inputboxres": break;
+                    case "comments": break;
+                    case "companyname": break;
+                    case "filedescription": break;
+                    case "fileversion": break;
+                    case "internalname": break;
+                    case "legalcopyright": break;
+                    case "legaltrademarks": break;
+                    case "originalfilename": break;
+                    case "productname": break;
+                    case "productversion": break;
+                    default:
+                        return InterpreterError.WellKnown(loc, "error.unhandled_pragma_key", key, option);
+                }
+
+                return InterpreterError.WellKnown(loc, "error.not_yet_implemented", "compile");
+            }
+
+            foreach (AbstractPragmaProcessor proc in Interpreter.PluginLoader.PragmaProcessors)
+                if (proc.PragmaName.Equals(option, StringComparison.InvariantCultureIgnoreCase))
+                    if (proc.CanProcessPragmaKey(key))
+                        return proc.ProcessPragma(loc, key, value);
+                    else
+                        return InterpreterError.WellKnown(loc, "error.unhandled_pragma_key", key, option);
+
+            return InterpreterError.WellKnown(loc, "error.unhandled_pragma_option", option);
         }
 
         private static string TrimComment(string? line)

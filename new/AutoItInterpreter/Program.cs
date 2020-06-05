@@ -11,6 +11,8 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3
 {
@@ -46,6 +48,9 @@ namespace Unknown6656.AutoIt3
     {
         public const string PLUGIN_DIR = "./plugins/";
         public const string LANG_DIR = "./lang/";
+
+        private static readonly ConcurrentQueue<(string prefix, string message, DateTime time)> _msg_queue = new ConcurrentQueue<(string, string, DateTime)>();
+        private static volatile bool _isrunning = true;
 #nullable disable
         public static LanguagePack CurrentLanguage { get; private set; }
         public static CommandLineOptions CommandLineOptions { get; private set; }
@@ -61,6 +66,8 @@ namespace Unknown6656.AutoIt3
             {
                 Console.OutputEncoding = Encoding.Unicode;
                 Console.InputEncoding = Encoding.Unicode;
+                // Console.BackgroundColor = ConsoleColor.Black;
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
                 Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
                 {
@@ -76,15 +83,13 @@ namespace Unknown6656.AutoIt3
                         return;
                     }
 
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-                    ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
-                    Console.Clear();
-
                     PrintBanner();
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
-                    InterpreterResult result = Runtime.Interpreter.Run(opt);
+                    Task.Factory.StartNew(PrinterTask);
+
+                    InterpreterResult result = Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
                         PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
@@ -101,10 +106,55 @@ namespace Unknown6656.AutoIt3
             }
             finally
             {
+                _isrunning = false;
+
                 ConsoleExtensions.RestoreConsoleState(state);
             }
 
             return code;
+        }
+
+        private static async Task PrinterTask()
+        {
+            while (_isrunning)
+                if (_msg_queue.TryDequeue(out (string p, string m, DateTime t) elem))
+                {
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                    Console.Write('[');
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
+                    Console.Write(elem.t.ToString("HH:mm:ss.fff"));
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                    Console.Write("][");
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+                    Console.Write(elem.p);
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                    Console.Write("]  ");
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+                    Console.WriteLine(elem.m);
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+                }
+                else
+                    await Task.Delay(50);
+        }
+
+        private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg)
+        {
+            if (CommandLineOptions.Verbosity < min_lvl)
+                return;
+
+            _msg_queue.Enqueue((prefix, msg, DateTime.Now));
+        }
+
+        internal static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message);
+
+        internal static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message);
+
+        internal static void PrintScriptMessage(FileInfo script, string message)
+        {
+            if (CommandLineOptions.Verbosity < Verbosity.n)
+                Console.WriteLine(message);
+            else
+                SubmitPrint(Verbosity.n, script.Name, message);
         }
 
         internal static void PrintException(this Exception? ex)
@@ -122,6 +172,9 @@ namespace Unknown6656.AutoIt3
 
         internal static void PrintError(this string message)
         {
+            _isrunning = false;
+            _msg_queue.Clear();
+
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
@@ -155,50 +208,11 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(new string('_', Console.WindowWidth - 1));
         }
 
-        internal static void PrintInterpreterMessage(string message)
-        {
-            if (CommandLineOptions.Verbosity < Verbosity.n)
-                return;
-
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
-            Console.Write($"[Interpreter]  ");
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
-            Console.WriteLine(message);
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-        }
-
-        internal static void PrintDebugMessage(string message)
-        {
-            if (CommandLineOptions.Verbosity < Verbosity.v)
-                return;
-
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
-            Console.Write($"[Interpreter-Debug]  ");
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
-            Console.WriteLine(message);
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-        }
-
-        internal static void PrintScriptMessage(FileInfo script, string message)
-        {
-            if (CommandLineOptions.Verbosity < Verbosity.n)
-                Console.WriteLine(message);
-            else
-            {
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
-                Console.Write($"[{script.Name}]  ");
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
-                Console.WriteLine(message);
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            }
-        }
-
         private static void PrintBanner()
         {
             if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
                 return;
 
-            ConsoleExtensions.RGBBackgroundColor = RGBAColor.Black;
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine($@"
                         _       _____ _   ____

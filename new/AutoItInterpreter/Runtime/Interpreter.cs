@@ -31,7 +31,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             CommandLineOptions = opt;
             ScriptScanner = new ScriptScanner(this);
-            PluginLoader = new PluginLoader(new DirectoryInfo(PLUGIN_DIR));
+            PluginLoader = new PluginLoader(this, new DirectoryInfo(PLUGIN_DIR));
 
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();

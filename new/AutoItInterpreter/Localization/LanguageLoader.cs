@@ -74,9 +74,19 @@ namespace Unknown6656.AutoIt3.Localization
         private readonly Dictionary<string, string> _strings = new Dictionary<string, string>();
 
 
-        public string this[string key] => _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpper()}]";
+        public string this[string key, params object?[] args]
+        {
+            get
+            {
+                string fmt_str = _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpper()}]";
+                int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}").Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0).Append(0).Max();
 
-        public string this[string key, params object?[] args] => string.Format(this[key], args);
+                if (args.Length < argc)
+                    Array.Resize(ref args, argc);
+
+                return string.Format(fmt_str, args);
+            }
+        }
 
         [JsonProperty("meta.code")]
         public string LanguageCode { get; private set; } = "";

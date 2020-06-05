@@ -20,7 +20,10 @@
         },
         "error": {
             "error_in": "ERROR in {0}",
+            "not_yet_implemented": "The functionality »{0}« has not yet been implemented. We're sorry :/",
             "script_not_found": "The script file '{0}' could not be found.",
+            "unhandled_pragma_option": "The pragma option '{0}' could not be handled.",
+            "unhandled_pragma_key": "The pragma key '{0}' could not be handled for the option '{1}'.",
             "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed.",
             "unparsable_line": "The line '{0}' could not be parsed. The syntax is either (currently) unsupported, or no parser has been registered for this kind of statement/expression.",
             "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement.",
