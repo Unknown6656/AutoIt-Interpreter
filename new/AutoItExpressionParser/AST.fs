@@ -79,16 +79,11 @@ and EXPRESSION =
     | ArrayInitExpression of EXPRESSION list * ARRAY_INIT_EXPRESSION list // indexers, initexpr
     | ArrayAccess of EXPRESSION * EXPRESSION // index
     | DotAccess of EXPRESSION * MEMBER
-    | ContextualDotAccess of MEMBER
+    | ContextualDotAccess of MEMBER // inside with expressions!
 
 and ASSIGNMENT_EXPRESSION =
-    | ScalarAssignment of OPERATOR_ASSIGNMENT * VARIABLE * EXPRESSION
-    | ArrayAssignment of OPERATOR_ASSIGNMENT * VARIABLE  * EXPRESSION list * EXPRESSION // op, var, indices, expr
-    | ReferenceAssignment of OPERATOR_ASSIGNMENT * EXPRESSION * EXPRESSION
-
-type MULTI_EXPRESSION =
-    | SingleValue of EXPRESSION
-    | ValueRange of EXPRESSION * EXPRESSION
+    | ScalarAssignment of VARIABLE * OPERATOR_ASSIGNMENT * EXPRESSION
+    | ArrayAssignment of VARIABLE * EXPRESSION list * OPERATOR_ASSIGNMENT * EXPRESSION // op, var, indices, expr
 
 type FUNCTION_PARAMETER_MODIFIER =
     {
