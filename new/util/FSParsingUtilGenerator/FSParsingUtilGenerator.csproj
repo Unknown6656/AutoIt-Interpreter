@@ -2,10 +2,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
-        <AssemblyName>incr</AssemblyName>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Optimize>true</Optimize>
+        <AssemblyName>fsutilgen</AssemblyName>
         <OutDir>$(SolutionDir)bin</OutDir>
-        <StartupObject>VersionIncrementer.Program</StartupObject>
     </PropertyGroup>
 </Project>

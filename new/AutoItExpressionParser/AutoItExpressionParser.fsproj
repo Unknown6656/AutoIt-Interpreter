@@ -21,10 +21,14 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="Util.fs" />
+        <Compile Include="ParsingUtil.fs" />
         <Compile Include="AST.fs" />
         <Compile Include="ExpressionParser.fs" />
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\util\Piglet\Piglet\Piglet.csproj" />
+        <ProjectReference Include="..\util\Piglet\Piglet\Piglet.csproj" />
     </ItemGroup>
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <Exec Command="dotnet &quot;$(OutDir)fsutilgen.dll&quot; &quot;$(ProjectPath)&quot;" />
+    </Target>
 </Project>

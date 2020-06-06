@@ -4,7 +4,7 @@ open System.Text.RegularExpressions
 open System.Globalization
 open System
 
-open Piglet.Parser.Configuration.Wrapper
+open Piglet.Parser.Configuration.Generic
 
 open AST
 
@@ -91,8 +91,7 @@ type ExpressionParser() =
         let t_identifier                = x.CreateTerminalF @"[_a-z]\w*"                        id
 
 
-
-        nt_result.
+        reduce1 nt_result nt_literal Literal
 
         ()
 
