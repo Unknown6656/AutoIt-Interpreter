@@ -51,6 +51,9 @@
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     </ItemGroup>
     <ItemGroup>
+      <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+    </ItemGroup>
+    <ItemGroup>
       <Compile Update="Properties\Resources.Designer.cs">
         <DesignTime>True</DesignTime>
         <AutoGen>True</AutoGen>
