@@ -1,11 +1,11 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
-using System.Linq;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -151,7 +151,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public SourceLocation CurrentLocation => _line_cache[_instruction_pointer].LineLocation;
 
         public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
-
 
 
         internal AU3CallFrame(AU3Thread thread, AU3Function function)

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -16,7 +15,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
-using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3
 {
