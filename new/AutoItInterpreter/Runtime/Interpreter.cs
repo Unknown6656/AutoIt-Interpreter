@@ -56,7 +56,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-        public InterpreterResult Run(ScannedFunction entry_point)
+        public InterpreterResult Run(ScriptFunction entry_point)
         {
             try
             {

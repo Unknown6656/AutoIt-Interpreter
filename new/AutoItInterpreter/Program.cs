@@ -53,7 +53,8 @@ namespace Unknown6656.AutoIt3
 
     public static class Program
     {
-        public static readonly DirectoryInfo ASM_DIR = new FileInfo(typeof(Program).Assembly.Location).Directory!;
+        public static readonly FileInfo ASM = new FileInfo(typeof(Program).Assembly.Location);
+        public static readonly DirectoryInfo ASM_DIR = ASM.Directory!;
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
 

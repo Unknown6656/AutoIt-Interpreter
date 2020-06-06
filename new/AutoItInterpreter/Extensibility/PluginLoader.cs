@@ -22,6 +22,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         private readonly List<AbstractDirectiveProcessor> _directive_processors = new List<AbstractDirectiveProcessor>();
         private readonly List<AbstractStatementProcessor> _statement_processors = new List<AbstractStatementProcessor>();
         private readonly List<AbstractPragmaProcessor> _pragma_processors = new List<AbstractPragmaProcessor>();
+        private readonly List<AbstractFunctionProvider> _func_providers = new List<AbstractFunctionProvider>();
         private readonly List<AbstractIncludeResolver> _resolvers = new List<AbstractIncludeResolver>();
         private readonly List<FileInfo> _plugin_files = new List<FileInfo>();
 
@@ -40,10 +41,10 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public IReadOnlyList<AbstractPragmaProcessor> PragmaProcessors => _pragma_processors;
 
+        public IReadOnlyList<AbstractFunctionProvider> FunctionProviders => _func_providers;
+
         public IReadOnlyList<AbstractIncludeResolver> IncludeResolvers => _resolvers.OrderByDescending(r => ((Scalar)r.RelativeImportance).Clamp()).ToList();
 
-
-        // TODO : mutex ?
 
         public PluginLoader(Interpreter interpreter, DirectoryInfo dir)
         {
@@ -74,8 +75,7 @@ namespace Unknown6656.AutoIt3.Extensibility
 
             List<Type> types = new List<Type>();
 
-            foreach (FileInfo file in PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory })
-                                                     .Append(new FileInfo(Assembly.GetExecutingAssembly().Location)))
+            foreach (FileInfo file in PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory }).Append(Program.ASM))
                 try
                 {
                     Assembly asm = Assembly.LoadFrom(file.FullName);
@@ -98,6 +98,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                     TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
                     TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
                     TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
+                    TryRegister<AbstractFunctionProvider>(type, RegisterFunctionProvider);
                 }
         }
 
@@ -116,6 +117,8 @@ namespace Unknown6656.AutoIt3.Extensibility
         public void RegisterPragmaProcessors(AbstractPragmaProcessor proc) => _pragma_processors.Add(proc);
 
         public void RegisterIncludeResolver(AbstractIncludeResolver resolver) => _resolvers.Add(resolver);
+
+        public void RegisterFunctionProvider(AbstractFunctionProvider provider) => _func_providers.Add(provider);
     }
 
     public abstract class AbstractInterpreterPlugin
@@ -191,4 +194,37 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public abstract InterpreterError? ProcessPragma(SourceLocation loc, string key, string? value);
     }
+
+    public abstract class AbstractFunctionProvider
+        : AbstractInterpreterPlugin
+    {
+        public abstract ProvidedNativeFunction[] ProvidedFunctions { get; }
+
+
+        protected AbstractFunctionProvider(Interpreter interpreter)
+            : base(interpreter)
+        {
+        }
+    }
+
+    public abstract class ProvidedNativeFunction
+    {
+        public abstract string Name { get; }
+
+
+        public abstract InterpreterError? Execute(CallFrame frame);
+    }
+
+    // public abstract class ProvidedAU3Function
+    //     : ProvidedNativeFunction
+    // {
+    //     public abstract SourceLocation Location { get; }
+    //     public abstract string[] CodeLines { get; }
+    // 
+    // 
+    //     public sealed override InterpreterError? Execute(CallFrame frame)
+    //     {
+    //         return frame.Call();
+    //     }
+    // }
 }

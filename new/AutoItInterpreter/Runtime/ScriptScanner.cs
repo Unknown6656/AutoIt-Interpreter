@@ -14,8 +14,9 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     public sealed class ScriptScanner
     {
+        private readonly ScannedScript _system_script;
         private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
-        private readonly ConcurrentDictionary<string, ScannedFunction> _cached_functions = new ConcurrentDictionary<string, ScannedFunction>();
+        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
         private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
         {
             ResolveUNC,
@@ -27,7 +28,41 @@ namespace Unknown6656.AutoIt3.Runtime
         public Interpreter Interpreter { get; }
 
 
-        public ScriptScanner(Interpreter interpreter) => Interpreter = interpreter;
+        public ScriptScanner(Interpreter interpreter)
+        {
+            Interpreter = interpreter;
+            _system_script = new ScannedScript(Program.ASM);
+
+            RegisterProvidedFunctions();
+        }
+
+        private void RegisterProvidedFunctions()
+        {
+            if (!Program.CommandLineOptions.StrictMode)
+            {
+                foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
+                    foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
+                        switch (function)
+                        {
+                            case ProvidedAU3Function au3:
+                                ScriptFunction func = new ScriptFunction(_system_script, function.Name);
+
+
+                                func.AddLine(, )
+
+                                break;
+                            case ProvidedNativeFunction native:
+                                break;
+                        }
+            }
+        }
+
+        public ScriptFunction? TryResolveFunction(string name)
+        {
+            _cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? func);
+
+            return func;
+        }
 
         public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path)
         {
@@ -65,13 +100,15 @@ namespace Unknown6656.AutoIt3.Runtime
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, ScriptScanningOptions options) =>
             ResolveScriptFile(include_loc, path).Match<Union<InterpreterError, ScannedScript>>(err => err, file =>
             {
+                // TODO : relative path
+
                 string key = file.physical_file.FullName;
 
                 if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
                 {
                     script = new ScannedScript(file.physical_file);
 
-                    ScannedFunction curr_func = script.GetOrCreateFunction(ScannedFunction.GLOBAL_FUNC);
+                    AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC);
                     List<(string line, SourceLocation loc)> lines = From.String(file.content)
                                                                         .To
                                                                         .Lines()
@@ -148,10 +185,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScannedFunction existing) && !existing.IsMainFunction)
+                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
-                            curr_func = script.GetOrCreateFunction(name);
+                            curr_func = script.GetOrCreateAU3Function(name);
                             _cached_functions.TryAdd(name.ToLower(), curr_func);
                         }
                         else if (line.Match(@"^endfunc$", out Match _))
@@ -159,7 +196,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             if (curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
 
-                            curr_func = script.MainFunction;
+                            curr_func = (AU3Function)script.MainFunction;
                         }
                         else if (!string.IsNullOrWhiteSpace(line))
                             curr_func.AddLine(loc, line);
@@ -170,13 +207,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return script;
             });
-
-        public ScannedFunction? TryResolveFunction(string name)
-        {
-            _cached_functions.TryGetValue(name.ToLower(), out ScannedFunction? func);
-
-            return func;
-        }
 
         private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
         {
@@ -269,14 +299,14 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class ScannedScript
         : IEquatable<ScannedScript>
     {
-        private readonly Dictionary<string, ScannedFunction> _functions = new Dictionary<string, ScannedFunction>();
+        private readonly Dictionary<string, ScriptFunction> _functions = new Dictionary<string, ScriptFunction>();
         private readonly List<(string func, SourceLocation decl)> _startup = new List<(string, SourceLocation)>();
         private readonly List<(string func, SourceLocation decl)> _exit = new List<(string, SourceLocation)>();
 
 
-        public ImmutableDictionary<string, ScannedFunction> Functions => _functions.ToImmutableDictionary();
+        public ImmutableDictionary<string, ScriptFunction> Functions => _functions.ToImmutableDictionary();
 
-        public ScannedFunction MainFunction => _functions[ScannedFunction.GLOBAL_FUNC];
+        public ScriptFunction MainFunction => _functions[ScriptFunction.GLOBAL_FUNC];
 
         public ScannedScriptState State { get; private set; } = ScannedScriptState.Unloaded;
 
@@ -287,59 +317,58 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScannedScript(FileInfo location) => Location = location;
 
-        internal ScannedFunction GetOrCreateFunction(string name) =>
-            _functions.TryGetValue(name.ToLower(), out ScannedFunction? func) ? func : AddFunction(new ScannedFunction(this, name));
+        internal AU3Function GetOrCreateAU3Function(string name)
+        {
+            _functions.TryGetValue(name.ToLower(), out ScriptFunction? func);
 
-        internal ScannedFunction AddFunction(ScannedFunction function) => _functions[function.Name.ToLower()] = function;
+            return func as AU3Function ?? AddFunction(new AU3Function(this, name));
+        }
+
+        internal T AddFunction<T>(T function) where T : ScriptFunction
+        {
+            _functions[function.Name.ToLower()] = function;
+
+            return function;
+        }
 
         internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToLower(), decl));
 
         internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToLower(), decl));
 
-        public InterpreterResult LoadScript(CallFrame frame)
+        public InterpreterError? LoadScript(CallFrame frame)
         {
             if (State == ScannedScriptState.Loaded)
-                return InterpreterResult.OK;
+                return null;
 
             State = ScannedScriptState.Loaded;
 
-            InterpreterResult? result = null;
+            InterpreterError? result = null;
 
             foreach ((string name, SourceLocation loc) in _startup)
-                if (_functions.TryGetValue(name, out ScannedFunction? func))
-                {
-                    if (result?.IsOK ?? false)
-                        result = null;
-
+                if (_functions.TryGetValue(name, out ScriptFunction? func))
                     result ??= frame.Call(func);
-                }
                 else
                     return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
 
-            return result ?? InterpreterResult.OK;
+            return result;
         }
 
-        public InterpreterResult UnLoadScript(CallFrame frame)
+        public InterpreterError? UnLoadScript(CallFrame frame)
         {
             if (State == ScannedScriptState.Unloaded)
-                return InterpreterResult.OK;
+                return null;
 
             State = ScannedScriptState.Unloaded;
 
-            InterpreterResult? result = null;
+            InterpreterError? result = null;
 
             foreach ((string name, SourceLocation loc) in _exit)
-                if (_functions.TryGetValue(name, out ScannedFunction? func))
-                {
-                    if (result?.IsOK ?? false)
-                        result = null;
-
+                if (_functions.TryGetValue(name, out ScriptFunction? func))
                     result ??= frame.Call(func);
-                }
                 else
                     return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
 
-            return result ?? InterpreterResult.OK;
+            return result;
         }
 
         public override int GetHashCode() => Location.FullName.GetHashCode();
@@ -358,19 +387,50 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator !=(ScannedScript? s1, ScannedScript? s2) => !(s1 == s2);
     }
 
-    public sealed class ScannedFunction
-        : IEquatable<ScannedFunction>
+    public abstract class ScriptFunction
+        : IEquatable<ScriptFunction>
     {
         internal const string GLOBAL_FUNC = "$global";
-
-        private readonly ConcurrentDictionary<SourceLocation, string> _lines = new ConcurrentDictionary<SourceLocation, string>();
 
 
         public string Name { get; }
 
         public ScannedScript Script { get; }
 
-        public SourceLocation Location
+        public abstract SourceLocation Location { get; }
+
+
+        public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
+
+
+        internal ScriptFunction(ScannedScript script, string name)
+        {
+            Name = name;
+            Script = script;
+            Script.AddFunction(this);
+        }
+
+        public override int GetHashCode() => HashCode.Combine(Name.ToLower(), Script);
+
+        public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
+
+        public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
+
+        public override string ToString() => $"[{Script}] Func {Name}";
+
+
+        public static bool operator ==(ScriptFunction? s1, ScriptFunction? s2) => s1?.Equals(s2) ?? s2 is null;
+
+        public static bool operator !=(ScriptFunction? s1, ScriptFunction? s2) => !(s1 == s2);
+    }
+
+    internal sealed class AU3Function
+        : ScriptFunction
+    {
+        private readonly ConcurrentDictionary<SourceLocation, string> _lines = new ConcurrentDictionary<SourceLocation, string>();
+
+
+        public override SourceLocation Location
         {
             get
             {
@@ -380,35 +440,24 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-
-        public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
+        public int LineCount => _lines.Count;
 
         public (SourceLocation LineLocation, string LineContent)[] Lines => _lines.OrderBy(k => k.Key).ToArray(k => (k.Key, k.Value));
 
-        public int LinesCount => _lines.Count;
 
-
-        internal ScannedFunction(ScannedScript script, string name)
+        public AU3Function(ScannedScript script, string name)
+            : base(script, name)
         {
-            Name = name;
-            Script = script;
-            Script.AddFunction(this);
         }
 
         public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, content, (l, c) => content);
 
-        public override int GetHashCode() => HashCode.Combine(Name.ToLower(), Script);
+        public override string ToString() => $"{base.ToString()} ({_lines.Count} Lines)";
+    }
 
-        public override bool Equals(object? obj) => Equals(obj as ScannedFunction);
-
-        public bool Equals(ScannedFunction? other) => other is ScannedFunction f && f.GetHashCode() == GetHashCode();
-
-        public override string ToString() => $"[{Script}] Func {Name}(...)  ({_lines.Count} Lines)";
-
-
-        public static bool operator ==(ScannedFunction? s1, ScannedFunction? s2) => s1?.Equals(s2) ?? s2 is null;
-
-        public static bool operator !=(ScannedFunction? s1, ScannedFunction? s2) => !(s1 == s2);
+    internal sealed class NativeFunction
+        : ScriptFunction
+    {
     }
 
     public enum ScannedScriptState

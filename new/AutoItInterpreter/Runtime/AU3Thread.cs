@@ -24,7 +24,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
 
-        public ScannedFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
+        public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
 
         public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
 
@@ -44,7 +44,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public InterpreterResult Start(ScannedFunction function)
+        public InterpreterResult Start(ScriptFunction function)
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
@@ -58,7 +58,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        internal InterpreterResult Call(ScannedFunction function)
+        internal InterpreterError? Call(ScriptFunction function)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -68,12 +68,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _callstack.Push(frame);
 
-            InterpreterResult? result = frame.Exec();
+            InterpreterError? result = frame.Exec();
 
             while (!ReferenceEquals(CurrentFrame, old))
                 _callstack.TryPop(out _);
 
-            return result ?? InterpreterResult.OK;
+            return result;
         }
 
         internal SourceLocation? ExitCall()
@@ -113,7 +113,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread CurrentThread { get; }
 
-        public ScannedFunction CurrentFunction { get; }
+        public ScriptFunction CurrentFunction { get; }
 
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
@@ -122,7 +122,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
 
 
-        internal CallFrame(AU3Thread thread, ScannedFunction function)
+        internal CallFrame(AU3Thread thread, ScriptFunction function)
         {
             CurrentThread = thread;
             CurrentFunction = function;
@@ -142,10 +142,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 return false;
         }
 
-        internal InterpreterResult? Exec()
+        internal InterpreterError? Exec()
         {
             ScannedScript script = CurrentFunction.Script;
-            InterpreterResult? result = null;
+            InterpreterError? result = null;
 
             if (CurrentFunction.IsMainFunction)
                 result = script.LoadScript(this);
@@ -153,9 +153,9 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Executing {CurrentFunction}");
 
             while (_instruction_pointer < _line_cache.Length)
-                if (result?.IsOK ?? true)
+                if (result is null)
                 {
-                    result = ParseCurrentLine();
+                    result = ParseCurrentLine()?.OptionalError;
 
                     if (!MoveNext())
                         break;
@@ -163,13 +163,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                     break;
 
-            if (CurrentFunction.IsMainFunction && (result?.IsOK ?? true))
-                result = script.UnLoadScript(this);
+            if (CurrentFunction.IsMainFunction)
+                result ??= script.UnLoadScript(this);
 
             return result;
         }
 
-        public InterpreterResult Call(ScannedFunction function) => CurrentThread.Call(function);
+        public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
 
         public InterpreterResult? ParseCurrentLine()
         {
@@ -189,7 +189,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result ?? WellKnownError("error.unparsable_line", line);
         }
 
-        private InterpreterResult? ProcessDirective(string directive)
+        private InterpreterError? ProcessDirective(string directive)
         {
             if (!directive.StartsWith('#'))
                 return null;
@@ -220,7 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (AbstractDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
                 result ??= proc?.ProcessDirective(this, directive);
 
-            return result ?? WellKnownError("error.unparsable_dirctive", directive);
+            return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
         }
 
         private InterpreterResult? ProcessStatement(string line)
@@ -278,6 +278,6 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterResult WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+        private InterpreterError WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
     }
 }
