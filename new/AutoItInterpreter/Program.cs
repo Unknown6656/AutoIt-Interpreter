@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -91,7 +92,8 @@ namespace Unknown6656.AutoIt3
                     {
                         h.AdditionalNewLineAfterOption = false;
                         h.MaximumDisplayWidth = 119;
-                        h.Heading = $"AutoIt3 Interpreter v.{Module.InterpreterVersion} ({Module.GitHash})";
+                        h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
+                        h.Copyright = __module__.Copyright;
                         h.AddDashesToOption = true;
                         h.AutoHelp = true;
                         h.AutoVersion = true;
@@ -280,8 +282,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
   _| |_| | | | ||  __/ |  | |_) | | |  __/ ||  __/ |
  |_____|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|
                           | |
-                          |_|  {CurrentLanguage["banner.written_by", "Unknown6656, 2020"]}
-{CurrentLanguage["banner.version"]} v.{Module.InterpreterVersion} ({Module.GitHash})
+                          |_|  {CurrentLanguage["banner.written_by", __module__.Author, __module__.Year]}
+{CurrentLanguage["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
 ");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
                     Console.Write("    ");
@@ -289,24 +291,6 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
                     Console.WriteLine(" This may panic your CPU.\n");
                 });
-        }
-    }
-
-    public static class Module
-    {
-        public static Version? InterpreterVersion { get; }
-        public static string GitHash { get; }
-
-
-        static Module()
-        {
-            string[] lines = Properties.Resources.version.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray(s => s.Trim());
-
-            InterpreterVersion = Version.TryParse(lines[0], out Version? v) ? v : null;
-            GitHash = lines.Length > 0 ? lines[1] : "";
-
-            if ((GitHash?.Length ?? 0) == 0)
-                GitHash = "<unknown git commit hash>";
         }
     }
 

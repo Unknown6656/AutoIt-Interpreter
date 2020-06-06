@@ -69,15 +69,5 @@ namespace Unknown6656.AutoIt3.Properties {
                 return ((byte[])(obj));
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 0.0.13.200601
-        ///2eaf218a2a0f02198503b717de877f5e9ec42be6.
-        /// </summary>
-        internal static string version {
-            get {
-                return ResourceManager.GetString("version", resourceCulture);
-            }
-        }
     }
 }

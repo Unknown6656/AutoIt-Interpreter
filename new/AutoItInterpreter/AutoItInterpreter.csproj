@@ -5,9 +5,10 @@
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin</OutDir>
         <LangVersion>preview</LangVersion>
-        <Deterministic>true</Deterministic>
+        <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
         <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
         <Authors>Unknown6656</Authors>
@@ -34,7 +35,6 @@
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="Localization\lang-en.json" />
-        <EmbeddedResource Include="version.txt" />
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\LICENSE.md">
