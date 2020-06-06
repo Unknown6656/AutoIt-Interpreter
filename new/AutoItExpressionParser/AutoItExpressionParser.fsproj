@@ -20,7 +20,9 @@
         <AssemblyName>autoit3.exprparser</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="Library.fs" />
+        <Compile Include="ExpressionParser.fs" />
+        <Compile Include="Util.fs" />
+        <Compile Include="AST.fs" />
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\util\Piglet\Piglet\Piglet.csproj" />
