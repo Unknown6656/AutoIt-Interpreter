@@ -1,20 +1,21 @@
-﻿using System;
+﻿using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System;
 
+using CommandLine.Text;
 using CommandLine;
+
+using Newtonsoft.Json;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using CommandLine.Text;
 
 namespace Unknown6656.AutoIt3
 {
@@ -58,6 +59,7 @@ namespace Unknown6656.AutoIt3
 
         private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;
+        private static volatile bool _finished = false;
 #nullable disable
         public static LanguagePack CurrentLanguage { get; private set; }
         public static CommandLineOptions CommandLineOptions { get; private set; }
@@ -72,8 +74,8 @@ namespace Unknown6656.AutoIt3
 
             try
             {
-                Console.WindowWidth = Math.Min(Console.WindowWidth, 120);
-                Console.BufferWidth = Math.Min(Console.BufferWidth, 120);
+                Console.WindowWidth = Math.Max(Console.WindowWidth, 120);
+                Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
                 Console.OutputEncoding = Encoding.Unicode;
                 Console.InputEncoding = Encoding.Unicode;
                 // Console.BackgroundColor = ConsoleColor.Black;
@@ -151,7 +153,7 @@ namespace Unknown6656.AutoIt3
                 ConsoleExtensions.RestoreConsoleState(state);
             }
 
-            while (!_print_queue.IsEmpty)
+            while (!_finished)
                 printer.Wait();
 
             return code;
@@ -167,6 +169,8 @@ namespace Unknown6656.AutoIt3
 
             while (_print_queue.TryDequeue(out Action? func))
                 func();
+
+            _finished = true;
         }
 
         private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg)

@@ -15,6 +15,7 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class ScriptScanner
     {
         private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
+        private readonly ConcurrentDictionary<string, ScannedFunction> _cached_functions = new ConcurrentDictionary<string, ScannedFunction>();
         private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
         {
             ResolveUNC,
@@ -32,19 +33,31 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             (FileInfo physical, string content)? file = null;
 
-            foreach (Func<string, (FileInfo, string)?> resolver in _existing_resolvers)
+            if (Program.CommandLineOptions.StrictMode)
                 try
                 {
-                    if (resolver(path) is (FileInfo physical, string content))
-                        return (physical, content);
+                    if (ResolveUNC(path) is { } res)
+                        return res;
                 }
                 catch
                 {
                 }
+            else
+            {
+                foreach (Func<string, (FileInfo, string)?> resolver in _existing_resolvers)
+                    try
+                    {
+                        if (resolver(path) is { } res)
+                            return res;
+                    }
+                    catch
+                    {
+                    }
 
-            foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
-                if (res.TryResolve(path, out file))
-                    return file;
+                foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
+                    if (res.TryResolve(path, out file))
+                        return file;
+            }
 
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
         }
@@ -113,38 +126,33 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
                             else
                             {
-                                line = line[..m.Index] + TrimComment(lines[i].line.TrimStart());
+                                line = line[..m.Index] + ' ' + TrimComment(lines[i].line.TrimStart());
                                 loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
                         if (line.Match(@"^(?<decl>func\s+([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.*)$", out m))
                         {
-                            if (!Program.CommandLineOptions.StrictMode)
+                            if (Program.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
 
-                            lines.RemoveAt(i);
-                            lines.InsertRange(i, new[]
+                            lines.InsertRange(i + 1, new[]
                             {
                                 (m.Groups["decl"].Value, loc),
                                 (m.Groups["body"].Value, loc),
                                 ("endfunc", loc),
                             });
                         }
-
                         else if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)$", out m))
                         {
                             string name = m.Groups["name"].Value;
 
                             if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                            else if (script.HasFunction(name))
-                            {
-                                ScannedFunction existing = script.GetOrCreateFunction(name);
-
+                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScannedFunction existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
-                            }
 
                             curr_func = script.GetOrCreateFunction(name);
+                            _cached_functions.TryAdd(name.ToLower(), curr_func);
                         }
                         else if (line.Match(@"^endfunc$", out Match _))
                         {
@@ -162,6 +170,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return script;
             });
+
+        public ScannedFunction? TryResolveFunction(string name)
+        {
+            _cached_functions.TryGetValue(name.ToLower(), out ScannedFunction? func);
+
+            return func;
+        }
 
         private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
         {

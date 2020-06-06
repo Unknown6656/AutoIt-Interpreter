@@ -227,46 +227,35 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             InterpreterResult? result = null;
 
-            // InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
-            // {
-            //     [@"^func\s+(?<name>[a-z_]\w*)\s*\(\s*(?<args>.*)\s*\)\s*$"] = m =>
-            //     {
-            //         string name = m.Groups["name"].Value;
-            //         string args = m.Groups["args"].Value;
-            // 
-            //         _state |= LineParserState.InsideBlockComment;
-            // 
-            // 
-            //         throw new NotImplementedException();
-            //     },
-            //     ["^endfunc$"] = _ => ScopeStack.Pop(ScopeType.Func),
-            //     ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
-            //     ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
-            //     [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
-            //     {
-            //         int level = int.TryParse(m.Groups["level"].Value, out int l)? l : 1;
-            //         InterpreterResult? result = InterpreterResult.OK;
-            // 
-            //         while (level-- > 1)
-            //             result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
-            // 
+            //InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            //{
+            //    ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
+            //    ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
+            //    [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+            //    {
+            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+            //        InterpreterResult? result = InterpreterResult.OK;
+
+            //        while (level-- > 1)
+            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+
             //         // TODO : continue
-            // 
-            // 
+
+
             //         throw new NotImplementedException();
-            //     },
-            //     [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-            //     {
-            //         int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-            //         InterpreterResult? result = InterpreterResult.OK;
-            // 
-            //         while (level-- > 0)
-            //             result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
-            // 
-            //         return result;
-            //     },
-            // });
-            // 
+            //    },
+            //    [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+            //    {
+            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+            //        InterpreterResult? result = InterpreterResult.OK;
+
+            //        while (level-- > 0)
+            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+
+            //        return result;
+            //    },
+            //});
+
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
