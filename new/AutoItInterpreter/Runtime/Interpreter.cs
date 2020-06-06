@@ -39,6 +39,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 0 => CurrentLanguage["general.no_plugins_loaded"],
                 int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName],
             });
+
+            ScriptScanner.ScanNativeFunctions();
         }
 
         public void Dispose()

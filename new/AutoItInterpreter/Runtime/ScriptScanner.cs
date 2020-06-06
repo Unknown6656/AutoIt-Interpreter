@@ -32,11 +32,9 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Interpreter = interpreter;
             _system_script = new ScannedScript(Program.ASM);
-
-            RegisterProvidedFunctions();
         }
 
-        private void RegisterProvidedFunctions()
+        internal void ScanNativeFunctions()
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
