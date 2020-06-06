@@ -22,4 +22,7 @@
     <ItemGroup>
         <Compile Include="Library.fs" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\util\Piglet\Piglet\Piglet.csproj" />
+    </ItemGroup>
 </Project>
