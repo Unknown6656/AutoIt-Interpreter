@@ -67,6 +67,9 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public void LoadPlugins()
         {
+            if (!Program.CommandLineOptions.StrictMode)
+                return;
+
             ClearLoadedPlugins();
 
             List<Type> types = new List<Type>();

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
-using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
@@ -77,7 +76,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction);
 
-        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path).Match(err => err, Run);
+        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
+                                                                  .Match(err => err, Run);
 
         public static InterpreterResult Run(CommandLineOptions opt)
         {

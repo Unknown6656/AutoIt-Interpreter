@@ -198,16 +198,21 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (directive.Match(@"^include(?<once>-once)?\s+(?<open>[""'<])(?<path>(?:(?!\5).)+)(?<close>[""'>])", out ReadOnlyIndexer<string, string>? g))
             {
-                bool once = g["once"].Contains('-');
                 char open = g["open"][0];
                 char close = g["close"][0];
 
                 if (open != close && open != '<' && close != '>')
                     return WellKnownError("error.mismatched_quotes", open, close);
 
-                bool relative = open != '<';
+                ScriptScanningOptions options = ScriptScanningOptions.Regular;
 
-                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script => Call(script.MainFunction));
+                if (g["once"].Contains('-'))
+                    options |= ScriptScanningOptions.IncludeOnce;
+
+                if (open != '<')
+                    options |= ScriptScanningOptions.RelativePath;
+
+                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script => Call(script.MainFunction));
             }
 
             InterpreterResult? result = null;

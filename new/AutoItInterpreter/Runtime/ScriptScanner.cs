@@ -1,11 +1,10 @@
-﻿using System;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Text.RegularExpressions;
+using System.IO;
+using System;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
@@ -50,7 +49,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
         }
 
-        public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path) =>
+        public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, ScriptScanningOptions options) =>
             ResolveScriptFile(include_loc, path).Match<Union<InterpreterError, ScannedScript>>(err => err, file =>
             {
                 string key = file.physical_file.FullName;
@@ -60,22 +59,25 @@ namespace Unknown6656.AutoIt3.Runtime
                     script = new ScannedScript(file.physical_file);
 
                     ScannedFunction curr_func = script.GetOrCreateFunction(ScannedFunction.GLOBAL_FUNC);
-                    string[] lines = From.String(file.content).To.Lines();
+                    List<(string line, SourceLocation loc)> lines = From.String(file.content)
+                                                                        .To
+                                                                        .Lines()
+                                                                        .Select((l, i) => (l, new SourceLocation(file.physical_file, i)))
+                                                                        .ToList();
                     int comment_lvl = 0;
                     Match m;
 
-                    for (int i = 0; i < lines.Length; ++i)
+                    for (int i = 0; i < lines.Count; ++i)
                     {
-                        SourceLocation loc = new SourceLocation(file.physical_file, i);
-                        string line = TrimComment(lines[i].TrimStart());
-                        bool handled = line.Match(
+                        (string line, SourceLocation loc) = lines[i];
+
+                        line = TrimComment(line.TrimStart());
+
+                        if (line.Match(
                             (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
                             (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
                             (@"^#(end-?)?region\b", delegate { }
-                        )
-                        );
-
-                        if (handled || comment_lvl > 0)
+                        )) || comment_lvl > 0)
                             continue;
 
                         if (line.Match(
@@ -107,15 +109,29 @@ namespace Unknown6656.AutoIt3.Runtime
                         }
 
                         while (line.Match(@"(\s|^)_$", out m))
-                            if (i == lines.Length - 1)
+                            if (i++ == lines.Count - 1)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
                             else
                             {
-                                line = line[..m.Index] + TrimComment(lines[++i].TrimStart());
-                                loc = new SourceLocation(loc.FileName, loc.StartLineNumber, i);
+                                line = line[..m.Index] + TrimComment(lines[i].line.TrimStart());
+                                loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
-                        if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)\s*$", out m))
+                        if (line.Match(@"^(?<decl>func\s+([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.*)$", out m))
+                        {
+                            if (!Program.CommandLineOptions.StrictMode)
+                                return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
+
+                            lines.RemoveAt(i);
+                            lines.InsertRange(i, new[]
+                            {
+                                (m.Groups["decl"].Value, loc),
+                                (m.Groups["body"].Value, loc),
+                                ("endfunc", loc),
+                            });
+                        }
+
+                        else if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)$", out m))
                         {
                             string name = m.Groups["name"].Value;
 
