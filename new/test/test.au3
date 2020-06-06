@@ -1,16 +1,3 @@
-func _
-f1 _
-( _
-)
-endfunc
-
-func _
-f2 _
-( _
-) -> 0
-
-
-
 $b = 9
 
 test($b)

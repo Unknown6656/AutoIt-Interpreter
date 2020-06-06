@@ -1,13 +1,11 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
-using Unknown6656.IO;
-using Unknown6656.Mathematics.Analysis;
+using System.Linq;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -254,39 +252,80 @@ namespace Unknown6656.AutoIt3.Runtime
             return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
         }
 
+
+
+
+        private readonly ConcurrentStack<(BlockStatementType, SourceLocation)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
+
+
+        private void PushBlockStatement(BlockStatementType statement) => _blockstatement_stack.Push((statement, CurrentLocation));
+
+        private InterpreterError? PopBlockStatement(params BlockStatementType[] accepted)
+        {
+            if (accepted.Length == 0)
+                _blockstatement_stack.TryPop(out _);
+            else
+            {
+                _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
+
+                if (!accepted.Contains(statement.type))
+                    return WellKnownError("error.no_matching_close", statement.type, statement.loc);
+            }
+
+            return null;
+        }
+
         private InterpreterResult? ProcessStatement(string line)
         {
-            InterpreterResult? result = null;
+            InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            {
+                [@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
+                {
+                    throw new NotImplementedException();
+                },
+                [@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$"] = m =>
+                {
+                    throw new NotImplementedException();
+                },
+                [@"^with\s+(?<expression>.+)$"] = m =>
+                {
+                    throw new NotImplementedException();
+                },
 
-            //InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
-            //{
-            //    ["^next$"] = _ => ScopeStack.Pop(ScopeType.For, ScopeType.ForIn),
-            //    ["^wend$"] = _ => ScopeStack.Pop(ScopeType.While),
-            //    [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
-            //    {
-            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-            //        InterpreterResult? result = InterpreterResult.OK;
+                ["^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
+                ["^wend$"] = _ => PopBlockStatement(BlockStatementType.While),
+                ["^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
+                ["^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
+                ["^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
 
-            //        while (level-- > 1)
-            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+                [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+                {
+                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+                    InterpreterResult? result = InterpreterResult.OK;
 
-            //         // TODO : continue
+                    while (level-- > 1)
+                        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
+
+                     // TODO : continue
 
 
-            //         throw new NotImplementedException();
-            //    },
-            //    [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-            //    {
-            //        int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-            //        InterpreterResult? result = InterpreterResult.OK;
+                     throw new NotImplementedException();
+                },
+                [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+                {
+                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+                    InterpreterResult? result = InterpreterResult.OK;
 
-            //        while (level-- > 0)
-            //            result = ScopeStack.Pop(ScopeType.For, ScopeType.ForIn, ScopeType.While, ScopeType.Do);
+                    while (level-- > 0)
+                        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
 
-            //        return result;
-            //    },
-            //});
+                    throw new NotImplementedException();
 
+                    return result;
+                },
+            });
+
+            throw new NotImplementedException();
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
@@ -310,5 +349,23 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private InterpreterError WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+    }
+
+    public enum BlockStatementType
+        : int
+    {
+        Global,
+        Func,
+        With,
+        For,
+        ForIn,
+        While,
+        Do,
+        If,
+        ElseIf,
+        Else,
+        Select,
+        Switch,
+        Case,
     }
 }
