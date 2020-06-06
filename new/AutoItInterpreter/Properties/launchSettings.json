@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-v v ../test/test.au3"
+      "commandLineArgs": "-v v ../test/npcbrainibot.au3"
     }
   }
 }

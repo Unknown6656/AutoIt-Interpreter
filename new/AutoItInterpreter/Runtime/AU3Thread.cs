@@ -227,7 +227,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            if (directive.Match(@"^include(?<once>-once)?\s+(?<open>[""'<])(?<path>(?:(?!\5).)+)(?<close>[""'>])", out ReadOnlyIndexer<string, string>? g))
+            if (directive.Match(@"^include(?<once>-once)?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
             {
                 char open = g["open"][0];
                 char close = g["close"][0];
