@@ -68,14 +68,12 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public void LoadPlugins()
         {
-            if (!Program.CommandLineOptions.StrictMode)
-                return;
-
             ClearLoadedPlugins();
 
             List<Type> types = new List<Type>();
+            IEnumerable<FileInfo> assemblies = Program.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
 
-            foreach (FileInfo file in PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory }).Append(Program.ASM))
+            foreach (FileInfo file in assemblies.Append(Program.ASM))
                 try
                 {
                     Assembly asm = Assembly.LoadFrom(file.FullName);
@@ -212,7 +210,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract string Name { get; }
 
 
-        public abstract InterpreterError? Execute(CallFrame frame);
+        public abstract InterpreterError? Execute(NativeCallFrame frame);
     }
 
     // public abstract class ProvidedAU3Function

@@ -7,6 +7,7 @@ using System;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.Mathematics.Analysis;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -22,11 +23,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
 
-        public SourceLocation? CurrentLocation => CurrentFrame?.CurrentLocation;
+        public SourceLocation? CurrentLocation => CurrentFrame switch {
+            AU3CallFrame f => f.CurrentLocation,
+            _ => SourceLocation.Unknown
+        };
 
         public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
-
-        public string? CurrentLineContent => CurrentFrame?.CurrentLineContent;
 
         public bool IsDisposed { get; private set; }
 
@@ -44,14 +46,14 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public InterpreterResult Start(ScriptFunction function)
+        public InterpreterError? Start(ScriptFunction function)
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
             else
                 _running = true;
 
-            InterpreterResult res = Call(function);
+            InterpreterError? res = Call(function);
 
             _running = false;
 
@@ -64,7 +66,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
             CallFrame? old = CurrentFrame;
-            CallFrame frame = new CallFrame(this, function);
+            CallFrame frame = function switch
+            {
+                AU3Function f => new AU3CallFrame(this, f),
+                NativeFunction f => new NativeCallFrame(this, f),
+                _ => throw new ArgumentException($"A function of the type '{function}' cannot be handled by the current thread '{this}'.", nameof(function)),
+            };
 
             _callstack.Push(frame);
 
@@ -105,44 +112,58 @@ namespace Unknown6656.AutoIt3.Runtime
         }
     }
 
-    public sealed class CallFrame
+    public abstract class CallFrame
     {
-        private volatile int _instruction_pointer = 0;
-        private (SourceLocation LineLocation, string LineContent)[] _line_cache;
-
-
         public AU3Thread CurrentThread { get; }
 
         public ScriptFunction CurrentFunction { get; }
 
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
-        public SourceLocation CurrentLocation => _line_cache[_instruction_pointer].LineLocation;
-
-        public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
-
 
         internal CallFrame(AU3Thread thread, ScriptFunction function)
         {
             CurrentThread = thread;
             CurrentFunction = function;
+        }
+
+        internal abstract InterpreterError? Exec();
+
+        public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
+    }
+
+    public sealed class NativeCallFrame
+        : CallFrame
+    {
+        internal NativeCallFrame(AU3Thread thread, NativeFunction function)
+            : base(thread, function)
+        {
+        }
+
+        internal override InterpreterError? Exec() => (CurrentFunction as NativeFunction)?.Execute(this);
+    }
+
+    public sealed class AU3CallFrame
+        : CallFrame
+    {
+        private volatile int _instruction_pointer = 0;
+        private (SourceLocation LineLocation, string LineContent)[] _line_cache;
+
+
+        public SourceLocation CurrentLocation => _line_cache[_instruction_pointer].LineLocation;
+
+        public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
+
+
+
+        internal AU3CallFrame(AU3Thread thread, AU3Function function)
+            : base(thread, function)
+        {
             _line_cache = function.Lines;
             _instruction_pointer = 0;
         }
 
-        private bool MoveNext()
-        {
-            if (_instruction_pointer < _line_cache.Length)
-            {
-                ++_instruction_pointer;
-        
-                return true;
-            }
-            else
-                return false;
-        }
-
-        internal InterpreterError? Exec()
+        internal override InterpreterError? Exec()
         {
             ScannedScript script = CurrentFunction.Script;
             InterpreterError? result = null;
@@ -169,7 +190,17 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
+        private bool MoveNext()
+        {
+            if (_instruction_pointer < _line_cache.Length)
+            {
+                ++_instruction_pointer;
+
+                return true;
+            }
+            else
+                return false;
+        }
 
         public InterpreterResult? ParseCurrentLine()
         {
@@ -189,7 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result ?? WellKnownError("error.unparsable_line", line);
         }
 
-        private InterpreterError? ProcessDirective(string directive)
+        private InterpreterResult? ProcessDirective(string directive)
         {
             if (!directive.StartsWith('#'))
                 return null;

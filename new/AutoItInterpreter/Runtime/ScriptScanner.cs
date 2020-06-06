@@ -38,23 +38,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private void RegisterProvidedFunctions()
         {
-            if (!Program.CommandLineOptions.StrictMode)
-            {
-                foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
-                    foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                        switch (function)
-                        {
-                            case ProvidedAU3Function au3:
-                                ScriptFunction func = new ScriptFunction(_system_script, function.Name);
-
-
-                                func.AddLine(, )
-
-                                break;
-                            case ProvidedNativeFunction native:
-                                break;
-                        }
-            }
+            foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
+                foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
+                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.Execute));
         }
 
         public ScriptFunction? TryResolveFunction(string name)
@@ -185,7 +171,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction existing) && !existing.IsMainFunction)
+                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
                             curr_func = script.GetOrCreateAU3Function(name);
@@ -458,6 +444,14 @@ namespace Unknown6656.AutoIt3.Runtime
     internal sealed class NativeFunction
         : ScriptFunction
     {
+        private readonly Func<NativeCallFrame, InterpreterError?> _execute;
+
+        public override SourceLocation Location { get; } = SourceLocation.Unknown;
+
+
+        public NativeFunction(ScannedScript script, string name, Func<NativeCallFrame, InterpreterError?> execute) : base(script, name) => _execute = execute;
+
+        public InterpreterError? Execute(NativeCallFrame frame) => _execute(frame);
     }
 
     public enum ScannedScriptState

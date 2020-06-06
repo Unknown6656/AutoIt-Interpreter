@@ -103,8 +103,6 @@ namespace Unknown6656.AutoIt3
                     {
                         Console.WriteLine(help.Heading);
                         Console.WriteLine(help.Copyright);
-
-                        code = 0;
                     }
                     else
                     {
@@ -132,12 +130,13 @@ namespace Unknown6656.AutoIt3
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
-                    InterpreterResult result = Interpreter.Run(opt);
+                    InterpreterError? result = Interpreter.Run(opt);
 
-                    if (result.OptionalError is { } err)
+                    if (result is { } err)
+                    {
                         PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
-
-                    code = result.ProgramExitCode;
+                        code = -1;
+                    }
                 });
             }
             catch (Exception ex)

@@ -56,7 +56,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-        public InterpreterResult Run(ScriptFunction entry_point)
+        public InterpreterError? Run(ScriptFunction entry_point)
         {
             try
             {
@@ -74,12 +74,12 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction);
+        public InterpreterError? Run(ScannedScript script) => Run(script.MainFunction);
 
-        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
-                                                                  .Match(err => err, Run);
+        public InterpreterError? Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
+                                                                  .Match(Generics.id, Run);
 
-        public static InterpreterResult Run(CommandLineOptions opt)
+        public static InterpreterError? Run(CommandLineOptions opt)
         {
             using Interpreter interpreter = new Interpreter(opt);
 
@@ -104,7 +104,7 @@ namespace Unknown6656.AutoIt3.Runtime
             OptionalError = err;
         }
 
-        public static implicit operator InterpreterResult(InterpreterError err) => new InterpreterResult(-1, err);
+        public static implicit operator InterpreterResult?(InterpreterError? err) => err is null ? null : new InterpreterResult(-1, err);
     }
 
     public sealed class InterpreterError
