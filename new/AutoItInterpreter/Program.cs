@@ -50,7 +50,7 @@ namespace Unknown6656.AutoIt3
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
 
-        private static readonly ConcurrentQueue<(string prefix, string message, DateTime time)> _msg_queue = new ConcurrentQueue<(string, string, DateTime)>();
+        private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;
 #nullable disable
         public static LanguagePack CurrentLanguage { get; private set; }
@@ -61,6 +61,7 @@ namespace Unknown6656.AutoIt3
         public static int Main(string[] argv)
         {
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
+            using Task printer = Task.Factory.StartNew(PrinterTask);
             int code = 0;
 
             try
@@ -88,8 +89,6 @@ namespace Unknown6656.AutoIt3
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
-                    Task.Factory.StartNew(PrinterTask);
-
                     InterpreterResult result = Interpreter.Run(opt);
 
                     if (result.OptionalError is { } err)
@@ -109,6 +108,8 @@ namespace Unknown6656.AutoIt3
             {
                 _isrunning = false;
 
+                printer.ConfigureAwait(false).GetAwaiter().GetResult();
+
                 ConsoleExtensions.RestoreConsoleState(state);
             }
 
@@ -118,24 +119,13 @@ namespace Unknown6656.AutoIt3
         private static async Task PrinterTask()
         {
             while (_isrunning)
-                if (_msg_queue.TryDequeue(out (string p, string m, DateTime t) elem))
-                {
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
-                    Console.Write('[');
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
-                    Console.Write(elem.t.ToString("HH:mm:ss.fff"));
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
-                    Console.Write("][");
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
-                    Console.Write(elem.p);
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
-                    Console.Write("]  ");
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
-                    Console.WriteLine(elem.m);
-                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-                }
+                if (_print_queue.TryDequeue(out Action? func))
+                    func();
                 else
                     await Task.Delay(50);
+
+            while (_print_queue.TryDequeue(out Action? func))
+                func();
         }
 
         private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg)
@@ -143,7 +133,24 @@ namespace Unknown6656.AutoIt3
             if (CommandLineOptions.Verbosity < min_lvl)
                 return;
 
-            _msg_queue.Enqueue((prefix, msg, DateTime.Now));
+            DateTime now = DateTime.Now;
+
+            _print_queue.Enqueue(delegate
+            {
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write('[');
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
+                Console.Write(now.ToString("HH:mm:ss.fff"));
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write("][");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+                Console.Write(prefix);
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write("]  ");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+                Console.WriteLine(msg);
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            });
         }
 
         internal static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message);
@@ -171,11 +178,8 @@ namespace Unknown6656.AutoIt3
             PrintError(sb.ToString());
         }
 
-        internal static void PrintError(this string message)
+        internal static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
-            _isrunning = false;
-            _msg_queue.Clear();
-
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
@@ -207,15 +211,17 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(message.TrimEnd());
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', Console.WindowWidth - 1));
-        }
+        });
 
         private static void PrintBanner()
         {
             if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
                 return;
-
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine($@"
+            else
+                _print_queue.Enqueue(delegate
+                {
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+                    Console.WriteLine($@"
                         _       _____ _   ____
              /\        | |     |_   _| | |___ \
             /  \  _   _| |_ ___  | | | |_  __) |
@@ -232,11 +238,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                           |_|  {CurrentLanguage["banner.written_by", "Unknown6656, 2020"]}
 {CurrentLanguage["banner.version"]} v.{Module.InterpreterVersion} ({Module.GitHash})
 ");
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
-            Console.Write("    ");
-            ConsoleExtensions.WriteUnderlined("WARNING!");
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
-            Console.WriteLine(" This may panic your CPU.\n");
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
+                    Console.Write("    ");
+                    ConsoleExtensions.WriteUnderlined("WARNING!");
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
+                    Console.WriteLine(" This may panic your CPU.\n");
+                });
         }
     }
 

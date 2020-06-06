@@ -385,4 +385,13 @@ namespace Unknown6656.AutoIt3.Runtime
         Unloaded,
         Loaded
     }
+
+    [Flags]
+    public enum ScriptScanningOptions
+        : byte
+    {
+        Regular = 0b_0000_0000,
+        IncludeOnce = 0b_0000_0001,
+        RelativePath = 0b_0000_0010,
+    }
 }
