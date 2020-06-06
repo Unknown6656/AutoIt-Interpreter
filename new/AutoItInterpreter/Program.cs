@@ -13,16 +13,21 @@ using Unknown6656.Imaging;
 using Unknown6656.Common;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using CommandLine.Text;
 
 namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
-        [Option('B', "nobanner", Default = false, HelpText = "Suppresses the banner.")]
+        [Option('B', "nobanner", Default = false, HelpText = "Suppress the banner.")]
         public bool HideBanner { get; }
 
-        [Option('N', "no-plugins", Default = false, HelpText = "Prevents the loading of interpreter plugins.")]
+        [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins.")]
         public bool DontLoadPlugins { get; }
+
+        [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
+        public bool StrictMode { get; }
 
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
         public Verbosity Verbosity { get; }
@@ -34,10 +39,11 @@ namespace Unknown6656.AutoIt3
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, Verbosity verbosity, string language, string filePath)
+        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, Verbosity verbosity, string language, string filePath)
         {
             HideBanner = hideBanner;
             DontLoadPlugins = dontLoadPlugins;
+            StrictMode = strictMode;
             Verbosity = verbosity;
             Language = language;
             FilePath = filePath;
@@ -66,12 +72,45 @@ namespace Unknown6656.AutoIt3
 
             try
             {
+                Console.WindowWidth = Math.Min(Console.WindowWidth, 120);
+                Console.BufferWidth = Math.Min(Console.BufferWidth, 120);
                 Console.OutputEncoding = Encoding.Unicode;
                 Console.InputEncoding = Encoding.Unicode;
                 // Console.BackgroundColor = ConsoleColor.Black;
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
-                Parser.Default.ParseArguments<CommandLineOptions>(argv).WithParsed(opt =>
+                Parser parser = new Parser(p => p.HelpWriter = null);
+                ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
+
+                result.WithNotParsed(err =>
+                {
+                    HelpText help = HelpText.AutoBuild(result, h =>
+                    {
+                        h.AdditionalNewLineAfterOption = false;
+                        h.MaximumDisplayWidth = 119;
+                        h.Heading = $"AutoIt3 Interpreter v.{Module.InterpreterVersion} ({Module.GitHash})";
+                        h.AddDashesToOption = true;
+                        h.AutoHelp = true;
+                        h.AutoVersion = true;
+
+                        return HelpText.DefaultParsingErrorsHandler(result, h);
+                    }, e => e);
+
+                    if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                    {
+                        Console.WriteLine(help.Heading);
+                        Console.WriteLine(help.Copyright);
+
+                        code = 0;
+                    }
+                    else
+                    {
+                        Console.WriteLine(help);
+
+                        code = -1;
+                    }
+                });
+                result.WithParsed(opt =>
                 {
                     CommandLineOptions = opt;
 
@@ -86,6 +125,7 @@ namespace Unknown6656.AutoIt3
                     }
 
                     PrintBanner();
+                    PrintDebugMessage(JsonConvert.SerializeObject(opt));
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
@@ -95,7 +135,7 @@ namespace Unknown6656.AutoIt3
                         PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
 
                     code = result.ProgramExitCode;
-                }).WithNotParsed(errs => code = -1);
+                });
             }
             catch (Exception ex)
             when (!Debugger.IsAttached)
@@ -108,10 +148,11 @@ namespace Unknown6656.AutoIt3
             {
                 _isrunning = false;
 
-                printer.ConfigureAwait(false).GetAwaiter().GetResult();
-
                 ConsoleExtensions.RestoreConsoleState(state);
             }
+
+            while (!_print_queue.IsEmpty)
+                printer.Wait();
 
             return code;
         }
