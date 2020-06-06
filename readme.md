@@ -12,20 +12,21 @@ This repository contains _two_ AutoIt-Interpreters:
  2. [The "new" (.net5-based) **AutoIt3 Interpreter**.](new/readme.md)
     <br/>
     This will primarily only support the AutoIt3-specification (without all the fancy AutoIt++-sh█t).
+    However, the interpiler project does suppoert a plugin-based extension system in order to provide a custom syntax or framework to the interpreter.
 
 
 #### Comparison:
 
 Category | [AutoIt++ Interpiler](old/readme.md)| [AutoIt3 Interpreter](new/readme.md)
 ---------|---------------------|--------------------
-Supported Language | AutoIt++ | Strict AutoIt 3
-Works as an ... | Interpiler:<br/>60% compiler, 30% interpreter, 10% magic | Interpreter
-Written in | F#, C#|C#
-Target Framework | .NET Core 2.1 | .NET 5
+Supported Language | AutoIt 3<br/>AutoIt++ | Strict AutoIt 3<br/>However, it can be extended
+Works as an ... | Interpiler/Transpiler:<br/>60% compiler, 30% interpreter, 10% magic | Interpreter
+Written in | C#, F# | C#, F#
+Target Framework | .NET Core 2.1 | .NET 5 and newer
 Works on Windows | Yup | Hopefully
-Works on Linux | Kinda | Hopefully
-Works on MacOs | Kinda | Hopefully
-Status | Beta-ish | Not yet developed
+Works on Linux | Kinda | Not yet tested
+Works on MacOs | Kinda | Not yet tested
+Status | Beta-ish | In development
 
 
 ## Links
