@@ -31,18 +31,12 @@ type ExpressionParser() =
         let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>             "unary-operator"
         let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>            "binary-operator"
         let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>        "binary-assignment-operator"
-        
         let nt_dot_membername           = x.CreateNonTerminal<MEMBERNAME>                 "dot-prefixed-member-name"
         let nt_dot_member               = x.CreateNonTerminal<MEMBER>                     "dot-prefixed-member"
-        
         let nt_funccall                 = x.CreateNonTerminal<FUNCCALL>                   "function-call"
         let nt_funcparams               = x.CreateNonTerminal<EXPRESSION list>            "function-parameters"
-
-
         let nt_array_indexers           = x.CreateNonTerminal<EXPRESSION list>            "array-indexers"
         let nt_array_indexer            = x.CreateNonTerminal<EXPRESSION>                 "array-indexer"
-
-
      // let nt_array_init_wrapper       = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-wrapper"
      // let nt_array_init_expression    = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-expression"
      // let nt_subexpression            = Array.map (x.CreateNonTerminal<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
@@ -117,6 +111,8 @@ type ExpressionParser() =
         reduce2 nt_expression nt_expression nt_dot_member (fun e m -> DotAccess(e, m))
         reduce1 nt_expression nt_dot_member ContextualDotAccess
 
+        reduce nt_funccall nt_dot_membername
+
         reduce1 nt_literal t_literal_true id
         reduce1 nt_literal t_literal_false id
         reduce1 nt_literal t_literal_null id
@@ -154,7 +150,7 @@ type ExpressionParser() =
 
         reduce3 nt_assignment_expression t_variable nt_operator_binary_assg nt_expression (fun v o e -> ScalarAssignment(v, o, e))
         reduce4 nt_assignment_expression nt_expression nt_dot_membername nt_operator_binary_assg nt_expression (fun e1 m o e2 -> MemberAssignment(e1, m, o, e2))
-        reduce3 nt_assignment_expression t_variable nt_operator_binary_assg nt_expression (fun v o e -> ScalarAssignment(v, o, e))
+        reduce4 nt_assignment_expression nt_expression nt_array_indexers nt_operator_binary_assg nt_expression (fun e1 xs o e2 -> ArrayAssignment(e1, xs, o, e2))
         reduce1 nt_operator_binary_assg t_operator_assign_add id
         reduce1 nt_operator_binary_assg t_operator_assign_sub id
         reduce1 nt_operator_binary_assg t_operator_assign_mul id

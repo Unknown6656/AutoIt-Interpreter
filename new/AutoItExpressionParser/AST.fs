@@ -85,7 +85,7 @@ and EXPRESSION =
 and ASSIGNMENT_EXPRESSION =
     | ScalarAssignment of VARIABLE * OPERATOR_ASSIGNMENT * EXPRESSION
     | MemberAssignment of EXPRESSION * MEMBERNAME * OPERATOR_ASSIGNMENT * EXPRESSION
-    | ArrayAssignment of VARIABLE * EXPRESSION list * OPERATOR_ASSIGNMENT * EXPRESSION // op, var, indices, expr
+    | ArrayAssignment of EXPRESSION * EXPRESSION list * OPERATOR_ASSIGNMENT * EXPRESSION // op, var, indices, expr
 
 type FUNCTION_PARAMETER_MODIFIER =
     {
