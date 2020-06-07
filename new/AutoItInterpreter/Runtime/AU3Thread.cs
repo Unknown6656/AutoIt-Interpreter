@@ -324,7 +324,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
             });
 
-            throw new NotImplementedException();
+            // TODO
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
@@ -335,6 +335,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult? ProcessExpressionStatement(string line)
         {
+            var result = ParserProvider.ExprParser.Parse(line);
+
             throw new NotImplementedException();
         }
 
