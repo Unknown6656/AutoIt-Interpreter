@@ -10,7 +10,7 @@ open AST
 
 
 type ExpressionParser() =
-    inherit ParserConstructor<EXPRESSION>()
+    inherit ParserConstructor<PARSABLE_EXPRESSION>()
 
     member private x.CreateTerminalF s f = x.CreateTerminal(s, fun s -> f s)
     override x.Construct nt_result =
@@ -22,29 +22,21 @@ type ExpressionParser() =
             |> Decimal
             |> Number
             
-        let nt_expression               = x.CreateNonTerminal<EXPRESSION>                 "expression"
+        let nt_expression               = x.CreateNonTerminal<EXPRESSION>                 "expr"
         let nt_literal                  = x.CreateNonTerminal<LITERAL>                    "literal"
-        let nt_unary_expression         = x.CreateNonTerminal<EXPRESSION>                 "unary-expression"
-        let nt_binary_expression        = x.CreateNonTerminal<EXPRESSION>                 "binary-expression"
-        let nt_ternary_expression       = x.CreateNonTerminal<EXPRESSION>                 "ternary-expression"
-        let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>      "assignment-expression"
-        let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>             "unary-operator"
-        let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>            "binary-operator"
-        let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>        "binary-assignment-operator"
-        let nt_dot_membername           = x.CreateNonTerminal<MEMBERNAME>                 "dot-prefixed-member-name"
-        let nt_dot_member               = x.CreateNonTerminal<MEMBER>                     "dot-prefixed-member"
-        let nt_funccall                 = x.CreateNonTerminal<FUNCCALL>                   "function-call"
-        let nt_funcparams               = x.CreateNonTerminal<EXPRESSION list>            "function-parameters"
-        let nt_array_indexers           = x.CreateNonTerminal<EXPRESSION list>            "array-indexers"
-        let nt_array_indexer            = x.CreateNonTerminal<EXPRESSION>                 "array-indexer"
-     // let nt_array_init_wrapper       = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-wrapper"
-     // let nt_array_init_expression    = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-expression"
-     // let nt_subexpression            = Array.map (x.CreateNonTerminal<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
-     // let nt_dot_members              = x.CreateNonTerminal<MEMBER list>                "dot-members"
-     // let nt_dot_member               = x.CreateNonTerminal<MEMBER list>                "dot-member"
-     // let nt_inline_array_wrapper     = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "inline-array-wrapper"
-     // let nt_inline_array_expression  = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "inline-array-expression"
-        
+        let nt_unary_expression         = x.CreateNonTerminal<UNARY_EXPRESSION>           "un-expr"
+        let nt_binary_expression        = x.CreateNonTerminal<BINARY_EXPRESSION>          "bin-expr"
+        let nt_ternary_expression       = x.CreateNonTerminal<TERNARY_EXPRESSION>         "ter-expr"
+        let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>      "assg-expr"
+        let nt_assg_target              = x.CreateNonTerminal<ASSIGNMENT_TARGET>          "assg-targ"
+        let nt_indexer_expression       = x.CreateNonTerminal<INDEXER_EXPRESSION>         "idx-expr"
+        let nt_member_expression        = x.CreateNonTerminal<MEMBER_EXPRESSION>          "member-expr"
+        let nt_funccall_expression      = x.CreateNonTerminal<FUNCCALL_EXPRESSION>        "funccall-expr"
+        let nt_funccall_arguments       = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>         "funccall-args"
+        let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>             "un-op"
+        let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>            "bin-op"
+        let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>        "assg-op"
+
         let t_operator_assign_add       = x.CreateTerminalF @"\+="                              (fun _ -> AssignAdd)
         let t_operator_assign_sub       = x.CreateTerminalF @"-="                               (fun _ -> AssignSubtract)
         let t_operator_assign_mul       = x.CreateTerminalF @"\*="                              (fun _ -> AssignMultiply)
@@ -71,8 +63,8 @@ type ExpressionParser() =
         let t_symbol_cparen             = x.CreateTerminal @"\)"
         let t_symbol_obrack             = x.CreateTerminal @"\["
         let t_symbol_cbrack             = x.CreateTerminal @"\]"
-        let t_symbol_ocurly             = x.CreateTerminal @"\{"
-        let t_symbol_ccurly             = x.CreateTerminal @"\}"
+     // let t_symbol_ocurly             = x.CreateTerminal @"\{"
+     // let t_symbol_ccurly             = x.CreateTerminal @"\}"
         let t_keyword_new               = x.CreateTerminal @"new"
         let t_keyword_and               = x.CreateTerminalF @"and"                              (fun _ -> And)
         let t_keyword_or                = x.CreateTerminalF @"or"                               (fun _ -> Or)
@@ -93,10 +85,16 @@ type ExpressionParser() =
         let t_macro                     = x.CreateTerminalF @"@[a-z_]\w*"                       (fun s -> MACRO(s.Substring 1))
         let t_string_1                  = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""  (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
         let t_string_2                  = x.CreateTerminalF @"'(([^']*''[^']*)*|[^']+)'"        (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
-        let t_identifier                = x.CreateTerminalF @"[_a-z]\w*"                        id
+        let t_identifier                = x.CreateTerminalF @"[_a-z]\w*"                        Identifier
 
 
 
+
+
+
+
+
+        (*
         reduce0 nt_result nt_expression
         
         reduce3 nt_expression t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
@@ -161,8 +159,6 @@ type ExpressionParser() =
         reduce3 nt_array_indexer t_symbol_obrack nt_expression t_symbol_cbrack (fun _ e _ -> e)
         reduce2 nt_array_indexers nt_array_indexers nt_array_indexer (fun xs x -> xs@[x])
         reduce1 nt_array_indexers nt_array_indexer (fun x -> [x])
-
-
+        *)
         ()
-            
 
