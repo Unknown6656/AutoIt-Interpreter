@@ -1,6 +1,9 @@
 ﻿module Unknown6656.AutoIt3.ExpressionParser.AST
 
 
+
+type IDENTIFIER = Identifier of string
+
 type VARIABLE (name : string) =
     member x.Name = if name.StartsWith('$') then name.Substring 1 else name
     override x.ToString() = "$" + x.Name
@@ -57,52 +60,42 @@ type OPERATOR_UNARY =
     | Negate
     | Not
 
-type MEMBERNAME = MemeberName of string
-
-type MEMBER =
-    | Field of MEMBERNAME
-    | Method of FUNCCALL
-
-and FUNCCALL = MEMBERNAME * EXPRESSION list
-
-and ARRAY_INIT_EXPRESSION =
-    | Multiple of ARRAY_INIT_EXPRESSION list
-    | Single of EXPRESSION
-
-and EXPRESSION =
+type EXPRESSION =
     | Literal of LITERAL
-    | FunctionCall of FUNCCALL
+    | Variable of VARIABLE
     | Macro of MACRO
-    | UnaryExpression of OPERATOR_UNARY * EXPRESSION
-    | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
-    | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
+    | Unary of UNARY_EXPRESSION
+    | Binary of BINARY_EXPRESSION
+    | Ternary of TERNARY_EXPRESSION
+    | Member of MEMBER_EXPRESSION
+    | Indexer of INDEXER_EXPRESSION
+    | FunctionCall of FUNCCALL_EXPRESSION
+
+and UNARY_EXPRESSION = OPERATOR_UNARY * EXPRESSION
+
+and BINARY_EXPRESSION = EXPRESSION * OPERATOR_BINARY * EXPRESSION
+
+and TERNARY_EXPRESSION = EXPRESSION * EXPRESSION * EXPRESSION
+
+and ASSIGNMENT_TARGET =
+    | VariableAssignment of VARIABLE
+    | IndexedAssignment of INDEXER_EXPRESSION
+    | MemberAssignemnt of MEMBER_EXPRESSION
+
+and ASSIGNMENT_EXPRESSION = ASSIGNMENT_TARGET * OPERATOR_ASSIGNMENT * EXPRESSION
+
+and MEMBER_EXPRESSION =
+    | ExplicitMemberAccess of EXPRESSION * IDENTIFIER
+    | ImplicitMemberAccess of IDENTIFIER
+
+and INDEXER_EXPRESSION = EXPRESSION * EXPRESSION // expr, index
+
+and FUNCCALL_ARGUMENTS = EXPRESSION list
+
+and FUNCCALL_EXPRESSION =
+    | DirectFunctionCall of IDENTIFIER * FUNCCALL_ARGUMENTS
+    | MemberCall of MEMBER_EXPRESSION * FUNCCALL_ARGUMENTS
+
+type PARSABLE_EXPRESSION =
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
-    | ArrayInitExpression of EXPRESSION list * ARRAY_INIT_EXPRESSION list // indexers, initexpr
-    | ArrayAccess of EXPRESSION * EXPRESSION // index
-    | DotAccess of EXPRESSION * MEMBER
-    | ContextualDotAccess of MEMBER // inside with expressions!
-
-and ASSIGNMENT_EXPRESSION =
-    | ScalarAssignment of VARIABLE * OPERATOR_ASSIGNMENT * EXPRESSION
-    | MemberAssignment of EXPRESSION * MEMBERNAME * OPERATOR_ASSIGNMENT * EXPRESSION
-    | ArrayAssignment of EXPRESSION * EXPRESSION list * OPERATOR_ASSIGNMENT * EXPRESSION // op, var, indices, expr
-
-type FUNCTION_PARAMETER_MODIFIER =
-    {
-        IsConst : bool
-        IsByRef : bool
-    }
-
-type FUNCTION_PARAMETER_DEFVAL =
-    | Lit of LITERAL
-    | Mac of MACRO
-
-type FUNCTION_PARAMETER_TYPE =
-    | Mandatory of FUNCTION_PARAMETER_MODIFIER
-    | Optional of FUNCTION_PARAMETER_DEFVAL
-
-type FUNCTION_PARAMETER =
-    {
-        Variable : VARIABLE
-        Type : FUNCTION_PARAMETER_TYPE
-    }
+    | FunctionCallExpression of FUNCCALL_EXPRESSION

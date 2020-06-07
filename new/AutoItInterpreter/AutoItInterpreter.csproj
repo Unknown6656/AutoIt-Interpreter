@@ -29,6 +29,9 @@
       <None Remove="Localization\lang-en.json" />
     </ItemGroup>
     <ItemGroup>
+        <Reference Include="Piglet">
+          <HintPath>..\lib\Piglet.dll</HintPath>
+        </Reference>
         <Reference Include="unknown6656.core">
             <HintPath>..\lib\unknown6656.core.dll</HintPath>
         </Reference>

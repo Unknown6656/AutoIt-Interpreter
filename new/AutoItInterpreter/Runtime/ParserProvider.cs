@@ -9,7 +9,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public static class ParserProvider
     {
-        public static ParserConstructor<AST.EXPRESSION>.ParserWrapper ExprParser { get; }
+        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper ExprParser { get; }
 
 
         static ParserProvider()

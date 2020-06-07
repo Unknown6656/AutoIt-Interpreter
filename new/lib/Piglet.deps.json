@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "Piglet/1.6.0": {
+        "runtime": {
+          "Piglet.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Piglet/1.6.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
