@@ -21,35 +21,47 @@ type ExpressionParser() =
             if n then -l else l
             |> Decimal
             |> Number
+            
+        let nt_expression               = x.CreateNonTerminal<EXPRESSION>                 "expression"
+        let nt_literal                  = x.CreateNonTerminal<LITERAL>                    "literal"
+        let nt_unary_expression         = x.CreateNonTerminal<EXPRESSION>                 "unary-expression"
+        let nt_binary_expression        = x.CreateNonTerminal<EXPRESSION>                 "binary-expression"
+        let nt_ternary_expression       = x.CreateNonTerminal<EXPRESSION>                 "ternary-expression"
+        let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>      "assignment-expression"
+        let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>             "unary-operator"
+        let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>            "binary-operator"
+        let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>        "binary-assignment-operator"
+        
+        let nt_dot_membername           = x.CreateNonTerminal<MEMBERNAME>                 "dot-prefixed-member-name"
+        let nt_dot_member               = x.CreateNonTerminal<MEMBER>                     "dot-prefixed-member"
+        
+        let nt_funccall                 = x.CreateNonTerminal<FUNCCALL>                   "function-call"
+        let nt_funcparams               = x.CreateNonTerminal<EXPRESSION list>            "function-parameters"
 
-        let nt_array_indexers           = x.CreateNonTerminal<EXPRESSION list>                  "array-indexers"
-        let nt_array_indexer            = x.CreateNonTerminal<EXPRESSION>                       "array-indexer"
-        let nt_array_init_wrapper       = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list>       "array-init-wrapper"
-        let nt_array_init_expression    = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list>       "array-init-expression"
-        let nt_deref_target_expressions = x.CreateNonTerminal<EXPRESSION>                       "dereferencing-targets"
-        let nt_expression_ext           = x.CreateNonTerminal<EXPRESSION>                       "extended-expression"
-        let nt_expression               = x.CreateNonTerminal<EXPRESSION>                       "expression"
-        let nt_at_expression            = x.CreateNonTerminal<EXPRESSION>                       "at-expression"
+
+        let nt_array_indexers           = x.CreateNonTerminal<EXPRESSION list>            "array-indexers"
+        let nt_array_indexer            = x.CreateNonTerminal<EXPRESSION>                 "array-indexer"
+
+
+     // let nt_array_init_wrapper       = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-wrapper"
+     // let nt_array_init_expression    = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "array-init-expression"
      // let nt_subexpression            = Array.map (x.CreateNonTerminal<EXPRESSION> << sprintf "expression-%d") [| 0..52 |]
-        let nt_funccall                 = x.CreateNonTerminal<FUNCCALL>                         "function-call"
-        let nt_funcparams               = x.CreateNonTerminal<EXPRESSION list>                  "function-parameters"
-        let nt_literal                  = x.CreateNonTerminal<LITERAL>                          "literal"
-        let nt_operator_binary_ass      = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>              "binary-assignment-operator"
-        let nt_dot_members              = x.CreateNonTerminal<MEMBER list>                      "dot-members"
-        let nt_dot_member               = x.CreateNonTerminal<MEMBER list>                      "dot-member"
-        let nt_inline_array_wrapper     = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list>       "inline-array-wrapper"
-        let nt_inline_array_expression  = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list>       "inline-array-expression"
-        let t_operator_assign_add       = x.CreateTerminal @"\+="
-        let t_operator_assign_sub       = x.CreateTerminal @"-="
-        let t_operator_assign_mul       = x.CreateTerminal @"\*="
-        let t_operator_assign_div       = x.CreateTerminal @"/="
-        let t_operator_assign_con       = x.CreateTerminal @"&="
-        let t_operator_comp_neq         = x.CreateTerminal @"<>"
-        let t_operator_comp_gte         = x.CreateTerminal @">="
-        let t_operator_comp_gt          = x.CreateTerminal @">"
-        let t_operator_comp_lte         = x.CreateTerminal @"<="
-        let t_operator_comp_lt          = x.CreateTerminal @"<"
-        let t_operator_comp_eq          = x.CreateTerminal @"=="
+     // let nt_dot_members              = x.CreateNonTerminal<MEMBER list>                "dot-members"
+     // let nt_dot_member               = x.CreateNonTerminal<MEMBER list>                "dot-member"
+     // let nt_inline_array_wrapper     = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "inline-array-wrapper"
+     // let nt_inline_array_expression  = x.CreateNonTerminal<ARRAY_INIT_EXPRESSION list> "inline-array-expression"
+        
+        let t_operator_assign_add       = x.CreateTerminalF @"\+="                              (fun _ -> AssignAdd)
+        let t_operator_assign_sub       = x.CreateTerminalF @"-="                               (fun _ -> AssignSubtract)
+        let t_operator_assign_mul       = x.CreateTerminalF @"\*="                              (fun _ -> AssignMultiply)
+        let t_operator_assign_div       = x.CreateTerminalF @"/="                               (fun _ -> AssignDivide)
+        let t_operator_assign_con       = x.CreateTerminalF @"&="                               (fun _ -> AssignConcat)
+        let t_operator_comp_neq         = x.CreateTerminalF @"<>"                               (fun _ -> Unequal)
+        let t_operator_comp_gte         = x.CreateTerminalF @">="                               (fun _ -> GreaterEqual)
+        let t_operator_comp_gt          = x.CreateTerminalF @">"                                (fun _ -> Greater)
+        let t_operator_comp_lte         = x.CreateTerminalF @"<="                               (fun _ -> LowerEqual)
+        let t_operator_comp_lt          = x.CreateTerminalF @"<"                                (fun _ -> Lower)
+        let t_operator_comp_eq          = x.CreateTerminalF @"=="                               (fun _ -> EqualCaseSensitive)
         let t_symbol_equal              = x.CreateTerminal @"="
         let t_symbol_questionmark       = x.CreateTerminal @"\?"
         let t_symbol_colon              = x.CreateTerminal @":"
@@ -57,21 +69,20 @@ type ExpressionParser() =
         let t_symbol_comma              = x.CreateTerminal @","
         let t_symbol_minus              = x.CreateTerminal @"-"
         let t_symbol_plus               = x.CreateTerminal @"\+"
-        let t_symbol_asterisk           = x.CreateTerminal @"\*"
-        let t_symbol_slash              = x.CreateTerminal @"/"
-        let t_symbol_hat                = x.CreateTerminal @"^"
-        let t_symbol_ampersand          = x.CreateTerminal @"&"
+        let t_opeator_mul               = x.CreateTerminalF @"\*"                               (fun _ -> Multiply)
+        let t_opeator_div               = x.CreateTerminalF @"/"                                (fun _ -> Divide)
+        let t_opeator_pow               = x.CreateTerminalF @"^"                                (fun _ -> Power)
+        let t_opeator_concat            = x.CreateTerminalF @"&"                                (fun _ -> StringConcat)
         let t_symbol_oparen             = x.CreateTerminal @"\("
         let t_symbol_cparen             = x.CreateTerminal @"\)"
         let t_symbol_obrack             = x.CreateTerminal @"\["
         let t_symbol_cbrack             = x.CreateTerminal @"\]"
         let t_symbol_ocurly             = x.CreateTerminal @"\{"
         let t_symbol_ccurly             = x.CreateTerminal @"\}"
-        let t_keyword_to                = x.CreateTerminal @"to"
         let t_keyword_new               = x.CreateTerminal @"new"
-        let t_keyword_and               = x.CreateTerminal @"and"
-        let t_keyword_or                = x.CreateTerminal @"or"
-        let t_keyword_not               = x.CreateTerminal @"(not|!)"
+        let t_keyword_and               = x.CreateTerminalF @"and"                              (fun _ -> And)
+        let t_keyword_or                = x.CreateTerminalF @"or"                               (fun _ -> Or)
+        let t_keyword_not               = x.CreateTerminalF @"(not|!)"                          (fun _ -> Not)
         let t_literal_true              = x.CreateTerminalF @"true"                             (fun _ -> True)
         let t_literal_false             = x.CreateTerminalF @"false"                            (fun _ -> False)
         let t_literal_null              = x.CreateTerminalF @"null"                             (fun _ -> Null)
@@ -91,10 +102,71 @@ type ExpressionParser() =
         let t_identifier                = x.CreateTerminalF @"[_a-z]\w*"                        id
 
 
-        reduce1 nt_result nt_literal Literal
 
-        // TODO
+        reduce0 nt_result nt_expression
+        
+        reduce3 nt_expression t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
+        reduce1 nt_expression nt_funccall FunctionCall
+        reduce1 nt_expression nt_unary_expression id
+        reduce1 nt_expression nt_binary_expression id
+        reduce1 nt_expression nt_ternary_expression id
+        reduce1 nt_expression nt_assignment_expression AssignmentExpression
+        reduce1 nt_expression nt_literal Literal
+        reduce1 nt_expression t_macro Macro
+        reduce2 nt_expression nt_expression nt_array_indexer (fun a i -> ArrayAccess(a, i))
+        reduce2 nt_expression nt_expression nt_dot_member (fun e m -> DotAccess(e, m))
+        reduce1 nt_expression nt_dot_member ContextualDotAccess
+
+        reduce1 nt_literal t_literal_true id
+        reduce1 nt_literal t_literal_false id
+        reduce1 nt_literal t_literal_null id
+        reduce1 nt_literal t_literal_default id
+        reduce1 nt_literal t_literal_empty id
+        reduce1 nt_literal t_hex id
+        reduce1 nt_literal t_bin id
+        reduce1 nt_literal t_oct id
+        reduce1 nt_literal t_dec id
+        reduce1 nt_literal t_string_1 id
+        reduce1 nt_literal t_string_2 id
+
+        reduce2 nt_unary_expression nt_operator_unary nt_expression (fun o e -> UnaryExpression(o, e))
+        reduce1 nt_operator_unary t_keyword_not id
+        reduce1 nt_operator_unary t_symbol_plus (fun _ -> Identity)
+        reduce1 nt_operator_unary t_symbol_minus (fun _ -> Negate)
+
+        reduce3 nt_binary_expression nt_expression nt_operator_binary nt_expression (fun e1 o e2 -> BinaryExpression(o, e1, e2))
+        reduce1 nt_operator_binary t_operator_comp_neq id
+        reduce1 nt_operator_binary t_operator_comp_gte id
+        reduce1 nt_operator_binary t_operator_comp_gt id
+        reduce1 nt_operator_binary t_operator_comp_lte id
+        reduce1 nt_operator_binary t_operator_comp_lt id
+        reduce1 nt_operator_binary t_operator_comp_eq id
+        reduce1 nt_operator_binary t_symbol_minus (fun _ -> Subtract)
+        reduce1 nt_operator_binary t_symbol_plus (fun _ -> Add)
+        reduce1 nt_operator_binary t_opeator_mul id
+        reduce1 nt_operator_binary t_opeator_div id
+        reduce1 nt_operator_binary t_opeator_pow id
+        reduce1 nt_operator_binary t_opeator_concat id
+        reduce1 nt_operator_binary t_keyword_and id
+        reduce1 nt_operator_binary t_keyword_or id
+
+        reduce5 nt_ternary_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
+
+        reduce3 nt_assignment_expression t_variable nt_operator_binary_assg nt_expression (fun v o e -> ScalarAssignment(v, o, e))
+        reduce4 nt_assignment_expression nt_expression nt_dot_membername nt_operator_binary_assg nt_expression (fun e1 m o e2 -> MemberAssignment(e1, m, o, e2))
+        reduce3 nt_assignment_expression t_variable nt_operator_binary_assg nt_expression (fun v o e -> ScalarAssignment(v, o, e))
+        reduce1 nt_operator_binary_assg t_operator_assign_add id
+        reduce1 nt_operator_binary_assg t_operator_assign_sub id
+        reduce1 nt_operator_binary_assg t_operator_assign_mul id
+        reduce1 nt_operator_binary_assg t_operator_assign_div id
+        reduce1 nt_operator_binary_assg t_operator_assign_con id
+        reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
+
+        reduce3 nt_array_indexer t_symbol_obrack nt_expression t_symbol_cbrack (fun _ e _ -> e)
+        reduce2 nt_array_indexers nt_array_indexers nt_array_indexer (fun xs x -> xs@[x])
+        reduce1 nt_array_indexers nt_array_indexer (fun x -> [x])
+
 
         ()
-
+            
 

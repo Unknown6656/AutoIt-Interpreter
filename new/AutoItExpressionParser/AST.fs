@@ -57,11 +57,13 @@ type OPERATOR_UNARY =
     | Negate
     | Not
 
+type MEMBERNAME = MemeberName of string
+
 type MEMBER =
-    | Field of string
+    | Field of MEMBERNAME
     | Method of FUNCCALL
 
-and FUNCCALL = string * EXPRESSION list
+and FUNCCALL = MEMBERNAME * EXPRESSION list
 
 and ARRAY_INIT_EXPRESSION =
     | Multiple of ARRAY_INIT_EXPRESSION list
@@ -74,7 +76,6 @@ and EXPRESSION =
     | UnaryExpression of OPERATOR_UNARY * EXPRESSION
     | BinaryExpression of OPERATOR_BINARY * EXPRESSION * EXPRESSION
     | TernaryExpression of EXPRESSION * EXPRESSION * EXPRESSION
-    | ToExpression of EXPRESSION * EXPRESSION
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | ArrayInitExpression of EXPRESSION list * ARRAY_INIT_EXPRESSION list // indexers, initexpr
     | ArrayAccess of EXPRESSION * EXPRESSION // index
@@ -83,6 +84,7 @@ and EXPRESSION =
 
 and ASSIGNMENT_EXPRESSION =
     | ScalarAssignment of VARIABLE * OPERATOR_ASSIGNMENT * EXPRESSION
+    | MemberAssignment of EXPRESSION * MEMBERNAME * OPERATOR_ASSIGNMENT * EXPRESSION
     | ArrayAssignment of VARIABLE * EXPRESSION list * OPERATOR_ASSIGNMENT * EXPRESSION // op, var, indices, expr
 
 type FUNCTION_PARAMETER_MODIFIER =
