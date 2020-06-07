@@ -337,7 +337,9 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             var result = ParserProvider.ExprParser.Parse(line);
 
-            throw new NotImplementedException();
+            Program.PrintDebugMessage("PARSED --------------> " + result.ParsedValue);
+
+            return InterpreterResult.OK;
         }
 
         private InterpreterResult? UseExternalLineProcessors(string line)

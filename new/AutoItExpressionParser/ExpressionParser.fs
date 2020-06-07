@@ -7,6 +7,7 @@ open System
 open Piglet.Parser.Configuration.Generic
 
 open AST
+open System.Runtime.Serialization
 
 
 type ExpressionParser() =
@@ -21,18 +22,20 @@ type ExpressionParser() =
             if n then -l else l
             |> Decimal
             |> Number
-            
+
+
         let nt_expression               = x.CreateNonTerminal<EXPRESSION>                 "expr"
         let nt_literal                  = x.CreateNonTerminal<LITERAL>                    "literal"
         let nt_unary_expression         = x.CreateNonTerminal<UNARY_EXPRESSION>           "un-expr"
         let nt_binary_expression        = x.CreateNonTerminal<BINARY_EXPRESSION>          "bin-expr"
         let nt_ternary_expression       = x.CreateNonTerminal<TERNARY_EXPRESSION>         "ter-expr"
         let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>      "assg-expr"
-        let nt_assg_target              = x.CreateNonTerminal<ASSIGNMENT_TARGET>          "assg-targ"
+        let nt_assignment_target        = x.CreateNonTerminal<ASSIGNMENT_TARGET>          "assg-targ"
         let nt_indexer_expression       = x.CreateNonTerminal<INDEXER_EXPRESSION>         "idx-expr"
         let nt_member_expression        = x.CreateNonTerminal<MEMBER_EXPRESSION>          "member-expr"
         let nt_funccall_expression      = x.CreateNonTerminal<FUNCCALL_EXPRESSION>        "funccall-expr"
         let nt_funccall_arguments       = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>         "funccall-args"
+        let nt_funccall_arguments1      = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>         "funccall-arg+"
         let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>             "un-op"
         let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>            "bin-op"
         let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>        "assg-op"
@@ -91,11 +94,48 @@ type ExpressionParser() =
 
 
 
+        reduce1 nt_result nt_assignment_expression AssignmentExpression
+        reduce1 nt_result nt_funccall_expression FunctionCallExpression
 
+        reduce3 nt_assignment_expression nt_assignment_target nt_operator_binary_assg nt_expression (fun t o e -> (t, o, e))
+        reduce1 nt_assignment_target t_variable VariableAssignment
+        reduce1 nt_assignment_target nt_indexer_expression IndexedAssignment
+        reduce1 nt_assignment_target nt_member_expression MemberAssignemnt
 
+        reduce1 nt_operator_binary_assg t_operator_assign_add id
+        reduce1 nt_operator_binary_assg t_operator_assign_sub id
+        reduce1 nt_operator_binary_assg t_operator_assign_mul id
+        reduce1 nt_operator_binary_assg t_operator_assign_div id
+        reduce1 nt_operator_binary_assg t_operator_assign_con id
+        reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
+        
+        reduce1 nt_expression nt_literal Literal
+        reduce1 nt_expression t_variable Variable
+        reduce1 nt_expression t_macro Macro
+        reduce1 nt_expression nt_funccall_expression FunctionCall
+        // TODO
+        
+        reduce1 nt_literal t_literal_true id
+        reduce1 nt_literal t_literal_false id
+        reduce1 nt_literal t_literal_null id
+        reduce1 nt_literal t_literal_default id
+        reduce1 nt_literal t_literal_empty id
+        reduce1 nt_literal t_hex id
+        reduce1 nt_literal t_bin id
+        reduce1 nt_literal t_oct id
+        reduce1 nt_literal t_dec id
+        reduce1 nt_literal t_string_1 id
+        reduce1 nt_literal t_string_2 id
+        
+        reduce4 nt_funccall_expression t_identifier t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
+        reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
+
+        reducef nt_funccall_arguments (fun () -> [])
+        reduce1 nt_funccall_arguments nt_funccall_arguments1 id
+        reduce3 nt_funccall_arguments1 nt_funccall_arguments1 t_symbol_comma nt_expression (fun xs _ x -> xs@[x])
+        reduce1 nt_funccall_arguments1 nt_expression (fun x -> [x])
 
         (*
-        reduce0 nt_result nt_expression
         
         reduce3 nt_expression t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
         reduce1 nt_expression nt_funccall FunctionCall
@@ -110,18 +150,6 @@ type ExpressionParser() =
         reduce1 nt_expression nt_dot_member ContextualDotAccess
 
         reduce nt_funccall nt_dot_membername
-
-        reduce1 nt_literal t_literal_true id
-        reduce1 nt_literal t_literal_false id
-        reduce1 nt_literal t_literal_null id
-        reduce1 nt_literal t_literal_default id
-        reduce1 nt_literal t_literal_empty id
-        reduce1 nt_literal t_hex id
-        reduce1 nt_literal t_bin id
-        reduce1 nt_literal t_oct id
-        reduce1 nt_literal t_dec id
-        reduce1 nt_literal t_string_1 id
-        reduce1 nt_literal t_string_2 id
 
         reduce2 nt_unary_expression nt_operator_unary nt_expression (fun o e -> UnaryExpression(o, e))
         reduce1 nt_operator_unary t_keyword_not id
@@ -145,16 +173,6 @@ type ExpressionParser() =
         reduce1 nt_operator_binary t_keyword_or id
 
         reduce5 nt_ternary_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun c _ a _ b -> TernaryExpression(c, a, b))
-
-        reduce3 nt_assignment_expression t_variable nt_operator_binary_assg nt_expression (fun v o e -> ScalarAssignment(v, o, e))
-        reduce4 nt_assignment_expression nt_expression nt_dot_membername nt_operator_binary_assg nt_expression (fun e1 m o e2 -> MemberAssignment(e1, m, o, e2))
-        reduce4 nt_assignment_expression nt_expression nt_array_indexers nt_operator_binary_assg nt_expression (fun e1 xs o e2 -> ArrayAssignment(e1, xs, o, e2))
-        reduce1 nt_operator_binary_assg t_operator_assign_add id
-        reduce1 nt_operator_binary_assg t_operator_assign_sub id
-        reduce1 nt_operator_binary_assg t_operator_assign_mul id
-        reduce1 nt_operator_binary_assg t_operator_assign_div id
-        reduce1 nt_operator_binary_assg t_operator_assign_con id
-        reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
 
         reduce3 nt_array_indexer t_symbol_obrack nt_expression t_symbol_cbrack (fun _ e _ -> e)
         reduce2 nt_array_indexers nt_array_indexers nt_array_indexer (fun xs x -> xs@[x])
