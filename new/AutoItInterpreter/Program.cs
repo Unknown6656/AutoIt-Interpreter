@@ -16,7 +16,6 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 
-
 namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
@@ -66,6 +65,10 @@ namespace Unknown6656.AutoIt3
         public static CommandLineOptions CommandLineOptions { get; private set; }
 #nullable enable
 
+
+
+
+        
 
         public static int Main(string[] argv)
         {

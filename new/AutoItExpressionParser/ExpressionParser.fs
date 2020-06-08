@@ -1,6 +1,5 @@
 ﻿namespace Unknown6656.AutoIt3.ExpressionParser
 
-open System.Text.RegularExpressions
 open System.Globalization
 open System
 
@@ -9,10 +8,15 @@ open Piglet.Parser.Configuration.Generic
 open AST
 
 
+type private Associativity =
+    | Left
+    | Right
+
 type ExpressionParser() =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()
 
     member private x.CreateTerminalF s f = x.CreateTerminal(s, fun s -> f s)
+    member private x.nt_subexpr d = x.CreateNonTerminal<EXPRESSION>(sprintf "expr-%d" d)
     override x.Construct nt_result =
         let parse_num prefix (parser : string -> Int64) (input : string) =
             let s = input.TrimStart('+').ToLower().Replace(prefix, "")
@@ -25,10 +29,8 @@ type ExpressionParser() =
         x.Configurator.LexerSettings.IgnoreCase <- true
 
         let nt_expression               = x.CreateNonTerminal<EXPRESSION>               "expr"
+        let nt_subexpr                  = Array.map x.nt_subexpr [| 0..20 |]
         let nt_literal                  = x.CreateNonTerminal<LITERAL>                  "literal"
-        let nt_unary_expression         = x.CreateNonTerminal<UNARY_EXPRESSION>         "un-expr"
-        let nt_binary_expression        = x.CreateNonTerminal<BINARY_EXPRESSION>        "bin-expr"
-        let nt_ternary_expression       = x.CreateNonTerminal<TERNARY_EXPRESSION>       "ter-expr"
         let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>    "assg-expr"
         let nt_assignment_target        = x.CreateNonTerminal<ASSIGNMENT_TARGET>        "assg-targ"
         let nt_indexer_expression       = x.CreateNonTerminal<INDEXER_EXPRESSION>       "idx-expr"
@@ -36,8 +38,6 @@ type ExpressionParser() =
         let nt_funccall_expression      = x.CreateNonTerminal<FUNCCALL_EXPRESSION>      "funccall-expr"
         let nt_funccall_arguments       = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>       "funccall-args"
         let nt_funccall_arguments1      = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>       "funccall-arg+"
-        let nt_operator_unary           = x.CreateNonTerminal<OPERATOR_UNARY>           "un-op"
-        let nt_operator_binary          = x.CreateNonTerminal<OPERATOR_BINARY>          "bin-op"
         let nt_operator_binary_assg     = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>      "assg-op"
 
         let t_operator_assign_add       = x.CreateTerminalF @"\+="                      (fun _ -> AssignAdd)
@@ -58,17 +58,17 @@ type ExpressionParser() =
         let t_symbol_comma              = x.CreateTerminal @","
         let t_symbol_minus              = x.CreateTerminal @"-"
         let t_symbol_plus               = x.CreateTerminal @"\+"
-        let t_opeator_mul               = x.CreateTerminalF @"\*"                       (fun _ -> Multiply)
-        let t_opeator_div               = x.CreateTerminalF @"/"                        (fun _ -> Divide)
-        let t_opeator_pow               = x.CreateTerminalF @"^"                        (fun _ -> Power)
-        let t_opeator_concat            = x.CreateTerminalF @"&"                        (fun _ -> StringConcat)
+        let t_operator_mul              = x.CreateTerminalF @"\*"                       (fun _ -> Multiply)
+        let t_operator_div              = x.CreateTerminalF @"/"                        (fun _ -> Divide)
+        let t_operator_pow              = x.CreateTerminalF @"^"                        (fun _ -> Power)
+        let t_operator_concat           = x.CreateTerminalF @"&"                        (fun _ -> StringConcat)
         let t_symbol_oparen             = x.CreateTerminal @"\("
         let t_symbol_cparen             = x.CreateTerminal @"\)"
         let t_symbol_obrack             = x.CreateTerminal @"\["
         let t_symbol_cbrack             = x.CreateTerminal @"\]"
      // let t_symbol_ocurly             = x.CreateTerminal @"\{"
      // let t_symbol_ccurly             = x.CreateTerminal @"\}"
-        let t_keyword_new               = x.CreateTerminal @"new"
+     // let t_keyword_new               = x.CreateTerminal @"new"
         let t_keyword_and               = x.CreateTerminalF @"and"                      (fun _ -> And)
         let t_keyword_or                = x.CreateTerminalF @"or"                       (fun _ -> Or)
         let t_keyword_not               = x.CreateTerminalF @"(not|!)"                  (fun _ -> Not)
@@ -92,8 +92,6 @@ type ExpressionParser() =
 
 
 
-
-
         reduce1 nt_result nt_assignment_expression AssignmentExpression
         reduce1 nt_result nt_funccall_expression FunctionCallExpression
 
@@ -109,17 +107,6 @@ type ExpressionParser() =
         reduce1 nt_operator_binary_assg t_operator_assign_con id
         reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
         
-        reduce1 nt_expression nt_literal Literal
-        reduce1 nt_expression t_variable Variable
-        reduce1 nt_expression t_macro Macro
-        reduce1 nt_expression nt_funccall_expression FunctionCall
-        reduce1 nt_expression nt_member_expression Member
-        reduce1 nt_expression nt_indexer_expression Indexer
-        // reduce1 nt_expression nt_ternary_expression Ternary
-        // reduce1 nt_expression nt_binary_expression Binary
-        // reduce1 nt_expression nt_unary_expression Unary
-        reduce3 nt_expression t_symbol_oparen nt_expression t_symbol_cparen (fun _ e _ -> e)
-        
         reduce1 nt_literal t_literal_true id
         reduce1 nt_literal t_literal_false id
         reduce1 nt_literal t_literal_null id
@@ -131,6 +118,64 @@ type ExpressionParser() =
         reduce1 nt_literal t_dec id
         reduce1 nt_literal t_string_1 id
         reduce1 nt_literal t_string_2 id
+        
+
+        let reduce_binary index operator_symbol associativity operator =
+            let (l, r) = match associativity with
+                         | Left -> (index, index + 1)
+                         | Right -> (index + 1, index)
+            reduce3 nt_subexpr.[index] nt_subexpr.[l] operator_symbol nt_subexpr.[r] (fun a _ b -> Binary(a, operator, b))
+            reduce1 nt_subexpr.[index] nt_subexpr.[index + 1] id
+        
+        let reduce_unary_prefix index operator_symbol operator =
+            reduce2 nt_subexpr.[index] operator_symbol nt_subexpr.[index + 1] (fun _ e -> Unary(operator, e))
+            reduce1 nt_subexpr.[index] nt_subexpr.[index + 1] id
+
+        
+        // the following lines are sorted by ascending associativity
+        reduce1 nt_expression nt_subexpr.[0] id
+        reduce5 nt_subexpr.[0] nt_subexpr.[1] t_symbol_questionmark nt_subexpr.[1] t_symbol_colon nt_subexpr.[0] (fun a _ b _ c -> Ternary(a, b, c))
+        reduce_binary 1 t_keyword_or Left Or
+        reduce_binary 2 t_keyword_and Left And
+        reduce_binary 3 t_operator_comp_lte Left LowerEqual
+        reduce_binary 4 t_operator_comp_lt Left Lower
+        reduce_binary 5 t_operator_comp_gte Left GreaterEqual
+        reduce_binary 6 t_operator_comp_gt Left Greater
+        reduce_binary 7 t_operator_comp_neq Left Unequal
+        reduce_binary 8 t_symbol_equal Left EqualCaseInsensitive
+        reduce_binary 9 t_operator_comp_eq Left EqualCaseSensitive
+        reduce_binary 10 t_operator_concat Left StringConcat
+        reduce_binary 11 t_symbol_minus Left Subtract
+        reduce_binary 12 t_symbol_plus Left Add
+        reduce_binary 13 t_operator_div Left Divide
+        reduce_binary 14 t_operator_mul Left Multiply
+        reduce_binary 15 t_operator_pow Right Power
+        reduce_unary_prefix 16 t_keyword_not Not
+        reduce_unary_prefix 17 t_symbol_minus Negate
+        reduce_unary_prefix 18 t_symbol_plus Identity
+        reduce0 nt_subexpr.[19] nt_subexpr.[20]
+        // reduce3 nt_subexpr.[19] t_symbol_oparen nt_subexpr.[20] t_symbol_cparen (fun _ e _ -> e)
+
+        // order:
+        //  dot access -> member_expr
+        //  indexer
+        //  literals
+        //  paren.
+        
+        reduce1 nt_expression nt_funccall_expression FunctionCall
+        reduce1 nt_expression nt_indexer_expression Indexer
+        reduce1 nt_expression nt_member_expression Member
+        reduce1 nt_expression nt_literal Literal
+        reduce1 nt_expression t_variable Variable
+        reduce1 nt_expression t_macro Macro
+        
+
+        reduce0 nt_subexpr.[20] nt_expression
+
+
+
+
+
         
         reduce4 nt_funccall_expression t_identifier t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
         reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
@@ -145,28 +190,3 @@ type ExpressionParser() =
         reduce3 nt_member_expression nt_expression t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
         reduce2 nt_member_expression t_symbol_dot t_identifier (fun _ i -> ImplicitMemberAccess i)
         
-        reduce5 nt_ternary_expression nt_expression t_symbol_questionmark nt_expression t_symbol_colon nt_expression (fun a _ b _ c -> (a, b, c))
-        reduce3 nt_binary_expression nt_expression nt_operator_binary nt_expression (fun e1 o e2 -> (e1, o, e2))
-        reduce2 nt_unary_expression nt_operator_unary nt_expression (fun o e -> (o, e))
-
-        reduce1 nt_operator_binary t_operator_comp_neq id
-        reduce1 nt_operator_binary t_operator_comp_gte id
-        reduce1 nt_operator_binary t_operator_comp_gt id
-        reduce1 nt_operator_binary t_operator_comp_lte id
-        reduce1 nt_operator_binary t_operator_comp_lt id
-        reduce1 nt_operator_binary t_operator_comp_eq id
-        reduce1 nt_operator_binary t_symbol_minus (fun _ -> Subtract)
-        reduce1 nt_operator_binary t_symbol_plus (fun _ -> Add)
-        reduce1 nt_operator_binary t_opeator_mul id
-        reduce1 nt_operator_binary t_opeator_div id
-        reduce1 nt_operator_binary t_opeator_pow id
-        reduce1 nt_operator_binary t_opeator_concat id
-        reduce1 nt_operator_binary t_keyword_and id
-        reduce1 nt_operator_binary t_keyword_or id
-
-        reduce1 nt_operator_unary t_keyword_not id
-        reduce1 nt_operator_unary t_symbol_plus (fun _ -> Identity)
-        reduce1 nt_operator_unary t_symbol_minus (fun _ -> Negate)
-
-        ()
-

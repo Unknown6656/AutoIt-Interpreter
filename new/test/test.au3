@@ -1,4 +1,5 @@
 $b = 9
+$a = + $b
 
 test($b)
 TEST(8)
