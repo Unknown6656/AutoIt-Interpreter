@@ -15,6 +15,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3
 {
@@ -72,6 +73,51 @@ namespace Unknown6656.AutoIt3
 
         public static int Main(string[] argv)
         {
+            try
+            {
+                var p = ParserProvider.ExprParser;
+                foreach (string s in new[]
+                {
+                    "$a",
+                    "$a = $a",
+                    "$a = 9",
+                    "$a[0] = 9",
+                    "$a[0] = $a[$a[$a]][$a]",
+                    "func()",
+                    "func($a, $b)",
+                    "$a.b",
+                    "$a.b()",
+                    "$a.b.c()",
+                    ".a",
+                    ".a[.b] = .c",
+                    ".a[func() + 1] -= @all",
+                    ".a = 88",
+                    ".c()",
+                    ".b.c()",
+                    "$a ? $b : $c",
+                })
+                    try
+                    {
+                        var res = p.Parse(s);
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"{s,40}   {res.ParsedValue}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.WriteLine($"{s,40}   {ex.Message}");
+                    }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            return 0;
+
+
+
+
+
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
             using Task printer = Task.Factory.StartNew(PrinterTask);
             int code = 0;
