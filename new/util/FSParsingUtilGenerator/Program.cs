@@ -25,9 +25,9 @@ module ParsingUtil =
         s.AddProduction().SetReduceFunction (Func<'a>(x))
         |> ignore
 
-    let internal reduce0 (s : NonTerminalWrapper<'a>) a =
-        s.AddProduction(a).SetReduceToFirst()
-        |> ignore
+    // let internal reduce0 (s : NonTerminalWrapper<'a>) a =
+    //     s.AddProduction(a).SetReduceToFirst()
+    //     |> ignore
 ");
 
             for (int i = 1; i <= 10; ++i)
@@ -40,6 +40,10 @@ module ParsingUtil =
         |> ignore
 ");
             }
+
+            await wr.WriteAsync($@"
+    let internal reduce0 s a = reduce1 s a id
+");
             await wr.FlushAsync();
             await fs.FlushAsync();
         }

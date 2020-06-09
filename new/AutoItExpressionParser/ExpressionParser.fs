@@ -29,9 +29,9 @@ type ExpressionParser() =
         x.Configurator.LexerSettings.IgnoreCase <- true
 
         let nt_expression               = x.CreateNonTerminal<EXPRESSION>               "expr"
-        let nt_subexpr                  = Array.map x.nt_subexpr [| 0..20 |]
+        let nt_subexpr                  = Array.map x.nt_subexpr [| 0..50 |]
         let nt_literal                  = x.CreateNonTerminal<LITERAL>                  "literal"
-        let nt_assignment_expression    = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>    "assg-expr"
+        let nt_assignment_statement     = x.CreateNonTerminal<ASSIGNMENT_EXPRESSION>    "assg-stmt"
         let nt_assignment_target        = x.CreateNonTerminal<ASSIGNMENT_TARGET>        "assg-targ"
         let nt_indexer_expression       = x.CreateNonTerminal<INDEXER_EXPRESSION>       "idx-expr"
         let nt_member_expression        = x.CreateNonTerminal<MEMBER_EXPRESSION>        "member-expr"
@@ -92,10 +92,10 @@ type ExpressionParser() =
 
 
 
-        reduce1 nt_result nt_assignment_expression AssignmentExpression
+        reduce1 nt_result nt_assignment_statement AssignmentExpression
         reduce1 nt_result nt_funccall_expression FunctionCallExpression
 
-        reduce3 nt_assignment_expression nt_assignment_target nt_operator_binary_assg nt_expression (fun t o e -> (t, o, e))
+        reduce3 nt_assignment_statement nt_assignment_target nt_operator_binary_assg nt_expression (fun t o e -> (t, o, e))
         reduce1 nt_assignment_target t_variable VariableAssignment
         reduce1 nt_assignment_target nt_indexer_expression IndexedAssignment
         reduce1 nt_assignment_target nt_member_expression MemberAssignemnt
@@ -153,29 +153,28 @@ type ExpressionParser() =
         reduce_unary_prefix 16 t_keyword_not Not
         reduce_unary_prefix 17 t_symbol_minus Negate
         reduce_unary_prefix 18 t_symbol_plus Identity
+
+        reduce3 nt_member_expression nt_subexpr.[20] t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
         reduce0 nt_subexpr.[19] nt_subexpr.[20]
-        // reduce3 nt_subexpr.[19] t_symbol_oparen nt_subexpr.[20] t_symbol_cparen (fun _ e _ -> e)
 
-        // order:
-        //  dot access -> member_expr
-        //  indexer
-        //  literals
-        //  paren.
+        reduce4 nt_indexer_expression nt_subexpr.[21] t_symbol_obrack nt_expression t_symbol_cbrack (fun e _ i _ -> (e, i))
+        reduce0 nt_subexpr.[20] nt_subexpr.[21]
         
-        reduce1 nt_expression nt_funccall_expression FunctionCall
-        reduce1 nt_expression nt_indexer_expression Indexer
-        reduce1 nt_expression nt_member_expression Member
-        reduce1 nt_expression nt_literal Literal
-        reduce1 nt_expression t_variable Variable
-        reduce1 nt_expression t_macro Macro
+        reduce1 nt_subexpr.[21] t_variable Variable
+        reduce0 nt_subexpr.[21] nt_subexpr.[22]
+
+        reduce1 nt_subexpr.[22] t_macro Macro
+        reduce0 nt_subexpr.[22] nt_subexpr.[23]
+
+        reduce1 nt_subexpr.[23] nt_literal Literal
+        reduce0 nt_subexpr.[23] nt_subexpr.[24]
         
-
-        reduce0 nt_subexpr.[20] nt_expression
-
+        reduce3 nt_subexpr.[24] t_symbol_oparen nt_subexpr.[0] t_symbol_cparen (fun _ e _ -> e)
 
 
 
-
+        reduce3 nt_member_expression nt_expression t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
+        reduce2 nt_member_expression t_symbol_dot t_identifier (fun _ i -> ImplicitMemberAccess i)
         
         reduce4 nt_funccall_expression t_identifier t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
         reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
@@ -184,9 +183,3 @@ type ExpressionParser() =
         reduce1 nt_funccall_arguments nt_funccall_arguments1 id
         reduce3 nt_funccall_arguments1 nt_funccall_arguments1 t_symbol_comma nt_expression (fun xs _ x -> xs@[x])
         reduce1 nt_funccall_arguments1 nt_expression (fun x -> [x])
-
-        reduce4 nt_indexer_expression nt_expression t_symbol_obrack nt_expression t_symbol_cbrack (fun e _ i _ -> (e, i))
-
-        reduce3 nt_member_expression nt_expression t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
-        reduce2 nt_member_expression t_symbol_dot t_identifier (fun _ i -> ImplicitMemberAccess i)
-        
