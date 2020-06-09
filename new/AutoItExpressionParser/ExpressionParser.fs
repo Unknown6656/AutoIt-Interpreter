@@ -1,4 +1,4 @@
-﻿namespace Unknown6656.AutoIt3.ExpressionParser
+namespace Unknown6656.AutoIt3.ExpressionParser
 
 open System.Globalization
 open System
@@ -30,10 +30,10 @@ type ExpressionParser() =
 
         x.Configurator.LexerSettings.IgnoreCase <- true
         
-        (* AutoIt Expression Grammar:
+        (* AutoIt Expression Grammar (v4):
 
-                expr-stmt := assg-target assg-op any-expr
-                           | any-expr
+                [start] := assg-target assg-op any-expr
+                         | any-expr
 
                 assg-target := variable
                              | indexer-expr
@@ -53,9 +53,9 @@ type ExpressionParser() =
                 parenthesized-expr := "(" any-expr ")"
 
                 any-expr := object-expr
-                          | value-expr "?" value-expr ":" value-expr
-                          | value-expr bin-op value-expr
-                          | un-op value-expr
+                          | any-expr "?" any-expr ":" any-expr
+                          | any-expr bin-op any-expr
+                          | un-op any-expr
 
                 funccall := identifier "(" args ")"
                           | member-expr "(" args ")"
@@ -63,8 +63,8 @@ type ExpressionParser() =
                 args := arg-list
                       | ε
 
-                arg-list := arg-list "," value-expr
-                          | value-expr
+                arg-list := arg-list "," any-expr
+                          | any-expr
 
 
         Binary operator precedence (ascending):
