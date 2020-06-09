@@ -92,47 +92,88 @@ type ExpressionParser() =
 
 
 
+
+        (*
+
+        expr-stmt := assg-target assg-op value-expr
+                   | value-expr
+
+        assg-target := variable
+                     | indexer-expr
+                     | member-expr
+
+        value-expr := indexer-expr
+                    | member-expr
+                    | regular-expr
+
+        indexer-expr := value-expr "[" value-expr "]"
+
+        member-expr := value-expr "." identifier
+                     | "." identifier
+
+        regular-expr := funccall
+                      | value-expr "?" value-expr ":" value-expr
+                      | value-expr bin-op value-expr
+                      | un-op value-expr
+                      | literal
+
+        funccall := identifier  "(" args ")"
+                  | member-expr "(" args ")"
+
+        args := arg-list
+              | ε
+
+        arg-list := arg-list "," value-expr
+                  | value-expr
+
+        *)
+
+
         reduce1 nt_result nt_assignment_statement AssignmentExpression
-        reduce1 nt_result nt_funccall_expression FunctionCallExpression
+        reduce1 nt_result nt_expression SimpleExpression
 
         reduce3 nt_assignment_statement nt_assignment_target nt_operator_binary_assg nt_expression (fun t o e -> (t, o, e))
         reduce1 nt_assignment_target t_variable VariableAssignment
         reduce1 nt_assignment_target nt_indexer_expression IndexedAssignment
         reduce1 nt_assignment_target nt_member_expression MemberAssignemnt
 
-        reduce1 nt_operator_binary_assg t_operator_assign_add id
-        reduce1 nt_operator_binary_assg t_operator_assign_sub id
-        reduce1 nt_operator_binary_assg t_operator_assign_mul id
-        reduce1 nt_operator_binary_assg t_operator_assign_div id
-        reduce1 nt_operator_binary_assg t_operator_assign_con id
+        reduce0 nt_operator_binary_assg t_operator_assign_add
+        reduce0 nt_operator_binary_assg t_operator_assign_sub
+        reduce0 nt_operator_binary_assg t_operator_assign_mul
+        reduce0 nt_operator_binary_assg t_operator_assign_div
+        reduce0 nt_operator_binary_assg t_operator_assign_con
         reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
-        
-        reduce1 nt_literal t_literal_true id
-        reduce1 nt_literal t_literal_false id
-        reduce1 nt_literal t_literal_null id
-        reduce1 nt_literal t_literal_default id
-        reduce1 nt_literal t_literal_empty id
-        reduce1 nt_literal t_hex id
-        reduce1 nt_literal t_bin id
-        reduce1 nt_literal t_oct id
-        reduce1 nt_literal t_dec id
-        reduce1 nt_literal t_string_1 id
-        reduce1 nt_literal t_string_2 id
-        
+
+        reduce0 nt_literal t_literal_true
+        reduce0 nt_literal t_literal_false
+        reduce0 nt_literal t_literal_null
+        reduce0 nt_literal t_literal_default
+        reduce0 nt_literal t_literal_empty
+        reduce0 nt_literal t_hex
+        reduce0 nt_literal t_bin
+        reduce0 nt_literal t_oct
+        reduce0 nt_literal t_dec 
+        reduce0 nt_literal t_string_1
+        reduce0 nt_literal t_string_2
+
 
         let reduce_binary index operator_symbol associativity operator =
             let (l, r) = match associativity with
                          | Left -> (index, index + 1)
                          | Right -> (index + 1, index)
             reduce3 nt_subexpr.[index] nt_subexpr.[l] operator_symbol nt_subexpr.[r] (fun a _ b -> Binary(a, operator, b))
-            reduce1 nt_subexpr.[index] nt_subexpr.[index + 1] id
-        
+            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
+
         let reduce_unary_prefix index operator_symbol operator =
             reduce2 nt_subexpr.[index] operator_symbol nt_subexpr.[index + 1] (fun _ e -> Unary(operator, e))
-            reduce1 nt_subexpr.[index] nt_subexpr.[index + 1] id
+            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
 
-        
-        // the following lines are sorted by ascending associativity
+        let reduce_or_next index symbol func =
+            reduce1 nt_subexpr.[index] symbol func
+            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
+
+
+        // the following lines are sorted by ascending precedence
         reduce1 nt_expression nt_subexpr.[0] id
         reduce5 nt_subexpr.[0] nt_subexpr.[1] t_symbol_questionmark nt_subexpr.[1] t_symbol_colon nt_subexpr.[0] (fun a _ b _ c -> Ternary(a, b, c))
         reduce_binary 1 t_keyword_or Left Or
@@ -154,32 +195,29 @@ type ExpressionParser() =
         reduce_unary_prefix 17 t_symbol_minus Negate
         reduce_unary_prefix 18 t_symbol_plus Identity
 
-        reduce3 nt_member_expression nt_subexpr.[20] t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
+        reduce4 nt_indexer_expression nt_subexpr.[19] t_symbol_obrack nt_expression t_symbol_cbrack (fun e _ i _ -> (e, i))
         reduce0 nt_subexpr.[19] nt_subexpr.[20]
 
-        reduce4 nt_indexer_expression nt_subexpr.[21] t_symbol_obrack nt_expression t_symbol_cbrack (fun e _ i _ -> (e, i))
+        reduce3 nt_member_expression nt_subexpr.[20] t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
         reduce0 nt_subexpr.[20] nt_subexpr.[21]
-        
-        reduce1 nt_subexpr.[21] t_variable Variable
-        reduce0 nt_subexpr.[21] nt_subexpr.[22]
 
-        reduce1 nt_subexpr.[22] t_macro Macro
-        reduce0 nt_subexpr.[22] nt_subexpr.[23]
+        reduce_or_next 21 nt_funccall_expression FunctionCall
+        reduce_or_next 22 t_variable Variable
+        reduce_or_next 23 t_macro Macro
+        reduce_or_next 24 nt_literal Literal
 
-        reduce1 nt_subexpr.[23] nt_literal Literal
-        reduce0 nt_subexpr.[23] nt_subexpr.[24]
-        
-        reduce3 nt_subexpr.[24] t_symbol_oparen nt_subexpr.[0] t_symbol_cparen (fun _ e _ -> e)
+        reduce3 nt_subexpr.[25] t_symbol_oparen nt_subexpr.[0] t_symbol_cparen (fun _ e _ -> e)
 
 
 
         reduce3 nt_member_expression nt_expression t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
         reduce2 nt_member_expression t_symbol_dot t_identifier (fun _ i -> ImplicitMemberAccess i)
-        
+
         reduce4 nt_funccall_expression t_identifier t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
-        reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
+        // reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
 
         reducef nt_funccall_arguments (fun () -> [])
         reduce1 nt_funccall_arguments nt_funccall_arguments1 id
         reduce3 nt_funccall_arguments1 nt_funccall_arguments1 t_symbol_comma nt_expression (fun xs _ x -> xs@[x])
         reduce1 nt_funccall_arguments1 nt_expression (fun x -> [x])
+

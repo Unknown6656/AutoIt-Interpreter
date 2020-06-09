@@ -98,4 +98,4 @@ and FUNCCALL_EXPRESSION =
 
 type PARSABLE_EXPRESSION =
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
-    | FunctionCallExpression of FUNCCALL_EXPRESSION
+    | SimpleExpression of EXPRESSION
