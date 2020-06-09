@@ -41,18 +41,18 @@ type ExpressionParser() =
 
                 value-expr := indexer-expr
                             | member-expr
-                            | regular-expr
+                            | expr
 
                 indexer-expr := value-expr "[" value-expr "]"
 
                 member-expr := value-expr "." identifier
                              | "." identifier
 
-                regular-expr := funccall
-                              | value-expr "?" value-expr ":" value-expr
-                              | value-expr bin-op value-expr
-                              | un-op value-expr
-                              | literal
+                expr := funccall
+                      | literal
+                      | value-expr "?" value-expr ":" value-expr
+                      | value-expr bin-op value-expr
+                      | un-op value-expr
 
                 funccall := identifier "(" args ")"
                           | member-expr "(" args ")"
@@ -86,7 +86,7 @@ type ExpressionParser() =
         let nt_value_expr           = x.CreateNonTerminal<EXPRESSION>           "value-expr"
         let nt_indexer_expr         = x.CreateNonTerminal<INDEXER_EXPRESSION>   "index-expr"
         let nt_member_expr          = x.CreateNonTerminal<MEMBER_EXPRESSION>    "member-expr"
-        let nt_regular_expr         = x.CreateNonTerminal<EXPRESSION>           "regular-expr"
+        let nt_expr                 = x.CreateNonTerminal<EXPRESSION>           "expr"
         let nt_func_call            = x.CreateNonTerminal<FUNCCALL_EXPRESSION>  "funccall"
         let nt_binary_op            = x.CreateNonTerminal<OPERATOR_BINARY>      "bin-op"
         let nt_unary_op             = x.CreateNonTerminal<OPERATOR_UNARY>       "un-op"
@@ -161,11 +161,11 @@ type ExpressionParser() =
 
 
         reduce0 nt_result nt_expr_stmt
-
-        reduce3 nt_expr_stmt nt_assg_target nt_assg_op nt_value_expr (fun t o e -> AssignmentExpression(t, o, e))
+        
         reduce1 nt_expr_stmt nt_value_expr SimpleExpression
+        reduce3 nt_expr_stmt nt_assg_target nt_assg_op nt_value_expr (fun t o e -> AssignmentExpression(t, o, e))
 
-        reduce1 nt_assg_op t_symbol_equal (fun _ -> Assign)
+        // reduce1 nt_assg_op t_symbol_equal (fun _ -> Assign)
         reduce1 nt_assg_op t_operator_assign_add (fun _ -> AssignAdd)
         reduce1 nt_assg_op t_operator_assign_sub (fun _ -> AssignSubtract)
         reduce1 nt_assg_op t_operator_assign_mul (fun _ -> AssignMultiply)
@@ -178,22 +178,44 @@ type ExpressionParser() =
 
         reduce1 nt_value_expr nt_indexer_expr Indexer
         reduce1 nt_value_expr nt_member_expr Member
-        reduce0 nt_value_expr nt_regular_expr
+        reduce0 nt_value_expr nt_expr
 
         reduce4 nt_indexer_expr nt_value_expr t_symbol_obrack nt_value_expr t_symbol_cbrack (fun e _ i _ -> (e, i))
 
         reduce3 nt_member_expr nt_value_expr t_symbol_dot t_identifier (fun e _ m -> ExplicitMemberAccess(e, m))
         reduce2 nt_member_expr t_symbol_dot t_identifier (fun _ m -> ImplicitMemberAccess m)
 
-        reduce1 nt_regular_expr t_variable Variable
-        reduce1 nt_regular_expr t_macro Macro
-        reduce1 nt_regular_expr nt_literal Literal
-        reduce1 nt_regular_expr nt_func_call FunctionCall
+        reduce1 nt_expr t_variable Variable
+        reduce1 nt_expr t_macro Macro
+        reduce1 nt_expr nt_literal Literal
+        reduce1 nt_expr nt_func_call FunctionCall
         // reduce7 nt_regular_expr t_symbol_oparen nt_value_expr t_symbol_questionmark nt_value_expr t_symbol_colon nt_value_expr t_symbol_cparen (fun _ a _ b _ c _ -> Ternary(a, b, c))
-        reduce5 nt_regular_expr nt_value_expr t_symbol_questionmark nt_value_expr t_symbol_colon nt_value_expr (fun a _ b _ c -> Ternary(a, b, c))
-        reduce3 nt_regular_expr nt_value_expr t_keyword_or nt_value_expr (fun a _ b -> Binary(a, Or, b))
+        reduce5 nt_expr nt_value_expr t_symbol_questionmark nt_value_expr t_symbol_colon nt_value_expr (fun a _ b _ c -> Ternary(a, b, c))
 
-        reduce3 nt_regular_expr nt_value_expr t_symbol_plus nt_value_expr (fun a _ b -> Binary(a, Add, b))
+        let reduce_binary symbol operator =
+            reduce3 nt_expr nt_value_expr symbol nt_value_expr (fun a _ b -> Binary(a, operator, b))
+
+        reduce_binary t_keyword_or Or
+        reduce_binary t_keyword_and And
+        reduce_binary t_operator_comp_lte LowerEqual
+        reduce_binary t_operator_comp_lt Lower
+        reduce_binary t_operator_comp_gte GreaterEqual
+        reduce_binary t_operator_comp_gt Greater
+        reduce_binary t_operator_comp_neq Unequal
+        reduce_binary t_operator_comp_eq EqualCaseSensitive
+        reduce_binary t_symbol_equal EqualCaseInsensitive
+        reduce_binary t_operator_concat StringConcat
+        reduce_binary t_symbol_plus Add
+        reduce_binary t_symbol_minus Subtract
+        reduce_binary t_operator_mul Multiply
+        reduce_binary t_operator_div Divide
+        reduce_binary t_operator_pow Power
+        
+        reduce2 nt_expr t_symbol_plus nt_value_expr (fun _ e -> Unary(Identity, e))
+        reduce2 nt_expr t_symbol_minus nt_value_expr (fun _ e -> Unary(Negate, e))
+        reduce2 nt_expr t_keyword_not nt_value_expr (fun _ e -> Unary(Not, e))
+
+        reduce3 nt_expr t_symbol_oparen nt_value_expr t_symbol_cparen (fun _ e _ -> e)
 
         reduce0 nt_literal t_literal_true
         reduce0 nt_literal t_literal_false

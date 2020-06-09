@@ -100,7 +100,8 @@ namespace Unknown6656.AutoIt3
                     {
                         var res = p.Parse(s);
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"{s,40}   {res.ParsedValue}");
+                        //Console.WriteLine($"{s,40}   {ParsedValue}");
+                        Console.WriteLine($"{s,40}   {string.Join(" ", res.LexedTokens.Select(t => t.DebugName))}");
                     }
                     catch (Exception ex)
                     {
