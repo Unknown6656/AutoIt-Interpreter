@@ -32,27 +32,30 @@ type ExpressionParser() =
         
         (* AutoIt Expression Grammar:
 
-                expr-stmt := assg-target assg-op value-expr
-                           | value-expr
+                expr-stmt := assg-target assg-op any-expr
+                           | any-expr
 
                 assg-target := variable
                              | indexer-expr
                              | member-expr
 
-                value-expr := indexer-expr
-                            | member-expr
-                            | expr
+                indexer-expr := object-expr "[" any-expr "]"
 
-                indexer-expr := value-expr "[" value-expr "]"
-
-                member-expr := value-expr "." identifier
+                member-expr := object-expr "." identifier
                              | "." identifier
 
-                expr := funccall
-                      | literal
-                      | value-expr "?" value-expr ":" value-expr
-                      | value-expr bin-op value-expr
-                      | un-op value-expr
+                object-expr := assg-target
+                             | macro
+                             | literal
+                             | parenthesized-expr
+                             | funccall
+
+                parenthesized-expr := "(" any-expr ")"
+
+                any-expr := object-expr
+                          | value-expr "?" value-expr ":" value-expr
+                          | value-expr bin-op value-expr
+                          | un-op value-expr
 
                 funccall := identifier "(" args ")"
                           | member-expr "(" args ")"
