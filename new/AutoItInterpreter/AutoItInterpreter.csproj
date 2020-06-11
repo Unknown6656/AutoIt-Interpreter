@@ -32,6 +32,9 @@
         <Reference Include="Piglet">
           <HintPath>..\lib\Piglet.dll</HintPath>
         </Reference>
+        <Reference Include="Piglet.FSharp">
+          <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
+        </Reference>
         <Reference Include="unknown6656.core">
             <HintPath>..\lib\unknown6656.core.dll</HintPath>
         </Reference>
