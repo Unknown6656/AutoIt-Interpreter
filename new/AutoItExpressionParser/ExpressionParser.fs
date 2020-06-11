@@ -23,6 +23,7 @@ type ExpressionParser() =
             |> Decimal
             |> Number
 
+        x.Configurator.LexerSettings.EscapeLiterals <- false
         x.Configurator.LexerSettings.IgnoreCase <- true
         
         (* AutoIt Expression Grammar (v4):
@@ -185,7 +186,8 @@ type ExpressionParser() =
         reduce_1i nt_any_expr nt_object_expr id
         reduce_1i nt_any_expr nt_conditional_expr id
         
-        reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
+        //reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
+        reduce_5i nt_conditional_expr nt_object_expr t_symbol_questionmark nt_object_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
         let reduce_binary symbol operator =
             //reduce_3i nt_any_expr nt_any_expr symbol nt_any_expr (fun a _ b -> Binary(a, operator, b))
