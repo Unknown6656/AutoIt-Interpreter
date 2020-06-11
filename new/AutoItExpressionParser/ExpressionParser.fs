@@ -10,8 +10,6 @@ open Piglet.Parser.Construction
 open AST
 
 
-type Associativity = Left | Right
-
 type ExpressionParser() =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()
 
@@ -191,27 +189,24 @@ type ExpressionParser() =
         //reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
         reduce_5i nt_conditional_expr nt_object_expr t_symbol_questionmark nt_object_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
-        let reduce_binary symbol operator assoc =
-            let (left_operand, right_operand) = match assoc with
-                                                | Left -> (nt_any_expr, nt_object_expr)
-                                                | Right -> (nt_object_expr, nt_any_expr)
-            reduce_3i nt_any_expr left_operand symbol right_operand (fun a _ b -> Binary(a, operator, b))
+        let reduce_binary symbol operator =
+            reduce_3i nt_any_expr nt_object_expr symbol nt_object_expr (fun a _ b -> Binary(a, operator, b))
 
-        reduce_binary t_keyword_or Or Left
-        reduce_binary t_keyword_and And Left
-        reduce_binary t_operator_comp_lte LowerEqual Left
-        reduce_binary t_operator_comp_lt Lower Left
-        reduce_binary t_operator_comp_gte GreaterEqual Left
-        reduce_binary t_operator_comp_gt Greater Left
-        reduce_binary t_operator_comp_neq Unequal Left
-        reduce_binary t_operator_comp_eq EqualCaseSensitive Left
-        reduce_binary t_symbol_equal EqualCaseInsensitive Left
-        reduce_binary t_operator_concat StringConcat Left
-        reduce_binary t_symbol_plus Add Left
-        reduce_binary t_symbol_minus Subtract Left
-        reduce_binary t_operator_mul Multiply Left
-        reduce_binary t_operator_div Divide Left
-        reduce_binary t_operator_pow Power Right
+        reduce_binary t_keyword_or Or
+        reduce_binary t_keyword_and And
+        reduce_binary t_operator_comp_lte LowerEqual
+        reduce_binary t_operator_comp_lt Lower
+        reduce_binary t_operator_comp_gte GreaterEqual
+        reduce_binary t_operator_comp_gt Greater
+        reduce_binary t_operator_comp_neq Unequal
+        reduce_binary t_operator_comp_eq EqualCaseSensitive
+        reduce_binary t_symbol_equal EqualCaseInsensitive
+        reduce_binary t_operator_concat StringConcat
+        reduce_binary t_symbol_plus Add
+        reduce_binary t_symbol_minus Subtract
+        reduce_binary t_operator_mul Multiply
+        reduce_binary t_operator_div Divide
+        reduce_binary t_operator_pow Power
         
         reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
         reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
