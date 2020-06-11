@@ -1,3 +1,5 @@
+### _Note: I am currently working on a new (and more stable) version - check out the '.net5'-branch!_
+
 ![Banner image](Artwork/banner.png)
 
 # Preamble
