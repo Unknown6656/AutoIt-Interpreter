@@ -82,7 +82,7 @@ namespace Unknown6656.AutoIt3
                 // Console.BackgroundColor = ConsoleColor.Black;
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
-                Parser parser = new Parser(p => p.HelpWriter = null);
+                using Parser parser = new Parser(p => p.HelpWriter = null);
                 ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
                 result.WithNotParsed(err =>
@@ -116,7 +116,7 @@ namespace Unknown6656.AutoIt3
                 {
                     CommandLineOptions = opt;
 
-                    if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLower(), out LanguagePack? lang))
+                    if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
                         CurrentLanguage = lang;
                     else
                     {

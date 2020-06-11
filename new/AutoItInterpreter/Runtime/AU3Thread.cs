@@ -4,8 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
+using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
+
+using Piglet.Parser.Configuration.Generic;
+using Piglet.Lexer;
+using System.Diagnostics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -254,6 +259,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
 
+        // TODO
         private readonly ConcurrentStack<(BlockStatementType, SourceLocation)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
 
 
@@ -335,11 +341,33 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult? ProcessExpressionStatement(string line)
         {
-            var result = ParserProvider.ExprParser.Parse(line);
+            try
+            {
+                ParserResult<AST.PARSABLE_EXPRESSION>? result = ParserProvider.ExprParser.Parse(line);
+                var expression = result.ParsedValue;
 
-            Program.PrintDebugMessage("PARSED --------------> " + result.ParsedValue);
+                Program.PrintDebugMessage($"Parsed \"{expression.ToString().Replace('\n', ' ')}\"");
 
-            return InterpreterResult.OK;
+                return ProcessExpressionStatement(expression) ?? InterpreterResult.OK;
+            }
+            catch (LexerException ex)
+            {
+                return WellKnownError("error.invalid_syntax", line, ex.Message);
+            }
+        }
+
+        private InterpreterError? ProcessExpressionStatement(AST.PARSABLE_EXPRESSION result)
+        {
+            (AST.ASSIGNMENT_TARGET target, AST.OPERATOR_ASSIGNMENT @operator, AST.EXPRESSION expression) = Cleanup.CleanUpExpression(result);
+
+
+
+
+
+            Console.WriteLine($"{target} {@operator} {expression}");
+
+
+            return null; // success
         }
 
         private InterpreterResult? UseExternalLineProcessors(string line)
