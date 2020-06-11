@@ -4,21 +4,16 @@ open System.Globalization
 open System
 
 open Piglet.Parser.Configuration.Generic
+open Piglet.Parser.Configuration.FSharp
+open Piglet.Parser.Construction
 
 open AST
-open Piglet.Parser.Construction
-open System.Runtime.Serialization
 
-
-type private Associativity =
-    | Left
-    | Right
 
 type ExpressionParser() =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()
 
-    member private x.CreateTerminalF s f = x.CreateTerminal(s, fun s -> f s)
-    member private x.nt_subexpr d = x.CreateNonTerminal<EXPRESSION>(sprintf "expr-%d" d)
+    member private x.CreateTerminalF s (f : string -> 'a) = x.CreateTerminal<'a>(s, fun s -> f s)
     override x.Construct nt_result =
         let parse_num prefix (parser : string -> Int64) (input : string) =
             let s = input.TrimStart('+').ToLower().Replace(prefix, "")
@@ -160,41 +155,41 @@ type ExpressionParser() =
         |> List.toArray)
 
 
-        reduce3 nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))
-        reduce1 nt_result nt_any_expr AnyExpression
+        reduce_3i nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))
+        reduce_1i nt_result nt_any_expr AnyExpression
 
-        // reduce1 nt_assg_op t_symbol_equal (fun _ -> Assign)
-        reduce1 nt_assg_op t_operator_assign_add (fun _ -> AssignAdd)
-        reduce1 nt_assg_op t_operator_assign_sub (fun _ -> AssignSubtract)
-        reduce1 nt_assg_op t_operator_assign_mul (fun _ -> AssignMultiply)
-        reduce1 nt_assg_op t_operator_assign_div (fun _ -> AssignDivide)
-        reduce1 nt_assg_op t_operator_assign_con (fun _ -> AssignConcat)
+        // reduce_1i nt_assg_op t_symbol_equal (fun _ -> Assign)
+        reduce_1i nt_assg_op t_operator_assign_add (fun _ -> AssignAdd)
+        reduce_1i nt_assg_op t_operator_assign_sub (fun _ -> AssignSubtract)
+        reduce_1i nt_assg_op t_operator_assign_mul (fun _ -> AssignMultiply)
+        reduce_1i nt_assg_op t_operator_assign_div (fun _ -> AssignDivide)
+        reduce_1i nt_assg_op t_operator_assign_con (fun _ -> AssignConcat)
 
-        reduce1 nt_assg_target t_variable VariableAssignment
-        reduce1 nt_assg_target nt_index_expr IndexedAssignment
-        reduce1 nt_assg_target nt_member_expr MemberAssignemnt
+        reduce_1i nt_assg_target t_variable VariableAssignment
+        reduce_1i nt_assg_target nt_index_expr IndexedAssignment
+        reduce_1i nt_assg_target nt_member_expr MemberAssignemnt
 
-        reduce4 nt_index_expr nt_object_expr t_symbol_obrack nt_any_expr t_symbol_cbrack (fun e _ i _ -> (e, i))
+        reduce_4i nt_index_expr nt_object_expr t_symbol_obrack nt_any_expr t_symbol_cbrack (fun e _ i _ -> (e, i))
 
-        reduce3 nt_member_expr nt_object_expr t_symbol_dot t_identifier (fun e _ m -> ExplicitMemberAccess(e, m))
-        reduce2 nt_member_expr t_symbol_dot t_identifier (fun _ m -> ImplicitMemberAccess m)
+        reduce_3i nt_member_expr nt_object_expr t_symbol_dot t_identifier (fun e _ m -> ExplicitMemberAccess(e, m))
+        reduce_2i nt_member_expr t_symbol_dot t_identifier (fun _ m -> ImplicitMemberAccess m)
+
+        reduce_1i nt_object_expr t_variable Variable
+        reduce_1i nt_object_expr nt_index_expr Indexer
+        reduce_1i nt_object_expr nt_member_expr Member
+        reduce_1i nt_object_expr t_macro Macro
+        reduce_1i nt_object_expr nt_literal Literal
+        reduce_1i nt_object_expr nt_func_call FunctionCall
+        reduce_3i nt_object_expr t_symbol_oparen nt_any_expr t_symbol_cparen (fun _ e _ -> e)
+
+        reduce_1i nt_any_expr nt_object_expr id
+        reduce_1i nt_any_expr nt_conditional_expr id
         
-        reduce1 nt_object_expr t_variable Variable
-        reduce1 nt_object_expr nt_index_expr Indexer
-        reduce1 nt_object_expr nt_member_expr Member
-        reduce1 nt_object_expr t_macro Macro
-        reduce1 nt_object_expr nt_literal Literal
-        reduce1 nt_object_expr nt_func_call FunctionCall
-        reduce3 nt_object_expr t_symbol_oparen nt_any_expr t_symbol_cparen (fun _ e _ -> e)
-
-        reduce0 nt_any_expr nt_object_expr
-        reduce0 nt_any_expr nt_conditional_expr
-        
-        reduce5 nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
+        reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
         let reduce_binary symbol operator =
-            //reduce3 nt_any_expr nt_any_expr symbol nt_any_expr (fun a _ b -> Binary(a, operator, b))
-            reduce3 nt_any_expr nt_object_expr symbol nt_object_expr (fun a _ b -> Binary(a, operator, b))
+            //reduce_3i nt_any_expr nt_any_expr symbol nt_any_expr (fun a _ b -> Binary(a, operator, b))
+            reduce_3i nt_any_expr nt_object_expr symbol nt_object_expr (fun a _ b -> Binary(a, operator, b))
 
         reduce_binary t_keyword_or Or
         reduce_binary t_keyword_and And
@@ -212,27 +207,27 @@ type ExpressionParser() =
         reduce_binary t_operator_div Divide
         reduce_binary t_operator_pow Power
         
-        reduce2 nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
-        reduce2 nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
-        reduce2 nt_any_expr t_keyword_not nt_any_expr (fun _ e -> Unary(Not, e))
+        reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
+        reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
+        reduce_2i nt_any_expr t_keyword_not nt_any_expr (fun _ e -> Unary(Not, e))
 
-        reduce0 nt_literal t_literal_true
-        reduce0 nt_literal t_literal_false
-        reduce0 nt_literal t_literal_null
-        reduce0 nt_literal t_literal_default
-        reduce0 nt_literal t_literal_empty
-        reduce0 nt_literal t_hex
-        reduce0 nt_literal t_bin
-        reduce0 nt_literal t_oct
-        reduce0 nt_literal t_dec 
-        reduce0 nt_literal t_string_1
-        reduce0 nt_literal t_string_2
+        reduce_0i nt_literal t_literal_true
+        reduce_0i nt_literal t_literal_false
+        reduce_0i nt_literal t_literal_null
+        reduce_0i nt_literal t_literal_default
+        reduce_0i nt_literal t_literal_empty
+        reduce_0i nt_literal t_hex
+        reduce_0i nt_literal t_bin
+        reduce_0i nt_literal t_oct
+        reduce_0i nt_literal t_dec 
+        reduce_0i nt_literal t_string_1
+        reduce_0i nt_literal t_string_2
 
-        reduce4 nt_func_call t_identifier t_symbol_oparen nt_args t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
-        reduce4 nt_func_call nt_member_expr t_symbol_oparen nt_args t_symbol_cparen (fun m _ a _ -> MemberCall(m, a))
+        reduce_4i nt_func_call t_identifier t_symbol_oparen nt_args t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
+        reduce_4i nt_func_call nt_member_expr t_symbol_oparen nt_args t_symbol_cparen (fun m _ a _ -> MemberCall(m, a))
 
-        reduce0 nt_args nt_arglist
-        reducef nt_args (fun () -> [])
-        
-        reduce3 nt_arglist nt_arglist t_symbol_comma nt_any_expr (fun xs _ x -> xs@[x])
-        reduce1 nt_arglist nt_any_expr (fun x -> [x])
+        reduce_0i nt_args nt_arglist
+        reduce_ci nt_args (fun () -> [])
+
+        reduce_3i nt_arglist nt_arglist t_symbol_comma nt_any_expr (fun xs _ x -> xs@[x])
+        reduce_1i nt_arglist nt_any_expr (fun x -> [x])

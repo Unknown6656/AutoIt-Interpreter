@@ -21,13 +21,15 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="Util.fs" />
-        <Compile Include="ParsingUtil.fs" />
         <Compile Include="AST.fs" />
         <Compile Include="ExpressionParser.fs" />
     </ItemGroup>
     <ItemGroup>
       <Reference Include="Piglet">
         <HintPath>..\lib\Piglet.dll</HintPath>
+      </Reference>
+      <Reference Include="Piglet.FSharp">
+        <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
       </Reference>
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
