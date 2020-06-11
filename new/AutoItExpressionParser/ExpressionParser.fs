@@ -47,10 +47,8 @@ type ExpressionParser() =
                 object-expr := assg-target
                              | macro
                              | literal
-                             | parenthesized-expr
                              | funccall
-
-                parenthesized-expr := "(" any-expr ")"
+                             | "(" any-expr ")"
 
                 any-expr := object-expr
                           | any-expr "?" any-expr ":" any-expr
@@ -88,8 +86,8 @@ type ExpressionParser() =
         let nt_index_expr           = x.CreateNonTerminal<INDEXER_EXPRESSION>   "index-expr"
         let nt_member_expr          = x.CreateNonTerminal<MEMBER_EXPRESSION>    "member-expr"
         let nt_object_expr          = x.CreateNonTerminal<EXPRESSION>           "object-expr"
-        let nt_parenthesized_expr   = x.CreateNonTerminal<EXPRESSION>           "paren-expr"
         let nt_any_expr             = x.CreateNonTerminal<EXPRESSION>           "any-expr"
+        let nt_conditional_expr     = x.CreateNonTerminal<EXPRESSION>           "cond-expr"
         let nt_func_call            = x.CreateNonTerminal<FUNCCALL_EXPRESSION>  "funccall"
         let nt_binary_op            = x.CreateNonTerminal<OPERATOR_BINARY>      "bin-op"
         let nt_unary_op             = x.CreateNonTerminal<OPERATOR_UNARY>       "un-op"
@@ -148,7 +146,7 @@ type ExpressionParser() =
 
 
         x.SetPrecedenceList (([
-            AssociativityDirection.Right, [ t_symbol_questionmark; t_symbol_colon ]
+            AssociativityDirection.Right, [ t_symbol_questionmark ]
             AssociativityDirection.Left, [ t_keyword_or ]
             AssociativityDirection.Left, [ t_keyword_and ]
             AssociativityDirection.Left, [ t_operator_comp_lte; t_operator_comp_lt; t_operator_comp_gt; t_operator_comp_gte ]
@@ -161,7 +159,7 @@ type ExpressionParser() =
         |> List.map (fun (a, g) -> struct(a, List.toArray g))
         |> List.toArray)
 
-        
+
         reduce3 nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))
         reduce1 nt_result nt_any_expr AnyExpression
 
@@ -190,10 +188,13 @@ type ExpressionParser() =
         reduce3 nt_object_expr t_symbol_oparen nt_any_expr t_symbol_cparen (fun _ e _ -> e)
 
         reduce0 nt_any_expr nt_object_expr
-        reduce5 nt_any_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
+        reduce0 nt_any_expr nt_conditional_expr
+        
+        reduce5 nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
         let reduce_binary symbol operator =
-            reduce3 nt_any_expr nt_any_expr symbol nt_any_expr (fun a _ b -> Binary(a, operator, b))
+            //reduce3 nt_any_expr nt_any_expr symbol nt_any_expr (fun a _ b -> Binary(a, operator, b))
+            reduce3 nt_any_expr nt_object_expr symbol nt_object_expr (fun a _ b -> Binary(a, operator, b))
 
         reduce_binary t_keyword_or Or
         reduce_binary t_keyword_and And
@@ -235,97 +236,3 @@ type ExpressionParser() =
         
         reduce3 nt_arglist nt_arglist t_symbol_comma nt_any_expr (fun xs _ x -> xs@[x])
         reduce1 nt_arglist nt_any_expr (fun x -> [x])
-
-        (*
-        reduce1 nt_result nt_assignment_statement AssignmentExpression
-        reduce1 nt_result nt_expression SimpleExpression
-
-        reduce3 nt_assignment_statement nt_assignment_target nt_operator_binary_assg nt_expression (fun t o e -> (t, o, e))
-        reduce1 nt_assignment_target t_variable VariableAssignment
-        reduce1 nt_assignment_target nt_indexer_expression IndexedAssignment
-        reduce1 nt_assignment_target nt_member_expression MemberAssignemnt
-
-        reduce0 nt_operator_binary_assg t_operator_assign_add
-        reduce0 nt_operator_binary_assg t_operator_assign_sub
-        reduce0 nt_operator_binary_assg t_operator_assign_mul
-        reduce0 nt_operator_binary_assg t_operator_assign_div
-        reduce0 nt_operator_binary_assg t_operator_assign_con
-        reduce1 nt_operator_binary_assg t_symbol_equal (fun _ -> Assign)
-
-        reduce0 nt_literal t_literal_true
-        reduce0 nt_literal t_literal_false
-        reduce0 nt_literal t_literal_null
-        reduce0 nt_literal t_literal_default
-        reduce0 nt_literal t_literal_empty
-        reduce0 nt_literal t_hex
-        reduce0 nt_literal t_bin
-        reduce0 nt_literal t_oct
-        reduce0 nt_literal t_dec 
-        reduce0 nt_literal t_string_1
-        reduce0 nt_literal t_string_2
-
-
-        let reduce_binary index operator_symbol associativity operator =
-            let (l, r) = match associativity with
-                         | Left -> (index, index + 1)
-                         | Right -> (index + 1, index)
-            reduce3 nt_subexpr.[index] nt_subexpr.[l] operator_symbol nt_subexpr.[r] (fun a _ b -> Binary(a, operator, b))
-            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
-
-        let reduce_unary_prefix index operator_symbol operator =
-            reduce2 nt_subexpr.[index] operator_symbol nt_subexpr.[index + 1] (fun _ e -> Unary(operator, e))
-            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
-
-        let reduce_or_next index symbol func =
-            reduce1 nt_subexpr.[index] symbol func
-            reduce0 nt_subexpr.[index] nt_subexpr.[index + 1]
-
-
-        // the following lines are sorted by ascending precedence
-        reduce1 nt_expression nt_subexpr.[0] id
-        reduce5 nt_subexpr.[0] nt_subexpr.[1] t_symbol_questionmark nt_subexpr.[1] t_symbol_colon nt_subexpr.[0] (fun a _ b _ c -> Ternary(a, b, c))
-        reduce_binary 1 t_keyword_or Left Or
-        reduce_binary 2 t_keyword_and Left And
-        reduce_binary 3 t_operator_comp_lte Left LowerEqual
-        reduce_binary 4 t_operator_comp_lt Left Lower
-        reduce_binary 5 t_operator_comp_gte Left GreaterEqual
-        reduce_binary 6 t_operator_comp_gt Left Greater
-        reduce_binary 7 t_operator_comp_neq Left Unequal
-        reduce_binary 8 t_symbol_equal Left EqualCaseInsensitive
-        reduce_binary 9 t_operator_comp_eq Left EqualCaseSensitive
-        reduce_binary 10 t_operator_concat Left StringConcat
-        reduce_binary 11 t_symbol_minus Left Subtract
-        reduce_binary 12 t_symbol_plus Left Add
-        reduce_binary 13 t_operator_div Left Divide
-        reduce_binary 14 t_operator_mul Left Multiply
-        reduce_binary 15 t_operator_pow Right Power
-        reduce_unary_prefix 16 t_keyword_not Not
-        reduce_unary_prefix 17 t_symbol_minus Negate
-        reduce_unary_prefix 18 t_symbol_plus Identity
-
-        reduce4 nt_indexer_expression nt_subexpr.[19] t_symbol_obrack nt_expression t_symbol_cbrack (fun e _ i _ -> (e, i))
-        reduce0 nt_subexpr.[19] nt_subexpr.[20]
-
-        reduce3 nt_member_expression nt_subexpr.[20] t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
-        reduce0 nt_subexpr.[20] nt_subexpr.[21]
-
-        reduce_or_next 21 nt_funccall_expression FunctionCall
-        reduce_or_next 22 t_variable Variable
-        reduce_or_next 23 t_macro Macro
-        reduce_or_next 24 nt_literal Literal
-
-        reduce3 nt_subexpr.[25] t_symbol_oparen nt_subexpr.[0] t_symbol_cparen (fun _ e _ -> e)
-
-
-
-        reduce3 nt_member_expression nt_expression t_symbol_dot t_identifier (fun e _ i -> ExplicitMemberAccess(e, i))
-        reduce2 nt_member_expression t_symbol_dot t_identifier (fun _ i -> ImplicitMemberAccess i)
-
-        reduce4 nt_funccall_expression t_identifier t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
-        // reduce4 nt_funccall_expression nt_member_expression t_symbol_oparen nt_funccall_arguments t_symbol_cparen (fun i _ a _ -> MemberCall(i, a))
-
-        reducef nt_funccall_arguments (fun () -> [])
-        reduce1 nt_funccall_arguments nt_funccall_arguments1 id
-        reduce3 nt_funccall_arguments1 nt_funccall_arguments1 t_symbol_comma nt_expression (fun xs _ x -> xs@[x])
-        reduce1 nt_funccall_arguments1 nt_expression (fun x -> [x])
-        *)
