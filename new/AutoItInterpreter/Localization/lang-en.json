@@ -36,6 +36,11 @@
             "unresolved_func": "Unresolved function name '{0}'.",
             "thread_already_running": "The thread 0x{0:x4} is already executing a function.",
             "mismatched_quotes": "Mismatched include quotes {0} and {1}.",
+            "invalid_step": "Invalid 'Step'-expression '{0}'. Possible expressions are 'n', '+n', '-n', or '*n', where <n> is a positive non-zero integer.",
+            "invalid_multi_decl": "Invalid (multi-)declaration statement '{0}'",
+            "unexpected_step": "Unexpected 'Step'-modifier on declaration. 'Step' may only be used in combination with 'Enum'.",
+            "duplicate_modifier": "Duplicate declaration modifier '{0}'.",
+            "incomplatible_modifiers": "The declaration modifiers '{0}' and '{1}' are not compatible with each other.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

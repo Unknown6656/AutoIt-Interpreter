@@ -1,9 +1,7 @@
 ﻿module Unknown6656.AutoIt3.ExpressionParser.AST
 
 
-
 type IDENTIFIER = Identifier of string
-
 
 type VARIABLE (name : string) =
     member _.Name = if name.StartsWith('$') then name.Substring 1 else name
@@ -129,10 +127,14 @@ and FUNCCALL_EXPRESSION =
             |> List.concat
             |> List.distinct
 
+type VARIABLE_DECLARATION = VARIABLE * EXPRESSION option
+
 type PARSABLE_EXPRESSION =
+    | MultiDeclarationExpression of VARIABLE_DECLARATION list
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | AnyExpression of EXPRESSION
     with
+        /// An array of referenced (not declared!) variables
         member x.ReferencedVariables =
             match x with
             | AssignmentExpression (target, _, expr) -> 

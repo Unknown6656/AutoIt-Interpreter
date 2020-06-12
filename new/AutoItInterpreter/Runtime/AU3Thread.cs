@@ -296,6 +296,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     throw new NotImplementedException();
                 },
+                [@"^redim\s+(?<expression>.+)$"] = m =>
+                {
+                    throw new NotImplementedException();
+                },
 
                 ["^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
                 ["^wend$"] = _ => PopBlockStatement(BlockStatementType.While),
@@ -339,16 +343,69 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        private InterpreterResult? ProcessExpressionStatement(string line)
+        private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationType declaration_type, out (char op, int amount)? enum_step)
+        {
+            declaration_type = DeclarationType.None;
+            enum_step = null;
+
+            while (line.Match(@"^(local|static|global|const|dim|enum|step)\b", out Match m_modifier))
+            {
+                DeclarationType modifier = (DeclarationType)Enum.Parse(typeof(DeclarationType), m_modifier.Value, true);
+
+                if (declaration_type.HasFlag(modifier))
+                    return WellKnownError("error.duplicate_modifier", modifier);
+
+                if (modifier is DeclarationType.Step)
+                    if (line.Match(@"^(?<op>[+\-*]?)(?<step>\d+)\b", out Match m_step))
+                    {
+                        char op = '+';
+                        int amount = int.Parse(m_step.Groups["step"].Value);
+
+                        if (m_step.Groups["op"] is { Length: > 0, Value: string s })
+                            op = s[0];
+
+                        enum_step = (op, amount);
+                    }
+                    else
+                        return WellKnownError("error.invalid_step", new string(line.TakeWhile(c => !char.IsWhiteSpace(c)).ToArray()));
+
+                declaration_type |= modifier;
+                line = line[..m_modifier.Length].TrimStart();
+            }
+
+            if (declaration_type.HasFlag(DeclarationType.Step) && !declaration_type.HasFlag(DeclarationType.Enum))
+                return WellKnownError("error.unexpected_step");
+
+            foreach ((DeclarationType m1, DeclarationType m2) in new[]
+            {
+                (DeclarationType.Local, DeclarationType.Global),
+                (DeclarationType.Static, DeclarationType.Const),
+                // TODO : ?
+            })
+                if (declaration_type.HasFlag(m1) && declaration_type.HasFlag(m2))
+                    return WellKnownError("error.incomplatible_modifiers", m1, m2);
+
+            return null;
+        }
+
+        private InterpreterError? ProcessExpressionStatement(string line)
         {
             try
             {
-                ParserResult<AST.PARSABLE_EXPRESSION>? result = ParserProvider.ExprParser.Parse(line);
-                var expression = result.ParsedValue;
+                if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
+                    return err;
+
+                ParserResult<AST.PARSABLE_EXPRESSION>? parser_result = (declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser).Parse(line);
+                AST.PARSABLE_EXPRESSION? expression = parser_result.ParsedValue;
 
                 Program.PrintDebugMessage($"Parsed \"{expression.ToString().Replace('\n', ' ')}\"");
 
-                return ProcessExpressionStatement(expression) ?? InterpreterResult.OK;
+                if (declaration_type == DeclarationType.None)
+                    return ProcessAssignmentStatement(expression);
+                else if (expression is AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
+                    return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
+                else
+                    return WellKnownError("error.invalid_multi_decl", line);
             }
             catch (LexerException ex)
             {
@@ -356,16 +413,17 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        private InterpreterError? ProcessExpressionStatement(AST.PARSABLE_EXPRESSION result)
+        private InterpreterError? ProcessMultiDeclarationExpression(AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
+        {
+
+        }
+
+        private InterpreterError? ProcessAssignmentStatement(AST.PARSABLE_EXPRESSION result)
         {
             (AST.ASSIGNMENT_TARGET target, AST.OPERATOR_ASSIGNMENT @operator, AST.EXPRESSION expression) = Cleanup.CleanUpExpression(result);
 
 
-
-
-
             Console.WriteLine($"{target} {@operator} {expression}");
-
 
             return null; // success
         }
@@ -380,6 +438,20 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private InterpreterError WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+    }
+
+    [Flags]
+    public enum DeclarationType
+        : byte
+    {
+        None = 0b_0000_0000,
+        Dim = 0b_0000_0001,
+        Local = 0b_0000_0010,
+        Global = 0b_0000_0100,
+        Const = 0b_0000_1000,
+        Static = 0b_0001_0000,
+        Enum = 0b_0010_0000,
+        Step = 0b_0100_0000,
     }
 
     public enum BlockStatementType

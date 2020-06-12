@@ -4,21 +4,19 @@ using Unknown6656.AutoIt3.ExpressionParser;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using ExpressionParser = ExpressionParser.ExpressionParser;
+    using exprparser = ExpressionParser.ExpressionParser;
 
 
     public static class ParserProvider
     {
-        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper ExprParser { get; }
+        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper ExpressionParser { get; }
+        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper MultiDeclarationParser { get; }
 
 
         static ParserProvider()
         {
-            ExpressionParser generator = new ExpressionParser();
-
-            ExprParser = generator.CreateParser();
-
-            // TODO
+            ExpressionParser = new exprparser(ParserMode.ArbitraryExpression).CreateParser();
+            MultiDeclarationParser = new exprparser(ParserMode.ExpressionDecl).CreateParser();
         }
     }
 }

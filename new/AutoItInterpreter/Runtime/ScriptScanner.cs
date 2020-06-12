@@ -151,7 +151,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
-                        if (line.Match(@"^(?<decl>func\s+([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.*)$", out m))
+                        if (line.Match(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.*)$", out m))
                         {
                             if (Program.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
@@ -163,9 +163,10 @@ namespace Unknown6656.AutoIt3.Runtime
                                 ("endfunc", loc),
                             });
                         }
-                        else if (line.Match(@"^func\s+(?<name>[a-z_]\w*)\s*\(.*\)$", out m))
+                        else if (line.Match(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\(.*\)$", out m))
                         {
                             string name = m.Groups["name"].Value;
+                            bool @volatile = m.Groups["volatile"].Length > 0;
 
                             if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
@@ -173,6 +174,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
                             curr_func = script.GetOrCreateAU3Function(name);
+                            curr_func.IsVolatile = @volatile;
                             _cached_functions.TryAdd(name.ToLower(), curr_func);
                         }
                         else if (line.Match(@"^endfunc$", out Match _))
@@ -424,10 +426,11 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        public bool IsVolatile { get; internal set; }
+
         public int LineCount => _lines.Count;
 
         public (SourceLocation LineLocation, string LineContent)[] Lines => _lines.OrderBy(k => k.Key).ToArray(k => (k.Key, k.Value));
-
 
         public AU3Function(ScannedScript script, string name)
             : base(script, name)

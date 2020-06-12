@@ -24,6 +24,16 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public DirectoryInfo PluginDirectory { get; }
 
+        public int PluginModuleCount => new IEnumerable<AbstractInterpreterPlugin>[]
+        {
+            _line_processors,
+            _directive_processors,
+            _statement_processors,
+            _pragma_processors,
+            _func_providers,
+            _resolvers,
+        }.Sum(p => p.Count());
+
         public IReadOnlyList<FileInfo> LoadedPlugins => _plugin_files;
 
         public IReadOnlyList<AbstractLineProcessor> LineProcessors => _line_processors;
@@ -48,7 +58,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 dir.Create();
         }
 
-        public override string ToString() => $"{_plugin_files.Count} plugins in \"{PluginDirectory.FullName}\"";
+        public override string ToString() => $"{_plugin_files.Count} plugins in \"{PluginDirectory.FullName}\" ({PluginModuleCount} modules)";
 
         public void ClearLoadedPlugins()
         {
