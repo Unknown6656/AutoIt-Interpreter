@@ -41,6 +41,7 @@
             "unexpected_step": "Unexpected 'Step'-modifier on declaration. 'Step' may only be used in combination with 'Enum'.",
             "duplicate_modifier": "Duplicate declaration modifier '{0}'.",
             "incomplatible_modifiers": "The declaration modifiers '{0}' and '{1}' are not compatible with each other.",
+            "uninitialized_constant": "The variable '{0}' has been declared as 'Const' and must therefore has a value assigned to it.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

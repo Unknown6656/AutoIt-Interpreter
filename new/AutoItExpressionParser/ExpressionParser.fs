@@ -11,7 +11,7 @@ open AST
 
 
 type ParserMode =
-    | ExpressionDeclaration = 0
+    | MultiDeclaration = 0
     | ArbitraryExpression = 1
 
 type ExpressionParser(mode : ParserMode) =
@@ -145,8 +145,8 @@ type ExpressionParser(mode : ParserMode) =
                                                                                                               | (true, d) -> d
                                                                                                               | _ -> Decimal.Parse(s, NumberStyles.Float)
                                                                                                               |> Number)
-        let t_variable              = x.CreateTerminalF @"$[^\W\d]\w*"                              (fun s -> VARIABLE(s.Substring 1))
-        let t_macro                 = x.CreateTerminalF @"@[^\W\d]\w*"                              (fun s -> MACRO(s.Substring 1))
+        let t_variable              = x.CreateTerminalF @"$([^\W\d_]|[^\W\d]\w*)"                   (fun s -> VARIABLE(s.Substring 1))
+        let t_macro                 = x.CreateTerminalF @"@([^\W\d_]|[^\W\d]\w*)"                   (fun s -> MACRO(s.Substring 1))
         let t_string_1              = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""          (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
         let t_string_2              = x.CreateTerminalF @"'(([^']*''[^']*)*|[^']+)'"                (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
         let t_identifier            = x.CreateTerminalF @"([^\W\d_]|[^\W\d]\w*)"                    Identifier
@@ -171,7 +171,7 @@ type ExpressionParser(mode : ParserMode) =
 
 
         match mode with
-        | ParserMode.ExpressionDeclaration ->
+        | ParserMode.MultiDeclaration ->
             reduce_1i nt_result nt_multi_decl_expr MultiDeclarationExpression
         | ParserMode.ArbitraryExpression ->
             reduce_3i nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))

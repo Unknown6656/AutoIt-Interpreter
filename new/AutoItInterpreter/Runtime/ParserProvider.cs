@@ -16,7 +16,7 @@ namespace Unknown6656.AutoIt3.Runtime
         static ParserProvider()
         {
             ExpressionParser = new exprparser(ParserMode.ArbitraryExpression).CreateParser();
-            MultiDeclarationParser = new exprparser(ParserMode.ExpressionDecl).CreateParser();
+            MultiDeclarationParser = new exprparser(ParserMode.MultiDeclaration).CreateParser();
         }
     }
 }

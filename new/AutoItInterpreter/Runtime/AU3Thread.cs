@@ -11,6 +11,7 @@ using Unknown6656.Common;
 using Piglet.Parser.Configuration.Generic;
 using Piglet.Lexer;
 using System.Diagnostics;
+using Microsoft.FSharp.Core;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -124,6 +125,9 @@ namespace Unknown6656.AutoIt3.Runtime
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
 
+        // TODO : var resolution
+
+
         internal CallFrame(AU3Thread thread, ScriptFunction function)
         {
             CurrentThread = thread;
@@ -216,8 +220,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             result ??= ProcessDirective(line);
             result ??= ProcessStatement(line);
-            result ??= ProcessExpressionStatement(line);
             result ??= UseExternalLineProcessors(line);
+            result ??= ProcessExpressionStatement(line);
 
             return result ?? WellKnownError("error.unparsable_line", line);
         }
@@ -256,7 +260,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
         }
 
+        public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}] {CurrentLocation}";
 
+
+        // var : name, is_const[y/n]
 
 
         // TODO
@@ -343,6 +350,31 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
+        private InterpreterError? ProcessExpressionStatement(string line)
+        {
+            try
+            {
+                if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
+                    return err;
+
+                ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser;
+                AST.PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
+
+                Program.PrintDebugMessage($"Parsed \"{expression.ToString().Replace('\n', ' ')}\"");
+
+                if (declaration_type == DeclarationType.None)
+                    return ProcessAssignmentStatement(expression);
+                else if (expression is AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
+                    return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
+                else
+                    return WellKnownError("error.invalid_multi_decl", line);
+            }
+            catch (LexerException ex)
+            {
+                return WellKnownError("error.invalid_syntax", line, ex.Message);
+            }
+        }
+
         private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationType declaration_type, out (char op, int amount)? enum_step)
         {
             declaration_type = DeclarationType.None;
@@ -370,7 +402,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return WellKnownError("error.invalid_step", new string(line.TakeWhile(c => !char.IsWhiteSpace(c)).ToArray()));
 
                 declaration_type |= modifier;
-                line = line[..m_modifier.Length].TrimStart();
+                line = line[m_modifier.Length..].TrimStart();
             }
 
             if (declaration_type.HasFlag(DeclarationType.Step) && !declaration_type.HasFlag(DeclarationType.Enum))
@@ -388,44 +420,48 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessExpressionStatement(string line)
-        {
-            try
-            {
-                if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
-                    return err;
-
-                ParserResult<AST.PARSABLE_EXPRESSION>? parser_result = (declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser).Parse(line);
-                AST.PARSABLE_EXPRESSION? expression = parser_result.ParsedValue;
-
-                Program.PrintDebugMessage($"Parsed \"{expression.ToString().Replace('\n', ' ')}\"");
-
-                if (declaration_type == DeclarationType.None)
-                    return ProcessAssignmentStatement(expression);
-                else if (expression is AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
-                    return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
-                else
-                    return WellKnownError("error.invalid_multi_decl", line);
-            }
-            catch (LexerException ex)
-            {
-                return WellKnownError("error.invalid_syntax", line, ex.Message);
-            }
-        }
-
         private InterpreterError? ProcessMultiDeclarationExpression(AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
         {
+            InterpreterError? error = null;
 
+            foreach ((AST.VARIABLE variable, FSharpOption<AST.EXPRESSION>? expression) in multi_decl.Item.Select(t => t.ToValueTuple()))
+            {
+                error ??= ProcessVariableDeclaration(variable, decltype);
+
+                if (expression is { })
+                {
+                    // TODO : enum step handling
+
+                    var assg_expr = (AST.ASSIGNMENT_TARGET.NewVariableAssignment(variable), AST.OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
+
+                    error ??= ProcessAssignmentStatement(AST.PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr));
+                }
+                else if (decltype.HasFlag(DeclarationType.Const))
+                    return WellKnownError("error.uninitialized_constant", variable);
+            }
+
+            return null;
+        }
+
+        private InterpreterError? ProcessVariableDeclaration(AST.VARIABLE variable, DeclarationType decltype)
+        {
+
+            // TODO
+
+            Console.WriteLine($"{decltype} {variable}");
+
+            return null;
         }
 
         private InterpreterError? ProcessAssignmentStatement(AST.PARSABLE_EXPRESSION result)
         {
             (AST.ASSIGNMENT_TARGET target, AST.OPERATOR_ASSIGNMENT @operator, AST.EXPRESSION expression) = Cleanup.CleanUpExpression(result);
 
+            // TODO
 
             Console.WriteLine($"{target} {@operator} {expression}");
 
-            return null; // success
+            return null;
         }
 
         private InterpreterResult? UseExternalLineProcessors(string line)
