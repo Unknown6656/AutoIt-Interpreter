@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
+using Microsoft.FSharp.Core;
+
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using Piglet.Parser.Configuration.Generic;
 using Piglet.Lexer;
-using System.Diagnostics;
-using Microsoft.FSharp.Core;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
