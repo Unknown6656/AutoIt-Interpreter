@@ -63,6 +63,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        public override string ToString() => $"{(IsGlobalScope ? "(Global) " : "")}{_variables.Count} Variables, {_children.Count} Child scopes";
+
         public Variable CreateVariable(string name, bool isConst)
         {
             if (!TryGetVariable(name, out Variable? var))

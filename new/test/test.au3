@@ -1,4 +1,4 @@
-dim enum $a = 9 - Default + (Null * "42"), $b, $c = 7
+dim enum $a = Default + (Null * "42"), $b, $c = 7
 
 $b = (Not 9)
 $c = test($b)

@@ -66,7 +66,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        internal InterpreterError? Call(ScriptFunction function)
+        public InterpreterError? Call(ScriptFunction function)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -137,7 +137,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             CurrentThread = thread;
             CurrentFunction = function;
-            VariableResolver = thread.CurrentVariableResolver.CreateChildScope();
+            VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope();
         }
 
         public void Dispose() => VariableResolver.Dispose();
