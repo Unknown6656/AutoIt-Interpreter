@@ -6,12 +6,15 @@ using System.Linq;
 using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
+    using static AST;
+
     public sealed class ScriptScanner
     {
         private readonly ScannedScript _system_script;
@@ -168,7 +171,9 @@ namespace Unknown6656.AutoIt3.Runtime
                             string name = m.Groups["name"].Value;
                             bool @volatile = m.Groups["volatile"].Length > 0;
 
-                            if (!curr_func.IsMainFunction)
+                            if (ScriptFunction.RESERVED_NAMES.Contains(name.ToLower()))
+                                return InterpreterError.WellKnown(loc, "error.reserved_name", name);
+                            else if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
                             else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
@@ -377,6 +382,13 @@ namespace Unknown6656.AutoIt3.Runtime
         : IEquatable<ScriptFunction>
     {
         internal const string GLOBAL_FUNC = "$global";
+
+        public static string[] RESERVED_NAMES =
+        {
+            "_", "$_", VARIABLE.Discard.Name, "$global", "global", "static", "dim", "redim", "enum", "step", "local", "for", "in", "next", "default", "null",
+            "func", "endfunc", "do", "until", "while", "wend", "if", "then", "else", "endif", "elseif", "select", "endselect", "case", "switch", "endswitch",
+            "with", "endwith", "continuecase", "continueloop", "exit", "exitloop", "return", "volatile"
+        };
 
 
         public string Name { get; }
