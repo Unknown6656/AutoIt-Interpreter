@@ -34,6 +34,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
 
+        public VariableResolver CurrentVariableResolver => CurrentFrame?.VariableResolver ?? Interpreter.VariableResolver;
+
         public bool IsDisposed { get; private set; }
 
         public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
@@ -82,7 +84,7 @@ namespace Unknown6656.AutoIt3.Runtime
             InterpreterError? result = frame.Exec();
 
             while (!ReferenceEquals(CurrentFrame, old))
-                _callstack.TryPop(out _);
+                ExitCall();
 
             return result;
         }
@@ -92,7 +94,9 @@ namespace Unknown6656.AutoIt3.Runtime
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
-            _callstack.TryPop(out _);
+            _callstack.TryPop(out CallFrame? frame);
+            frame?.Dispose();
+
 
             return CurrentLocation;
         }
@@ -116,28 +120,33 @@ namespace Unknown6656.AutoIt3.Runtime
         }
     }
 
+#pragma warning disable CA1063
     public abstract class CallFrame
+        : IDisposable
     {
         public AU3Thread CurrentThread { get; }
 
         public ScriptFunction CurrentFunction { get; }
 
+        public VariableResolver VariableResolver { get; }
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
-
-
-        // TODO : var resolution
 
 
         internal CallFrame(AU3Thread thread, ScriptFunction function)
         {
             CurrentThread = thread;
             CurrentFunction = function;
+            VariableResolver = thread.CurrentVariableResolver.CreateChildScope();
         }
+
+        public void Dispose() => VariableResolver.Dispose();
 
         internal abstract InterpreterError? Exec();
 
         public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
     }
+#pragma warning restore CA1063
 
     public sealed class NativeCallFrame
         : CallFrame
@@ -410,6 +419,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
             foreach ((DeclarationType m1, DeclarationType m2) in new[]
             {
+                (DeclarationType.Dim, DeclarationType.Global),
+                (DeclarationType.Dim, DeclarationType.Local),
+                (DeclarationType.Dim, DeclarationType.Static),
+                (DeclarationType.Enum, DeclarationType.Static),
                 (DeclarationType.Local, DeclarationType.Global),
                 (DeclarationType.Static, DeclarationType.Const),
                 // TODO : ?
@@ -445,6 +458,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterError? ProcessVariableDeclaration(AST.VARIABLE variable, DeclarationType decltype)
         {
+            string name = variable.Name;
+
+            if (decltype == DeclarationType.None)
+                decltype = DeclarationType.Dim;
+
+
+
 
             // TODO
 

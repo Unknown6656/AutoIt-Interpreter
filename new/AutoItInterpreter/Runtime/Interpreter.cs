@@ -19,6 +19,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread[] Threads => _threads.Keys.ToArray();
 
+        public VariableResolver VariableResolver { get; }
+
         public CommandLineOptions CommandLineOptions { get; }
 
         public ScriptScanner ScriptScanner { get; }
@@ -31,6 +33,7 @@ namespace Unknown6656.AutoIt3.Runtime
             CommandLineOptions = opt;
             ScriptScanner = new ScriptScanner(this);
             PluginLoader = new PluginLoader(this, PLUGIN_DIR);
+            VariableResolver = VariableResolver.CreateGlobalScope(this);
 
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
