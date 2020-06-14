@@ -14,4 +14,5 @@ TODO LIST
 [ ] Add thread inspection methods
 [ ] Add variable inspection methods
 [ ] Add error-flag (on syntax error continue and set @error)
-[ ] 
+[ ] Test all on linux
+[ ] Test all on macos
