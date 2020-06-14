@@ -235,7 +235,7 @@ namespace Unknown6656.AutoIt3.Runtime
             result ??= UseExternalLineProcessors(line);
             result ??= ProcessExpressionStatement(line);
 
-            return result ?? WellKnownError("error.unparsable_line", line);
+            return result ?? InterpreterResult.OK;
         }
 
         private InterpreterResult? ProcessDirective(string directive)
@@ -381,9 +381,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                     return WellKnownError("error.invalid_multi_decl", line);
             }
-            catch (LexerException ex)
+            catch (Exception ex)
             {
-                return WellKnownError("error.invalid_syntax", line, ex.Message);
+                return WellKnownError("error.unparsable_line", line, ex.Message);
             }
         }
 
@@ -428,7 +428,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 (DeclarationType.Enum, DeclarationType.Static),
                 (DeclarationType.Local, DeclarationType.Global),
                 (DeclarationType.Static, DeclarationType.Const),
-                // TODO : ?
             })
                 if (declaration_type.HasFlag(m1) && declaration_type.HasFlag(m2))
                     return WellKnownError("error.incomplatible_modifiers", m1, m2);
@@ -449,8 +448,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     // TODO : enum step handling
 
                     var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable), OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
+                    Union<Variant, InterpreterError> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
-                    error ??= ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
+                    if (result.IsA)
+                        Program.PrintDebugMessage($"{variable} = {result.UnsafeItem}");
+                    else
+                        error ??= (InterpreterError)result;
                 }
                 else if (decltype.HasFlag(DeclarationType.Const))
                     return WellKnownError("error.uninitialized_constant", variable);
@@ -472,7 +475,7 @@ namespace Unknown6656.AutoIt3.Runtime
             // if (decltype.HasFlag(DeclarationType.Dim) || decltype == DeclarationType.None)
             //     global = CurrentFunction.IsMainFunction;
 
-            if (scope.TryGetVariable(variable.Name, out Variable? var))
+            if (scope.TryGetVariable(variable, out Variable? var))
             {
                 if (!(var.IsGlobal && decltype.HasFlag(DeclarationType.Local))) // potential conflict
                     if (constant && !var.IsConst)
@@ -481,16 +484,14 @@ namespace Unknown6656.AutoIt3.Runtime
                         return WellKnownError("error.redefining_constant", var, var.DeclaredLocation);
             }
             else
-                scope.CreateVariable(CurrentLocation, variable.Name, constant);
+                scope.CreateVariable(CurrentLocation, variable, constant);
 
             return null;
         }
 
-        private InterpreterError? ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
+        private Union<Variant, InterpreterError> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
             (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
-
-            Program.PrintDebugMessage($"{target} = {expression}");
 
             switch (target)
             {
@@ -517,22 +518,18 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        private InterpreterError? ProcessVariableAssignment(Variable variable, EXPRESSION expression)
+        private Union<Variant, InterpreterError> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
-            foreach (string referenced in expression.ReferencedVariables.Select(v => v.Name))
-                if (!VariableResolver.HasVariable(referenced))
-                    return WellKnownError("error.undeclared_variable", referenced);
+            foreach (VARIABLE v in expression.ReferencedVariables)
+                if (!VariableResolver.HasVariable(v))
+                    return WellKnownError("error.undeclared_variable", v);
 
-            Union<Variant, InterpreterError>? value = ProcessExpression(expression);
+            Union<Variant, InterpreterError> value = ProcessExpression(expression);
 
             if (value.IsA)
-            {
                 variable.Value = value;
 
-                return null;
-            }
-            else
-                return value;
+            return value;
         }
 
         private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION expression)
@@ -553,13 +550,15 @@ namespace Unknown6656.AutoIt3.Runtime
                 case EXPRESSION.FunctionCall funccall:
                     break;
             }
+            //TODO
+            return null;
         }
 
         private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)
         {
             string name = macro.Name.ToLowerInvariant();
 
-            if (Interpreter.Macros[name] is Variant v)
+            if (Interpreter.BuiltinMacros[name] is Variant v)
                 return v;
 
             foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
@@ -571,13 +570,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
         {
-
+            if (VariableResolver.TryGetVariable(variable, out Variable? var))
+                return var.Value;
+            else
+                return WellKnownError("error.undeclared_variable", variable);
         }
 
-        private Union<Variant, InterpreterError> ProcessLiteral(LITERAL literal)
-        {
-
-        }
+        private Variant ProcessLiteral(LITERAL literal) => Variant.FromLiteral(literal); // TODO : on error throw ?
 
         private InterpreterResult? UseExternalLineProcessors(string line)
         {
