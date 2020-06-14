@@ -105,4 +105,15 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public abstract InterpreterError? Execute(NativeCallFrame frame);
     }
+
+    public abstract class AbstractMacroProvider
+        : AbstractInterpreterPlugin
+    {
+        protected AbstractMacroProvider(Interpreter interpreter)
+            : base(interpreter)
+        {
+        }
+
+        public abstract bool ProvideMacroValue(string name, out Variant? value);
+    }
 }

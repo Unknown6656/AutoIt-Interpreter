@@ -48,6 +48,7 @@
             "invalid_assignment_target": "The assignment target '{0}' is invalid.",
             "reserved_name": "The name '{0}' is a reserved keyword and cannot be used as identifier.",
             "undeclared_variable": "The variable '${0}' has not been declared and can therefore not be used in this expression.",
+            "unknown_macro": "The macro '{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

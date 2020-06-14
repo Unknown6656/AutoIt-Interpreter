@@ -334,10 +334,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     while (level-- > 1)
                         result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
 
-                     // TODO : continue
+                    // TODO : continue
 
 
-                     throw new NotImplementedException();
+                    throw new NotImplementedException();
                 },
                 [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
                 {
@@ -536,6 +536,45 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION expression)
+        {
+            switch (expression)
+            {
+                case EXPRESSION.Literal literal:
+                    return ProcessLiteral(literal.Item);
+                case EXPRESSION.Variable variable:
+                    return ProcessVariable(variable.Item);
+                case EXPRESSION.Macro macro:
+                    return ProcessMacro(macro.Item);
+                case EXPRESSION.Unary unary:
+                case EXPRESSION.Binary binary:
+                case EXPRESSION.Ternary ternary:
+                case EXPRESSION.Member member:
+                case EXPRESSION.Indexer indexer:
+                case EXPRESSION.FunctionCall funccall:
+                    break;
+            }
+        }
+
+        private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)
+        {
+            string name = macro.Name.ToLowerInvariant();
+
+            if (Interpreter.Macros[name] is Variant v)
+                return v;
+
+            foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
+                if (provider.ProvideMacroValue(name, out Variant? value) && value.HasValue)
+                    return value.Value;
+
+            return WellKnownError("error.unknown_macro", macro.Name);
+        }
+
+        private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
+        {
+
+        }
+
+        private Union<Variant, InterpreterError> ProcessLiteral(LITERAL literal)
         {
 
         }

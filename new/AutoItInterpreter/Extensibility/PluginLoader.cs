@@ -17,6 +17,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         private readonly List<AbstractPragmaProcessor> _pragma_processors = new List<AbstractPragmaProcessor>();
         private readonly List<AbstractFunctionProvider> _func_providers = new List<AbstractFunctionProvider>();
         private readonly List<AbstractIncludeResolver> _resolvers = new List<AbstractIncludeResolver>();
+        private readonly List<AbstractMacroProvider> _macro_providers = new List<AbstractMacroProvider>();
         private readonly List<FileInfo> _plugin_files = new List<FileInfo>();
 
 
@@ -32,6 +33,7 @@ namespace Unknown6656.AutoIt3.Extensibility
             _pragma_processors,
             _func_providers,
             _resolvers,
+            _macro_providers,
         }.Sum(p => p.Count());
 
         public IReadOnlyList<FileInfo> LoadedPlugins => _plugin_files;
@@ -47,6 +49,8 @@ namespace Unknown6656.AutoIt3.Extensibility
         public IReadOnlyList<AbstractFunctionProvider> FunctionProviders => _func_providers;
 
         public IReadOnlyList<AbstractIncludeResolver> IncludeResolvers => _resolvers.OrderByDescending(r => ((Scalar)r.RelativeImportance).Clamp()).ToList();
+
+        public IReadOnlyList<AbstractMacroProvider> MacroProviders => _macro_providers;
 
 
         public PluginLoader(Interpreter interpreter, DirectoryInfo dir)
@@ -100,6 +104,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                     TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
                     TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
                     TryRegister<AbstractFunctionProvider>(type, RegisterFunctionProvider);
+                    TryRegister<AbstractMacroProvider>(type, RegisterMacroProvider);
                 }
         }
 
@@ -120,5 +125,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         public void RegisterIncludeResolver(AbstractIncludeResolver resolver) => _resolvers.Add(resolver);
 
         public void RegisterFunctionProvider(AbstractFunctionProvider provider) => _func_providers.Add(provider);
+
+        public void RegisterMacroProvider(AbstractMacroProvider provider) => _macro_providers.Add(provider);
     }
 }
