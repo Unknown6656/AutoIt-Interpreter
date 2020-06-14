@@ -26,7 +26,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CommandLineOptions CommandLineOptions { get; }
 
-        public ReadOnlyIndexer<string, Variant?> Macros { get; }
+        public ReadOnlyIndexer<string, Variant?> BuiltinMacros { get; }
 
         public ScriptScanner ScriptScanner { get; }
 
@@ -51,7 +51,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
-            Macros = new ReadOnlyIndexer<string, Variant?>(ResolveMacro);
+            BuiltinMacros = new ReadOnlyIndexer<string, Variant?>(ResolveMacro);
         }
 
         public void Dispose()
@@ -69,46 +69,26 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-        private unsafe Variant? ResolveMacro(string macro)
+        private unsafe Variant? ResolveMacro(string macro) => macro switch
         {
-            switch (macro)
-            {
-                case "appdatacommondir":
-                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                case "appdatadir":
-                    return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                case "autoitexe":
-                    return ASM.FullName;
-                case "autoitpid":
-                    return Process.GetCurrentProcess().Id;
-                case "autoitversion":
-                    return __module__.InterpreterVersion?.ToString() ?? "0.0.0.0";
-                case "autoitx64":
-                    return sizeof(void*) > 4;
-                case "commonfilesdir":
-                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles);
-                case "compiled":
-                    return false;
+            "appdatacommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "appdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "autoitexe" => ASM.FullName,
+            "autoitpid" => Process.GetCurrentProcess().Id,
+            "autoitversion" => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0",
+            "autoitx64" => sizeof(void*) > 4,
+            "commonfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+            "compiled" => false,
+            "cr" => "\r",
+            "crlf" => "\r\n",
+            "lf" => "\n",
 
-                case "cr":
-                    return "\r";
-                case "crlf":
-                    return "\r\n";
-                case "lf":
-                    return "\n";
-
-
-
-                ///////////////////////////////////// ADDITIONAL MACROS /////////////////////////////////////
-                case "esc":
-                    return "\x1b";
-                case "nul":
-                    return "\0";
-            }
-
-            /* https://www.autoitscript.com/autoit3/docs/macros.htm
-
-AutoItX64	Returns 1 if the script is running under the native x64 version of AutoIt.
+            ///////////////////////////////////// ADDITIONAL MACROS /////////////////////////////////////
+            "esc" => "\x1b",
+            "nul" => "\0",
+            _ => null,
+        };
+        /* https://www.autoitscript.com/autoit3/docs/macros.htm
 COM_EventObj	Object the COM event is being fired on. Only valid in a COM event function.
 ComputerName	Computer's network name.
 ComSpec	Value of %COMSPEC%, the SPECified secondary COMmand interpreter; primary for command line uses, e.g. Run(@ComSpec & " /k help | more")
@@ -202,7 +182,6 @@ WorkingDir	Current/active working directory. Only includes a trailing backslash 
 YDAY	Current day of year. Range is 001 to 366 (or 001 to 365 if not a leap year)
 YEAR	Current four-digit year
              */
-        }
 
         public InterpreterError? Run(ScriptFunction entry_point)
         {
