@@ -117,6 +117,23 @@ module Cleanup =
         | MemberAssignemnt m -> MemberAssignemnt (FoldMember m)
 
     let FoldAssignment (target, op, ex) = (FoldTarget target, op, FoldConstants ex)
+    
+    let DecomposeAssignmentExpression (target, op, expr) =
+        let expr = match op with
+                   | AssignAdd -> Some Add
+                   | AssignSubtract -> Some Subtract
+                   | AssignMultiply -> Some Multiply
+                   | AssignDivide -> Some Divide
+                   | AssignConcat -> Some StringConcat
+                   | Assign -> None
+                   |> Option.map (fun bop -> 
+                       let left = match target with
+                                  | VariableAssignment v -> Variable v
+                                  | IndexedAssignment i -> Indexer i
+                                  | MemberAssignemnt m -> Member m
+                       Binary (left, bop, expr))
+                   |> Option.defaultValue expr
+        (target, Assign, expr)
 
     let CleanUpExpression expression =
         match expression with
@@ -125,5 +142,7 @@ module Cleanup =
         | AnyExpression(Binary(Member membr, EqualCaseInsensitive, source)) -> (MemberAssignemnt membr, Assign, source)
         | AnyExpression e -> (VariableAssignment VARIABLE.Discard, Assign, e)
         | AssignmentExpression e -> e
+        |> DecomposeAssignmentExpression
         |> FoldAssignment
         |> fun (target, op, expr) -> struct(target, op, expr)
+
