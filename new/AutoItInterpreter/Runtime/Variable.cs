@@ -11,11 +11,16 @@ namespace Unknown6656.AutoIt3.Runtime
         public string Name { get; }
         public bool IsConst { get; }
         public object? Value { get; set; }
+        public VariableScope DeclaredScope { get; }
+        public SourceLocation DeclaredLocation { get; }
+        public bool IsGlobal => DeclaredScope.IsGlobalScope;
 
 
-        internal Variable(string name, bool isConst)
+        internal Variable(VariableScope scope, SourceLocation location, string name, bool isConst)
         {
             Name = name.TrimStart('$').ToLowerInvariant();
+            DeclaredLocation = location;
+            DeclaredScope = scope;
             IsConst = isConst;
         }
 
@@ -29,25 +34,25 @@ namespace Unknown6656.AutoIt3.Runtime
         public bool Equals(Variable? other) => Name.Equals(other?.Name, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    public sealed class VariableResolver
+    public sealed class VariableScope
         : IDisposable
     {
-        private readonly ConcurrentDictionary<VariableResolver, __empty> _children = new ConcurrentDictionary<VariableResolver, __empty>();
+        private readonly ConcurrentDictionary<VariableScope, __empty> _children = new ConcurrentDictionary<VariableScope, __empty>();
         private readonly ConcurrentDictionary<Variable, __empty> _variables = new ConcurrentDictionary<Variable, __empty>();
 
 
-        public VariableResolver[] ChildScopes => _children.Keys.ToArray();
+        public VariableScope[] ChildScopes => _children.Keys.ToArray();
 
         public bool IsGlobalScope => Parent is null;
 
         public Interpreter Interpreter { get; }
 
-        public VariableResolver? Parent { get; }
+        public VariableScope? Parent { get; }
 
-        public VariableResolver? GlobalRoot { get; }
+        public VariableScope? GlobalRoot { get; }
 
 
-        private VariableResolver(Interpreter interpreter, VariableResolver? parent)
+        private VariableScope(Interpreter interpreter, VariableScope? parent)
         {
             Interpreter = interpreter;
             Parent = parent;
@@ -65,11 +70,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => $"{(IsGlobalScope ? "(Global) " : "")}{_variables.Count} Variables, {_children.Count} Child scopes";
 
-        public Variable CreateVariable(string name, bool isConst)
+        public Variable CreateVariable(SourceLocation location, string name, bool isConst)
         {
             if (!TryGetVariable(name, out Variable? var))
             {
-                var = new Variable(name, isConst);
+                var = new Variable(this, location, name, isConst);
 
                 _variables.TryAdd(var, default);
             }
@@ -113,9 +118,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 p.DestroyAllVariables(recursive);
         }
 
-        public VariableResolver CreateChildScope()
+        public VariableScope CreateChildScope()
         {
-            VariableResolver res = new VariableResolver(Interpreter, this);
+            VariableScope res = new VariableScope(Interpreter, this);
 
             while (!_children.TryAdd(res, default))
                 ;
@@ -123,6 +128,6 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        public static VariableResolver CreateGlobalScope(Interpreter interpreter) => new VariableResolver(interpreter, null);
+        public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null);
     }
 }

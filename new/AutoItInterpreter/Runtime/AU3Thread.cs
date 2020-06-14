@@ -6,12 +6,14 @@ using System;
 
 using Microsoft.FSharp.Core;
 
+using Piglet.Parser.Configuration.Generic;
+using Piglet.Lexer;
+
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
-using Piglet.Parser.Configuration.Generic;
-using Piglet.Lexer;
+using static Unknown6656.AutoIt3.ExpressionParser.AST;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -34,7 +36,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
 
-        public VariableResolver CurrentVariableResolver => CurrentFrame?.VariableResolver ?? Interpreter.VariableResolver;
+        public VariableScope CurrentVariableResolver => CurrentFrame?.VariableResolver ?? Interpreter.VariableResolver;
 
         public bool IsDisposed { get; private set; }
 
@@ -128,7 +130,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScriptFunction CurrentFunction { get; }
 
-        public VariableResolver VariableResolver { get; }
+        public VariableScope VariableResolver { get; }
 
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
@@ -366,14 +368,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
                     return err;
 
-                ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser;
-                AST.PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
+                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser;
+                PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
-                Program.PrintDebugMessage($"Parsed \"{expression.ToString().Replace('\n', ' ')}\"");
+                Program.PrintDebugMessage($"Parsed \"{expression}\"");
 
                 if (declaration_type == DeclarationType.None)
-                    return ProcessAssignmentStatement(expression);
-                else if (expression is AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
+                    return ProcessAssignmentStatement(expression, false);
+                else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
                     return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
                 else
                     return WellKnownError("error.invalid_multi_decl", line);
@@ -433,11 +435,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessMultiDeclarationExpression(AST.PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
+        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
         {
             InterpreterError? error = null;
 
-            foreach ((AST.VARIABLE variable, FSharpOption<AST.EXPRESSION>? expression) in multi_decl.Item.Select(t => t.ToValueTuple()))
+            foreach ((VARIABLE variable, FSharpOption<EXPRESSION>? expression) in multi_decl.Item.Select(t => t.ToValueTuple()))
             {
                 error ??= ProcessVariableDeclaration(variable, decltype);
 
@@ -445,9 +447,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     // TODO : enum step handling
 
-                    var assg_expr = (AST.ASSIGNMENT_TARGET.NewVariableAssignment(variable), AST.OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
+                    var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable), OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
 
-                    error ??= ProcessAssignmentStatement(AST.PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr));
+                    error ??= ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
                 }
                 else if (decltype.HasFlag(DeclarationType.Const))
                     return WellKnownError("error.uninitialized_constant", variable);
@@ -456,26 +458,48 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessVariableDeclaration(AST.VARIABLE variable, DeclarationType decltype)
+        private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationType decltype)
         {
-            string name = variable.Name;
+            bool constant = decltype.HasFlag(DeclarationType.Const) || decltype.HasFlag(DeclarationType.Enum);
+            bool global = decltype.HasFlag(DeclarationType.Global) && !decltype.HasFlag(DeclarationType.Local);
 
-            if (decltype == DeclarationType.None)
-                decltype = DeclarationType.Dim;
+            if (decltype.HasFlag(DeclarationType.Static) && !global)
+                return WellKnownError("error.not_yet_implemented", "static"); // TODO : static
 
+            VariableScope scope = (global ? VariableResolver.GlobalRoot : null) ?? VariableResolver;
 
+            // if (decltype.HasFlag(DeclarationType.Dim) || decltype == DeclarationType.None)
+            //     global = CurrentFunction.IsMainFunction;
 
-
-            // TODO
-
-            Console.WriteLine($"{decltype} {variable}");
+            if (scope.TryGetVariable(variable.Name, out Variable? var))
+            {
+                if (!(var.IsGlobal && decltype.HasFlag(DeclarationType.Local))) // potential conflict
+                    if (constant && !var.IsConst)
+                        return WellKnownError("error.cannot_make_constant", var, var.DeclaredLocation);
+                    else if (var.IsConst)
+                        return WellKnownError("error.redefining_constant", var, var.DeclaredLocation);
+            }
+            else
+                scope.CreateVariable(CurrentLocation, variable.Name, constant);
 
             return null;
         }
 
-        private InterpreterError? ProcessAssignmentStatement(AST.PARSABLE_EXPRESSION result)
+        private InterpreterError? ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
-            (AST.ASSIGNMENT_TARGET target, AST.OPERATOR_ASSIGNMENT @operator, AST.EXPRESSION expression) = Cleanup.CleanUpExpression(result);
+            (ASSIGNMENT_TARGET target, OPERATOR_ASSIGNMENT @operator, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+
+            switch (target)
+            {
+                case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE var }:
+                    break;
+                case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
+                    break;
+                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: { } member }:
+                    break;
+                default:
+                    return WellKnownError("error.invalid_assignment_target", target);
+            }
 
             // TODO
 
