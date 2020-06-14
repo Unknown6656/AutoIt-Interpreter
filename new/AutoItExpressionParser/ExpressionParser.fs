@@ -145,11 +145,11 @@ type ExpressionParser(mode : ParserMode) =
                                                                                                               | (true, d) -> d
                                                                                                               | _ -> Decimal.Parse(s, NumberStyles.Float)
                                                                                                               |> Number)
-        let t_variable              = x.CreateTerminalF @"$([^\W\d_]|[^\W\d]\w*)"                   (fun s -> VARIABLE(s.Substring 1))
-        let t_macro                 = x.CreateTerminalF @"@([^\W\d_]|[^\W\d]\w*)"                   (fun s -> MACRO(s.Substring 1))
+        let t_variable              = x.CreateTerminalF @"$([^\W\d]|[^\W\d]\w*)"                    (fun s -> VARIABLE(s.Substring 1))
+        let t_macro                 = x.CreateTerminalF @"@([^\W\d]|[^\W\d]\w*)"                    (fun s -> MACRO(s.Substring 1))
         let t_string_1              = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""          (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
         let t_string_2              = x.CreateTerminalF @"'(([^']*''[^']*)*|[^']+)'"                (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
-        let t_identifier            = x.CreateTerminalF @"([^\W\d_]|[^\W\d]\w*)"                    Identifier
+        let t_identifier            = x.CreateTerminalF @"([^\W\d]|[^\W\d]\w*)"                     Identifier
 
 
         let precedences =

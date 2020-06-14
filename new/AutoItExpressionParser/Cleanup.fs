@@ -144,5 +144,5 @@ module Cleanup =
         | AssignmentExpression e -> e
         |> DecomposeAssignmentExpression
         |> FoldAssignment
-        |> fun (target, op, expr) -> struct(target, op, expr)
+        |> fun (target, _, expr) -> struct(target, expr)
 
