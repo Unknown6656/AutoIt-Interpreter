@@ -28,6 +28,8 @@ namespace Unknown6656.AutoIt3.Runtime
     }
 
     public readonly struct Variant
+        : IEquatable<Variant>
+     // , IComparable<Variant>
     {
         public readonly VariantType Type { get; }
 
@@ -98,6 +100,31 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public readonly override bool Equals(object? obj) => Equals(ToVariant(obj));
+
+        public readonly bool Equals(Variant other)
+        {
+            throw new NotImplementedException();
+        }
+
+        public readonly override string ToString() => IsDefault ? "Default" : RawData?.ToString() ?? "";
+
+        public readonly bool ToBoolean() => Type switch
+        {
+            VariantType.Null or VariantType.Default => false,
+            VariantType.Boolean => (bool?)RawData ?? false,
+            VariantType.Number => !((decimal?)RawData is 0m or null),
+            VariantType.String => ToString() != "",
+            _ => true,
+        };
+
+        public readonly decimal ToNumber() => Type switch
+        {
+            VariantType.Default => -1m,
+            VariantType.Boolean => (bool?)RawData is true ? 1 : 0,
+            VariantType.Number => (decimal?)RawData ?? 0m,
+            VariantType.String => decimal.TryParse(ToString(), out decimal d) ? d : 0m,
+            VariantType.Null or _ => 0m,
+        };
 
 
         public static Variant GetTypeDefault(VariantType type) => type switch
