@@ -5,12 +5,17 @@ using System;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
+    public readonly struct Variant
+    {
+        // TODO
+    }
+
     public sealed class Variable
         : IEquatable<Variable>
     {
         public string Name { get; }
         public bool IsConst { get; }
-        public object? Value { get; set; }
+        public Variant Value { get; set; }
         public VariableScope DeclaredScope { get; }
         public SourceLocation DeclaredLocation { get; }
         public bool IsGlobal => DeclaredScope.IsGlobalScope;

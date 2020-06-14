@@ -47,6 +47,7 @@
             "cannot_make_constant": "The already existing '{0}' (declared at {1}) cannot be made constant by a re-definition.",
             "invalid_assignment_target": "The assignment target '{0}' is invalid.",
             "reserved_name": "The name '{0}' is a reserved keyword and cannot be used as identifier.",
+            "undeclared_variable": "The variable '${0}' has not been declared and can therefore not be used in this expression.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

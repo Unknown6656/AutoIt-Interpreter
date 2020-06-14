@@ -14,6 +14,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using Microsoft.VisualBasic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -518,7 +519,25 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterError? ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
-            return null;
+            foreach (string referenced in expression.ReferencedVariables.Select(v => v.Name))
+                if (!VariableResolver.HasVariable(referenced))
+                    return WellKnownError("error.undeclared_variable", referenced);
+
+            Union<Variant, InterpreterError>? value = ProcessExpression(expression);
+
+            if (value.IsA)
+            {
+                variable.Value = value;
+
+                return null;
+            }
+            else
+                return value;
+        }
+
+        private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION expression)
+        {
+
         }
 
         private InterpreterResult? UseExternalLineProcessors(string line)
