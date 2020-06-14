@@ -2,12 +2,14 @@
 using System.Linq;
 using System;
 
+using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
     using static Program;
+    using static AST;
 
     public sealed class Interpreter
         : IDisposable
@@ -33,7 +35,6 @@ namespace Unknown6656.AutoIt3.Runtime
             CommandLineOptions = opt;
             ScriptScanner = new ScriptScanner(this);
             PluginLoader = new PluginLoader(this, PLUGIN_DIR);
-            VariableResolver = VariableScope.CreateGlobalScope(this);
 
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
@@ -44,6 +45,9 @@ namespace Unknown6656.AutoIt3.Runtime
             });
 
             ScriptScanner.ScanNativeFunctions();
+
+            VariableResolver = VariableScope.CreateGlobalScope(this);
+            VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
         }
 
         public void Dispose()

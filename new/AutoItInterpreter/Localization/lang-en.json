@@ -20,7 +20,7 @@
         },
         "error": {
             "error_in": "ERROR in {0}",
-            "not_yet_implemented": "The functionality ï¿½{0}ï¿½ has not yet been implemented. We're sorry :/",
+            "not_yet_implemented": "The functionality »{0}« has not yet been implemented. We're sorry :/",
             "unresolved_script": "The script or include file '{0}' could not be resolved. Verify whether the path is correct and that the file is accessible. If you have an include resolver plugin, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "unhandled_pragma_option": "The pragma option '{0}' could not be handled. If you have a plugin for that pragma option, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "unhandled_pragma_key": "The pragma key '{0}' could not be handled for the option '{1}'.",
@@ -43,6 +43,7 @@
             "incomplatible_modifiers": "The declaration modifiers '{0}' and '{1}' are not compatible with each other.",
             "uninitialized_constant": "The variable '{0}' has been declared as 'Const' and must therefore has a value assigned to it.",
             "redefining_constant": "The variable '{0}' has been previously defined as constant (at {1}) and can therefore not be re-defined.",
+            "constant_assignment": "The variable '{0}' (declared at {1}) has been defined as constant and can therefore not have a new value re-assigned to it.",
             "cannot_make_constant": "The already existing '{0}' (declared at {1}) cannot be made constant by a re-definition.",
             "invalid_assignment_target": "The assignment target '{0}' is invalid.",
             "reserved_name": "The name '{0}' is a reserved keyword and cannot be used as identifier.",

@@ -487,24 +487,37 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterError? ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
-            (ASSIGNMENT_TARGET target, OPERATOR_ASSIGNMENT @operator, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+            (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+
+            Program.PrintDebugMessage($"{target} = {expression}");
 
             switch (target)
             {
                 case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE var }:
-                    break;
+                    if (VariableResolver.TryGetVariable(var.Name, out Variable? variable))
+                    {
+                        if (variable.IsConst)
+                            return WellKnownError("error.constant_assignment", variable, variable.DeclaredLocation);
+                    }
+                    else
+                        variable = VariableResolver.CreateVariable(CurrentLocation, var.Name, false);
+
+                    return ProcessVariableAssignment(variable, expression);
                 case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
-                    break;
+                    // TODO
+
+                    throw new NotImplementedException();
                 case ASSIGNMENT_TARGET.MemberAssignemnt { Item: { } member }:
-                    break;
+                    // TODO
+
+                    throw new NotImplementedException();
                 default:
                     return WellKnownError("error.invalid_assignment_target", target);
             }
+        }
 
-            // TODO
-
-            Console.WriteLine($"{target} {@operator} {expression}");
-
+        private InterpreterError? ProcessVariableAssignment(Variable variable, EXPRESSION expression)
+        {
             return null;
         }
 
