@@ -1,0 +1,17 @@
+TODO LIST
+
+[ ] Implement all default macros
+[ ] Implement all default functions
+[ ] Implement Collections
+    [ ] Arrays
+    [ ] Maps
+    [ ] Declaration
+    [ ] Indexing
+[ ] Implement Objects
+    [ ] COM Objects
+    [ ] NET Objects
+[ ] Implement P/Invoke
+[ ] Add thread inspection methods
+[ ] Add variable inspection methods
+[ ] Add error-flag (on syntax error continue and set @error)
+[ ] 
