@@ -1,4 +1,4 @@
-### _Note: I am currently working on a new (and more stable) version - check out the '.net5'-branch!_
+# _Note: I am currently working on a new (and more stable) version - check out the ['.NET5'-branch](https://github.com/Unknown6656/AutoIt-Interpreter/tree/net5)! The version below is deprecated._
 
 ![Banner image](Artwork/banner.png)
 
