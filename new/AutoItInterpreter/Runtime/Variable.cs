@@ -296,7 +296,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return var;
         }
 
+        public Variable CreateVariable(SourceLocation location, VARIABLE variable, bool isConst) => CreateVariable(location, variable.Name, isConst);
+
         public bool HasVariable(string name) => TryGetVariable(name, out _);
+
+        public bool HasVariable(VARIABLE variable) => HasVariable(variable.Name);
 
         public bool TryGetVariable(string name, [NotNullWhen(true)] out Variable? variable)
         {
@@ -312,6 +316,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return Parent?.TryGetVariable(name, out variable) ?? false;
         }
+
+        public bool TryGetVariable(VARIABLE input, [NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
 
         public bool DestroyVariable(string name, bool recursive)
         {
