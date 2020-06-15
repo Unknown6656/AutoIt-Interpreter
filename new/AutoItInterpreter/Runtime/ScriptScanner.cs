@@ -111,15 +111,15 @@ namespace Unknown6656.AutoIt3.Runtime
                         line = TrimComment(line.TrimStart());
 
                         if (line.Match(
-                            (@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
-                            (@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                            (@"^#(end-?)?region\b", delegate { }
+                            (/*language=regex*/@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
+                            (/*language=regex*/@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
+                            (/*language=regex*/@"^#(end-?)?region\b", delegate { }
                         )) || comment_lvl > 0)
                             continue;
 
                         if (line.Match(
-                            (@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
-                            (@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                            (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                            (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
                         ))
                             continue;
                         else if (line.Match(@"^#requireadmin\b", out m))
@@ -127,7 +127,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         else if (line.Match(@"^#notrayicon\b", out m))
                             line = @"Opt(""TrayIconHide"", 1)";
 
-                        if (line.Match(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
+                        if (line.Match(/*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
                         {
                             string option = m.Groups["option"].Value.Trim();
                             string @params = m.Groups["params"].Value;
@@ -154,7 +154,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
-                        if (line.Match(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.*)$", out m))
+                        if (line.Match(/*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", out m))
                         {
                             if (Program.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
@@ -166,9 +166,10 @@ namespace Unknown6656.AutoIt3.Runtime
                                 ("endfunc", loc),
                             });
                         }
-                        else if (line.Match(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\(.*\)$", out m))
+                        else if (line.Match(/*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", out m))
                         {
                             string name = m.Groups["name"].Value;
+                            string args = m.Groups["args"].Value;
                             bool @volatile = m.Groups["volatile"].Length > 0;
 
                             if (ScriptFunction.RESERVED_NAMES.Contains(name.ToLower()))
@@ -177,6 +178,8 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
                             else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
+
+                            var pars = ParserProvider.ParameterParser.Parse(args).ParsedValue as PARSABLE_EXPRESSION.ParameterDeclaration;
 
                             curr_func = script.GetOrCreateAU3Function(name);
                             curr_func.IsVolatile = @volatile;

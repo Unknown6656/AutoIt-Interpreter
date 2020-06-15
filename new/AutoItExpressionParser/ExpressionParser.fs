@@ -8,11 +8,14 @@ open Piglet.Parser.Configuration.FSharp
 open Piglet.Parser.Construction
 
 open AST
+open System.Linq.Expressions
+open System.Runtime.CompilerServices
 
 
 type ParserMode =
     | MultiDeclaration = 0
     | ArbitraryExpression = 1
+    | FunctionParameters = 2
 
 type ExpressionParser(mode : ParserMode) =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()
@@ -86,8 +89,11 @@ type ExpressionParser(mode : ParserMode) =
                 Not
                 + -
         *)
-
-
+        
+        let nt_params_decl_expr     = x.CreateNonTerminal<PARAMETER_DECLARATION list>   "params-decl-expr"
+        let nt_param_decl_expr      = x.CreateNonTerminal<PARAMETER_DECLARATION>        "param-decl-expr"
+        let nt_const_modifier       = x.CreateNonTerminal<bool>                         "const-modf"
+        let nt_byref_modifier       = x.CreateNonTerminal<bool>                         "byref-modf"
         let nt_assg_target          = x.CreateNonTerminal<ASSIGNMENT_TARGET>            "assg-targ"
         let nt_assg_op              = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>          "assg-op"
         let nt_multi_decl_expr      = x.CreateNonTerminal<VARIABLE_DECLARATION list>    "multi-decl-expr"
@@ -130,6 +136,8 @@ type ExpressionParser(mode : ParserMode) =
      // let t_symbol_ocurly         = x.CreateTerminal  @"\{"
      // let t_symbol_ccurly         = x.CreateTerminal  @"\}"
      // let t_keyword_new           = x.CreateTerminal  @"new"
+        let t_keyword_const         = x.CreateTerminal  @"const"
+        let t_keyword_byref         = x.CreateTerminal  @"byref"
         let t_keyword_and           = x.CreateTerminalF @"and"                          (fun _ -> And)
         let t_keyword_or            = x.CreateTerminalF @"or"                           (fun _ -> Or)
         let t_keyword_not           = x.CreateTerminalF @"(not|!)"                      (fun _ -> Not)
@@ -171,6 +179,8 @@ type ExpressionParser(mode : ParserMode) =
 
 
         match mode with
+        | ParserMode.FunctionParameters ->
+            reduce_1i nt_result nt_params_decl_expr ParameterDeclaration
         | ParserMode.MultiDeclaration ->
             reduce_1i nt_result nt_multi_decl_expr MultiDeclarationExpression
         | ParserMode.ArbitraryExpression ->
@@ -180,6 +190,18 @@ type ExpressionParser(mode : ParserMode) =
             sprintf "The parser mode '%O' is either unknown or unsupported." mode
             |> ArgumentOutOfRangeException
             |> raise
+ 
+        reduce_3i nt_params_decl_expr nt_params_decl_expr t_symbol_comma nt_param_decl_expr (fun xs _ x -> xs@[x])
+        reduce_1i nt_params_decl_expr nt_param_decl_expr (fun x -> [x])
+        
+        reduce_3i nt_param_decl_expr nt_const_modifier nt_byref_modifier nt_decl_expr (fun c r (v, e) -> { IsConst = c; IsByRef = r; Variable = v; DefaultValue = e })
+        reduce_3i nt_param_decl_expr nt_byref_modifier nt_const_modifier nt_decl_expr (fun r c (v, e) -> { IsConst = c; IsByRef = r; Variable = v; DefaultValue = e })
+
+        reduce_1i nt_const_modifier t_keyword_const (fun _ -> true)
+        reduce_ci nt_const_modifier (fun () -> false)
+        
+        reduce_1i nt_byref_modifier t_keyword_byref (fun _ -> true)
+        reduce_ci nt_byref_modifier (fun () -> false)
 
         reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_decl_expr (fun xs _ x -> xs@[x])
         reduce_1i nt_multi_decl_expr nt_decl_expr (fun x -> [x])

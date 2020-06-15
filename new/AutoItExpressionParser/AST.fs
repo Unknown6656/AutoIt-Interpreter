@@ -129,9 +129,18 @@ and FUNCCALL_EXPRESSION =
 
 type VARIABLE_DECLARATION = VARIABLE * EXPRESSION option
 
+type PARAMETER_DECLARATION =
+    {
+        Variable : VARIABLE
+        DefaultValue : EXPRESSION option
+        IsConst : bool
+        IsByRef : bool
+    }
+
 type PARSABLE_EXPRESSION =
     | MultiDeclarationExpression of VARIABLE_DECLARATION list
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
+    | ParameterDeclaration of PARAMETER_DECLARATION list
     | AnyExpression of EXPRESSION
     with
         /// An array of referenced (not declared!) variables

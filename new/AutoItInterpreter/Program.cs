@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -143,7 +144,7 @@ namespace Unknown6656.AutoIt3
                 });
             }
             catch (Exception ex)
-            //when (!Debugger.IsAttached)
+            when (!Debugger.IsAttached)
             {
                 code = ex.HResult;
 

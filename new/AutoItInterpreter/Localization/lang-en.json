@@ -25,7 +25,7 @@
             "unhandled_pragma_option": "The pragma option '{0}' could not be handled. If you have a plugin for that pragma option, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "unhandled_pragma_key": "The pragma key '{0}' could not be handled for the option '{1}'.",
             "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder.",
-            "unparsable_line": "The line '{0}' could not be parsed due to the following syntay error: {1}.\nThe syntax is either (currently) unsupported, or no parser plugin has been registered for this kind of statement/expression.",
+            "unparsable_line": "The line '{0}' could not be parsed due to the following syntax error: \"{1}\". The syntax is either (currently) unsupported, or no parser plugin has been registered for this kind of statement/expression.",
             "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement.",
             "unexpected_close": "Unexpected statement '{0}': A {1}-statement must be opened before it can be closed.",
             "unexpected_line_cont": "Unexpected line continuation.",
