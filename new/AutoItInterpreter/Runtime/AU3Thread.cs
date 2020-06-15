@@ -14,7 +14,6 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using Microsoft.VisualBasic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

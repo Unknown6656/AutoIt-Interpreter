@@ -77,15 +77,18 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         private readonly object? RawData { get; }
 
+        public readonly Variable? ParentVariable { get; }
+
         public readonly bool IsNull => Type is VariantType.Null;
 
         public readonly bool IsDefault => Type is VariantType.Default;
 
 
-        private Variant(VariantType type, object? data)
+        private Variant(VariantType type, object? data, Variable? variable)
         {
             Type = type;
             RawData = data;
+            ParentVariable = variable;
         }
 
         public readonly bool NotEquals(Variant other)
@@ -130,6 +133,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Null or _ => 0m,
         };
 
+        public Variant SetParent(Variable? parent) => new Variant(Type, RawData, parent);
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
@@ -137,7 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Number => FromNumber(0m),
             VariantType.String => FromString(""),
             VariantType.Array => FromArray(Array.Empty<Variant>()),
-            _ => new Variant(type, null),
+            _ => new Variant(type, null, null),
         };
 
         public static Variant ToVariant(object? obj) => obj switch
@@ -192,13 +196,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new InvalidCastException($"Unable to convert the value '{literal}' to an instance of the type '{typeof(Variant)}'");
         }
 
-        public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj);
+        public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
-        public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d);
+        public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d, null);
 
-        public static Variant FromString(string s) => new Variant(VariantType.String, s);
+        public static Variant FromString(string s) => new Variant(VariantType.String, s, null);
 
-        public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b);
+        public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
         //public static implicit operator bool
         //public static implicit operator sbyte
@@ -253,11 +257,23 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class Variable
         : IEquatable<Variable>
     {
+        private Variant _value;
+
+
         public string Name { get; }
+
         public bool IsConst { get; }
-        public Variant Value { get; set; }
+
         public VariableScope DeclaredScope { get; }
+
         public SourceLocation DeclaredLocation { get; }
+
+        public Variant Value
+        {
+            get => _value;
+            set => _value = value.SetParent(this);
+        }
+
         public bool IsGlobal => DeclaredScope.IsGlobalScope;
 
 
