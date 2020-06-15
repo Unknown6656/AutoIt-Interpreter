@@ -532,10 +532,12 @@ namespace Unknown6656.AutoIt3.Runtime
             return value;
         }
 
-        private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION expression)
+        private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION? expression)
         {
             switch (expression)
             {
+                case null:
+                    return Variant.Null;
                 case EXPRESSION.Literal literal:
                     return ProcessLiteral(literal.Item);
                 case EXPRESSION.Variable variable:
@@ -543,15 +545,64 @@ namespace Unknown6656.AutoIt3.Runtime
                 case EXPRESSION.Macro macro:
                     return ProcessMacro(macro.Item);
                 case EXPRESSION.Unary unary:
+                    {
+                        (OPERATOR_UNARY op, EXPRESSION expr) = unary.Item.ToValueTuple();
+
+                        return ProcessUnary(op, expr);
+                    }
                 case EXPRESSION.Binary binary:
+                    {
+                        (EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2) = binary.Item.ToValueTuple();
+
+                        return ProcessBinary(expr1, op, expr2);
+                    }
                 case EXPRESSION.Ternary ternary:
+                    {
+                        (EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) = ternary.Item.ToValueTuple();
+
+                        return ProcessTernary(expr1, expr2, expr3);
+                    }
                 case EXPRESSION.Member member:
+                    return ProcessMember(member.Item);
                 case EXPRESSION.Indexer indexer:
+                    {
+                        (EXPRESSION expr, EXPRESSION index) = indexer.Item.ToValueTuple();
+
+                        return ProcessIndexer(expr, index);
+                    }
                 case EXPRESSION.FunctionCall funccall:
-                    break;
+                    return ProcessFunctionCall(funccall.Item);
             }
-            //TODO
-            return null;
+
+            return WellKnownError("error.not_yet_implemented", expression);
+        }
+
+        private Union<Variant, InterpreterError> ProcessIndexer(EXPRESSION expr, EXPRESSION index)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Union<Variant, InterpreterError> ProcessMember(MEMBER_EXPRESSION expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Union<Variant, InterpreterError> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Union<Variant, InterpreterError> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Union<Variant, InterpreterError> ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
+            ProcessExpression(expr1).Match<Union<Variant, InterpreterError>>(cond => ProcessExpression(cond.ToBoolean() ? expr2 : expr3), err => err);
+
+        private Union<Variant, InterpreterError> ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
+        {
+            throw new NotImplementedException();
         }
 
         private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)

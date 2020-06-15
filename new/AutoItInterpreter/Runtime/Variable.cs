@@ -13,7 +13,6 @@ namespace Unknown6656.AutoIt3.Runtime
     using static Generics;
     using static AST;
 
-
     public enum VariantType
         : int
     {
@@ -24,13 +23,18 @@ namespace Unknown6656.AutoIt3.Runtime
         Array = 4,
         NETObject = 5,
         // TODO : map type
+        // TODO : variable refrence type
         Default = -1,
     }
 
     public readonly struct Variant
         : IEquatable<Variant>
-     // , IComparable<Variant>
+    // , IComparable<Variant>
     {
+        public static Variant Null { get; } = GetTypeDefault(VariantType.Null);
+
+        public static Variant Default { get; } = GetTypeDefault(VariantType.Default);
+
         public readonly VariantType Type { get; }
 
         /// <summary>
