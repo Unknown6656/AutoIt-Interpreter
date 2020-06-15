@@ -184,6 +184,8 @@ namespace Unknown6656.AutoIt3.Runtime
                             curr_func = script.GetOrCreateAU3Function(name);
                             curr_func.IsVolatile = @volatile;
                             _cached_functions.TryAdd(name.ToLower(), curr_func);
+
+                            Program.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")} func {name} with params: {pars}");
                         }
                         else if (line.Match(@"^endfunc$", out Match _))
                         {

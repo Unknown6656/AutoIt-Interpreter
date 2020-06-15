@@ -92,8 +92,6 @@ type ExpressionParser(mode : ParserMode) =
         
         let nt_params_decl_expr     = x.CreateNonTerminal<PARAMETER_DECLARATION list>   "params-decl-expr"
         let nt_param_decl_expr      = x.CreateNonTerminal<PARAMETER_DECLARATION>        "param-decl-expr"
-        let nt_const_modifier       = x.CreateNonTerminal<bool>                         "const-modf"
-        let nt_byref_modifier       = x.CreateNonTerminal<bool>                         "byref-modf"
         let nt_assg_target          = x.CreateNonTerminal<ASSIGNMENT_TARGET>            "assg-targ"
         let nt_assg_op              = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>          "assg-op"
         let nt_multi_decl_expr      = x.CreateNonTerminal<VARIABLE_DECLARATION list>    "multi-decl-expr"
@@ -194,14 +192,10 @@ type ExpressionParser(mode : ParserMode) =
         reduce_3i nt_params_decl_expr nt_params_decl_expr t_symbol_comma nt_param_decl_expr (fun xs _ x -> xs@[x])
         reduce_1i nt_params_decl_expr nt_param_decl_expr (fun x -> [x])
         
-        reduce_3i nt_param_decl_expr nt_const_modifier nt_byref_modifier nt_decl_expr (fun c r (v, e) -> { IsConst = c; IsByRef = r; Variable = v; DefaultValue = e })
-        reduce_3i nt_param_decl_expr nt_byref_modifier nt_const_modifier nt_decl_expr (fun r c (v, e) -> { IsConst = c; IsByRef = r; Variable = v; DefaultValue = e })
-
-        reduce_1i nt_const_modifier t_keyword_const (fun _ -> true)
-        reduce_ci nt_const_modifier (fun () -> false)
-        
-        reduce_1i nt_byref_modifier t_keyword_byref (fun _ -> true)
-        reduce_ci nt_byref_modifier (fun () -> false)
+        reduce_3i nt_param_decl_expr t_keyword_const t_keyword_byref nt_decl_expr (fun _ _ (v, e) -> { IsConst = true; IsByRef = true; Variable = v; DefaultValue = e })
+        reduce_2i nt_param_decl_expr t_keyword_byref nt_decl_expr (fun _ (v, e) -> { IsConst = false; IsByRef = true; Variable = v; DefaultValue = e })
+        reduce_2i nt_param_decl_expr t_keyword_const nt_decl_expr (fun _ (v, e) -> { IsConst = true; IsByRef = false; Variable = v; DefaultValue = e })
+        reduce_1i nt_param_decl_expr nt_decl_expr (fun (v, e) -> { IsConst = false; IsByRef = false; Variable = v; DefaultValue = e })
 
         reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_decl_expr (fun xs _ x -> xs@[x])
         reduce_1i nt_multi_decl_expr nt_decl_expr (fun x -> [x])
