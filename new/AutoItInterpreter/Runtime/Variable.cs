@@ -77,7 +77,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         private readonly object? RawData { get; }
 
-        public readonly Variable? ParentVariable { get; }
+        public readonly Variable? AssignedTo { get; }
 
         public readonly bool IsNull => Type is VariantType.Null;
 
@@ -88,7 +88,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Type = type;
             RawData = data;
-            ParentVariable = variable;
+            AssignedTo = variable;
         }
 
         public readonly bool NotEquals(Variant other)
@@ -133,7 +133,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Null or _ => 0m,
         };
 
-        public Variant SetParent(Variable? parent) => new Variant(Type, RawData, parent);
+        public Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
@@ -271,7 +271,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public Variant Value
         {
             get => _value;
-            set => _value = value.SetParent(this);
+            set => _value = value.AssignTo(this);
         }
 
         public bool IsGlobal => DeclaredScope.IsGlobalScope;
@@ -283,6 +283,7 @@ namespace Unknown6656.AutoIt3.Runtime
             DeclaredLocation = location;
             DeclaredScope = scope;
             IsConst = isConst;
+            Value = Variant.Null;
         }
 
         public override string ToString() => $"${Name}: {Value}";

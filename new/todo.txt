@@ -1,4 +1,10 @@
-TODO LIST
+________________________________________
+|    TODO LIST                         |
+|                                      |
+|       [ ] open point                 |
+|       [-] work in process            |
+|       [x] closed point               |
+|______________________________________|
 
 [ ] Implement all default macros
 [ ] Implement all default functions
@@ -13,6 +19,8 @@ TODO LIST
 [ ] Implement P/Invoke
 [ ] Add thread inspection methods
 [ ] Add variable inspection methods
-[ ] Add error-flag (on syntax error continue and set @error)
+[-] Add error-flag (on syntax error continue and set @error)
 [ ] Test all on linux
 [ ] Test all on macos
+[ ] Add argument passing
+    [ ] ByRef variables

@@ -452,8 +452,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable), OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
                     Union<Variant, InterpreterError> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
-                    if (result.IsA)
-                        Program.PrintDebugMessage($"{variable} = {result.UnsafeItem}");
+                    if (result.Is(out Variant value))
+                        Program.PrintDebugMessage($"{variable} = {value}");
                     else
                         error ??= (InterpreterError)result;
                 }
@@ -494,30 +494,44 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<Variant, InterpreterError> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
             (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+            Union<Variant, InterpreterError>? result = null;
+            Variable? target_variable = null;
 
             switch (target)
             {
-                case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE var }:
-                    if (VariableResolver.TryGetVariable(var.Name, out Variable? variable))
+                case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
+                    if (VariableResolver.TryGetVariable(variable.Name, out target_variable))
                     {
-                        if (variable.IsConst)
-                            return WellKnownError("error.constant_assignment", variable, variable.DeclaredLocation);
+                        if (target_variable.IsConst)
+                            return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
                     }
                     else
-                        variable = VariableResolver.CreateVariable(CurrentLocation, var.Name, false);
+                        target_variable = VariableResolver.CreateVariable(CurrentLocation, variable.Name, false);
 
-                    return ProcessVariableAssignment(variable, expression);
+                    break;
                 case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
-                    // TODO
-
-                    throw new NotImplementedException();
+                    {
+                        (EXPRESSION expr, EXPRESSION index) = indexer.ToValueTuple();
+                        result = ProcessIndexer(expr, index);
+                    }
+                    break;
                 case ASSIGNMENT_TARGET.MemberAssignemnt { Item: { } member }:
-                    // TODO
+                    result = ProcessMember(member);
 
-                    throw new NotImplementedException();
+                    break;
                 default:
                     return WellKnownError("error.invalid_assignment_target", target);
             }
+
+            if (result?.Is<InterpreterError>() ?? false)
+                return result;
+            else
+                target_variable ??= result?.As<Variant>().AssignedTo;
+
+            if (target_variable is null)
+                return WellKnownError("error.invalid_assignment_target", target);
+            else
+                return ProcessVariableAssignment(target_variable, expression);
         }
 
         private Union<Variant, InterpreterError> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
@@ -528,8 +542,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             Union<Variant, InterpreterError> value = ProcessExpression(expression);
 
-            if (value.IsA)
-                variable.Value = value;
+            if (value.Is(out Variant variant))
+                variable.Value = variant;
 
             return value;
         }
@@ -624,7 +638,14 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
         {
             if (VariableResolver.TryGetVariable(variable, out Variable? var))
-                return var.Value;
+            {
+                Variant value = var.Value;
+
+                if (value.AssignedTo != var)
+                    var.Value = value.AssignTo(var); // update parent var
+
+                return value;
+            }
             else
                 return WellKnownError("error.undeclared_variable", variable);
         }

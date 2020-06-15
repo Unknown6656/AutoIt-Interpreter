@@ -44,7 +44,7 @@
             "redefining_constant": "The variable '{0}' has been previously defined as constant (at {1}) and can therefore not be re-defined.",
             "constant_assignment": "The variable '{0}' (declared at {1}) has been defined as constant and can therefore not have a new value re-assigned to it.",
             "cannot_make_constant": "The already existing '{0}' (declared at {1}) cannot be made constant by a re-definition.",
-            "invalid_assignment_target": "The assignment target '{0}' is invalid.",
+            "invalid_assignment_target": "The assignment target '{0}' is invalid. Make sure that the target is a referencable variable.",
             "reserved_name": "The name '{0}' is a reserved keyword and cannot be used as identifier.",
             "undeclared_variable": "The variable '{0}' has not been declared previously to this line and can therefore not be used in this expression.",
             "unknown_macro": "The macro '{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",

@@ -1,5 +1,5 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
-global const $x = 9
+global const $x = 9, $y = $x
 
 ; Local $arr[] = [8, 4, 5, 9, 1]
 
