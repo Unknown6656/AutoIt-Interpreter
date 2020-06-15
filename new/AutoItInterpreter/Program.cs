@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -15,7 +14,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
-using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3
 {
@@ -30,6 +28,9 @@ namespace Unknown6656.AutoIt3
         [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
         public bool StrictMode { get; }
 
+        [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
+        public bool IgnoreErrors { get; }
+
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
         public Verbosity Verbosity { get; }
 
@@ -40,11 +41,12 @@ namespace Unknown6656.AutoIt3
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, Verbosity verbosity, string language, string filePath)
+        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, bool ignoreErrors, Verbosity verbosity, string language, string filePath)
         {
             HideBanner = hideBanner;
             DontLoadPlugins = dontLoadPlugins;
             StrictMode = strictMode;
+            IgnoreErrors = ignoreErrors;
             Verbosity = verbosity;
             Language = language;
             FilePath = filePath;
@@ -227,10 +229,10 @@ namespace Unknown6656.AutoIt3
         internal static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine('\n' + new string('_', Console.WindowWidth - 1));
+            Console.WriteLine(new string('_', Console.WindowWidth - 1));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
 
-            if (CommandLineOptions.Verbosity > Verbosity.n)
+            if (!CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n)
             {
                 Console.WriteLine(@"
                                ____
@@ -252,6 +254,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
                 Console.WriteLine("            AW SHIT -- THE INTERPRETER JUST BLEW UP!\n");
             }
+            else
+                Console.WriteLine();
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());

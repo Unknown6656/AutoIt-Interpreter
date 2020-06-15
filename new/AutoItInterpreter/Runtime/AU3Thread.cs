@@ -235,6 +235,9 @@ namespace Unknown6656.AutoIt3.Runtime
             result ??= UseExternalLineProcessors(line);
             result ??= ProcessExpressionStatement(line);
 
+            if (Interpreter.CommandLineOptions.IgnoreErrors && !(result?.IsOK ?? true))
+                result = null;
+
             return result ?? InterpreterResult.OK;
         }
 

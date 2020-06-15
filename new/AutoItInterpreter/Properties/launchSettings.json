@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-B -v v ../test/test.au3"
+      "commandLineArgs": "-B -v v ../test/test.au3 -e"
     }
   }
 }
