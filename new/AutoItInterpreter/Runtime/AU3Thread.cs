@@ -14,6 +14,8 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using Microsoft.FSharp.Collections;
+using System.Net.Http.Headers;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -54,21 +56,21 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public InterpreterError? Start(ScriptFunction function, Variant[] args)
+        public Union<Variant, InterpreterError> Start(ScriptFunction function, Variant[] args)
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
             else
                 _running = true;
 
-            InterpreterError? res = Call(function, args);
+            Union<Variant, InterpreterError> result = Call(function, args);
 
             _running = false;
 
-            return res;
+            return result;
         }
 
-        public InterpreterError? Call(ScriptFunction function, Variant[] args)
+        public Union<Variant, InterpreterError> Call(ScriptFunction function, Variant[] args)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -88,7 +90,7 @@ namespace Unknown6656.AutoIt3.Runtime
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();
 
-            return result;
+            return result; // TODO : if null, then return value
         }
 
         internal SourceLocation? ExitCall()
@@ -174,7 +176,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        public InterpreterError? Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
+        public Union<Variant, InterpreterError> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
         public void Print(Variant value) => Interpreter.Print(this, value);
 
@@ -290,7 +292,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 if (open != '<')
                     options |= ScriptScanningOptions.RelativePath;
 
-                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script => Call(script.MainFunction, Array.Empty<Variant>()));
+                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script =>
+                {
+                    if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
+                        return err;
+
+                    return null;
+                });
             }
 
             InterpreterResult? result = null;
@@ -645,7 +653,36 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
         {
-            throw new NotImplementedException();
+            Union<Variant[], InterpreterError> ProcessRawArguments(FSharpList<EXPRESSION> raw_args)
+            {
+                Variant[] arguments = new Variant[raw_args.Length];
+                int i = 0;
+
+                foreach (EXPRESSION arg in raw_args)
+                {
+                    Union<Variant, InterpreterError>? res = ProcessExpression(arg);
+
+                    if (res.Is(out Variant value))
+                        arguments[i] = value;
+                    else
+                        return (InterpreterError)res;
+                }
+
+                return arguments;
+            }
+
+            switch (funccall)
+            {
+                case FUNCCALL_EXPRESSION.DirectFunctionCall { Item1: { Item: string func_name }, Item2: var raw_args }:
+                    if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
+                        return ProcessRawArguments(raw_args).Match<Union<Variant, InterpreterError>>(args => Call(func, args), err => err);
+                    else
+                        return WellKnownError("error.unresolved_func", func_name);
+                case FUNCCALL_EXPRESSION.MemberCall member_call:
+                    throw new NotImplementedException();
+            }
+
+            return WellKnownError("error.not_yet_implemented", funccall);
         }
 
         private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)

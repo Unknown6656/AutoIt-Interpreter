@@ -42,6 +42,9 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
                     _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute));
+
+            foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
+                _cached_functions.TryAdd(func.Key.ToLower(), func.Value);
         }
 
         public ScriptFunction? TryResolveFunction(string name)

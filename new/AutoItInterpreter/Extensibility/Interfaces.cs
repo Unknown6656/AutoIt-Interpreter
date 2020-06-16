@@ -110,6 +110,8 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public abstract InterpreterError? Execute(NativeCallFrame frame, Variant[] args);
 
+        public override string ToString() => Name;
+
         public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], InterpreterError?> @delegate) => Create(name, (param_count, param_count), @delegate);
 
         public static ProvidedNativeFunction Create(string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], InterpreterError?> @delegate) =>
