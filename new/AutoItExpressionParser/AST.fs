@@ -136,6 +136,15 @@ type PARAMETER_DECLARATION =
         IsConst : bool
         IsByRef : bool
     }
+    with
+        member x.IsOptional = x.DefaultValue.IsSome
+        override x.ToString() =
+            let c = (?) x.IsConst "Const " ""
+            let r = (?) x.IsByRef "ByRef " ""
+            let d = match x.DefaultValue with
+                    | Some e -> " = " + e.ToString()
+                    | None -> ""
+            sprintf "%s%s%O%s" c r x.Variable d
 
 type PARSABLE_EXPRESSION =
     | MultiDeclarationExpression of VARIABLE_DECLARATION list

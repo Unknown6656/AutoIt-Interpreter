@@ -22,5 +22,5 @@ ________________________________________
 [-] Add error-flag (on syntax error continue and set @error)
 [ ] Test all on linux
 [ ] Test all on macos
-[ ] Add argument passing
-    [ ] ByRef variables
+[-] Add argument passing
+    [-] ByRef variables

@@ -19,7 +19,7 @@ TEST(8)
 
 ConsoleWrite($b & @CRLF & $c);
 
-func test($b)
+func test($b = 9)
    local const $a = -9
    $b = 42
 endfunc

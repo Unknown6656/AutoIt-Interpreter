@@ -102,6 +102,8 @@ namespace Unknown6656.AutoIt3.Extensibility
     {
         public abstract string Name { get; }
 
+        public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
 
         public abstract InterpreterError? Execute(NativeCallFrame frame);
     }

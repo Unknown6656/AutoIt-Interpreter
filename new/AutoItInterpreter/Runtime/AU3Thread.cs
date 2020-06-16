@@ -147,6 +147,8 @@ namespace Unknown6656.AutoIt3.Runtime
         internal abstract InterpreterError? Exec();
 
         public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
+
+        public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
     }
 #pragma warning restore CA1063
 
@@ -159,6 +161,8 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         internal override InterpreterError? Exec() => (CurrentFunction as NativeFunction)?.Execute(this);
+
+        public override string ToString() => $"{base.ToString()} native call frame";
     }
 
     public sealed class AU3CallFrame
@@ -274,7 +278,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
         }
 
-        public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}] {CurrentLocation}";
+        public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
 
         // var : name, is_const[y/n]
