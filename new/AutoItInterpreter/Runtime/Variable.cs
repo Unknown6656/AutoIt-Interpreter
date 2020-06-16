@@ -271,7 +271,11 @@ namespace Unknown6656.AutoIt3.Runtime
         public Variant Value
         {
             get => _value;
-            set => _value = value.AssignTo(this);
+            set
+            {
+                lock (this) // TODO: is this necessary?
+                    _value = value.AssignTo(this);
+            }
         }
 
         public bool IsGlobal => DeclaredScope.IsGlobalScope;

@@ -54,21 +54,21 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public InterpreterError? Start(ScriptFunction function)
+        public InterpreterError? Start(ScriptFunction function, Variant[] args)
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
             else
                 _running = true;
 
-            InterpreterError? res = Call(function);
+            InterpreterError? res = Call(function, args);
 
             _running = false;
 
             return res;
         }
 
-        public InterpreterError? Call(ScriptFunction function)
+        public InterpreterError? Call(ScriptFunction function, Variant[] args)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -76,14 +76,14 @@ namespace Unknown6656.AutoIt3.Runtime
             CallFrame? old = CurrentFrame;
             CallFrame frame = function switch
             {
-                AU3Function f => new AU3CallFrame(this, f),
-                NativeFunction f => new NativeCallFrame(this, f),
+                AU3Function f => new AU3CallFrame(this, f, args),
+                NativeFunction f => new NativeCallFrame(this, f, args),
                 _ => throw new ArgumentException($"A function of the type '{function}' cannot be handled by the current thread '{this}'.", nameof(function)),
             };
 
             _callstack.Push(frame);
 
-            InterpreterError? result = frame.Exec();
+            InterpreterError? result = frame.Exec(args);
 
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();
@@ -132,21 +132,24 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public VariableScope VariableResolver { get; }
 
+        public Variant[] PassedArguments { get; }
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
 
-        internal CallFrame(AU3Thread thread, ScriptFunction function)
+        internal CallFrame(AU3Thread thread, ScriptFunction function, Variant[] args)
         {
             CurrentThread = thread;
             CurrentFunction = function;
             VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope();
+            PassedArguments = args;
         }
 
         public void Dispose() => VariableResolver.Dispose();
 
-        internal abstract InterpreterError? Exec();
+        internal abstract InterpreterError? Exec(Variant[] args);
 
-        public InterpreterError? Call(ScriptFunction function) => CurrentThread.Call(function);
+        public InterpreterError? Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
     }
@@ -155,12 +158,17 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class NativeCallFrame
         : CallFrame
     {
-        internal NativeCallFrame(AU3Thread thread, NativeFunction function)
-            : base(thread, function)
+        internal NativeCallFrame(AU3Thread thread, NativeFunction function, Variant[] args)
+            : base(thread, function, args)
         {
         }
 
-        internal override InterpreterError? Exec() => (CurrentFunction as NativeFunction)?.Execute(this);
+        internal override InterpreterError? Exec(Variant[] args)
+        {
+            // TODO : check param count
+
+            return (CurrentFunction as NativeFunction)?.Execute(this, args);
+        }
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }
@@ -177,20 +185,22 @@ namespace Unknown6656.AutoIt3.Runtime
         public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
 
 
-        internal AU3CallFrame(AU3Thread thread, AU3Function function)
-            : base(thread, function)
+        internal AU3CallFrame(AU3Thread thread, AU3Function function, Variant[] args)
+            : base(thread, function, args)
         {
             _line_cache = function.Lines;
             _instruction_pointer = 0;
         }
 
-        internal override InterpreterError? Exec()
+        internal override InterpreterError? Exec(Variant[] args)
         {
             ScannedScript script = CurrentFunction.Script;
             InterpreterError? result = null;
 
             if (CurrentFunction.IsMainFunction)
                 result = script.LoadScript(this);
+
+            // TODO : check param count
 
             Program.PrintDebugMessage($"Executing {CurrentFunction}");
 
@@ -267,7 +277,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 if (open != '<')
                     options |= ScriptScanningOptions.RelativePath;
 
-                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script => Call(script.MainFunction));
+                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script => Call(script.MainFunction, Array.Empty<Variant>()));
             }
 
             InterpreterResult? result = null;

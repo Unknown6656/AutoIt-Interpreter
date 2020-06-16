@@ -2,7 +2,10 @@
 using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime;
+
+[assembly: AutoIt3Plugin]
 
 namespace Unknown6656.AutoIt3.Extensibility
 {
@@ -105,7 +108,32 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
 
-        public abstract InterpreterError? Execute(NativeCallFrame frame);
+        public abstract InterpreterError? Execute(NativeCallFrame frame, Variant[] args);
+
+        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], InterpreterError?> @delegate) => Create(name, (param_count, param_count), @delegate);
+
+        public static ProvidedNativeFunction Create(string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], InterpreterError?> @delegate) =>
+            new FromDelegate(@delegate, name, param_count);
+
+        private sealed class FromDelegate
+            : ProvidedNativeFunction
+        {
+            private readonly Func<NativeCallFrame, Variant[], InterpreterError?> _exec;
+
+            public override string Name { get; }
+
+            public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
+
+            public FromDelegate(Func<NativeCallFrame, Variant[], InterpreterError?> exec, string name, (int min, int max) param_count)
+            {
+                _exec = exec;
+                Name = name;
+                ParameterCount = param_count;
+            }
+
+            public override InterpreterError? Execute(NativeCallFrame frame, Variant[] args) => _exec(frame, args);
+        }
     }
 
     public abstract class AbstractMacroProvider

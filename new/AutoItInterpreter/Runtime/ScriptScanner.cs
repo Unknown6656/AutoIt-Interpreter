@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System;
@@ -119,11 +119,16 @@ namespace Unknown6656.AutoIt3.Runtime
                     )) || comment_lvl > 0)
                         continue;
 
-                    if (line.Match(
+                    InterpreterResult? res = line.Match(
+                        InterpreterResult.OK,
                         (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
                         (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
-                    ))
+                    );
+
+                    if (res?.IsOK ?? false)
                         continue;
+                    else if (res?.OptionalError is { } err)
+                        return err;
                     else if (line.Match(@"^#requireadmin\b", out m))
                         line = "#pragma compile(ExecLevel, requireAdministrator)";
                     else if (line.Match(@"^#notrayicon\b", out m))
@@ -353,40 +358,33 @@ namespace Unknown6656.AutoIt3.Runtime
             return function;
         }
 
-        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToLower(), decl));
-
-        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToLower(), decl));
-
-        public InterpreterError? LoadScript(CallFrame frame)
+        internal InterpreterError? AddStartupFunction(string name, SourceLocation decl)
         {
-            if (State == ScannedScriptState.Loaded)
-                return null;
-
-            State = ScannedScriptState.Loaded;
-
-            InterpreterError? result = null;
-
-            foreach ((string name, SourceLocation loc) in _startup)
-                if (_functions.TryGetValue(name, out ScriptFunction? func))
-                    result ??= frame.Call(func);
-                else
-                    return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
-
-            return result;
+            _startup.Add((name.ToLower(), decl));
         }
 
-        public InterpreterError? UnLoadScript(CallFrame frame)
+        internal InterpreterError? AddExitFunction(string name, SourceLocation decl)
         {
-            if (State == ScannedScriptState.Unloaded)
-                return null;
+            _exit.Add((name.ToLower(), decl));
+        }
 
-            State = ScannedScriptState.Unloaded;
+        public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
 
+        public InterpreterError? UnLoadScript(CallFrame frame) => HandleLoading(frame, true);
+
+        private InterpreterError? HandleLoading(CallFrame frame, bool unloading)
+        {
+            (ScannedScriptState state, List<(string, SourceLocation)>? funcs) = unloading ? (ScannedScriptState.Unloaded, _exit) : (ScannedScriptState.Loaded, _startup);
             InterpreterError? result = null;
 
-            foreach ((string name, SourceLocation loc) in _exit)
+            if (State == state)
+                return null;
+
+            State = state;
+
+            foreach ((string name, SourceLocation loc) in funcs)
                 if (_functions.TryGetValue(name, out ScriptFunction? func))
-                    result ??= frame.Call(func);
+                    result ??= frame.Call(func, Array.Empty<Variant>());
                 else
                     return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
 
@@ -489,21 +487,21 @@ namespace Unknown6656.AutoIt3.Runtime
     internal sealed class NativeFunction
         : ScriptFunction
     {
-        private readonly Func<NativeCallFrame, InterpreterError?> _execute;
+        private readonly Func<NativeCallFrame, Variant[], InterpreterError?> _execute;
 
         public (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, InterpreterError?> execute)
+        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], InterpreterError?> execute)
             : base(script, name)
         {
             _execute = execute;
             ParameterCount = param_count;
         }
 
-        public InterpreterError? Execute(NativeCallFrame frame) => _execute(frame);
+        public InterpreterError? Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
         public override string ToString() => "[native] " + base.ToString();
     }
