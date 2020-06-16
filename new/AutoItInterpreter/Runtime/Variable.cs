@@ -309,13 +309,17 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public VariableScope[] ChildScopes => _children.Keys.ToArray();
 
+        public Variable[] LocalVariables => _variables.Keys.ToArray();
+
+        public Variable[] GlobalVariables => GlobalRoot.LocalVariables;
+
         public bool IsGlobalScope => Parent is null;
 
         public Interpreter Interpreter { get; }
 
         public VariableScope? Parent { get; }
 
-        public VariableScope? GlobalRoot { get; }
+        public VariableScope GlobalRoot { get; }
 
 
         private VariableScope(Interpreter interpreter, VariableScope? parent)

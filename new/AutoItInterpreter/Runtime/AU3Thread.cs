@@ -4,18 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
+using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 
 using Piglet.Parser.Configuration.Generic;
-using Piglet.Lexer;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using Microsoft.FSharp.Collections;
-using System.Net.Http.Headers;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -78,8 +76,8 @@ namespace Unknown6656.AutoIt3.Runtime
             CallFrame? old = CurrentFrame;
             CallFrame frame = function switch
             {
-                AU3Function f => new AU3CallFrame(this, f, args),
-                NativeFunction f => new NativeCallFrame(this, f, args),
+                AU3Function f => new AU3CallFrame(this, old, f, args),
+                NativeFunction f => new NativeCallFrame(this, old, f, args),
                 _ => throw new ArgumentException($"A function of the type '{function}' cannot be handled by the current thread '{this}'.", nameof(function)),
             };
 
@@ -136,13 +134,20 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variant[] PassedArguments { get; }
 
+        public CallFrame? CallerFrame { get; }
+
+        public Variant? ReturnValue { set; get; } = Variant.Null;
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
 
-        internal CallFrame(AU3Thread thread, ScriptFunction function, Variant[] args)
+        internal CallFrame(AU3Thread thread, CallFrame? caller, ScriptFunction function, Variant[] args)
         {
             CurrentThread = thread;
+            CallerFrame = caller;
             CurrentFunction = function;
+
+            // TODO : the following line is wrong - it should be interpreter as parent, not the previous frame
             VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope();
             PassedArguments = args;
         }
@@ -159,10 +164,12 @@ namespace Unknown6656.AutoIt3.Runtime
             if (CurrentFunction.IsMainFunction)
                 result = script.LoadScript(this);
 
-            if (args.Length < CurrentFunction.ParameterCount.MinimumCount)
-                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", CurrentFunction.ParameterCount.MinimumCount, args.Length);
-            else if (args.Length > CurrentFunction.ParameterCount.MaximumCount)
-                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", CurrentFunction.ParameterCount.MaximumCount, args.Length);
+            (int min_argc, int max_argc) = CurrentFunction.ParameterCount;
+
+            if (args.Length < min_argc)
+                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", min_argc, args.Length);
+            else if (args.Length > max_argc)
+                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", max_argc, args.Length);
             else
             {
                 Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
@@ -189,8 +196,8 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class NativeCallFrame
         : CallFrame
     {
-        internal NativeCallFrame(AU3Thread thread, NativeFunction function, Variant[] args)
-            : base(thread, function, args)
+        internal NativeCallFrame(AU3Thread thread, CallFrame? caller, NativeFunction function, Variant[] args)
+            : base(thread, caller, function, args)
         {
         }
 
@@ -206,13 +213,13 @@ namespace Unknown6656.AutoIt3.Runtime
         private (SourceLocation LineLocation, string LineContent)[] _line_cache;
 
 
-        public SourceLocation CurrentLocation => _line_cache[_instruction_pointer].LineLocation;
+        public SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
-        public string CurrentLineContent => _line_cache[_instruction_pointer].LineContent;
+        public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
 
 
-        internal AU3CallFrame(AU3Thread thread, AU3Function function, Variant[] args)
-            : base(thread, function, args)
+        internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
+            : base(thread, caller, function, args)
         {
             _line_cache = function.Lines;
             _instruction_pointer = 0;
@@ -220,7 +227,40 @@ namespace Unknown6656.AutoIt3.Runtime
 
         protected override InterpreterError? InternalExec(Variant[] args)
         {
+            _instruction_pointer = -1;
+
+            AU3Function func = (AU3Function)CurrentFunction;
             InterpreterError? result = null;
+            int argc = func.ParameterCount.MaximumCount;
+            int len = args.Length;
+
+            if (len < argc)
+                Array.Resize(ref args, argc);
+
+            for (int i = 0; i < argc; ++i)
+            {
+                PARAMETER_DECLARATION param = func.Parameters[i];
+
+                if (i < len)
+                {
+                    if (param.IsByRef)
+                        ; // TODO : copy param byref
+                }
+                else if (param.DefaultValue is null)
+                    return WellKnownError("error.missing_argument", i + 1, param.Variable);
+                else
+                {
+                    EXPRESSION expr = param.DefaultValue.Value;
+                    Union<Variant, InterpreterError> union = ProcessExpression(expr);
+
+                    if (union.Is(out InterpreterError error))
+                        return error;
+                    else if (union.Is(out Variant value))
+                        args[i] = value;
+                }
+            }
+
+            _instruction_pointer = 0;
 
             while (_instruction_pointer < _line_cache.Length)
                 if (result is null)
@@ -537,7 +577,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
                     if (VariableResolver.TryGetVariable(variable.Name, out target_variable))
                     {
-                        if (target_variable.IsConst)
+                        if (target_variable.IsConst && !force)
                             return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
                     }
                     else
@@ -689,7 +729,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             string name = macro.Name.ToLowerInvariant();
 
-            if (Interpreter.BuiltinMacros[name] is Variant v)
+            if (Interpreter.BuiltinMacros[this, name] is Variant v)
                 return v;
 
             foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
@@ -701,6 +741,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
         {
+            if (variable == VARIABLE.Discard)
+                return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, Interpreter.MACRO_DISCARD);
+
             if (VariableResolver.TryGetVariable(variable, out Variable? var))
             {
                 Variant value = var.Value;

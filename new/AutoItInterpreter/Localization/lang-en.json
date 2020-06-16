@@ -54,6 +54,8 @@
             "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} arguments were given.",
             "too_many_args": "The function '{0}' expects at a maximum of {1} arguments, however, {2} arguments were given.",
             "register_func_argcount": "Functions registered with '#OnAutoItStartRegister' or '#OnAutoItExitRegister' must not have any mandatory parameter, meaning that they must be either parameterless, or only accept parameters declared with default values.",
+            "invalid_discard_access": "The discard variable '{0}' is a write-only variable designed for internal purposes only. Use the macro '@{1}' to get the last (non-deterministic) processed expression value.",
+            "missing_argument": "No value has been passed for the argument no. {0} ('{1}').",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

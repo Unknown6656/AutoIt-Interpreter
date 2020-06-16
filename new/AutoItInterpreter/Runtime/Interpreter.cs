@@ -15,6 +15,8 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class Interpreter
         : IDisposable
     {
+        internal const string MACRO_DISCARD = "DISCARD";
+
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
         private readonly object _main_thread_mutex = new object();
 
@@ -26,7 +28,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CommandLineOptions CommandLineOptions { get; }
 
-        public ReadOnlyIndexer<string, Variant?> BuiltinMacros { get; }
+        public ReadOnlyIndexer<CallFrame, string, Variant?> BuiltinMacros { get; }
 
         public ScriptScanner ScriptScanner { get; }
 
@@ -51,7 +53,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
-            BuiltinMacros = new ReadOnlyIndexer<string, Variant?>(ResolveMacro);
+            BuiltinMacros = new ReadOnlyIndexer<CallFrame, string, Variant?>(ResolveMacro);
         }
 
         public void Dispose()
@@ -69,7 +71,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
 
-        private unsafe Variant? ResolveMacro(string macro) => macro switch
+        private unsafe Variant? ResolveMacro(CallFrame frame, string macro) => macro switch
         {
             "appdatacommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "appdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -86,7 +88,8 @@ namespace Unknown6656.AutoIt3.Runtime
             ///////////////////////////////////// ADDITIONAL MACROS /////////////////////////////////////
             "esc" => "\x1b",
             "nul" => "\0",
-            _ => null,
+            _ when macro == MACRO_DISCARD.ToLower() => frame.VariableResolver.TryGetVariable(VARIABLE.Discard, out Variable? discard) ? discard.Value : Variant.Null,
+            _ => (Variant?)null,
         };
         /* https://www.autoitscript.com/autoit3/docs/macros.htm
 COM_EventObj	Object the COM event is being fired on. Only valid in a COM event function.

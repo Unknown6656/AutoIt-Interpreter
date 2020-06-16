@@ -179,6 +179,7 @@ type ExpressionParser(mode : ParserMode) =
         match mode with
         | ParserMode.FunctionParameters ->
             reduce_1i nt_result nt_params_decl_expr ParameterDeclaration
+            reduce_ci nt_result (fun () -> ParameterDeclaration [])
         | ParserMode.MultiDeclaration ->
             reduce_1i nt_result nt_multi_decl_expr MultiDeclarationExpression
         | ParserMode.ArbitraryExpression ->
