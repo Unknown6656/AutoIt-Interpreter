@@ -119,16 +119,11 @@ namespace Unknown6656.AutoIt3.Runtime
                     )) || comment_lvl > 0)
                         continue;
 
-                    InterpreterResult? res = line.Match(
-                        InterpreterResult.OK,
+                    if (line.Match(
                         (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
                         (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
-                    );
-
-                    if (res?.IsOK ?? false)
+                    ))
                         continue;
-                    else if (res?.OptionalError is { } err)
-                        return err;
                     else if (line.Match(@"^#requireadmin\b", out m))
                         line = "#pragma compile(ExecLevel, requireAdministrator)";
                     else if (line.Match(@"^#notrayicon\b", out m))
@@ -358,15 +353,9 @@ namespace Unknown6656.AutoIt3.Runtime
             return function;
         }
 
-        internal InterpreterError? AddStartupFunction(string name, SourceLocation decl)
-        {
-            _startup.Add((name.ToLower(), decl));
-        }
+        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToLower(), decl));
 
-        internal InterpreterError? AddExitFunction(string name, SourceLocation decl)
-        {
-            _exit.Add((name.ToLower(), decl));
-        }
+        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToLower(), decl));
 
         public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
 
@@ -383,10 +372,12 @@ namespace Unknown6656.AutoIt3.Runtime
             State = state;
 
             foreach ((string name, SourceLocation loc) in funcs)
-                if (_functions.TryGetValue(name, out ScriptFunction? func))
-                    result ??= frame.Call(func, Array.Empty<Variant>());
-                else
+                if (!_functions.TryGetValue(name, out ScriptFunction? func))
                     return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
+                else if (func.ParameterCount.MinimumCount > 0)
+                    return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
+                else
+                    result ??= frame.Call(func, Array.Empty<Variant>());
 
             return result;
         }
@@ -426,6 +417,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public abstract SourceLocation Location { get; }
 
+        public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
         public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
 
@@ -473,11 +465,17 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public int LineCount => _lines.Count;
 
+        public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
         public (SourceLocation LineLocation, string LineContent)[] Lines => _lines.OrderBy(k => k.Key).ToArray(k => (k.Key, k.Value));
 
 
         public AU3Function(ScannedScript script, string name, IEnumerable<PARAMETER_DECLARATION>? @params)
-            : base(script, name) => Parameters = @params?.ToArray() ?? Array.Empty<PARAMETER_DECLARATION>();
+            : base(script, name)
+        {
+            Parameters = @params?.ToArray() ?? Array.Empty<PARAMETER_DECLARATION>();
+            ParameterCount = (Parameters.Count(p => !p.IsOptional), Parameters.Length);
+        }
 
         public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, content, (l, c) => content);
 
@@ -489,7 +487,7 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly Func<NativeCallFrame, Variant[], InterpreterError?> _execute;
 
-        public (int MinimumCount, int MaximumCount) ParameterCount { get; }
+        public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 

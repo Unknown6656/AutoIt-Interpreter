@@ -96,7 +96,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 }
 
             foreach (Type type in types)
-                if (!type.IsAbstract)
+                if (!type.IsAbstract && typeof(AbstractInterpreterPlugin).IsAssignableFrom(type))
                 {
                     TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
                     TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
@@ -109,9 +109,10 @@ namespace Unknown6656.AutoIt3.Extensibility
         }
 
         private void TryRegister<T>(Type type, Action<T> register_func)
+            where T : AbstractInterpreterPlugin
         {
-            if (typeof(T).IsAssignableFrom(type) && Activator.CreateInstance(typeof(T), Interpreter) is T t)
-                register_func(t);
+            if (typeof(T).IsAssignableFrom(type))
+                register_func((T)Activator.CreateInstance(type, Interpreter)!);
         }
 
         public void RegisterLineProcessor(AbstractLineProcessor proc) => _line_processors.Add(proc);

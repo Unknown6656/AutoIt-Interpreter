@@ -177,7 +177,7 @@ namespace Unknown6656.AutoIt3
             _finished = true;
         }
 
-        private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg)
+        private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg, bool from_script)
         {
             if (CommandLineOptions.Verbosity < min_lvl)
                 return;
@@ -192,26 +192,26 @@ namespace Unknown6656.AutoIt3
                 Console.Write(now.ToString("HH:mm:ss.fff"));
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("][");
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkCyan;
+                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.PaleTurquoise : RGBAColor.Cyan;
                 Console.Write(prefix);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("]  ");
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Cyan;
+                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.White : RGBAColor.Cyan;
                 Console.WriteLine(msg);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             });
         }
 
-        internal static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message);
+        internal static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message, false);
 
-        internal static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message);
+        internal static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message, false);
 
-        internal static void PrintScriptMessage(FileInfo script, string message)
+        internal static void PrintScriptMessage(FileInfo? script, string message)
         {
             if (CommandLineOptions.Verbosity < Verbosity.n)
-                Console.WriteLine(message);
+                Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, script.Name, message);
+                SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message, true);
         }
 
         internal static void PrintException(this Exception? ex)

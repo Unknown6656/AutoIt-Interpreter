@@ -75,7 +75,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///     </item>
         /// </list>
         /// </summary>
-        private readonly object? RawData { get; }
+        internal readonly object? RawData { get; }
 
         public readonly Variable? AssignedTo { get; }
 

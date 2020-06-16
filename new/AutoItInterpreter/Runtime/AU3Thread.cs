@@ -83,7 +83,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _callstack.Push(frame);
 
-            InterpreterError? result = frame.Exec(args);
+            InterpreterError? result = frame.Execute(args);
 
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();
@@ -147,9 +147,38 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose() => VariableResolver.Dispose();
 
-        internal abstract InterpreterError? Exec(Variant[] args);
+        protected abstract InterpreterError? InternalExec(Variant[] args);
+
+        internal InterpreterError? Execute(Variant[] args)
+        {
+            ScannedScript script = CurrentFunction.Script;
+            InterpreterError? result = null;
+
+            if (CurrentFunction.IsMainFunction)
+                result = script.LoadScript(this);
+
+            if (args.Length < CurrentFunction.ParameterCount.MinimumCount)
+                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", CurrentFunction.ParameterCount.MinimumCount, args.Length);
+            else if (args.Length > CurrentFunction.ParameterCount.MaximumCount)
+                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", CurrentFunction.ParameterCount.MaximumCount, args.Length);
+            else
+            {
+                Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
+
+                result ??= InternalExec(args);
+            }
+
+            if (CurrentFunction.IsMainFunction)
+                result ??= script.UnLoadScript(this);
+
+            return result;
+        }
 
         public InterpreterError? Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
+
+        public void Print(Variant value) => Interpreter.Print(this, value);
+
+        public void Print(object? value) => Interpreter.Print(this, value);
 
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
     }
@@ -163,12 +192,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
-        internal override InterpreterError? Exec(Variant[] args)
-        {
-            // TODO : check param count
-
-            return (CurrentFunction as NativeFunction)?.Execute(this, args);
-        }
+        protected override InterpreterError? InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args);
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }
@@ -192,17 +216,9 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
-        internal override InterpreterError? Exec(Variant[] args)
+        protected override InterpreterError? InternalExec(Variant[] args)
         {
-            ScannedScript script = CurrentFunction.Script;
             InterpreterError? result = null;
-
-            if (CurrentFunction.IsMainFunction)
-                result = script.LoadScript(this);
-
-            // TODO : check param count
-
-            Program.PrintDebugMessage($"Executing {CurrentFunction}");
 
             while (_instruction_pointer < _line_cache.Length)
                 if (result is null)
@@ -214,9 +230,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 }
                 else
                     break;
-
-            if (CurrentFunction.IsMainFunction)
-                result ??= script.UnLoadScript(this);
 
             return result;
         }

@@ -183,7 +183,11 @@ YDAY	Current day of year. Range is 001 to 366 (or 001 to 365 if not a leap year)
 YEAR	Current four-digit year
              */
 
-        public InterpreterError? Run(ScriptFunction entry_point)
+        public void Print(CallFrame current_frame, Variant value) => Print(current_frame, value as object);
+
+        public void Print(CallFrame current_frame, object? value) => PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FileName, value?.ToString() ?? "");
+
+        public InterpreterError? Run(ScriptFunction entry_point, Variant[] args)
         {
             try
             {
@@ -192,7 +196,7 @@ YEAR	Current four-digit year
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                return thread.Start(entry_point);
+                return thread.Start(entry_point, args);
             }
             finally
             {
@@ -201,7 +205,7 @@ YEAR	Current four-digit year
             }
         }
 
-        public InterpreterError? Run(ScannedScript script) => Run(script.MainFunction);
+        public InterpreterError? Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
 
         public InterpreterError? Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
                                                                   .Match(Generics.id, Run);
