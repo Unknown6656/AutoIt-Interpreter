@@ -32,6 +32,9 @@ func test($b = 9)
 endfunc
 
 Func Swap(ByRef $vVar1, ByRef $vVar2)
+   DebugVar($vVar1)
+   DebugVar($vVar2)
+
    Local $vTemp = $vVar1
    $vVar1 = $vVar2
    $vVar2 = $vTemp

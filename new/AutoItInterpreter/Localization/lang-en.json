@@ -57,6 +57,7 @@
             "invalid_discard_access": "The discard variable '{0}' is a write-only variable designed for internal purposes only. Use the macro '@{1}' to get the last (non-deterministic) processed expression value.",
             "missing_argument": "No value has been passed for the argument no. {0} ('{1}').",
             "unsupported_operator": "The operator '{0}' is not supported.",
+            "constant_passed_as_ref": "The constant variable '{0}' cannot be passed as 'ByRef'-argument (argument no. {1}).",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

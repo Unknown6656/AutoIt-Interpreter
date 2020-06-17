@@ -211,7 +211,7 @@ namespace Unknown6656.AutoIt3
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message, true);
+                SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message.Trim(), true);
         }
 
         internal static void PrintException(this Exception? ex)

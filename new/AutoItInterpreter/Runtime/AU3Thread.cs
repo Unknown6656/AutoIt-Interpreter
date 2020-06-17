@@ -242,11 +242,15 @@ namespace Unknown6656.AutoIt3.Runtime
             for (int i = 0; i < argc; ++i)
             {
                 PARAMETER_DECLARATION param = func.Parameters[i];
+                Variable param_var = VariableResolver.CreateVariable(func.Location, param.Variable.Name, param.IsConst);
 
                 if (i < len)
                 {
-                    if (param.IsByRef)
-                        ; // TODO : copy param byref
+                    if (param.IsByRef && args[i].AssignedTo is Variable existing)
+                        if (existing.IsConst)
+                            return WellKnownError("error.constant_passed_as_ref", existing, i + 1);
+                        else
+                            args[i] = Variant.FromReference(existing);
                 }
                 else if (param.DefaultValue is null)
                     return WellKnownError("error.missing_argument", i + 1, param.Variable);
@@ -260,6 +264,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     else if (result.Is(out Variant value))
                         args[i] = value;
                 }
+
+                param_var.Value = args[i];
             }
 
             _instruction_pointer = 0;
@@ -624,7 +630,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Union<Variant, InterpreterError> value = ProcessExpression(expression);
 
             if (value.Is(out Variant variant))
-                variable.Value = variant;
+                (variable.ReferencedVariable ?? variable).Value = variant;
 
             return value;
         }
@@ -792,7 +798,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     Union<Variant, InterpreterError>? res = ProcessExpression(arg);
 
                     if (res.Is(out Variant value))
-                        arguments[i] = value;
+                        arguments[i++] = value;
                     else
                         return (InterpreterError)res;
                 }

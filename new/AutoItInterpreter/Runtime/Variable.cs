@@ -13,6 +13,7 @@ namespace Unknown6656.AutoIt3.Runtime
     using static Generics;
     using static AST;
 
+
     public enum VariantType
         : int
     {
@@ -22,8 +23,10 @@ namespace Unknown6656.AutoIt3.Runtime
         String = 3,
         Array = 4,
         NETObject = 5,
+
         // TODO : map type
-        // TODO : variable refrence type
+
+        Reference = -2,
         Default = -1,
     }
 
@@ -57,6 +60,10 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <description><see cref="VariantType.Null"/> or <see cref="VariantType.Default"/></description>
         ///     </item>
         ///     <item>
+        ///         <term><see cref="Variable"/></term>
+        ///         <description><see cref="VariantType.Reference"/></description>
+        ///     </item>
+        ///     <item>
         ///         <term><see cref="bool"/></term>
         ///         <description><see cref="VariantType.Boolean"/></description>
         ///     </item>
@@ -85,6 +92,10 @@ namespace Unknown6656.AutoIt3.Runtime
         internal readonly object? RawData { get; }
 
         public readonly Variable? AssignedTo { get; }
+
+        public readonly bool IsReference => Type is VariantType.Reference;
+
+        public readonly Variable? ReferencedVariable => IsReference ? RawData as Variable : null;
 
         public readonly bool IsNull => Type is VariantType.Null;
 
@@ -154,6 +165,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Variant FromObject(object? obj) => obj switch
         {
             null or LITERAL => FromLiteral(obj as LITERAL),
+            Variable v => FromReference(v),
             Variant v => v,
             bool b => FromBoolean(b),
             sbyte n => FromNumber(n),
@@ -202,6 +214,8 @@ namespace Unknown6656.AutoIt3.Runtime
             else
                 throw new InvalidCastException($"Unable to convert the value '{literal}' to an instance of the type '{typeof(Variant)}'");
         }
+
+        public static Variant FromReference(Variable variable) => new Variant(VariantType.Reference, variable, null);
 
         public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
@@ -294,17 +308,23 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsConst { get; }
 
+        public bool IsReference => _value.IsReference;
+
+        public Variable? ReferencedVariable => _value.ReferencedVariable;
+
         public VariableScope DeclaredScope { get; }
 
         public SourceLocation DeclaredLocation { get; }
 
         public Variant Value
         {
-            get => _value;
+            get => ReferencedVariable?._value ?? _value;
             set
             {
+                Variable? target = ReferencedVariable ?? this;
+
                 lock (this) // TODO: is this necessary?
-                    _value = value.AssignTo(this);
+                    target._value = value.AssignTo(target);
             }
         }
 

@@ -4,6 +4,7 @@ using System.Text;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
+using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -28,8 +29,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         private static Union<Variant, InterpreterError> DebugVar(CallFrame frame, Variant[] args)
         {
-                if (args[0].AssignedTo is Variable var)
-                    frame.Print($@"${var.Name} : {{
+            int indentation = args.Length < 2 ? 0 : (int)args[1].ToNumber();
+            StringBuilder sb = new StringBuilder();
+
+            if (args[0].AssignedTo is Variable var)
+                sb.Append($@"${var.Name} : {{
     Value:         {var.Value}
     Type:          {var.Value.Type}
     Raw Data:      ""{var.Value.RawData}"" ({var.Value.RawData?.GetType() ?? typeof(void)})
@@ -37,17 +41,27 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
     Is Global:     {var.IsGlobal}
     Decl.Location: {var.DeclaredLocation}
     Decl.Scope:    {var.DeclaredScope}
-}}
 ");
-                else
-                    frame.Print($@"<unknown> : {{
+            else
+                sb.Append($@"<unknown> : {{
     Value:         {args[0]}
     Type:          {args[0].Type}
     Raw Data:      ""{args[0].RawData}"" ({args[0].RawData?.GetType() ?? typeof(void)})
-}}
 ");
 
-                return null;
+            if (args[0].ReferencedVariable is Variable @ref)
+                sb.AppendLine($"    Reference to:  {DebugVar(frame, new[] { @ref.Value, Variant.FromNumber(indentation + 1) }).As<Variant>().ToString().Trim()}");
+
+            sb.AppendLine("}");
+
+            if (indentation == 0)
+            {
+                frame.Print(sb);
+
+                return Variant.Null;
+            }
+            else
+                return Variant.FromObject(string.Join("\n", From.String(sb.ToString()).To.Lines().Select(s => new string(' ', indentation * 4) + s)));
         }
 
         private static Union<Variant, InterpreterError> DebugCallFrame(CallFrame frame, Variant[] args)
@@ -92,12 +106,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             frame.Print(sb);
 
-            return null;
+            return Variant.Null;
         }
 
         private static Union<Variant, InterpreterError> TODO(CallFrame frame, Variant[] args)
         {
-            return null;
+            return Variant.Null;
         }
     }
 }
