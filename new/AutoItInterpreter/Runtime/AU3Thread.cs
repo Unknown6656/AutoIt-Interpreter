@@ -686,7 +686,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
         {
-            throw new NotImplementedException();
+            Union<Variant, InterpreterError> result = ProcessExpression(expr);
+
+            if (result.Is(out Variant value))
+                if (op.IsIdentity)
+                    result = +value;
+                else if (op.IsNegate)
+                    result = -value;
+                else if (op.IsNegate)
+                    result = !value;
+                else
+                    result = WellKnownError("error.unsupported_operator", op);
+
+            return result;
         }
 
         private Union<Variant, InterpreterError> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
@@ -760,6 +772,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (op.IsPower)
                 return e1 ^ e2;
             // TODO : modulus
+            // TODO : all other operators
 
             return WellKnownError("error.unsupported_operator", op);
         }
