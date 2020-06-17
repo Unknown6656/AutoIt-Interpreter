@@ -1,13 +1,11 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
-ConsoleWrite((+Null) == Null)
-
-
-DebugVar($a)
-DebugVar(0)
-DebugVar(Default)
-DebugVar($_)
-DebugCallFrame()
+; ConsoleWrite((+Null) == Null)
+; DebugVar($a)
+; DebugVar(0)
+; DebugVar(Default)
+; DebugVar($_)
+; DebugCallFrame()
 
 
 $x = "X"

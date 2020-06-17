@@ -691,7 +691,77 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
         {
-            throw new NotImplementedException();
+            InterpreterError? evaluate(EXPRESSION expr, out Variant target)
+            {
+                Union<Variant, InterpreterError> result = ProcessExpression(expr);
+
+                target = Variant.Zero;
+
+                if (result.Is(out InterpreterError error))
+                    return error;
+
+                target = (Variant)result;
+
+                return null;
+            }
+
+            Variant e1, e2;
+            InterpreterError? err = evaluate(expr1, out e1);
+
+            if (err is { })
+                return err;
+            else if (op.IsAnd)
+            {
+                if (!e1.ToBoolean())
+                    return Variant.False;
+                else if ((err = evaluate(expr2, out e2)) is { })
+                    return err;
+                else
+                    return e2;
+            }
+            else if (op.IsOr)
+            {
+                if (e1.ToBoolean())
+                    return Variant.True;
+                else if ((err = evaluate(expr2, out e2)) is { })
+                    return err;
+                else
+                    return e2;
+            }
+            else
+                err = evaluate(expr2, out e2);
+
+            if (err is { })
+                return err;
+            else if (op.IsStringConcat)
+                return e1 & e2;
+            else if (op.IsEqualCaseSensitive)
+                ;
+            else if (op.IsEqualCaseInsensitive)
+                ;
+            else if (op.IsUnequal)
+                ;
+            else if (op.IsGreater)
+                ;
+            else if (op.IsGreaterEqual)
+                ;
+            else if (op.IsLower)
+                ;
+            else if (op.IsLowerEqual)
+                ;
+            else if (op.IsAdd)
+                return e1 + e2;
+            else if (op.IsSubtract)
+                return e1 - e2;
+            else if (op.IsMultiply)
+                return e1 * e2;
+            else if (op.IsDivide)
+                return e1 / e2;
+            else if (op.IsPower)
+                return e1 ^ e2;
+            // TODO : modulus
+
+            return WellKnownError("error.unsupported_operator", op);
         }
 
         private Union<Variant, InterpreterError> ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
