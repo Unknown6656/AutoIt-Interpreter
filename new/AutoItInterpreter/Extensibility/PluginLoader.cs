@@ -85,7 +85,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 {
                     Assembly asm = Assembly.LoadFrom(file.FullName);
 
-                    if (asm.GetCustomAttribute<AutoIt3Plugin>() is { })
+                    if (asm.GetCustomAttribute<AutoIt3PluginAttribute>() is { })
                     {
                         _plugin_files.Add(file);
                         types.AddRange(asm.GetTypes());

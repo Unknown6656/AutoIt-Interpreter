@@ -9,6 +9,7 @@ using Microsoft.FSharp.Core;
 
 using Piglet.Parser.Configuration.Generic;
 
+using Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
@@ -887,13 +888,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)
         {
-            string name = macro.Name.ToLowerInvariant();
-
-            if (Interpreter.BuiltinMacros[this, name] is Variant v)
-                return v;
+            string name = macro.Name;
 
             foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
-                if (provider.ProvideMacroValue(name, out Variant? value) && value.HasValue)
+                if (provider.ProvideMacroValue(this, name, out Variant? value) && value.HasValue)
                     return value.Value;
 
             return WellKnownError("error.unknown_macro", macro.Name);
@@ -902,7 +900,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
         {
             if (variable == VARIABLE.Discard)
-                return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, Interpreter.MACRO_DISCARD);
+                return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, FrameworkMacros.MACRO_DISCARD);
 
             if (VariableResolver.TryGetVariable(variable, out Variable? var))
             {

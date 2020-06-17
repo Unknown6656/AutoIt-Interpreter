@@ -3,7 +3,7 @@
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 
-namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
+namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider

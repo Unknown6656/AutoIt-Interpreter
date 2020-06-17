@@ -11,7 +11,7 @@ using Unknown6656.Common;
 namespace Unknown6656.AutoIt3.Extensibility
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false, Inherited = true)]
-    public sealed class AutoIt3Plugin
+    public sealed class AutoIt3PluginAttribute
         : Attribute
     {
     }
@@ -147,6 +147,6 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract bool ProvideMacroValue(string name, out Variant? value);
+        public abstract bool ProvideMacroValue(CallFrame frame, string name, out Variant? value);
     }
 }
