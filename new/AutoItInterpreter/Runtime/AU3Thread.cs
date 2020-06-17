@@ -23,9 +23,12 @@ namespace Unknown6656.AutoIt3.Runtime
         private static volatile int _tid = 0;
         private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
         private volatile bool _running = false;
+        private int? _override_exitcode = null;
 
 
         public Interpreter Interpreter { get; }
+
+        public bool IsRunning => _running;
 
         public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
 
@@ -65,6 +68,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _running = false;
 
+            if (_override_exitcode is int code)
+                return Variant.FromNumber(code);
+
             return result;
         }
 
@@ -89,6 +95,20 @@ namespace Unknown6656.AutoIt3.Runtime
                 ExitCall();
 
             return result;
+        }
+
+        public void Stop()
+        {
+            _running = false;
+
+            Dispose();
+        }
+
+        public void Stop(int exitcode)
+        {
+            Stop();
+
+            _override_exitcode = exitcode;
         }
 
         internal SourceLocation? ExitCall()
@@ -171,11 +191,12 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (args.Length > max_argc)
                 return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", max_argc, args.Length);
             else if (result.Is<Variant>())
-            {
-                Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
+                if (CurrentThread.IsRunning)
+                {
+                    Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
 
-                result = InternalExec(args);
-            }
+                    result = InternalExec(args);
+                }
 
             if (CurrentFunction.IsMainFunction && result.Is<Variant>() && script.UnLoadScript(this) is InterpreterError unload_error)
                 result = unload_error;
@@ -270,7 +291,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _instruction_pointer = 0;
 
-            while (_instruction_pointer < _line_cache.Length)
+            while (_instruction_pointer < _line_cache.Length && CurrentThread.IsRunning)
                 if (ParseCurrentLine()?.OptionalError is InterpreterError error)
                     return error;
                 else if (!MoveNext())
@@ -392,6 +413,32 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
             {
+                [@"^exit(\b\s*(?<code>.+))?$"] = m =>
+                {
+                    string code = m.Groups["code"].Value;
+
+                    if (string.IsNullOrWhiteSpace(code))
+                        code = "0";
+
+                    Union<Variant, InterpreterError> result = ProcessExpressionString(code);
+
+                    if (result.Is(out Variant value))
+                    {
+                        Interpreter.Stop((int)value.ToNumber());
+
+                        return InterpreterResult.OK;
+                    }
+                    else
+                        return (InterpreterError)result;
+                },
+                [@"^return(\b\s*(?<value>.+))?$"] = m =>
+                {
+                    string optval = m.Groups["value"].Value;
+
+
+
+                    throw new NotImplementedException();
+                },
                 [@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
                 {
                     throw new NotImplementedException();
@@ -473,6 +520,24 @@ namespace Unknown6656.AutoIt3.Runtime
             catch (Exception ex)
             {
                 return WellKnownError("error.unparsable_line", line, ex.Message);
+            }
+        }
+
+        private Union<Variant, InterpreterError> ProcessExpressionString(string expression)
+        {
+            try
+            {
+                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = ParserProvider.ExpressionParser;
+                PARSABLE_EXPRESSION? expr = provider.Parse(expression).ParsedValue;
+
+                if (expr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION any })
+                    return ProcessExpression(any);
+
+                return WellKnownError("error.unparsable_line", expression);
+            }
+            catch (Exception ex)
+            {
+                return WellKnownError("error.unparsable_line", expression, ex.Message);
             }
         }
 

@@ -134,13 +134,12 @@ namespace Unknown6656.AutoIt3
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
 
-                    InterpreterError? result = Interpreter.Run(opt);
+                    InterpreterResult result = Interpreter.Run(opt);
 
-                    if (result is { } err)
-                    {
+                    if (result.OptionalError is InterpreterError err)
                         PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
-                        code = -1;
-                    }
+
+                    code = result.ProgramExitCode;
                 });
             }
             catch (Exception ex)

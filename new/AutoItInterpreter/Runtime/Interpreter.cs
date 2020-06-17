@@ -1,11 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
-using System.Diagnostics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -63,6 +63,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 thread.Dispose();
                 _threads.TryRemove(thread, out _);
             }
+        }
+
+        public void Stop(int exitcode)
+        {
+            foreach (AU3Thread thread in Threads)
+                thread.Stop(exitcode);
         }
 
         public AU3Thread CreateNewThread() => new AU3Thread(this);
@@ -190,7 +196,7 @@ YEAR	Current four-digit year
 
         public void Print(CallFrame current_frame, object? value) => PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FileName, value?.ToString() ?? "");
 
-        public InterpreterError? Run(ScriptFunction entry_point, Variant[] args)
+        public InterpreterResult Run(ScriptFunction entry_point, Variant[] args)
         {
             try
             {
@@ -199,7 +205,7 @@ YEAR	Current four-digit year
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                return thread.Start(entry_point, args);
+                return thread.Start(entry_point, args).Match(success => new InterpreterResult((int)success.ToNumber()), error => new InterpreterResult(-1, error));
             }
             finally
             {
@@ -208,12 +214,12 @@ YEAR	Current four-digit year
             }
         }
 
-        public InterpreterError? Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
+        public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
 
-        public InterpreterError? Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
-                                                                  .Match(Generics.id, Run);
+        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
+                                                                  .Match(err => new InterpreterResult(-1, err), Run);
 
-        public static InterpreterError? Run(CommandLineOptions opt)
+        public static InterpreterResult Run(CommandLineOptions opt)
         {
             using Interpreter interpreter = new Interpreter(opt);
 

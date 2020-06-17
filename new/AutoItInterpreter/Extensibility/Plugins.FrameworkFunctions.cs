@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
@@ -13,7 +11,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
-            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), 1, ConsoleWriteLine),
+            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), (0, 1), ConsoleWriteLine),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
             ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
             /*
@@ -455,7 +453,7 @@ Window
             return Variant.FromString(s);
         }
 
-        private static Union<Variant, InterpreterError> ConsoleWriteLine(CallFrame frame, Variant[] args) => ConsoleWrite(frame, new[] { args[0] & "\r\n" });
+        private static Union<Variant, InterpreterError> ConsoleWriteLine(CallFrame frame, Variant[] args) => ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
 
         private static Union<Variant, InterpreterError> ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
 
