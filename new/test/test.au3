@@ -1,13 +1,11 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
-func lol($a, $zz = 49)
 DebugVar($a)
 DebugVar(0)
 DebugVar(Default)
 DebugVar($_)
 DebugCallFrame()
-endfunc
-lol(99)
+
 
 $x = "X"
 $y = "Y"

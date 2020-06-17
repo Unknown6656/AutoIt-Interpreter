@@ -8,14 +8,16 @@ open Piglet.Parser.Configuration.FSharp
 open Piglet.Parser.Construction
 
 open AST
-open System.Linq.Expressions
-open System.Runtime.CompilerServices
 
 
 type ParserMode =
     | MultiDeclaration = 0
     | ArbitraryExpression = 1
     | FunctionParameters = 2
+
+type Associativity =
+    | Left
+    | Right
 
 type ExpressionParser(mode : ParserMode) =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()
@@ -160,17 +162,20 @@ type ExpressionParser(mode : ParserMode) =
 
         let precedences =
             ([
-                AssociativityDirection.Right, [ t_symbol_questionmark ]
-                AssociativityDirection.Left, [ t_keyword_or ]
-                AssociativityDirection.Left, [ t_keyword_and ]
-                AssociativityDirection.Left, [ t_operator_comp_lte; t_operator_comp_lt; t_operator_comp_gt; t_operator_comp_gte ]
-                AssociativityDirection.Left, [ t_operator_comp_neq; t_symbol_equal; t_operator_comp_eq ]
-                AssociativityDirection.Left, [ t_operator_concat ]
-                AssociativityDirection.Left, [ t_symbol_plus; t_symbol_minus ]
-                AssociativityDirection.Left, [ t_operator_mul; t_operator_div ]
-                AssociativityDirection.Right, [ t_operator_pow ]
-            ] : list<AssociativityDirection * ITerminalWrapper list>)
-            |> List.map (fun (a, g) -> struct(a, List.toArray g))
+                Right, [ t_symbol_questionmark ]
+                Left, [ t_keyword_or ]
+                Left, [ t_keyword_and ]
+                Left, [ t_operator_comp_lte; t_operator_comp_lt; t_operator_comp_gt; t_operator_comp_gte ]
+                Left, [ t_operator_comp_neq; t_symbol_equal; t_operator_comp_eq ]
+                Left, [ t_operator_concat ]
+                Left, [ t_symbol_plus; t_symbol_minus ]
+                Left, [ t_operator_mul; t_operator_div ]
+                Right, [ t_operator_pow ]
+            ] : list<Associativity * ITerminalWrapper list>)
+            |> List.map (fun (a, g) -> struct(match a with
+                                              | Right -> AssociativityDirection.Right
+                                              | _ -> AssociativityDirection.Left
+                                              , List.toArray g))
             |> List.toArray
 
         x.SetPrecedenceList precedences
@@ -234,24 +239,24 @@ type ExpressionParser(mode : ParserMode) =
         //reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
         reduce_5i nt_conditional_expr nt_object_expr t_symbol_questionmark nt_object_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
-        let reduce_binary symbol operator =
-            reduce_3i nt_any_expr nt_object_expr symbol nt_object_expr (fun a _ b -> Binary(a, operator, b))
+        let reduce_binary symbol operator assoc =
+            reduce_3i nt_any_expr nt_object_expr symbol (match assoc with | Left -> nt_any_expr | Right -> nt_object_expr) (fun a _ b -> Binary(a, operator, b))
 
-        reduce_binary t_keyword_or Or
-        reduce_binary t_keyword_and And
-        reduce_binary t_operator_comp_lte LowerEqual
-        reduce_binary t_operator_comp_lt Lower
-        reduce_binary t_operator_comp_gte GreaterEqual
-        reduce_binary t_operator_comp_gt Greater
-        reduce_binary t_operator_comp_neq Unequal
-        reduce_binary t_operator_comp_eq EqualCaseSensitive
-        reduce_binary t_symbol_equal EqualCaseInsensitive
-        reduce_binary t_operator_concat StringConcat
-        reduce_binary t_symbol_plus Add
-        reduce_binary t_symbol_minus Subtract
-        reduce_binary t_operator_mul Multiply
-        reduce_binary t_operator_div Divide
-        reduce_binary t_operator_pow Power
+        reduce_binary t_keyword_or Or Left
+        reduce_binary t_keyword_and And Left
+        reduce_binary t_operator_comp_lte LowerEqual Left
+        reduce_binary t_operator_comp_lt Lower Left
+        reduce_binary t_operator_comp_gte GreaterEqual Left
+        reduce_binary t_operator_comp_gt Greater Left
+        reduce_binary t_operator_comp_neq Unequal Left
+        reduce_binary t_operator_comp_eq EqualCaseSensitive Left
+        reduce_binary t_symbol_equal EqualCaseInsensitive Left
+        reduce_binary t_operator_concat StringConcat Left
+        reduce_binary t_symbol_plus Add Left
+        reduce_binary t_symbol_minus Subtract Left
+        reduce_binary t_operator_mul Multiply Left
+        reduce_binary t_operator_div Divide Left
+        reduce_binary t_operator_pow Power Right
         
         reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
         reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
