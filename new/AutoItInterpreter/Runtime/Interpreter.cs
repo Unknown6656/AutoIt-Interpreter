@@ -29,6 +29,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public PluginLoader PluginLoader { get; }
 
+        public int ExitCode { get; private set; } = 0;
+
 
         public Interpreter(CommandLineOptions opt)
         {
@@ -84,7 +86,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                return thread.Start(entry_point, args).Match(success => new InterpreterResult((int)success.ToNumber()), error => new InterpreterResult(-1, error));
+                InterpreterResult result = thread.Start(entry_point, args).Match(success => new InterpreterResult((int)success.ToNumber()), error => new InterpreterResult(-1, error));
+
+                ExitCode = result.ProgramExitCode;
+
+                return result;
             }
             finally
             {
