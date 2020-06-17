@@ -113,7 +113,7 @@ namespace Unknown6656.AutoIt3.Runtime
             throw new NotImplementedException();
         }
 
-        public readonly override bool Equals(object? obj) => Equals(ToVariant(obj));
+        public readonly override bool Equals(object? obj) => Equals(FromObject(obj));
 
         public readonly bool Equals(Variant other)
         {
@@ -151,7 +151,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => new Variant(type, null, null),
         };
 
-        public static Variant ToVariant(object? obj) => obj switch
+        public static Variant FromObject(object? obj) => obj switch
         {
             null or LITERAL => FromLiteral(obj as LITERAL),
             Variant v => v,
@@ -211,54 +211,77 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
-        //public static implicit operator bool
-        //public static implicit operator sbyte
-        //public static implicit operator byte
-        //public static implicit operator short
-        //public static implicit operator ushort
-        //public static implicit operator int
-        //public static implicit operator uint
-        //public static implicit operator long
-        //public static implicit operator ulong
-        //public static implicit operator float
-        //public static implicit operator double
-        //public static implicit operator decimal
-        //public static implicit operator char
-        //public static implicit operator string
-        //public static implicit operator StringBuilder
-        //public static implicit operator Array
 
-        public static implicit operator Variant (bool b) => ToVariant(b);
+        public static Variant operator +(Variant v) => v;
 
-        public static implicit operator Variant (sbyte n) => ToVariant(n);
+        public static Variant operator !(Variant v) => FromBoolean(!v.ToBoolean());
 
-        public static implicit operator Variant (byte n) => ToVariant(n);
+        public static Variant operator -(Variant v) => v.IsDefault || v.IsNull ? v : FromNumber(-v.ToNumber());
 
-        public static implicit operator Variant (short n) => ToVariant(n);
+        public static Variant operator +(Variant v1, Variant v2) => FromNumber(v1.ToNumber() + v2.ToNumber());
 
-        public static implicit operator Variant (ushort n) => ToVariant(n);
+        public static Variant operator -(Variant v1, Variant v2) => FromNumber(v1.ToNumber() - v2.ToNumber());
 
-        public static implicit operator Variant (int n) => ToVariant(n);
+        public static Variant operator *(Variant v1, Variant v2) => FromNumber(v1.ToNumber() * v2.ToNumber());
 
-        public static implicit operator Variant (uint n) => ToVariant(n);
+        public static Variant operator /(Variant v1, Variant v2) => FromNumber(v1.ToNumber() / v2.ToNumber());
 
-        public static implicit operator Variant (long n) => ToVariant(n);
+        public static Variant operator %(Variant v1, Variant v2) => FromNumber(v1.ToNumber() % v2.ToNumber());
 
-        public static implicit operator Variant (ulong n) => ToVariant(n);
+        /// <summary>This is <b>not</b> XOR - this is the mathematical power operator!</summary>
+        public static Variant operator ^(Variant v1, Variant v2) => FromObject(Math.Pow((double)v1.ToNumber(), (double)v2.ToNumber()));
 
-        public static implicit operator Variant (float n) => ToVariant(n);
+        /// <summary>This is <b>not</b> AND - this is string concat!</summary>
+        public static Variant operator &(Variant v1, Variant v2) => FromString(v1.ToString() + v2.ToString());
 
-        public static implicit operator Variant (double n) => ToVariant(n);
+        public static implicit operator Variant (bool b) => FromBoolean(b);
 
-        public static implicit operator Variant (decimal n) => ToVariant(n);
+        public static implicit operator Variant (sbyte n) => FromNumber(n);
 
-        public static implicit operator Variant (char n) => ToVariant(n);
+        public static implicit operator Variant (byte n) => FromNumber(n);
 
-        public static implicit operator Variant (string? n) => ToVariant(n);
+        public static implicit operator Variant (short n) => FromNumber(n);
 
-        public static implicit operator Variant (StringBuilder? n) => ToVariant(n);
+        public static implicit operator Variant (ushort n) => FromNumber(n);
 
-        public static implicit operator Variant (Array? n) => ToVariant(n);
+        public static implicit operator Variant (int n) => FromNumber(n);
+
+        public static implicit operator Variant (uint n) => FromNumber(n);
+
+        public static implicit operator Variant (long n) => FromNumber(n);
+
+        public static implicit operator Variant (ulong n) => FromNumber(n);
+
+        public static implicit operator Variant (float n) => FromObject(n);
+
+        public static implicit operator Variant (double n) => FromObject(n);
+
+        public static implicit operator Variant (decimal n) => FromNumber(n);
+
+        public static implicit operator Variant (char n) => FromObject(n);
+
+        public static implicit operator Variant (string? n) => FromString(n);
+
+        public static implicit operator Variant (StringBuilder? n) => FromObject(n);
+
+        public static implicit operator Variant (Array? n) => FromObject(n);
+
+        //public static explicit operator bool (Variant v) => ;
+        //public static explicit operator sbyte (Variant v) => ;
+        //public static explicit operator byte (Variant v) => ;
+        //public static explicit operator short (Variant v) => ;
+        //public static explicit operator ushort (Variant v) => ;
+        //public static explicit operator int (Variant v) => ;
+        //public static explicit operator uint (Variant v) => ;
+        //public static explicit operator long (Variant v) => ;
+        //public static explicit operator ulong (Variant v) => ;
+        //public static explicit operator float (Variant v) => ;
+        //public static explicit operator double (Variant v) => ;
+        //public static explicit operator decimal (Variant v) => ;
+        //public static explicit operator char (Variant v) => ;
+        //public static explicit operator string (Variant v) => ;
+        //public static explicit operator StringBuilder (Variant v) => ;
+        //public static explicit operator Array (Variant v) => ;
     }
 
     public sealed class Variable

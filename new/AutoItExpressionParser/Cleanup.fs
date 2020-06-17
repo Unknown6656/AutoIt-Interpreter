@@ -39,7 +39,7 @@ module Cleanup =
 
     let rec FoldConstants =
         function
-        | Unary (Identity, Literal Null) -> Literal False
+      //| Unary (Identity, Literal Null) -> Literal False
         | Unary (Identity, e) -> e
         | Unary (Negate, Literal Default) -> Literal Default
         | Unary (Negate, Literal Null) -> Literal Null

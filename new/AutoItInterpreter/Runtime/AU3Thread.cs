@@ -14,7 +14,6 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using CommandLine;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -205,7 +204,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
-        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args) => ((NativeFunction)CurrentFunction).Execute(this, args);
+        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args) ?? ReturnValue;
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }

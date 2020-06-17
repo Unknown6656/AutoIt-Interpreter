@@ -1,8 +1,6 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
-func lol()
-endfunc
-ConsoleWrite(lol())
+ConsoleWrite((+Null) == Null)
 
 
 DebugVar($a)
