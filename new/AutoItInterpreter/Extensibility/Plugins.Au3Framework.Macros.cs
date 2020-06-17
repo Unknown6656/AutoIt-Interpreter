@@ -3,6 +3,7 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime;
+using System.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -22,7 +23,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public unsafe override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
         {
-            value = name.ToLowerInvariant() switch
+            bool is_unix = Environment.OSVersion.Platform is PlatformID.Unix or PlatformID.MacOSX;
+
+            return (value = name.ToLowerInvariant() switch
             {
                 "appdatacommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "appdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -32,18 +35,80 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "autoitx64" => sizeof(void*) > 4,
                 "commonfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
                 "compiled" => false,
+                "ComSpec" => Environment.GetEnvironmentVariable(is_unix ? "SHELL" : "comspec"),
                 "cr" => "\r",
                 "crlf" => "\r\n",
+                "cpuarch" or "osarch" => Environment.Is64BitOperatingSystem ? "X64" : "X86",
+                "desktopcommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                "desktopdir" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                "documentscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
+                //"exitcode" => ,
+                "favoritescommondir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
+                "favoritesdir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
+                "homedrive" => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,
+                "homepath" => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "hour" => DateTime.Now.ToString("HH"),
+                "localappdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "mday" => DateTime.Now.ToString("dd"),
+                "min" => DateTime.Now.ToString("mm"),
+                "mon" => DateTime.Now.ToString("MM"),
+                "msec" => DateTime.Now.ToString("fff"),
+                "mydocumentsdir" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tab" => "\t",
+                "sw_disable" => 65,
+                "sw_enable" => 64,
+                "sw_hide" => 0,
+                "sw_lock" => 66,
+                "sw_maximize" => 3,
+                "sw_minimize" => 6,
+                "sw_restore" => 9,
+                "sw_show" => 5,
+                "sw_showdefault" => 10,
+                "sw_showmaximized" => 3,
+                "sw_showminimized" => 2,
+                "sw_showminnoactive" => 7,
+                "sw_showna" => 8,
+                "sw_shownoactivate" => 4,
+                "sw_shownormal" => 1,
+                "sw_unlock" => 67,
+                "tempdir" => is_unix ? "/tmp" : Environment.GetEnvironmentVariable("temp"),
+
+                "programfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "programscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+                "programsdir" => Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+
+                "startmenucommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                "startmenudir" => Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                "startupcommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup),
+                "startupdir" => Environment.GetFolderPath(Environment.SpecialFolder.Startup),
+                "systemdir" => Environment.GetFolderPath(Environment.SpecialFolder.SystemX86),
+                "windowsdir" => Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "sec" => DateTime.Now.ToString("ss"),
+                "yday" => DateTime.Now.DayOfYear.ToString("D3"),
+                "year" => DateTime.Now.ToString("yyyy"),
+                "wday" => (int)DateTime.Now.DayOfWeek + 1,
+
                 "lf" => "\n",
 
-                ///////////////////////////////////// ADDITIONAL MACROS /////////////////////////////////////
-                "esc" => "\x1b",
-                "nul" => "\0",
                 _ when name.Equals(MACRO_DISCARD, StringComparison.InvariantCultureIgnoreCase) => frame.VariableResolver.TryGetVariable(VARIABLE.Discard, out Variable? discard) ? discard.Value : Variant.Null,
                 _ => (Variant?)null,
-            };
-
-            return value is Variant;
+            }) is Variant;
         }
+    }
+
+    public sealed class AdditionalMacros
+        : AbstractMacroProvider
+    {
+        public AdditionalMacros(Interpreter interpreter)
+            : base(interpreter)
+        {
+        }
+
+        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value) => (value = name.ToLowerInvariant() switch
+        {
+            "esc" => "\x1b",
+            "nul" => "\0",
+            _ => (Variant?)null,
+        }) is Variant;
     }
 }
