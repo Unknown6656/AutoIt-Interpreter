@@ -35,6 +35,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant Default { get; } = GetTypeDefault(VariantType.Default);
 
+        public static Variant True { get; } = true;
+
+        public static Variant False { get; } = false;
+
+        public static Variant Zero { get; } = 0m;
+
+
         public readonly VariantType Type { get; }
 
         /// <summary>

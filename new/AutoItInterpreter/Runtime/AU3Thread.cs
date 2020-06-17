@@ -14,6 +14,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using CommandLine;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -83,12 +84,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _callstack.Push(frame);
 
-            InterpreterError? result = frame.Execute(args);
+            Union<Variant, InterpreterError> result = frame.Execute(args);
 
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();
 
-            return result; // TODO : if null, then return value
+            return result;
         }
 
         internal SourceLocation? ExitCall()
@@ -136,7 +137,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CallFrame? CallerFrame { get; }
 
-        public Variant? ReturnValue { set; get; } = Variant.Null;
+        public Variant ReturnValue { protected set; get; } = Variant.Zero;
 
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
@@ -154,31 +155,34 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose() => VariableResolver.Dispose();
 
-        protected abstract InterpreterError? InternalExec(Variant[] args);
+        protected abstract Union<Variant, InterpreterError> InternalExec(Variant[] args);
 
-        internal InterpreterError? Execute(Variant[] args)
+        internal Union<Variant, InterpreterError> Execute(Variant[] args)
         {
+            Union<Variant, InterpreterError> result = Variant.Zero;
             ScannedScript script = CurrentFunction.Script;
-            InterpreterError? result = null;
 
-            if (CurrentFunction.IsMainFunction)
-                result = script.LoadScript(this);
+            if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
+                result = load_error;
 
             (int min_argc, int max_argc) = CurrentFunction.ParameterCount;
 
             if (args.Length < min_argc)
-                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", min_argc, args.Length);
+                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", min_argc, args.Length);
             else if (args.Length > max_argc)
-                result = InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", max_argc, args.Length);
-            else
+                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", max_argc, args.Length);
+            else if (result.Is<Variant>())
             {
                 Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
 
-                result ??= InternalExec(args);
+                result = InternalExec(args);
             }
 
-            if (CurrentFunction.IsMainFunction)
-                result ??= script.UnLoadScript(this);
+            if (CurrentFunction.IsMainFunction && result.Is<Variant>() && script.UnLoadScript(this) is InterpreterError unload_error)
+                result = unload_error;
+
+            if (result.Is(out Variant @return))
+                ReturnValue = @return;
 
             return result;
         }
@@ -201,7 +205,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
-        protected override InterpreterError? InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args);
+        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args) => ((NativeFunction)CurrentFunction).Execute(this, args);
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }
@@ -225,12 +229,11 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
-        protected override InterpreterError? InternalExec(Variant[] args)
+        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
 
             AU3Function func = (AU3Function)CurrentFunction;
-            InterpreterError? result = null;
             int argc = func.ParameterCount.MaximumCount;
             int len = args.Length;
 
@@ -251,11 +254,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                 {
                     EXPRESSION expr = param.DefaultValue.Value;
-                    Union<Variant, InterpreterError> union = ProcessExpression(expr);
+                    Union<Variant, InterpreterError> result = ProcessExpression(expr);
 
-                    if (union.Is(out InterpreterError error))
+                    if (result.Is(out InterpreterError error))
                         return error;
-                    else if (union.Is(out Variant value))
+                    else if (result.Is(out Variant value))
                         args[i] = value;
                 }
             }
@@ -263,17 +266,12 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
 
             while (_instruction_pointer < _line_cache.Length)
-                if (result is null)
-                {
-                    result = ParseCurrentLine()?.OptionalError;
-
-                    if (!MoveNext())
-                        break;
-                }
-                else
+                if (ParseCurrentLine()?.OptionalError is InterpreterError error)
+                    return error;
+                else if (!MoveNext())
                     break;
 
-            return result;
+            return ReturnValue;
         }
 
         private bool MoveNext()
@@ -286,6 +284,16 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else
                 return false;
+        }
+
+        /// <summary>
+        /// Copies the given value into the <see cref="CallFrame.ReturnValue"/>-field, and moves the instruction pointer to the end.
+        /// </summary>
+        /// <param name="value">Return value</param>
+        public void Return(Variant value)
+        {
+            _instruction_pointer = _line_cache.Length;
+            ReturnValue = value;
         }
 
         public InterpreterResult? ParseCurrentLine()
@@ -352,7 +360,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
 
-        // var : name, is_const[y/n]
 
 
         // TODO

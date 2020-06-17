@@ -488,21 +488,21 @@ namespace Unknown6656.AutoIt3.Runtime
     internal sealed class NativeFunction
         : ScriptFunction
     {
-        private readonly Func<NativeCallFrame, Variant[], InterpreterError?> _execute;
+        private readonly Func<NativeCallFrame, Variant[], Union<Variant, InterpreterError>> _execute;
 
         public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], InterpreterError?> execute)
+        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<Variant, InterpreterError>> execute)
             : base(script, name)
         {
             _execute = execute;
             ParameterCount = param_count;
         }
 
-        public InterpreterError? Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
+        public Union<Variant, InterpreterError> Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
         public override string ToString() => "[native] " + base.ToString();
     }

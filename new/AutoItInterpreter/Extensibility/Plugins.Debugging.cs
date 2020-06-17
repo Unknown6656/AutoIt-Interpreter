@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 
 using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -25,7 +26,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
         }
 
-        private static InterpreterError? DebugVar(CallFrame frame, Variant[] args)
+        private static Union<Variant, InterpreterError> DebugVar(CallFrame frame, Variant[] args)
         {
                 if (args[0].AssignedTo is Variable var)
                     frame.Print($@"${var.Name} : {{
@@ -49,7 +50,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return null;
         }
 
-        private static InterpreterError? DebugCallFrame(CallFrame frame, Variant[] args)
+        private static Union<Variant, InterpreterError> DebugCallFrame(CallFrame frame, Variant[] args)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -94,7 +95,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return null;
         }
 
-        private static InterpreterError? TODO(CallFrame frame, Variant[] args)
+        private static Union<Variant, InterpreterError> TODO(CallFrame frame, Variant[] args)
         {
             return null;
         }
