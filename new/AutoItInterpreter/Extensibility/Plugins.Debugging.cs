@@ -29,7 +29,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
         }
 
-        private static Union<Variant, InterpreterError> DebugVar(CallFrame frame, Variant[] args)
+        private static Union<InterpreterError, Variant> DebugVar(CallFrame frame, Variant[] args)
         {
             int indentation = args.Length < 2 ? 0 : (int)args[1].ToNumber();
             StringBuilder sb = new StringBuilder();
@@ -66,7 +66,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return Variant.FromObject(string.Join("\n", From.String(sb.ToString()).To.Lines().Select(s => new string(' ', indentation * 4) + s)));
         }
 
-        private static Union<Variant, InterpreterError> DebugCallFrame(CallFrame frame, Variant[] args)
+        private static Union<InterpreterError, Variant> DebugCallFrame(CallFrame frame, Variant[] args)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -111,7 +111,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Null;
         }
 
-        private static Union<Variant, InterpreterError> DebugThread(CallFrame frame, Variant[] _)
+        private static Union<InterpreterError, Variant> DebugThread(CallFrame frame, Variant[] _)
         {
             StringBuilder sb = new StringBuilder();
             AU3Thread thread = frame.CurrentThread;
@@ -144,9 +144,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Null;
         }
 
-        private static Union<Variant, InterpreterError> DebugAllVars(CallFrame frame, Variant[] _)
+        private static Union<InterpreterError, Variant> DebugAllVars(CallFrame frame, Variant[] _)
         {
-            Union<Variant, InterpreterError> result;
+            Union<InterpreterError, Variant> result;
             StringBuilder sb = new StringBuilder();
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
             int count;
@@ -195,7 +195,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private static Union<Variant, InterpreterError> DebugAllThreads(CallFrame frame, Variant[] _)
+        private static Union<InterpreterError, Variant> DebugAllThreads(CallFrame frame, Variant[] _)
         {
             // TODO
 

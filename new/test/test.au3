@@ -14,6 +14,7 @@ Func Swap(ByRef $vVar1, ByRef $vVar2)
    $vVar2 = $vTemp
 EndFunc
 
+#include <L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3>
 
 
 

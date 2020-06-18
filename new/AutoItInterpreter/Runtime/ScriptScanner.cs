@@ -54,7 +54,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return func;
         }
 
-        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path)
+        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path, bool relative)
         {
             (FileInfo physical, string content)? file = null;
 
@@ -84,16 +84,17 @@ namespace Unknown6656.AutoIt3.Runtime
                         return file;
             }
 
+            if (relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
+                return file;
+
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
         }
 
-        public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, ScriptScanningOptions options) =>
-            ResolveScriptFile(include_loc, path).Match<Union<InterpreterError, ScannedScript>>(err => err, file => ProcessScriptFile(file.physical_file, file.content, options));
+        public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
+            ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));
 
-        private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content, ScriptScanningOptions options)
+        private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content)
         {
-            // TODO : relative path
-
             string key = file.FullName;
 
             if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
@@ -123,6 +124,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         continue;
 
                     if (line.Match(
+                        (/*language=regex*/@"^#include-once(\b|$)", _ => script.IncludeOnlyOnce = true),
                         (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
                         (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
                     ))
@@ -335,6 +337,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScannedScriptState State { get; private set; } = ScannedScriptState.Unloaded;
 
+        public bool IncludeOnlyOnce { get; internal set; }
+
         public bool IsLoaded => State == ScannedScriptState.Loaded;
 
         public FileInfo Location { get; }
@@ -488,21 +492,21 @@ namespace Unknown6656.AutoIt3.Runtime
     internal sealed class NativeFunction
         : ScriptFunction
     {
-        private readonly Func<NativeCallFrame, Variant[], Union<Variant, InterpreterError>?> _execute;
+        private readonly Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> _execute;
 
         public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<Variant, InterpreterError>?> execute)
+        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> execute)
             : base(script, name)
         {
             _execute = execute;
             ParameterCount = param_count;
         }
 
-        public Union<Variant, InterpreterError>? Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
+        public Union<InterpreterError, Variant>? Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
         public override string ToString() => "[native] " + base.ToString();
     }
@@ -511,14 +515,5 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         Unloaded,
         Loaded
-    }
-
-    [Flags]
-    public enum ScriptScanningOptions
-        : byte
-    {
-        Regular = 0b_0000_0000,
-        IncludeOnce = 0b_0000_0001,
-        RelativePath = 0b_0000_0010,
     }
 }

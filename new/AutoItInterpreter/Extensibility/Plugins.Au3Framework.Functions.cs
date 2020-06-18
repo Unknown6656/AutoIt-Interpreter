@@ -22,7 +22,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
         }
 
-        public static Union<Variant, InterpreterError> ConsoleWriteError(CallFrame frame, Variant[] args)
+        public static Union<InterpreterError, Variant> ConsoleWriteError(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
@@ -31,7 +31,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(s.Length);
         }
 
-        public static Union<Variant, InterpreterError> ConsoleWrite(CallFrame frame, Variant[] args)
+        public static Union<InterpreterError, Variant> ConsoleWrite(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
@@ -40,7 +40,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(s.Length);
         }
 
-        public static Union<Variant, InterpreterError> ConsoleRead(CallFrame frame, Variant[] args)
+        public static Union<InterpreterError, Variant> ConsoleRead(CallFrame frame, Variant[] args)
         {
             bool peek = args[0].ToBoolean();
             bool binary = args[1].ToBoolean();
@@ -50,7 +50,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             throw new NotImplementedException();
         }
 
-        public static Union<Variant, InterpreterError> MsgBox(CallFrame frame, Variant[] args)
+        public static Union<InterpreterError, Variant> MsgBox(CallFrame frame, Variant[] args)
         {
             decimal flag = args[0].ToNumber();
             string title = args[1].ToString();
@@ -80,9 +80,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
         }
 
-        public static Union<Variant, InterpreterError> ConsoleWriteLine(CallFrame frame, Variant[] args) => 
+        public static Union<InterpreterError, Variant> ConsoleWriteLine(CallFrame frame, Variant[] args) => 
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
 
-        public static Union<Variant, InterpreterError> ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
+        public static Union<InterpreterError, Variant> ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
     }
 }

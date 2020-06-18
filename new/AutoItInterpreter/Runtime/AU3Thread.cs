@@ -58,14 +58,14 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public Union<Variant, InterpreterError> Start(ScriptFunction function, Variant[] args)
+        public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args)
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
             else
                 _running = true;
 
-            Union<Variant, InterpreterError> result = Call(function, args);
+            Union<InterpreterError, Variant> result = Call(function, args);
 
             _running = false;
 
@@ -75,7 +75,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        public Union<Variant, InterpreterError> Call(ScriptFunction function, Variant[] args)
+        public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -90,7 +90,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _callstack.Push(frame);
 
-            Union<Variant, InterpreterError> result = frame.Execute(args);
+            Union<InterpreterError, Variant> result = frame.Execute(args);
 
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();
@@ -175,11 +175,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose() => VariableResolver.Dispose();
 
-        protected abstract Union<Variant, InterpreterError> InternalExec(Variant[] args);
+        protected abstract Union<InterpreterError, Variant> InternalExec(Variant[] args);
 
-        internal Union<Variant, InterpreterError> Execute(Variant[] args)
+        internal Union<InterpreterError, Variant> Execute(Variant[] args)
         {
-            Union<Variant, InterpreterError> result = Variant.Zero;
+            Union<InterpreterError, Variant> result = Variant.Zero;
             ScannedScript script = CurrentFunction.Script;
 
             if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
@@ -208,7 +208,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        public Union<Variant, InterpreterError> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
+        public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
         public void Print(Variant value) => Interpreter.Print(this, value);
 
@@ -226,7 +226,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
-        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args) ?? ReturnValue;
+        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args) ?? ReturnValue;
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }
@@ -250,7 +250,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
-        protected override Union<Variant, InterpreterError> InternalExec(Variant[] args)
+        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
 
@@ -279,7 +279,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                 {
                     EXPRESSION expr = param.DefaultValue.Value;
-                    Union<Variant, InterpreterError> result = ProcessExpression(expr);
+                    Union<InterpreterError, Variant> result = ProcessExpression(expr);
 
                     if (result.Is(out InterpreterError error))
                         return error;
@@ -351,23 +351,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            if (directive.Match(@"^include(?<once>-once)?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
+            if (directive.Match(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
             {
                 char open = g["open"][0];
                 char close = g["close"][0];
+                bool relative = open != '<';
 
                 if (open != close && open != '<' && close != '>')
                     return WellKnownError("error.mismatched_quotes", open, close);
 
-                ScriptScanningOptions options = ScriptScanningOptions.Regular;
-
-                if (g["once"].Contains('-'))
-                    options |= ScriptScanningOptions.IncludeOnce;
-
-                if (open != '<')
-                    options |= ScriptScanningOptions.RelativePath;
-
-                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], options).Match(err => err, script =>
+                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script =>
                 {
                     if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
                         return err;
@@ -423,7 +416,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(code))
                         code = "0";
 
-                    Union<Variant, InterpreterError> result = ProcessExpressionString(code);
+                    Union<InterpreterError, Variant> result = ProcessExpressionString(code);
 
                     if (result.Is(out Variant value))
                     {
@@ -444,7 +437,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(optval))
                         optval = "0";
 
-                    Union<Variant, InterpreterError> result = ProcessExpressionString(optval);
+                    Union<InterpreterError, Variant> result = ProcessExpressionString(optval);
 
                     if (result.Is(out Variant value))
                         Return(value);
@@ -537,7 +530,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        private Union<Variant, InterpreterError> ProcessExpressionString(string expression)
+        private Union<InterpreterError, Variant> ProcessExpressionString(string expression)
         {
             try
             {
@@ -616,7 +609,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     // TODO : enum step handling
 
                     var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable), OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
-                    Union<Variant, InterpreterError> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
+                    Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
                     if (result.Is(out Variant value))
                         Program.PrintDebugMessage($"{variable} = {value}");
@@ -657,10 +650,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private Union<Variant, InterpreterError> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
+        private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
             (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
-            Union<Variant, InterpreterError>? result = null;
+            Union<InterpreterError, Variant>? result = null;
             Variable? target_variable = null;
 
             switch (target)
@@ -700,13 +693,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 return ProcessVariableAssignment(target_variable, expression);
         }
 
-        private Union<Variant, InterpreterError> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
+        private Union<InterpreterError, Variant> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
             foreach (VARIABLE v in expression.ReferencedVariables)
                 if (!VariableResolver.HasVariable(v))
                     return WellKnownError("error.undeclared_variable", v);
 
-            Union<Variant, InterpreterError> value = ProcessExpression(expression);
+            Union<InterpreterError, Variant> value = ProcessExpression(expression);
 
             if (value.Is(out Variant variant))
                 (variable.ReferencedVariable ?? variable).Value = variant;
@@ -714,7 +707,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return value;
         }
 
-        private Union<Variant, InterpreterError> ProcessExpression(EXPRESSION? expression)
+        private Union<InterpreterError, Variant> ProcessExpression(EXPRESSION? expression)
         {
             switch (expression)
             {
@@ -759,19 +752,19 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.not_yet_implemented", expression);
         }
 
-        private Union<Variant, InterpreterError> ProcessIndexer(EXPRESSION expr, EXPRESSION index)
+        private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index)
         {
             throw new NotImplementedException();
         }
 
-        private Union<Variant, InterpreterError> ProcessMember(MEMBER_EXPRESSION expr)
+        private Union<InterpreterError, Variant> ProcessMember(MEMBER_EXPRESSION expr)
         {
             throw new NotImplementedException();
         }
 
-        private Union<Variant, InterpreterError> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
+        private Union<InterpreterError, Variant> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
         {
-            Union<Variant, InterpreterError> result = ProcessExpression(expr);
+            Union<InterpreterError, Variant> result = ProcessExpression(expr);
 
             if (result.Is(out Variant value))
                 if (op.IsIdentity)
@@ -786,11 +779,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        private Union<Variant, InterpreterError> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
+        private Union<InterpreterError, Variant> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
         {
             InterpreterError? evaluate(EXPRESSION expr, out Variant target)
             {
-                Union<Variant, InterpreterError> result = ProcessExpression(expr);
+                Union<InterpreterError, Variant> result = ProcessExpression(expr);
 
                 target = Variant.Zero;
 
@@ -862,10 +855,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.unsupported_operator", op);
         }
 
-        private Union<Variant, InterpreterError> ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
-            ProcessExpression(expr1).Match<Union<Variant, InterpreterError>>(cond => ProcessExpression(cond.ToBoolean() ? expr2 : expr3), err => err);
+        private Union<InterpreterError, Variant> ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
+            ProcessExpression(expr1).Match<Union<InterpreterError, Variant>>(e => e, cond => ProcessExpression(cond.ToBoolean() ? expr2 : expr3));
 
-        private Union<Variant, InterpreterError> ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
+        private Union<InterpreterError, Variant> ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
         {
             Union<Variant[], InterpreterError> ProcessRawArguments(FSharpList<EXPRESSION> raw_args)
             {
@@ -874,7 +867,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 foreach (EXPRESSION arg in raw_args)
                 {
-                    Union<Variant, InterpreterError>? res = ProcessExpression(arg);
+                    Union<InterpreterError, Variant>? res = ProcessExpression(arg);
 
                     if (res.Is(out Variant value))
                         arguments[i++] = value;
@@ -889,7 +882,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 case FUNCCALL_EXPRESSION.DirectFunctionCall { Item1: { Item: string func_name }, Item2: var raw_args }:
                     if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
-                        return ProcessRawArguments(raw_args).Match<Union<Variant, InterpreterError>>(args => Call(func, args), err => err);
+                        return ProcessRawArguments(raw_args).Match<Union<InterpreterError, Variant>>(args => Call(func, args), err => err);
                     else
                         return WellKnownError("error.unresolved_func", func_name);
                 case FUNCCALL_EXPRESSION.MemberCall member_call:
@@ -899,7 +892,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.not_yet_implemented", funccall);
         }
 
-        private Union<Variant, InterpreterError> ProcessMacro(MACRO macro)
+        private Union<InterpreterError, Variant> ProcessMacro(MACRO macro)
         {
             string name = macro.Name;
 
@@ -910,7 +903,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.unknown_macro", macro.Name);
         }
 
-        private Union<Variant, InterpreterError> ProcessVariable(VARIABLE variable)
+        private Union<InterpreterError, Variant> ProcessVariable(VARIABLE variable)
         {
             if (variable == VARIABLE.Discard)
                 return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, FrameworkMacros.MACRO_DISCARD);

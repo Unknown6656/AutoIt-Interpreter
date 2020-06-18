@@ -94,7 +94,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                InterpreterResult result = thread.Start(entry_point, args).Match(success => new InterpreterResult((int)success.ToNumber()), error => new InterpreterResult(-1, error));
+                InterpreterResult result = thread.Start(entry_point, args).Match(error => new InterpreterResult(-1, error), success => new InterpreterResult((int)success.ToNumber()));
 
                 ExitCode = result.ProgramExitCode;
 
@@ -109,8 +109,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
 
-        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, ScriptScanningOptions.IncludeOnce | ScriptScanningOptions.RelativePath)
-                                                                  .Match(err => new InterpreterResult(-1, err), Run);
+        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, true).Match(err => new InterpreterResult(-1, err), Run);
 
         public static InterpreterResult Run(CommandLineOptions opt)
         {
