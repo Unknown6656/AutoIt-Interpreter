@@ -365,6 +365,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsGlobalScope => Parent is null;
 
+        public string InternalName { get; }
+
+        public CallFrame? CallFrame { get; }
+
         public Interpreter Interpreter { get; }
 
         public VariableScope? Parent { get; }
@@ -372,11 +376,13 @@ namespace Unknown6656.AutoIt3.Runtime
         public VariableScope GlobalRoot { get; }
 
 
-        private VariableScope(Interpreter interpreter, VariableScope? parent)
+        private VariableScope(Interpreter interpreter, CallFrame? frame, VariableScope? parent)
         {
-            Interpreter = interpreter;
             Parent = parent;
+            CallFrame = frame;
+            Interpreter = interpreter;
             GlobalRoot = parent?.GlobalRoot ?? this;
+            InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction.Name.ToLowerInvariant() ?? "::"}-{parent._children.Count}";
         }
 
         public void Dispose()
@@ -388,7 +394,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        public override string ToString() => $"{(IsGlobalScope ? "(Global) " : "")}{_variables.Count} Variables, {_children.Count} Child scopes";
+        public override string ToString() => $"\"{InternalName}\"{(IsGlobalScope ? " (global)" : "")}: {_variables.Count} Variables, {_children.Count} Child scopes";
 
         public Variable CreateVariable(SourceLocation location, string name, bool isConst)
         {
@@ -444,9 +450,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 p.DestroyAllVariables(recursive);
         }
 
-        public VariableScope CreateChildScope()
+        public VariableScope CreateChildScope(CallFrame target)
         {
-            VariableScope res = new VariableScope(Interpreter, this);
+            VariableScope res = new VariableScope(Interpreter, target, this);
 
             while (!_children.TryAdd(res, default))
                 ;
@@ -454,6 +460,6 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null);
+        public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null, null);
     }
 }

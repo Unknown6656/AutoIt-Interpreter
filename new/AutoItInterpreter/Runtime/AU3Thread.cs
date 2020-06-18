@@ -167,10 +167,10 @@ namespace Unknown6656.AutoIt3.Runtime
             CurrentThread = thread;
             CallerFrame = caller;
             CurrentFunction = function;
+            PassedArguments = args;
 
             // TODO : the following line is wrong - it should be interpreter as parent, not the previous frame
-            VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope();
-            PassedArguments = args;
+            VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope(this);
         }
 
         public void Dispose() => VariableResolver.Dispose();

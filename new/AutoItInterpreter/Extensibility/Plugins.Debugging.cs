@@ -1,4 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using Unknown6656.AutoIt3.Runtime;
@@ -14,10 +18,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
             ProvidedNativeFunction.Create(nameof(DebugVar), 1, DebugVar),
             ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
-            // TODO : debug all vars
-            // TODO : debug all threads
-            // TODO : debug current thread
-            // TODO : debug 
+            ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
+            ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
+            ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
         };
 
 
@@ -33,9 +36,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             if (args[0].AssignedTo is Variable var)
                 sb.Append($@"${var.Name} : {{
-    Value:         {var.Value}
+    Value:         {var.Value.ToString().Trim()}
     Type:          {var.Value.Type}
-    Raw Data:      ""{var.Value.RawData}"" ({var.Value.RawData?.GetType() ?? typeof(void)})
+    Raw Data:      ""{var.Value.RawData?.ToString().Trim()}"" ({var.Value.RawData?.GetType() ?? typeof(void)})
     Is Constant:   {var.IsConst}
     Is Global:     {var.IsGlobal}
     Decl.Location: {var.DeclaredLocation}
@@ -43,9 +46,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 ");
             else
                 sb.Append($@"<unknown> : {{
-    Value:         {args[0]}
+    Value:         {args[0].ToString().Trim()}
     Type:          {args[0].Type}
-    Raw Data:      ""{args[0].RawData}"" ({args[0].RawData?.GetType() ?? typeof(void)})
+    Raw Data:      ""{args[0].RawData?.ToString().Trim()}"" ({args[0].RawData?.GetType() ?? typeof(void)})
 ");
 
             if (args[0].ReferencedVariable is Variable @ref)
@@ -108,9 +111,95 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Null;
         }
 
-        private static Union<Variant, InterpreterError> TODO(CallFrame frame, Variant[] args)
+        private static Union<Variant, InterpreterError> DebugThread(CallFrame frame, Variant[] _)
         {
+            StringBuilder sb = new StringBuilder();
+            AU3Thread thread = frame.CurrentThread;
+
+            sb.Append($@"Thread 0x{thread.ThreadID:x4} : {{
+    ID:             {thread.ThreadID}
+    Is Disposed:    {thread.IsDisposed}
+    Is Main thread: {thread.IsMainThread}
+    Is Running:     {thread.IsRunning}
+    Callstack:      {0} Frames");
+            CallFrame? cf = frame;
+            int idx = 0;
+
+            while (cf is { })
+            {
+                sb.Append($@"
+        {++idx} : {{
+            Location:  {cf}
+            Function:  {cf.CurrentFunction}
+            Arguments: {string.Join<Variant>(", ", cf.PassedArguments)}
+        }}");
+
+                cf = cf.CallerFrame;
+            }
+
+            sb.AppendLine("\n}");
+
+            frame.Print(sb);
+
             return Variant.Null;
+        }
+
+        private static Union<Variant, InterpreterError> DebugAllVars(CallFrame frame, Variant[] _)
+        {
+            Union<Variant, InterpreterError> result;
+            StringBuilder sb = new StringBuilder();
+            List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            int count;
+
+            do
+            {
+                count = scopes.Count;
+
+                foreach (VariableScope scope in from indexed in scopes.ToArray()
+                                                from s in indexed.ChildScopes
+                                                where !scopes.Contains(s)
+                                                select s)
+                    scopes.Add(scope);
+            }
+            while (count != scopes.Count);
+
+            foreach (VariableScope scope in scopes)
+            {
+                sb.Append($@"{scope.InternalName} : {{
+    Call frame:     {scope.CallFrame}
+    Function:       {scope.CallFrame?.CurrentFunction}
+    Is global:      {scope.IsGlobalScope}
+    Parent scope:   {scope.Parent}
+    Child sopes:    {scope.ChildScopes.Length}
+");
+                foreach (var child in scope.ChildScopes)
+                    sb.AppendLine($"      - {child}");
+
+                sb.AppendLine($"    Variable count: {scope.LocalVariables.Length}\n    Variables:");
+
+                foreach (Variable global in scope.LocalVariables)
+                {
+                    result = DebugVar(frame, new Variant[] { global.Value, 2 });
+
+                    if (result.Is<InterpreterError>())
+                        return result;
+                    else if (result.Is(out Variant value))
+                        sb.AppendLine("      - " + value.ToString().Trim());
+                }
+
+                sb.AppendLine("}");
+            }
+
+            frame.Print(sb);
+
+            return Variant.Zero;
+        }
+
+        private static Union<Variant, InterpreterError> DebugAllThreads(CallFrame frame, Variant[] _)
+        {
+            // TODO
+
+            return Variant.Zero;
         }
     }
 }

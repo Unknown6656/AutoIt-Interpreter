@@ -1,14 +1,12 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
-ConsoleWrite(@logonserver)
-exit
-
 
 $x = "X"
 $y = "Y"
 ConsoleWrite($x & " " & $y & @CRLF)
 swap($x,$y)
 ConsoleWrite($x & " " & $y & @CRLF)
+
 
 Func Swap(ByRef $vVar1, ByRef $vVar2)
    ; DebugVar($vVar1)
@@ -17,6 +15,8 @@ Func Swap(ByRef $vVar1, ByRef $vVar2)
    Local $vTemp = $vVar1
    $vVar1 = $vVar2
    $vVar2 = $vTemp
+
+DebugAllVars()
 EndFunc
 
 
