@@ -43,7 +43,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             PrintInterpreterMessage(PluginLoader.LoadedPlugins.Count switch {
                 0 => CurrentLanguage["general.no_plugins_loaded"],
-                int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName],
+                int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount],
             });
 
             ScriptScanner.ScanNativeFunctions();

@@ -436,9 +436,17 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     string optval = m.Groups["value"].Value;
 
+                    if (string.IsNullOrWhiteSpace(optval))
+                        optval = "0";
 
+                    Union<Variant, InterpreterError> result = ProcessExpressionString(optval);
 
-                    throw new NotImplementedException();
+                    if (result.Is(out Variant value))
+                        Return(value);
+                    else
+                        return (InterpreterError)result;
+
+                    return InterpreterResult.OK;
                 },
                 [@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
                 {

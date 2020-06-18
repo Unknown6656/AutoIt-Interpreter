@@ -15,8 +15,8 @@
             "unknown": "unknown",
             "langpack_found": "{0} language pack(s) found.",
             "loaded_langpack": "Loaded language pack: {0}",
-            "no_plugins_loaded": "No plugins have been loaded.",
-            "plugins_loaded": "{0} plugins have been loaded from the directory '{1}'."
+            "no_plugins_loaded": "No plugin files have been loaded.",
+            "plugins_loaded": "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
         },
         "error": {
             "error_in": "ERROR in {0}",

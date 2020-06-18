@@ -11,431 +11,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
-            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), (0, 1), ConsoleWriteLine),
+            ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
-            ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
-            /*
-https://www.autoitscript.com/autoit3/docs/functions/
-ACos.htm
-ASin.htm
-ATan.htm
-Abs.htm
-AdlibRegister.htm
-AdlibUnRegister.htm
-Asc.htm
-AscW.htm
-Assign.htm
-AutoItSetOption.htm
-AutoItWinGetTitle.htm
-AutoItWinSetTitle.htm
-Beep.htm
-Binary.htm
-BinaryLen.htm
-BinaryMid.htm
-BinaryToString.htm
-BitAND.htm
-BitNOT.htm
-BitOR.htm
-BitRotate.htm
-BitShift.htm
-BitXOR.htm
-BlockInput.htm
-Break.htm
-CDTray.htm
-Call.htm
-Ceiling.htm
-Chr.htm
-ChrW.htm
-ClipGet.htm
-ClipPut.htm
-ConsoleRead.htm
-ConsoleWrite.htm
-ConsoleWriteError.htm
-ControlClick.htm
-ControlCommand.htm
-ControlDisable.htm
-ControlEnable.htm
-ControlFocus.htm
-ControlGetFocus.htm
-ControlGetHandle.htm
-ControlGetPos.htm
-ControlGetText.htm
-ControlHide.htm
-ControlListView.htm
-ControlMove.htm
-ControlSend.htm
-ControlSetText.htm
-ControlShow.htm
-ControlTreeView.htm
-Controls
-Cos.htm
-Dec.htm
-DirCopy.htm
-DirCreate.htm
-DirGetSize.htm
-DirMove.htm
-DirRemove.htm
-DllCall.htm
-DllCallAddress.htm
-DllCallbackFree.htm
-DllCallbackGetPtr.htm
-DllCallbackRegister.htm
-DllClose.htm
-DllOpen.htm
-DllStructCreate.htm
-DllStructGetData.htm
-DllStructGetPtr.htm
-DllStructGetSize.htm
-DllStructSetData.htm
-DriveGetDrive.htm
-DriveGetFileSystem.htm
-DriveGetLabel.htm
-DriveGetSerial.htm
-DriveGetType.htm
-DriveMapAdd.htm
-DriveMapDel.htm
-DriveMapGet.htm
-DriveSetLabel.htm
-DriveSpaceFree.htm
-DriveSpaceTotal.htm
-DriveStatus.htm
-EnvGet.htm
-EnvSet.htm
-EnvUpdate.htm
-Environment
-Eval.htm
-Execute.htm
-Exp.htm
-FileChangeDir.htm
-FileClose.htm
-FileCopy.htm
-FileCreateNTFSLink.htm
-FileCreateShortcut.htm
-FileDelete.htm
-FileDirDisk
-FileExists.htm
-FileFindFirstFile.htm
-FileFindNextFile.htm
-FileFlush.htm
-FileGetAttrib.htm
-FileGetEncoding.htm
-FileGetLongName.htm
-FileGetPos.htm
-FileGetShortName.htm
-FileGetShortcut.htm
-FileGetSize.htm
-FileGetTime.htm
-FileGetVersion.htm
-FileInstall.htm
-FileMove.htm
-FileOpen.htm
-FileOpenDialog.htm
-FileRead.htm
-FileReadLine.htm
-FileReadToArray.htm
-FileRecycle.htm
-FileRecycleEmpty.htm
-FileSaveDialog.htm
-FileSelectFolder.htm
-FileSetAttrib.htm
-FileSetEnd.htm
-FileSetPos.htm
-FileSetTime.htm
-FileWrite.htm
-FileWriteLine.htm
-Floor.htm
-FtpSetProxy.htm
-FuncName.htm
-GUICreate.htm
-GUICtrlCreateAvi.htm
-GUICtrlCreateButton.htm
-GUICtrlCreateCheckbox.htm
-GUICtrlCreateCombo.htm
-GUICtrlCreateContextMenu.htm
-GUICtrlCreateDate.htm
-GUICtrlCreateDummy.htm
-GUICtrlCreateEdit.htm
-GUICtrlCreateGraphic.htm
-GUICtrlCreateGroup.htm
-GUICtrlCreateIcon.htm
-GUICtrlCreateInput.htm
-GUICtrlCreateLabel.htm
-GUICtrlCreateList.htm
-GUICtrlCreateListView.htm
-GUICtrlCreateListViewItem.htm
-GUICtrlCreate
-GUICtrlCreateMenu.htm
-GUICtrlCreateMenuItem.htm
-GUICtrlCreateMonthCal.htm
-GUICtrlCreateObj.htm
-GUICtrlCreatePic.htm
-GUICtrlCreateProgress.htm
-GUICtrlCreateRadio.htm
-GUICtrlCreateSlider.htm
-GUICtrlCreateTab.htm
-GUICtrlCreateTabItem.htm
-GUICtrlCreateTreeView.htm
-GUICtrlCreateTreeViewItem.htm
-GUICtrlCreateUpdown.htm
-GUICtrlDelete.htm
-GUICtrlGetHandle.htm
-GUICtrlGetState.htm
-GUICtrlRead.htm
-GUICtrlRecvMsg.htm
-GUICtrlRegisterListViewSort.htm
-GUICtrlSendMsg.htm
-GUICtrlSendToDummy.htm
-GUICtrlSetBkColor.htm
-GUICtrlSetColor.htm
-GUICtrlSetCursor.htm
-GUICtrlSetData.htm
-GUICtrlSetDefBkColor.htm
-GUICtrlSetDefColor.htm
-GUICtrlSetFont.htm
-GUICtrlSetGraphic.htm
-GUICtrlSetImage.htm
-GUICtrlSetLimit.htm
-GUICtrlSetOnEvent.htm
-GUICtrlSetPos.htm
-GUICtrlSetResizing.htm
-GUICtrlSetState.htm
-GUICtrlSetStyle.htm
-GUICtrlSetTip.htm
-GUICtrlUpdate
-GUIDelete.htm
-GUIGetCursorInfo.htm
-GUIGetMsg.htm
-GUIGetStyle.htm
-GUI
-GUIRegisterMsg.htm
-GUISetAccelerators.htm
-GUISetBkColor.htm
-GUISetCoord.htm
-GUISetCursor.htm
-GUISetFont.htm
-GUISetHelp.htm
-GUISetIcon.htm
-GUISetOnEvent.htm
-GUISetParameters
-GUISetState.htm
-GUISetStyle.htm
-GUIStartGroup.htm
-GUISwitch.htm
-GraphicSound
-HWnd.htm
-Hex.htm
-HotKeySet.htm
-HttpSetProxy.htm
-HttpSetUserAgent.htm
-InetClose.htm
-InetGet.htm
-InetGetInfo.htm
-InetGetSize.htm
-InetRead.htm
-IniDelete.htm
-IniRead.htm
-IniReadSection.htm
-IniReadSectionNames.htm
-IniRenameSection.htm
-IniWrite.htm
-IniWriteSection.htm
-InputBox.htm
-Int.htm
-IsAdmin.htm
-IsArray.htm
-IsBinary.htm
-IsBool.htm
-IsDeclared.htm
-IsDllStruct.htm
-IsFloat.htm
-IsFunc.htm
-IsHWnd.htm
-IsInt.htm
-IsKeyword.htm
-IsNumber.htm
-IsObj.htm
-IsPtr.htm
-IsString.htm
-Keyboard
-Log.htm
-Math
-MemGetStats.htm
-MessageBoxesDialogs
-Misc
-Mod.htm
-MouseClick.htm
-MouseClickDrag.htm
-MouseDown.htm
-MouseGetCursor.htm
-MouseGetPos.htm
-Mouse
-MouseMove.htm
-MouseUp.htm
-MouseWheel.htm
-MsgBox.htm
-Network
-Number.htm
-ObjCOM
-ObjCreate.htm
-ObjCreateInterface.htm
-ObjEvent.htm
-ObjGet.htm
-ObjName.htm
-OnAutoItExitRegister.htm
-OnAutoItExitUnRegister.htm
-Ping.htm
-PixelChecksum.htm
-PixelGetColor.htm
-PixelSearch.htm
-ProcessClose.htm
-ProcessExists.htm
-ProcessGetStats.htm
-ProcessList.htm
-Process
-ProcessSetPriority.htm
-ProcessWait.htm
-ProcessWaitClose.htm
-ProgressOff.htm
-ProgressOn.htm
-ProgressSet.htm
-Ptr.htm
-Random.htm
-RegDelete.htm
-RegEnumKey.htm
-RegEnumVal.htm
-RegRead.htm
-RegWrite.htm
-Registry
-Round.htm
-Run.htm
-RunAs.htm
-RunAsWait.htm
-RunWait.htm
-SRandom.htm
-Send.htm
-SendKeepActive.htm
-SetError.htm
-SetExtended.htm
-ShellExecute.htm
-ShellExecuteWait.htm
-Shutdown.htm
-Sin.htm
-Sleep.htm
-SoundPlay.htm
-SoundSetWaveVolume.htm
-SplashImageOn.htm
-SplashOff.htm
-SplashTextOn.htm
-Sqrt.htm
-StatusbarGetText.htm
-StderrRead.htm
-StdinWrite.htm
-StdioClose.htm
-StdoutRead.htm
-String.htm
-StringAddCR.htm
-StringCompare.htm
-StringFormat.htm
-StringFromASCIIArray.htm
-StringInStr.htm
-StringIsASCII.htm
-StringIsAlNum.htm
-StringIsAlpha.htm
-StringIsDigit.htm
-StringIsFloat.htm
-StringIsInt.htm
-StringIsLower.htm
-StringIsSpace.htm
-StringIsUpper.htm
-StringIsXDigit.htm
-StringLeft.htm
-StringLen.htm
-StringLower.htm
-String
-StringMid.htm
-StringRegExp.htm
-StringRegExpReplace.htm
-StringReplace.htm
-StringReverse.htm
-StringRight.htm
-StringSplit.htm
-StringStripCR.htm
-StringStripWS.htm
-StringToASCIIArray.htm
-StringToBinary.htm
-StringTrimLeft.htm
-StringTrimRight.htm
-StringUpper.htm
-TCPAccept.htm
-TCPCloseSocket.htm
-TCPConnect.htm
-TCPListen.htm
-TCPNameToIP.htm
-TCPRecv.htm
-TCPSend.htm
-TCPShutdown.htm
-TCPStartup.htm
-Tan.htm
-TimerDelay
-TimerDiff.htm
-TimerInit.htm
-ToolTip.htm
-TrayCreateItem.htm
-TrayCreateMenu.htm
-TrayGetMsg.htm
-TrayItemDelete.htm
-TrayItemGetHandle.htm
-TrayItemGetState.htm
-TrayItemGetText.htm
-TrayItemSetOnEvent.htm
-TrayItemSetState.htm
-TrayItemSetText.htm
-Tray
-TraySetClick.htm
-TraySetIcon.htm
-TraySetOnEvent.htm
-TraySetPauseIcon.htm
-TraySetState.htm
-TraySetToolTip.htm
-TrayTip.htm
-UBound.htm
-UDPBind.htm
-UDPCloseSocket.htm
-UDPOpen.htm
-UDPRecv.htm
-UDPSend.htm
-VarConv
-VarGetType.htm
-WinActivate.htm
-WinActive.htm
-WinClose.htm
-WinExists.htm
-WinFlash.htm
-WinGetCaretPos.htm
-WinGetClassList.htm
-WinGetClientSize.htm
-WinGetHandle.htm
-WinGetPos.htm
-WinGetProcess.htm
-WinGetState.htm
-WinGetText.htm
-WinGetTitle.htm
-WinKill.htm
-WinList.htm
-WinMenuSelectItem.htm
-WinMinimizeAll.htm
-WinMinimizeAllUndo.htm
-WinMove.htm
-WinSetOnTop.htm
-WinSetState.htm
-WinSetTitle.htm
-WinSetTrans.htm
-WinWait.htm
-WinWaitActive.htm
-WinWaitClose.htm
-WinWaitNotActive.htm
-Window
-             */
         };
 
 
@@ -444,20 +21,25 @@ Window
         {
         }
 
-        private static Union<Variant, InterpreterError> ConsoleWrite(CallFrame frame, Variant[] args)
+        public static Union<Variant, InterpreterError> ConsoleWriteError(CallFrame frame, Variant[] args)
+        {
+            string s = args[0].ToString();
+
+            Console.Error.Write(s);
+
+            return Variant.FromNumber(s.Length);
+        }
+
+        public static Union<Variant, InterpreterError> ConsoleWrite(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
             frame.Print(s);
 
-            return Variant.FromString(s);
+            return Variant.FromNumber(s.Length);
         }
 
-        private static Union<Variant, InterpreterError> ConsoleWriteLine(CallFrame frame, Variant[] args) => ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
-
-        private static Union<Variant, InterpreterError> ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
-
-        private static Union<Variant, InterpreterError> ConsoleRead(CallFrame frame, Variant[] args)
+        public static Union<Variant, InterpreterError> ConsoleRead(CallFrame frame, Variant[] args)
         {
             bool peek = args[0].ToBoolean();
             bool binary = args[1].ToBoolean();
@@ -466,5 +48,26 @@ Window
 
             return null;
         }
+    }
+
+    public sealed class AdditionalFunctions
+        : AbstractFunctionProvider
+    {
+        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
+        {
+            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), (0, 1), ConsoleWriteLine),
+            ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
+        };
+
+
+        public AdditionalFunctions(Interpreter interpreter)
+            : base(interpreter)
+        {
+        }
+
+        public static Union<Variant, InterpreterError> ConsoleWriteLine(CallFrame frame, Variant[] args) => 
+            FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
+
+        public static Union<Variant, InterpreterError> ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
     }
 }

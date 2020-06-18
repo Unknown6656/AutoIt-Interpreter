@@ -62,7 +62,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 dir.Create();
         }
 
-        public override string ToString() => $"{_plugin_files.Count} plugins in \"{PluginDirectory.FullName}\" ({PluginModuleCount} modules)";
+        public override string ToString() => $"{_plugin_files.Count} plugin files found in \"{PluginDirectory.FullName}\" ({PluginModuleCount} modules)";
 
         public void ClearLoadedPlugins()
         {
