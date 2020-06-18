@@ -3,10 +3,18 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 
 
 dim $i = 5
-do
+while $i
    ConsoleWriteLine($i)
+
+
+   dim $j = 2
+   while $j
+	  ConsoleWriteLine(" `- " & $j)
+	  $j -= 1
+   wend
+
    $i -= 1
-until Not $i
+wend
 exit
 
 

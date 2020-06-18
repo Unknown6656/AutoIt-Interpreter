@@ -15,6 +15,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using System.Reflection.Metadata;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -315,11 +316,21 @@ namespace Unknown6656.AutoIt3.Runtime
                 return false;
         }
 
-        private bool MoveTo(SourceLocation closest_location)
+        private bool MoveAfter(SourceLocation closest_location)
         {
             _instruction_pointer = (from ln in _line_cache.WithIndex()
-                                    where ln.Item.LineLocation >= closest_location
+                                    let loc = ln.Item.LineLocation
+                                    where loc >= closest_location
+                                    orderby loc ascending
                                     select ln.Index).FirstOrDefault();
+
+            return _instruction_pointer < _line_cache.Length;
+        }
+
+        private bool MoveBefore(SourceLocation closest_location)
+        {
+            MoveAfter(closest_location);
+            --_instruction_pointer;
 
             return _instruction_pointer < _line_cache.Length;
         }
@@ -443,11 +454,22 @@ namespace Unknown6656.AutoIt3.Runtime
         //    return null;
         //}
 
+        private const string REGEX_WHILE = /*language=regex*/@"^while\s+(?<expression>.+)$";
+        private const string REGEX_WEND = /*language=regex*/@"^wend$";
+        private const string REGEX_EXIT = /*language=regex*/@"^exit(\b\s*(?<code>.+))?$";
+        private const string REGEX_RETURN = /*language=regex*/@"^return(\b\s*(?<value>.+))?$";
+        private const string REGEX_FORTO = /*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$";
+        private const string REGEX_FORIN = /*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$";
+        private const string REGEX_WITH = /*language=regex*/@"^with\s+(?<expression>.+)$";
+        private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
+        private const string REGEX_DO = /*language=regex*/@"^do$";
+        private const string REGEX_UNTIL = /*language=regex*/@"^until\s+(?<expression>.+)$";
+
         private InterpreterResult? ProcessStatement(string line)
         {
             InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
             {
-                [/*language=regex*/@"^exit(\b\s*(?<code>.+))?$"] = m =>
+                [REGEX_EXIT] = m =>
                 {
                     string code = m.Groups["code"].Value;
 
@@ -465,7 +487,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         return (InterpreterError)result;
                 },
-                [/*language=regex*/@"^return(\b\s*(?<value>.+))?$"] = m =>
+                [REGEX_RETURN] = m =>
                 {
                     if (CurrentFunction.IsMainFunction)
                         return WellKnownError("error.invalid_return");
@@ -484,25 +506,25 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return InterpreterResult.OK;
                 },
-                [/*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
+                [REGEX_FORTO] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [/*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$"] = m =>
+                [REGEX_FORIN] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [/*language=regex*/@"^with\s+(?<expression>.+)$"] = m =>
+                [REGEX_WITH] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [/*language=regex*/@"^redim\s+(?<expression>.+)$"] = m =>
+                [REGEX_REDIM] = m =>
                 {
                     throw new NotImplementedException();
                 },
 
-                [/*language=regex*/@"^do$"] = _ => PushBlockStatement(BlockStatementType.Do),
-                [/*language=regex*/@"^until\s+(?<expression>.+)$"] = m =>
+                [REGEX_DO] = _ => PushBlockStatement(BlockStatementType.Do),
+                [REGEX_UNTIL] = m =>
                 {
                     _blockstatement_stack.TryPeek(out (BlockStatementType type, SourceLocation loc) topmost);
 
@@ -514,15 +536,39 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (result.Is(out InterpreterError error))
                         return error;
                     else if (!result.As<Variant>().ToBoolean())
-                        MoveTo(topmost.loc);
+                        MoveAfter(topmost.loc);
                     else
                         _blockstatement_stack.TryPop(out _);
 
                     return InterpreterResult.OK;
-                }
+                },
+                [REGEX_WHILE] = m =>
+                {
+                    Union<InterpreterError, Variant> result = ProcessExpressionString(m.Groups["expression"].Value);
+
+                    if (result.Is(out InterpreterError error))
+                        return error;
+
+                    if (!result.As<Variant>().ToBoolean())
+                        return ScanToEndOf(BlockStatementType.While);
+                    else
+                        PushBlockStatement(BlockStatementType.While);
+
+                    return InterpreterResult.OK;
+                },
+                [REGEX_WEND] = _ =>
+                {
+                    _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) topmost);
+
+                    if (topmost.type != BlockStatementType.While)
+                        return WellKnownError("error.unexpected_wend");
+
+                    MoveBefore(topmost.loc);
+
+                    return InterpreterResult.OK;
+                },
 
                 //[/*language=regex*/@"^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
-                //[/*language=regex*/@"^wend$"] = _ => PopBlockStatement(BlockStatementType.While),
                 //[/*language=regex*/@"^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
@@ -560,6 +606,32 @@ namespace Unknown6656.AutoIt3.Runtime
                     result ??= sp.ProcessStatement(this, line);
 
             return result;
+        }
+
+        private InterpreterResult? ScanToEndOf(BlockStatementType type)
+        {
+            SourceLocation init = CurrentLocation;
+            int depth = 1;
+
+            if (type is BlockStatementType.While)
+                while (MoveNext())
+                {
+                    if (CurrentLineContent.Match(REGEX_WEND, out Match _))
+                        --depth;
+                    else if (CurrentLineContent.Match(REGEX_WHILE, out Match _))
+                        ++depth;
+
+                    if (depth == 0)
+                        return InterpreterResult.OK;
+                }
+
+            // TODO : other block types
+
+            if (depth != 0)
+                return WellKnownError("error.no_matching_close", type, init);
+            else
+                return WellKnownError("error.not_yet_implemented", type);
+
         }
 
         private InterpreterError? ProcessExpressionStatement(string line)
