@@ -42,6 +42,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public VariableScope CurrentVariableResolver => CurrentFrame?.VariableResolver ?? Interpreter.VariableResolver;
 
+        public CallFrame[] CallStack => CurrentFrame.Propagate(frame => (frame?.CallerFrame, frame is { })).ToArrayWhere(frame => frame is { })!;
+
         public bool IsDisposed { get; private set; }
 
         public bool IsMainThread => ReferenceEquals(this, Interpreter.MainThread);
@@ -313,6 +315,15 @@ namespace Unknown6656.AutoIt3.Runtime
                 return false;
         }
 
+        private bool MoveTo(SourceLocation closest_location)
+        {
+            _instruction_pointer = (from ln in _line_cache.WithIndex()
+                                    where ln.Item.LineLocation >= closest_location
+                                    select ln.Index).FirstOrDefault();
+
+            return _instruction_pointer < _line_cache.Length;
+        }
+
         /// <summary>
         /// Copies the given value into the <see cref="CallFrame.ReturnValue"/>-field, and moves the instruction pointer to the end.
         /// </summary>
@@ -351,7 +362,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            if (directive.Match(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
+            if (directive.Match(/*language=regex*/@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
             {
                 char open = g["open"][0];
                 char close = g["close"][0];
@@ -362,10 +373,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script =>
                 {
-                    if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
-                        return err;
+                    ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
 
-                    return null;
+                    if (active.Contains(script))
+                    {
+                        if (script.IncludeOnlyOnce)
+                            return InterpreterResult.OK;
+                        else
+                            return WellKnownError("error.circular_include", script.Location.FullName);
+                    }
+                    else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
+                        return err;
+                    else
+                        return InterpreterResult.OK;
                 });
             }
 
@@ -383,33 +403,51 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         // TODO
-        private readonly ConcurrentStack<(BlockStatementType, SourceLocation)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
-        private Variable? _current_with_context;
+        private readonly ConcurrentStack<(BlockStatementType BlockType, SourceLocation Location)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
+        private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
 
 
 
-        private void PushBlockStatement(BlockStatementType statement) => _blockstatement_stack.Push((statement, CurrentLocation));
-
-        private InterpreterError? PopBlockStatement(params BlockStatementType[] accepted)
+        private InterpreterResult PushBlockStatement(BlockStatementType statement)
         {
-            if (accepted.Length == 0)
-                _blockstatement_stack.TryPop(out _);
-            else
-            {
-                _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
+            _blockstatement_stack.Push((statement, CurrentLocation));
 
-                if (!accepted.Contains(statement.type))
-                    return WellKnownError("error.no_matching_close", statement.type, statement.loc);
-            }
+            return InterpreterResult.OK;
+        }
+
+        private InterpreterError? ExpectBlockStatementType(params BlockStatementType[] expected)
+        {
+            if (expected.Length == 0)
+                return null;
+
+            _blockstatement_stack.TryPeek(out (BlockStatementType type, SourceLocation) statement);
+
+            if (!expected.Contains(statement.type))
+                return WellKnownError("error.expected_statement_block", statement.type, string.Join(", ", expected));
 
             return null;
         }
+
+        //private InterpreterError? PopBlockStatement(params BlockStatementType[] accepted)
+        //{
+        //    if (accepted.Length == 0)
+        //        _blockstatement_stack.TryPop(out _);
+        //    else
+        //    {
+        //        _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
+
+        //        if (!accepted.Contains(statement.type))
+        //            return WellKnownError("error.no_matching_close", statement.type, statement.loc);
+        //    }
+
+        //    return null;
+        //}
 
         private InterpreterResult? ProcessStatement(string line)
         {
             InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
             {
-                [@"^exit(\b\s*(?<code>.+))?$"] = m =>
+                [/*language=regex*/@"^exit(\b\s*(?<code>.+))?$"] = m =>
                 {
                     string code = m.Groups["code"].Value;
 
@@ -427,7 +465,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         return (InterpreterError)result;
                 },
-                [@"^return(\b\s*(?<value>.+))?$"] = m =>
+                [/*language=regex*/@"^return(\b\s*(?<value>.+))?$"] = m =>
                 {
                     if (CurrentFunction.IsMainFunction)
                         return WellKnownError("error.invalid_return");
@@ -446,54 +484,73 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return InterpreterResult.OK;
                 },
-                [@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
+                [/*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$"] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$"] = m =>
+                [/*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$"] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [@"^with\s+(?<expression>.+)$"] = m =>
+                [/*language=regex*/@"^with\s+(?<expression>.+)$"] = m =>
                 {
                     throw new NotImplementedException();
                 },
-                [@"^redim\s+(?<expression>.+)$"] = m =>
+                [/*language=regex*/@"^redim\s+(?<expression>.+)$"] = m =>
                 {
                     throw new NotImplementedException();
                 },
 
-                ["^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
-                ["^wend$"] = _ => PopBlockStatement(BlockStatementType.While),
-                ["^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
-                ["^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
-                ["^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
-
-                [@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+                [/*language=regex*/@"^do$"] = _ => PushBlockStatement(BlockStatementType.Do),
+                [/*language=regex*/@"^until\s+(?<expression>.+)$"] = m =>
                 {
-                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-                    InterpreterResult? result = InterpreterResult.OK;
+                    _blockstatement_stack.TryPeek(out (BlockStatementType type, SourceLocation loc) topmost);
 
-                    while (level-- > 1)
-                        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
+                    if (topmost.type != BlockStatementType.Do)
+                        return WellKnownError("error.unexpected_until");
 
-                    // TODO : continue
+                    Union<InterpreterError, Variant> result = ProcessExpressionString(m.Groups["expression"].Value);
 
+                    if (result.Is(out InterpreterError error))
+                        return error;
+                    else if (!result.As<Variant>().ToBoolean())
+                        MoveTo(topmost.loc);
+                    else
+                        _blockstatement_stack.TryPop(out _);
 
-                    throw new NotImplementedException();
-                },
-                [@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-                {
-                    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-                    InterpreterResult? result = InterpreterResult.OK;
+                    return InterpreterResult.OK;
+                }
 
-                    while (level-- > 0)
-                        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
-
-                    throw new NotImplementedException();
-
-                    return result;
-                },
+                //[/*language=regex*/@"^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
+                //[/*language=regex*/@"^wend$"] = _ => PopBlockStatement(BlockStatementType.While),
+                //[/*language=regex*/@"^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
+                //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
+                //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
+                //[/*language=regex*/@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
+                //{
+                //    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+                //    InterpreterResult? result = InterpreterResult.OK;
+                //
+                //    while (level-- > 1)
+                //        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
+                //
+                //    // TODO : continue
+                //
+                //
+                //    throw new NotImplementedException();
+                //},
+                //[/*language=regex*/@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
+                //{
+                //    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
+                //    InterpreterResult? result = InterpreterResult.OK;
+                //
+                //    while (level-- > 0)
+                //        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
+                //
+                //    throw new NotImplementedException();
+                //
+                //    return result;
+                //},
             });
 
             // TODO
@@ -771,7 +828,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     result = +value;
                 else if (op.IsNegate)
                     result = -value;
-                else if (op.IsNegate)
+                else if (op.IsNot)
                     result = !value;
                 else
                     result = WellKnownError("error.unsupported_operator", op);

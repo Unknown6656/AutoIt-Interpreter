@@ -28,6 +28,10 @@ namespace Unknown6656.AutoIt3.Runtime
         };
 
 
+        public ScannedScript[] ActiveScripts => (from thread in Interpreter.Threads
+                                                 from frame in thread.CallStack
+                                                 select frame.CurrentFunction.Script).Distinct().ToArray();
+
         public Interpreter Interpreter { get; }
 
 
@@ -84,7 +88,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return file;
             }
 
-            if (relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
+            if (!relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
                 return file;
 
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);

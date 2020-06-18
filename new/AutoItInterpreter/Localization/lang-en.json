@@ -59,6 +59,8 @@
             "unsupported_operator": "The operator '{0}' is not supported.",
             "constant_passed_as_ref": "The constant variable '{0}' cannot be passed as 'ByRef'-argument (argument no. {1}).",
             "invalid_return": "The 'Return'-statement is not supported in the global scope. If you wish to terminate the program, use the 'Exit'-statement instead.",
+            "circular_include": "Including the script '{0}' would result in a circular dependency.",
+            "unexpected_until": "The statement 'Until' can only be used in combination with a previously opened 'Do'-statement.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

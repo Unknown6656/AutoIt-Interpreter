@@ -1,21 +1,13 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
 
-$x = "X"
-$y = "Y"
-ConsoleWrite($x & " " & $y & @CRLF)
-swap($x,$y)
-ConsoleWrite($x & " " & $y & @CRLF)
 
-
-Func Swap(ByRef $vVar1, ByRef $vVar2)
-   Local $vTemp = $vVar1
-   $vVar1 = $vVar2
-   $vVar2 = $vTemp
-EndFunc
-
-#include <L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3>
-
+dim $i = 5
+do
+   ConsoleWriteLine($i)
+   $i -= 1
+until Not $i
+exit
 
 
 local $xl = ObjCreate("Excel.Application")
@@ -25,8 +17,7 @@ With $xl
    ;EndWith
     MsgBox(0, "", "msg")
 EndWith
-
-Exit 9
+Exit
 
 
 

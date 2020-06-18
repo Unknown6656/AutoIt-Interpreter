@@ -109,7 +109,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
 
-        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, true).Match(err => new InterpreterResult(-1, err), Run);
+        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
 
         public static InterpreterResult Run(CommandLineOptions opt)
         {
