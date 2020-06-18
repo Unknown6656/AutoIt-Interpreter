@@ -28,8 +28,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public unsafe override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
         {
-            bool is_unix = Environment.OSVersion.Platform is PlatformID.Unix or PlatformID.MacOSX;
-            SourceLocation location = frame.CurrentThread.CurrentLocation ?? Interpreter.MainThread.CurrentLocation ?? SourceLocation.Unknown;
+            SourceLocation location = frame.CurrentThread.CurrentLocation ?? Interpreter.MainThread?.CurrentLocation ?? SourceLocation.Unknown;
 
             value = name.ToLowerInvariant() switch
             {
@@ -42,7 +41,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "commonfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
                 "compiled" => false,
                 "computername" => Environment.MachineName,
-                "comspec" => Environment.GetEnvironmentVariable(is_unix ? "SHELL" : "comspec"),
+                "comspec" => Environment.GetEnvironmentVariable(Interpreter.OperatingSystem == Runtime.OperatingSystem.Windows ? "comspec" : "SHELL"),
                 "cr" => "\r",
                 "crlf" => Environment.NewLine,
                 "cpuarch" or "osarch" => Environment.Is64BitOperatingSystem ? "X64" : "X86",
@@ -81,7 +80,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "sw_shownoactivate" => 4,
                 "sw_shownormal" => 1,
                 "sw_unlock" => 67,
-                "tempdir" => is_unix ? "/tmp" : Environment.GetEnvironmentVariable("temp"),
+                "tempdir" => Interpreter.OperatingSystem == Runtime.OperatingSystem.Windows ? Environment.GetEnvironmentVariable("temp") : "/tmp",
 
                 "osbuild" => Environment.OSVersion.Version.Build,
 

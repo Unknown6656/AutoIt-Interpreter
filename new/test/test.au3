@@ -4,24 +4,28 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 $x = "X"
 $y = "Y"
 ConsoleWrite($x & " " & $y & @CRLF)
-DebugVar(swap($x,$y))
+swap($x,$y)
 ConsoleWrite($x & " " & $y & @CRLF)
 
 
 Func Swap(ByRef $vVar1, ByRef $vVar2)
-   ; DebugVar($vVar1)
-   ; DebugVar($vVar2)
-
    Local $vTemp = $vVar1
    $vVar1 = $vVar2
    $vVar2 = $vTemp
-
-   Return 9
 EndFunc
 
 
-Exit
 
+
+local $xl = ObjCreate("Excel.Application")
+With $xl
+   .visible = 1
+   ;with $y
+   ;EndWith
+    MsgBox(0, "", "msg")
+EndWith
+
+Exit 9
 
 
 

@@ -280,22 +280,37 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant (Array? n) => FromObject(n);
 
-        //public static explicit operator bool (Variant v) => ;
-        //public static explicit operator sbyte (Variant v) => ;
-        //public static explicit operator byte (Variant v) => ;
-        //public static explicit operator short (Variant v) => ;
-        //public static explicit operator ushort (Variant v) => ;
-        //public static explicit operator int (Variant v) => ;
-        //public static explicit operator uint (Variant v) => ;
-        //public static explicit operator long (Variant v) => ;
-        //public static explicit operator ulong (Variant v) => ;
-        //public static explicit operator float (Variant v) => ;
-        //public static explicit operator double (Variant v) => ;
-        //public static explicit operator decimal (Variant v) => ;
-        //public static explicit operator char (Variant v) => ;
-        //public static explicit operator string (Variant v) => ;
-        //public static explicit operator StringBuilder (Variant v) => ;
-        //public static explicit operator Array (Variant v) => ;
+        public static explicit operator bool (Variant v) => v.ToBoolean();
+
+        public static explicit operator sbyte (Variant v) => (sbyte)v.ToNumber();
+
+        public static explicit operator byte (Variant v) => (byte)v.ToNumber();
+
+        public static explicit operator short (Variant v) => (short)v.ToNumber();
+
+        public static explicit operator ushort (Variant v) => (ushort)v.ToNumber();
+
+        public static explicit operator int (Variant v) => (int)v.ToNumber();
+
+        public static explicit operator uint (Variant v) => (uint)v.ToNumber();
+
+        public static explicit operator long (Variant v) => (long)v.ToNumber();
+
+        public static explicit operator ulong (Variant v) => (ulong)v.ToNumber();
+
+        public static explicit operator float (Variant v) => (float)v.ToNumber();
+
+        public static explicit operator double (Variant v) => (double)v.ToNumber();
+
+        public static explicit operator decimal (Variant v) => v.ToNumber();
+
+        public static explicit operator char (Variant v) => v.ToString().FirstOrDefault();
+
+        public static explicit operator string (Variant v) => v.ToString();
+
+        public static explicit operator StringBuilder (Variant v) => new StringBuilder(v.ToString());
+
+        // public static explicit operator Array (Variant v) => ;
     }
 
     public sealed class Variable

@@ -5,7 +5,7 @@
         <AssemblyName>incr</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Optimize>true</Optimize>
-        <OutDir>$(SolutionDir)bin</OutDir>
+        <OutDir>$(SolutionDir)bin-util</OutDir>
         <StartupObject>VersionIncrementer.Program</StartupObject>
     </PropertyGroup>
 </Project>

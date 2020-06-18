@@ -11,11 +11,19 @@ namespace Unknown6656.AutoIt3.Runtime
     using static Program;
     using static AST;
 
+
     public sealed class Interpreter
         : IDisposable
     {
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
         private readonly object _main_thread_mutex = new object();
+
+        public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
+        {
+            PlatformID.MacOSX => OperatingSystem.MacOS,
+            PlatformID.Unix => OperatingSystem.Unix,
+            _ => OperatingSystem.Windows
+        };
 
         public AU3Thread? MainThread { get; private set; }
 
@@ -145,6 +153,13 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+    }
+
+    public enum OperatingSystem
+    {
+        Windows,
+        Unix,
+        MacOS
     }
 }
 

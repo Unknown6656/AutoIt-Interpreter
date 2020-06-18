@@ -13,6 +13,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
+            ProvidedNativeFunction.Create(nameof(MsgBox), (3, 5), MsgBox),
         };
 
 
@@ -46,7 +47,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             // TODO
 
-            return null;
+            throw new NotImplementedException();
+        }
+
+        public static Union<Variant, InterpreterError> MsgBox(CallFrame frame, Variant[] args)
+        {
+            decimal flag = args[0].ToNumber();
+            string title = args[1].ToString();
+            string text = args[2].ToString();
+            decimal timeout = args[3].ToNumber();
+            decimal hwnd = args[4].ToNumber();
+
+            // TODO
+
+
+            throw new NotImplementedException();
         }
     }
 

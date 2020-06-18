@@ -25,15 +25,18 @@
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
         <AssemblyName>autoit3</AssemblyName>
     </PropertyGroup>
+    <PropertyGroup>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    </PropertyGroup>
     <ItemGroup>
-      <None Remove="Localization\lang-en.json" />
+        <None Remove="Localization\lang-en.json" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Piglet">
-          <HintPath>..\lib\Piglet.dll</HintPath>
+            <HintPath>..\lib\Piglet.dll</HintPath>
         </Reference>
         <Reference Include="Piglet.FSharp">
-          <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
+            <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
         </Reference>
         <Reference Include="unknown6656.core">
             <HintPath>..\lib\unknown6656.core.dll</HintPath>
@@ -57,22 +60,30 @@
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+        <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
     </ItemGroup>
     <ItemGroup>
-      <Compile Update="Properties\Resources.Designer.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>Resources.resx</DependentUpon>
-      </Compile>
+        <Compile Update="Properties\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
     </ItemGroup>
     <ItemGroup>
-      <EmbeddedResource Update="Properties\Resources.resx">
-        <Generator>ResXFileCodeGenerator</Generator>
-        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      </EmbeddedResource>
+        <EmbeddedResource Update="Properties\Resources.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+        <Folder Include="include\" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="include\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-        <Exec Command="dotnet &quot;$(OutDir)incr.dll&quot; &quot;$(ProjectPath)&quot;" />
+        <Exec Command="dotnet &quot;$(OutDir)../bin-util/incr.dll&quot; &quot;$(ProjectPath)&quot;" />
     </Target>
 </Project>

@@ -33,7 +33,4 @@
         <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
       </Reference>
     </ItemGroup>
-    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-        <Exec Command="dotnet &quot;$(OutDir)fsutilgen.dll&quot; &quot;$(ProjectPath)&quot;" />
-    </Target>
 </Project>

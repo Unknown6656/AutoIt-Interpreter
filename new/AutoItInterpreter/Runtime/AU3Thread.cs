@@ -391,6 +391,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         // TODO
         private readonly ConcurrentStack<(BlockStatementType, SourceLocation)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
+        private Variable? _current_with_context;
+
 
 
         private void PushBlockStatement(BlockStatementType statement) => _blockstatement_stack.Push((statement, CurrentLocation));
@@ -434,6 +436,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [@"^return(\b\s*(?<value>.+))?$"] = m =>
                 {
+                    if (CurrentFunction.IsMainFunction)
+                        return WellKnownError("error.invalid_return");
+
                     string optval = m.Groups["value"].Value;
 
                     if (string.IsNullOrWhiteSpace(optval))
