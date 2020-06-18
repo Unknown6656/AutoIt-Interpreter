@@ -233,6 +233,9 @@ namespace Unknown6656.AutoIt3.Runtime
                         curr_func.AddLine(loc, line);
                 }
 
+                if (!curr_func.IsMainFunction)
+                    return InterpreterError.WellKnown(new SourceLocation(file, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
+
                 _cached_scripts.TryAdd(key, script);
             }
 

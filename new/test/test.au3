@@ -2,19 +2,10 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 
 
 
-dim $i = 5
-while $i
-   ConsoleWriteLine($i)
+For $i = 1 To 1 Step -1
+   ConsoleWrite($i)
 
-
-   dim $j = 2
-   while $j
-	  ConsoleWriteLine(" `- " & $j)
-	  $j -= 1
-   wend
-
-   $i -= 1
-wend
+next
 exit
 
 
@@ -28,6 +19,21 @@ EndWith
 Exit
 
 
+
+
+for $a = init to stop step xxx
+next
+
+
+$a = init
+$first = false
+do
+   if not $first then
+	  $a += xxx
+   endif
+
+
+until $a == stop
 
 
 

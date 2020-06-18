@@ -411,6 +411,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => $"\"{InternalName}\"{(IsGlobalScope ? " (global)" : "")}: {_variables.Count} Variables, {_children.Count} Child scopes";
 
+        public Variable CreateTemporaryVariable() => CreateVariable(SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
+
         public Variable CreateVariable(SourceLocation location, string name, bool isConst)
         {
             if (!TryGetVariable(name, out Variable? var))

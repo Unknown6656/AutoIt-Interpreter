@@ -16,6 +16,7 @@ using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
 using System.Reflection.Metadata;
+using System.Transactions;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -238,7 +239,7 @@ namespace Unknown6656.AutoIt3.Runtime
         : CallFrame
     {
         private volatile int _instruction_pointer = 0;
-        private (SourceLocation LineLocation, string LineContent)[] _line_cache;
+        private List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
 
         public SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
@@ -249,7 +250,7 @@ namespace Unknown6656.AutoIt3.Runtime
         internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
             : base(thread, caller, function, args)
         {
-            _line_cache = function.Lines;
+            _line_cache = function.Lines.ToList();
             _instruction_pointer = 0;
         }
 
@@ -295,7 +296,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _instruction_pointer = 0;
 
-            while (_instruction_pointer < _line_cache.Length && CurrentThread.IsRunning)
+            while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
                 if (ParseCurrentLine()?.OptionalError is InterpreterError error)
                     return error;
                 else if (!MoveNext())
@@ -306,7 +307,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private bool MoveNext()
         {
-            if (_instruction_pointer < _line_cache.Length)
+            if (_instruction_pointer < _line_cache.Count)
             {
                 ++_instruction_pointer;
 
@@ -324,7 +325,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                     orderby loc ascending
                                     select ln.Index).FirstOrDefault();
 
-            return _instruction_pointer < _line_cache.Length;
+            return _instruction_pointer < _line_cache.Count;
         }
 
         private bool MoveBefore(SourceLocation closest_location)
@@ -332,7 +333,7 @@ namespace Unknown6656.AutoIt3.Runtime
             MoveAfter(closest_location);
             --_instruction_pointer;
 
-            return _instruction_pointer < _line_cache.Length;
+            return _instruction_pointer < _line_cache.Count;
         }
 
         /// <summary>
@@ -341,7 +342,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="value">Return value</param>
         public void Return(Variant value)
         {
-            _instruction_pointer = _line_cache.Length;
+            _instruction_pointer = _line_cache.Count;
             ReturnValue = value;
         }
 
@@ -416,6 +417,7 @@ namespace Unknown6656.AutoIt3.Runtime
         // TODO
         private readonly ConcurrentStack<(BlockStatementType BlockType, SourceLocation Location)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
+        private readonly ConcurrentStack<int> _forloop_eip_stack = new ConcurrentStack<int>();
 
 
 
@@ -456,9 +458,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private const string REGEX_WHILE = /*language=regex*/@"^while\s+(?<expression>.+)$";
         private const string REGEX_WEND = /*language=regex*/@"^wend$";
+        private const string REGEX_NEXT = /*language=regex*/@"^next$";
         private const string REGEX_EXIT = /*language=regex*/@"^exit(\b\s*(?<code>.+))?$";
         private const string REGEX_RETURN = /*language=regex*/@"^return(\b\s*(?<value>.+))?$";
-        private const string REGEX_FORTO = /*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+)(\s+step\s+(?<step>.+))?$";
+        private const string REGEX_FOR = /*language=regex*/@"^for\s+.+$";
+        private const string REGEX_FORTO = /*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$";
         private const string REGEX_FORIN = /*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$";
         private const string REGEX_WITH = /*language=regex*/@"^with\s+(?<expression>.+)$";
         private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
@@ -476,7 +480,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(code))
                         code = "0";
 
-                    Union<InterpreterError, Variant> result = ProcessExpressionString(code);
+                    Union<InterpreterError, Variant> result = ProcessAsVariant(code);
 
                     if (result.Is(out Variant value))
                     {
@@ -497,7 +501,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(optval))
                         optval = "0";
 
-                    Union<InterpreterError, Variant> result = ProcessExpressionString(optval);
+                    Union<InterpreterError, Variant> result = ProcessAsVariant(optval);
 
                     if (result.Is(out Variant value))
                         Return(value);
@@ -508,7 +512,62 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_FORTO] = m =>
                 {
-                    throw new NotImplementedException();
+                    Union<InterpreterError, PARSABLE_EXPRESSION> start = ProcessRawExpression(m.Groups["start"].Value);
+                    string step = m.Groups["step"].Value is { Length: > 0 } s ? s : "1";
+
+                    if (start.Is(out InterpreterError? error))
+                         return error;
+                    else if (start.UnsafeItem is PARSABLE_EXPRESSION.AnyExpression
+                    {
+                        Item: EXPRESSION.Binary
+                        {
+                            Item:
+                            {
+                                Item1: EXPRESSION.Variable { Item: VARIABLE counter },
+                                Item2: { IsEqualCaseInsensitive: true },
+                            }
+                        }
+                    } assg)
+                    {
+                        if (ProcessAssignmentStatement(assg, false).Is(out error))
+                            return error;
+
+                        SourceLocation loc_for = CurrentLocation;
+                        int eip_for = _instruction_pointer;
+                        int depth = 1;
+
+                        while (MoveNext())
+                        {
+                            if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
+                                --depth;
+                            else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
+                                ++depth;
+
+                            if (depth == 0)
+                            {
+                                string temp = '$' + VariableResolver.CreateTemporaryVariable().Name;
+
+                                _line_cache[_instruction_pointer] = (_line_cache[_instruction_pointer].LineLocation, $"Until ({counter} <> {m.Groups["stop"].Value})");
+                                _line_cache.RemoveAt(eip_for);
+                                _line_cache.InsertRange(eip_for, new[] {
+                                    (loc_for, $"{temp} = True"),
+                                    (loc_for, $"do"),
+                                    (loc_for, $"If {temp} Then"),
+                                    (loc_for, $"{temp} = False"),
+                                    (loc_for, $"Else"),
+                                    (loc_for, $"{counter} += {step}"),
+                                    (loc_for, $"EndIf"),
+                                });
+                                _instruction_pointer = eip_for - 1;
+
+                                return InterpreterResult.OK;
+                            }
+                        }
+
+                        return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
+                    }
+                    else
+                        return WellKnownError("error.malformed_for_expr", m.Groups["start"]);
                 },
                 [REGEX_FORIN] = m =>
                 {
@@ -531,7 +590,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (topmost.type != BlockStatementType.Do)
                         return WellKnownError("error.unexpected_until");
 
-                    Union<InterpreterError, Variant> result = ProcessExpressionString(m.Groups["expression"].Value);
+                    Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
 
                     if (result.Is(out InterpreterError error))
                         return error;
@@ -544,13 +603,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_WHILE] = m =>
                 {
-                    Union<InterpreterError, Variant> result = ProcessExpressionString(m.Groups["expression"].Value);
+                    Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
 
                     if (result.Is(out InterpreterError error))
                         return error;
 
                     if (!result.As<Variant>().ToBoolean())
-                        return ScanToEndOf(BlockStatementType.While);
+                        return MoveToEndOf(BlockStatementType.While);
                     else
                         PushBlockStatement(BlockStatementType.While);
 
@@ -608,7 +667,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        private InterpreterResult? ScanToEndOf(BlockStatementType type)
+        private InterpreterResult? MoveToEndOf(BlockStatementType type)
         {
             SourceLocation init = CurrentLocation;
             int depth = 1;
@@ -659,22 +718,28 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        private Union<InterpreterError, Variant> ProcessExpressionString(string expression)
+        private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessRawExpression(string expression)
         {
             try
             {
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = ParserProvider.ExpressionParser;
-                PARSABLE_EXPRESSION? expr = provider.Parse(expression).ParsedValue;
 
-                if (expr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION any })
-                    return ProcessExpression(any);
-
-                return WellKnownError("error.unparsable_line", expression);
+                return provider.Parse(expression).ParsedValue;
             }
             catch (Exception ex)
             {
                 return WellKnownError("error.unparsable_line", expression, ex.Message);
             }
+        }
+
+        private Union<InterpreterError, Variant> ProcessAsVariant(string expression)
+        {
+            Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessRawExpression(expression);
+
+            if (result.Is(out PARSABLE_EXPRESSION.AnyExpression any))
+                return ProcessExpression(any.Item);
+            else
+                return (InterpreterError?)result ?? WellKnownError("error.unparsable_line", expression);
         }
 
         private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationType declaration_type, out (char op, int amount)? enum_step)
@@ -1081,18 +1146,13 @@ namespace Unknown6656.AutoIt3.Runtime
     public enum BlockStatementType
         : int
     {
-        Global,
-        Func,
-        With,
+        __function__ = default,
         For,
-        ForIn,
         While,
         Do,
-        If,
-        ElseIf,
-        Else,
-        Select,
-        Switch,
-        Case,
+        // With,
+        // Select,
+        // Switch,
+        // Case,
     }
 }
