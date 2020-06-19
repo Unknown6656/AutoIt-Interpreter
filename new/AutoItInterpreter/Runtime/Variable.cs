@@ -32,7 +32,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public readonly struct Variant
         : IEquatable<Variant>
-    // , IComparable<Variant>
+        , IComparable<Variant>
     {
         public static Variant Null { get; } = GetTypeDefault(VariantType.Null);
 
@@ -109,27 +109,27 @@ namespace Unknown6656.AutoIt3.Runtime
             AssignedTo = variable;
         }
 
-        public readonly bool NotEquals(Variant other)
-        {
-            throw new NotImplementedException();
-        }
+        public int CompareTo(Variant other) => Type is VariantType.String && other.Type is VariantType.String
+                                             ? ToString().CompareTo(other.ToString())
+                                             : ToNumber().CompareTo(other.ToNumber());
 
-        public readonly bool EqualsCaseSensitive(Variant other)
-        {
-            throw new NotImplementedException();
-        }
+        public readonly bool NotEquals(Variant other) => !EqualsCaseInsensitive(other); // TODO : unit tests
 
         public readonly bool EqualsCaseInsensitive(Variant other)
         {
-            throw new NotImplementedException();
+            if (Type is VariantType.String && other.Type is VariantType.String)
+                return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+
+            return EqualsCaseSensitive(other);
         }
+
+        public readonly bool EqualsCaseSensitive(Variant other) => Equals(other); // TODO : unit tests
+
+        public readonly bool Equals(Variant other) => Type.Equals(other.Type) && Equals(RawData, other.RawData);
 
         public readonly override bool Equals(object? obj) => Equals(FromObject(obj));
 
-        public readonly bool Equals(Variant other)
-        {
-            throw new NotImplementedException();
-        }
+        public readonly override int GetHashCode() => HashCode.Combine(Type, RawData);
 
         public readonly override string ToString() => IsDefault ? "Default" : RawData?.ToString() ?? "";
 
@@ -151,7 +151,8 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Null or _ => 0m,
         };
 
-        public Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
+        public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
+
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
@@ -247,6 +248,18 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <summary>This is <b>not</b> AND - this is string concat!</summary>
         public static Variant operator &(Variant v1, Variant v2) => FromString(v1.ToString() + v2.ToString());
+
+        public static bool operator ==(Variant v1, Variant v2) => v1.EqualsCaseSensitive(v2);
+
+        public static bool operator !=(Variant v1, Variant v2) => v1.NotEquals(v2);
+
+        public static bool operator <(Variant v1, Variant v2) => v1.CompareTo(v2) < 0;
+
+        public static bool operator <=(Variant v1, Variant v2) => v1.CompareTo(v2) <= 0;
+
+        public static bool operator >(Variant v1, Variant v2) => v1.CompareTo(v2) > 0;
+
+        public static bool operator >=(Variant v1, Variant v2) => v1.CompareTo(v2) >= 0;
 
         public static implicit operator Variant (bool b) => FromBoolean(b);
 

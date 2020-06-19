@@ -1,39 +1,25 @@
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 
 
+;ConsoleWrite(0 <> 1)
+;ConsoleWrite("abc" <> "Ab")
+;exit
 
-For $i = 1 To 1 Step -1
-   ConsoleWrite($i)
 
+;local $xl = ObjCreate("Excel.Application")
+;With $xl
+;   .visible = 1
+;   ;with $y
+;   ;EndWith
+;    MsgBox(0, "", "msg")
+;EndWith
+;Exit
+
+
+for $i = 0 to 5 step 0.5
+   ConsoleWrite($i & @crlf)
 next
 exit
-
-
-local $xl = ObjCreate("Excel.Application")
-With $xl
-   .visible = 1
-   ;with $y
-   ;EndWith
-    MsgBox(0, "", "msg")
-EndWith
-Exit
-
-
-
-
-for $a = init to stop step xxx
-next
-
-
-$a = init
-$first = false
-do
-   if not $first then
-	  $a += xxx
-   endif
-
-
-until $a == stop
 
 
 

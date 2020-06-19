@@ -64,9 +64,11 @@
             "malformed_for_expr": "Malformed variable declaration '{0}' statement inside 'For'-Block.",
             "unexpected_eof": "Unexpected end of file.",
             "missing_if": "'Else'- or 'ElseIf'-statements can only be used after an opening 'If ... Then'-statement.",
-
+            "unknown_jumplabel": "The jump label '{0}' could not be found.",
+            "duplicate_jumplabel": "A jump label called '{0}' has already been defined for this method in {1}.",
             "experimental": {
-                "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."
+                "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",
+                "goto_instructions": "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."
             }
         }
     }

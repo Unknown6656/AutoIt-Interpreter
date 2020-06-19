@@ -336,6 +336,20 @@ namespace Unknown6656.AutoIt3.Runtime
             return _instruction_pointer < _line_cache.Count;
         }
 
+        private bool MoveTo(JumpLabel jump_label) => MoveAfter(jump_label.Location);
+
+        private InterpreterError? MoveTo(string jump_label)
+        {
+            if ((CurrentFunction as AU3Function)?.JumpLabels[jump_label] is JumpLabel label)
+            {
+                MoveTo(label);
+
+                return null;
+            }
+
+            return WellKnownError("error.unknown_jumplabel", jump_label);
+        }
+
         /// <summary>
         /// Copies the given value into the <see cref="CallFrame.ReturnValue"/>-field, and moves the instruction pointer to the end.
         /// </summary>
@@ -414,6 +428,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
 
+
+
         // TODO
         private readonly ConcurrentStack<(BlockStatementType BlockType, SourceLocation Location)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
@@ -456,6 +472,7 @@ namespace Unknown6656.AutoIt3.Runtime
         //    return null;
         //}
 
+        private const string REGEX_GOTO = /*language=regex*/@"^goto\s+(?<label>.+)$";
         private const string REGEX_WHILE = /*language=regex*/@"^while\s+(?<expression>.+)$";
         private const string REGEX_WEND = /*language=regex*/@"^wend$";
         private const string REGEX_NEXT = /*language=regex*/@"^next$";
@@ -520,7 +537,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     string step = m.Groups["step"].Value is { Length: > 0 } s ? s : "1";
 
                     if (start.Is(out InterpreterError? error))
-                         return error;
+                        return error;
                     else if (start.UnsafeItem is PARSABLE_EXPRESSION.AnyExpression
                     {
                         Item: EXPRESSION.Binary
@@ -669,7 +686,13 @@ namespace Unknown6656.AutoIt3.Runtime
                     return InterpreterResult.OK;
                 },
                 [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? InterpreterResult.OK : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
+                [REGEX_GOTO] = m =>
+                {
+                    if (Interpreter.CommandLineOptions.StrictMode)
+                        return WellKnownError("error.experimental.goto_instructions");
 
+                    return MoveTo(m.Groups["label"].Value) ?? InterpreterResult.OK;
+                },
 
 
 
@@ -727,7 +750,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         ++depth;
 
                     if (depth == 0)
-                        return InterpreterResult.OK;
+                        break;
                 }
             else if (type is BlockStatementType.If)
                 while (MoveNext())
@@ -743,16 +766,15 @@ namespace Unknown6656.AutoIt3.Runtime
                         --depth;
 
                     if (depth == 0)
-                        return InterpreterResult.OK;
+                        break;
                 }
 
             // TODO : other block types
 
-            if (depth != 0)
-                return WellKnownError("error.no_matching_close", type, init);
             else
                 return WellKnownError("error.not_yet_implemented", type);
 
+            return depth == 0 ? InterpreterResult.OK : WellKnownError("error.no_matching_close", type, init);
         }
 
         private InterpreterError? ProcessExpressionStatement(string line)
@@ -1051,8 +1073,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 return null;
             }
 
-            Variant e1, e2;
-            InterpreterError? err = evaluate(expr1, out e1);
+            InterpreterError? err = evaluate(expr1, out Variant e1);
+            Variant e2;
 
             if (err is { })
                 return err;
@@ -1082,19 +1104,19 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (op.IsStringConcat)
                 return e1 & e2;
             else if (op.IsEqualCaseSensitive)
-                ;
+                return Variant.FromBoolean(e1.EqualsCaseSensitive(e2));
             else if (op.IsEqualCaseInsensitive)
-                ;
+                return Variant.FromBoolean(e1.EqualsCaseInsensitive(e2));
             else if (op.IsUnequal)
-                ;
+                return Variant.FromBoolean(e1.NotEquals(e2));
             else if (op.IsGreater)
-                ;
+                return Variant.FromBoolean(e1 > e2);
             else if (op.IsGreaterEqual)
-                ;
+                return Variant.FromBoolean(e1 >= e2);
             else if (op.IsLower)
-                ;
+                return Variant.FromBoolean(e1 < e2);
             else if (op.IsLowerEqual)
-                ;
+                return Variant.FromBoolean(e1 <= e2);
             else if (op.IsAdd)
                 return e1 + e2;
             else if (op.IsSubtract)
@@ -1105,8 +1127,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 return e1 / e2;
             else if (op.IsPower)
                 return e1 ^ e2;
+
             // TODO : modulus
-            // TODO : all other operators
 
             return WellKnownError("error.unsupported_operator", op);
         }

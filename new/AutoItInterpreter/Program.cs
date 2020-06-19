@@ -229,11 +229,16 @@ namespace Unknown6656.AutoIt3
 
         internal static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
+            bool extensive = !CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n;
+
+            if (!extensive && Console.CursorLeft > 0)
+                Console.WriteLine();
+
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', Console.WindowWidth - 1));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
 
-            if (!CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n)
+            if (extensive)
             {
                 Console.WriteLine(@"
                                ____

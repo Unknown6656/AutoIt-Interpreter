@@ -97,6 +97,19 @@ namespace Unknown6656.AutoIt3.Runtime
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
             ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));
 
+
+        private const string REGEX_CS = /*language=regex*/@"^#(comments\-start|cs)(\b|$)";
+        private const string REGEX_CE = /*language=regex*/@"^#(comments\-end|ce)(\b|$)";
+        private const string REGEX_REGION = /*language=regex*/@"^#(end-?)?region\b";
+        private const string REGEX_PRAGMA = /*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*";
+        private const string REGEX_LINECONT = /*language=regex*/@"(\s|^)_$";
+        private const string REGEX_1LFUNC = /*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$";
+        private const string REGEX_FUNC = /*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$";
+        private const string REGEX_ENDFUNC = /*language=regex*/@"^endfunc$";
+        private const string REGEX_LABEL = /*language=regex*/@"^(?<name>[a-z_]\w*)\s*:$";
+
+        // TODO : extract all constant
+
         private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content)
         {
             string key = file.FullName;
@@ -121,24 +134,24 @@ namespace Unknown6656.AutoIt3.Runtime
                     line = TrimComment(line.TrimStart());
 
                     if (line.Match(
-                        (/*language=regex*/@"^#(comments\-start|cs)(\b|$)", _ => ++comment_lvl),
-                        (/*language=regex*/@"^#(comments\-end|ce)(\b|$)", _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                        (/*language=regex*/@"^#(end-?)?region\b", delegate { }
+                        (REGEX_CS, _ => ++comment_lvl),
+                        (REGEX_CE, _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
+                        (REGEX_REGION, delegate { }
                     )) || comment_lvl > 0)
                         continue;
 
                     if (line.Match(
-                        (/*language=regex*/@"^#include-once(\b|$)", _ => script.IncludeOnlyOnce = true),
+                        (/*language=regex*/@" ^#include-once(\b|$)", _ => script.IncludeOnlyOnce = true),
                         (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
                         (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
                     ))
                         continue;
-                    else if (line.Match(@"^#requireadmin\b", out m))
+                    else if (line.Match(/*language=regex*/@"^#requireadmin\b", out m))
                         line = "#pragma compile(ExecLevel, requireAdministrator)";
-                    else if (line.Match(@"^#notrayicon\b", out m))
+                    else if (line.Match(/*language=regex*/@"^#notrayicon\b", out m))
                         line = @"Opt(""TrayIconHide"", 1)";
 
-                    if (line.Match(/*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", out m))
+                    if (line.Match(REGEX_PRAGMA, out m))
                     {
                         string option = m.Groups["option"].Value.Trim();
                         string @params = m.Groups["params"].Value;
@@ -156,7 +169,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             continue;
                     }
 
-                    while (line.Match(@"(\s|^)_$", out m))
+                    while (line.Match(REGEX_LINECONT, out m))
                         if (i++ == lines.Count - 1)
                             return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
                         else
@@ -165,7 +178,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                         }
 
-                    if (line.Match(/*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", out m))
+                    if (line.Match(REGEX_1LFUNC, out m))
                     {
                         if (Program.CommandLineOptions.StrictMode)
                             return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
@@ -177,7 +190,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             ("endfunc", loc),
                         });
                     }
-                    else if (line.Match(/*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", out m))
+                    else if (line.Match(REGEX_FUNC, out m))
                     {
                         string name = m.Groups["name"].Value;
                         string args = m.Groups["args"].Value;
@@ -222,12 +235,25 @@ namespace Unknown6656.AutoIt3.Runtime
 
                         Program.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
                     }
-                    else if (line.Match(@"^endfunc$", out Match _))
+                    else if (line.Match(REGEX_ENDFUNC, out Match _))
                     {
                         if (curr_func.IsMainFunction)
                             return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
 
                         curr_func = (AU3Function)script.MainFunction;
+                    }
+                    else if (line.Match(REGEX_LABEL, out m))
+                    {
+                        if (Program.CommandLineOptions.StrictMode)
+                            return InterpreterError.WellKnown(loc, "error.experimental.goto_instructions");
+
+                        string name = m.Groups["name"].Value;
+
+                        if (curr_func.JumpLabels[name] is JumpLabel label)
+                            return InterpreterError.WellKnown(loc, "error.duplicate_jumplabel", name, label.Location);
+
+                        curr_func.AddJumpLabel(loc, name);
+                        curr_func.AddLine(loc, "");
                     }
                     else if (!string.IsNullOrWhiteSpace(line))
                         curr_func.AddLine(loc, line);
@@ -457,9 +483,38 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator !=(ScriptFunction? s1, ScriptFunction? s2) => !(s1 == s2);
     }
 
-    internal sealed class AU3Function
+    public sealed class JumpLabel
+        : IEquatable<JumpLabel?>
+    {
+        public AU3Function Function { get; }
+
+        public SourceLocation Location { get; }
+        
+        public string Name { get; }
+
+
+        internal JumpLabel(AU3Function function, SourceLocation location, string name)
+        {
+            Function = function;
+            Location = location;
+            Name = name;
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as JumpLabel);
+
+        public bool Equals(JumpLabel? other) => other != null && EqualityComparer<AU3Function>.Default.Equals(Function, other.Function) && Name == other.Name;
+
+        public override int GetHashCode() => HashCode.Combine(Function, Name);
+
+        public static bool operator ==(JumpLabel? left, JumpLabel? right) => EqualityComparer<JumpLabel>.Default.Equals(left, right);
+
+        public static bool operator !=(JumpLabel? left, JumpLabel? right) => !(left == right);
+    }
+
+    public sealed class AU3Function
         : ScriptFunction
     {
+        private readonly ConcurrentDictionary<string, JumpLabel> _jumplabels = new ConcurrentDictionary<string, JumpLabel>();
         private readonly ConcurrentDictionary<SourceLocation, string> _lines = new ConcurrentDictionary<SourceLocation, string>();
 
 
@@ -483,20 +538,34 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public (SourceLocation LineLocation, string LineContent)[] Lines => _lines.OrderBy(k => k.Key).ToArray(k => (k.Key, k.Value));
 
+        public ReadOnlyIndexer<string, JumpLabel?> JumpLabels { get; }
 
-        public AU3Function(ScannedScript script, string name, IEnumerable<PARAMETER_DECLARATION>? @params)
+
+        internal AU3Function(ScannedScript script, string name, IEnumerable<PARAMETER_DECLARATION>? @params)
             : base(script, name)
         {
             Parameters = @params?.ToArray() ?? Array.Empty<PARAMETER_DECLARATION>();
             ParameterCount = (Parameters.Count(p => !p.IsOptional), Parameters.Length);
+            JumpLabels = new ReadOnlyIndexer<string, JumpLabel?>(name => _jumplabels.TryGetValue(name.ToLower(), out JumpLabel? label) ? label : null);
         }
 
-        public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, content, (l, c) => content);
+        public JumpLabel AddJumpLabel(SourceLocation location, string name)
+        {
+            name = name.Trim().ToLowerInvariant();
+
+            JumpLabel label = new JumpLabel(this, location, name);
+
+            _jumplabels.AddOrUpdate(name, label, (_, _) => label);
+
+            return label;
+        }
+
+        public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, content, (_, _) => content);
 
         public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{_lines.Count} Lines]";
     }
 
-    internal sealed class NativeFunction
+    public sealed class NativeFunction
         : ScriptFunction
     {
         private readonly Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> _execute;
@@ -506,7 +575,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        public NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> execute)
+        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> execute)
             : base(script, name)
         {
             _execute = execute;
