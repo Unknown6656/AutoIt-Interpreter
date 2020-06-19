@@ -418,7 +418,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly ConcurrentStack<(BlockStatementType BlockType, SourceLocation Location)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
         private readonly ConcurrentStack<int> _forloop_eip_stack = new ConcurrentStack<int>();
-
+        private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
 
 
         private InterpreterResult PushBlockStatement(BlockStatementType statement)
@@ -468,6 +468,10 @@ namespace Unknown6656.AutoIt3.Runtime
         private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
         private const string REGEX_DO = /*language=regex*/@"^do$";
         private const string REGEX_UNTIL = /*language=regex*/@"^until\s+(?<expression>.+)$";
+
+        private const string REGEX_IF = /*language=regex*/@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$";
+        private const string REGEX_ELSE = /*language=regex*/@"^else$";
+        private const string REGEX_ENDIF = /*language=regex*/@"^endif$";
 
         private InterpreterResult? ProcessStatement(string line)
         {
@@ -581,7 +585,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     throw new NotImplementedException();
                 },
-
                 [REGEX_DO] = _ => PushBlockStatement(BlockStatementType.Do),
                 [REGEX_UNTIL] = m =>
                 {
@@ -626,8 +629,51 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return InterpreterResult.OK;
                 },
+                [REGEX_IF] = m =>
+                {
+                    Union<InterpreterError, Variant> condition = ProcessAsVariant(m.Groups["condition"].Value);
+                    bool elif = m.Groups["elif"].Length > 0;
 
-                //[/*language=regex*/@"^next$"] = _ => PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn),
+                    if (elif)
+                        if (_if_stack.TryPop(out bool cond))
+                        {
+                            if (cond)
+                                condition = Variant.False;
+                        }
+                        else
+                            return WellKnownError("error.missing_if");
+
+                    if (condition.Is(out InterpreterError? error))
+                        return error;
+                    if (condition.As<Variant>().ToBoolean())
+                        _if_stack.Push(true);
+                    else
+                    {
+                        _if_stack.Push(false);
+
+                        MoveToEndOf(BlockStatementType.If);
+                    }
+
+                    return InterpreterResult.OK;
+                },
+                [REGEX_ELSE] = _ =>
+                {
+                    if (_if_stack.TryPop(out bool cond))
+                    {
+                        if (cond)
+                            MoveToEndOf(BlockStatementType.If);
+                    }
+                    else
+                        return WellKnownError("error.missing_if");
+
+                    return InterpreterResult.OK;
+                },
+                [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? InterpreterResult.OK : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
+
+
+
+
+
                 //[/*language=regex*/@"^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
@@ -683,6 +729,22 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (depth == 0)
                         return InterpreterResult.OK;
                 }
+            else if (type is BlockStatementType.If)
+                while (MoveNext())
+                {
+                    if (CurrentLineContent.Match(REGEX_IF, out Match m))
+                        if (m.Groups["elif"].Length > 0)
+                            --depth;
+                        else
+                            ++depth;
+                    else if (CurrentLineContent.Match(REGEX_ELSE, out Match _))
+                        --depth;
+                    else if (CurrentLineContent.Match(REGEX_ENDIF, out Match _))
+                        --depth;
+
+                    if (depth == 0)
+                        return InterpreterResult.OK;
+                }
 
             // TODO : other block types
 
@@ -706,7 +768,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 Program.PrintDebugMessage($"Parsed \"{expression}\"");
 
                 if (declaration_type == DeclarationType.None)
-                    return ProcessAssignmentStatement(expression, false);
+                    return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
                 else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
                     return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
                 else
@@ -1150,6 +1212,7 @@ namespace Unknown6656.AutoIt3.Runtime
         For,
         While,
         Do,
+        If,
         // With,
         // Select,
         // Switch,

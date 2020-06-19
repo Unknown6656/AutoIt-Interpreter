@@ -63,6 +63,7 @@
             "unexpected_until": "The statement 'Until' can only be used in combination with a previously opened 'Do'-statement.",
             "malformed_for_expr": "Malformed variable declaration '{0}' statement inside 'For'-Block.",
             "unexpected_eof": "Unexpected end of file.",
+            "missing_if": "'Else'- or 'ElseIf'-statements can only be used after an opening 'If ... Then'-statement.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option."

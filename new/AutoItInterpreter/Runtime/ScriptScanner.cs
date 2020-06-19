@@ -391,7 +391,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 else if (func.ParameterCount.MinimumCount > 0)
                     return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
                 else
-                    result ??= frame.Call(func, Array.Empty<Variant>());
+                    result ??= (InterpreterError?)frame.Call(func, Array.Empty<Variant>());
 
             return result;
         }

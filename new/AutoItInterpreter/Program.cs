@@ -144,7 +144,7 @@ namespace Unknown6656.AutoIt3
                 });
             }
             catch (Exception ex)
-            //when (!Debugger.IsAttached)
+            // when (!Debugger.IsAttached)
             {
                 code = ex.HResult;
 
