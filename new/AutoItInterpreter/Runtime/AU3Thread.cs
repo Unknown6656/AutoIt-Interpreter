@@ -17,6 +17,7 @@ using Unknown6656.Common;
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
 using System.Reflection.Metadata;
 using System.Transactions;
+using CommandLine;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -481,7 +482,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private const string REGEX_FOR = /*language=regex*/@"^for\s+.+$";
         private const string REGEX_FORTO = /*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$";
         private const string REGEX_FORIN = /*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$";
-        private const string REGEX_WITH = /*language=regex*/@"^with\s+(?<expression>.+)$";
+        private const string REGEX_WITH = /*language=regex*/@"^with\s+(?<variable>.+)$";
+        private const string REGEX_ENDWITH = /*language=regex*/@"^endwith$";
         private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
         private const string REGEX_DO = /*language=regex*/@"^do$";
         private const string REGEX_UNTIL = /*language=regex*/@"^until\s+(?<expression>.+)$";
@@ -602,7 +604,31 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_WITH] = m =>
                 {
-                    throw new NotImplementedException();
+                    Union<InterpreterError, PARSABLE_EXPRESSION> parsed = ProcessRawExpression(m.Groups["variable"].Value);
+
+                    if (parsed.Is(out InterpreterError? error))
+                        return error;
+                    else if (parsed.Is(out PARSABLE_EXPRESSION? pexpr) && pexpr is PARSABLE_EXPRESSION.AnyExpression
+                    {
+                        Item: EXPRESSION.Variable
+                        {
+                            Item: VARIABLE variable
+                        }
+                    } && VariableResolver.TryGetVariable(variable, out Variable? withctx) && !withctx.IsConst)
+                    {
+                        _withcontext_stack.Push(withctx);
+
+                        return InterpreterResult.OK;
+                    }
+                    else
+                        return WellKnownError("error.invalid_with_target");
+                },
+                [REGEX_ENDWITH] = _ =>
+                {
+                    if (_withcontext_stack.TryPop(out Variable _))
+                        return InterpreterResult.OK;
+                    else
+                        return WellKnownError("error.unexpected_close", line, "With");
                 },
                 [REGEX_REDIM] = m =>
                 {
@@ -702,9 +728,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
 
 
-
-
-                //[/*language=regex*/@"^endwith$"] = _ => PopBlockStatement(BlockStatementType.With),
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
                 //[/*language=regex*/@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
@@ -1055,7 +1078,34 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private Union<InterpreterError, Variant> ProcessMember(MEMBER_EXPRESSION expr)
         {
-            throw new NotImplementedException();
+            Union<InterpreterError, Variant> result = WellKnownError("error.not_yet_implemented", expr);
+            string? member = null;
+
+            switch (expr)
+            {
+                case MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } objexpr, Item2: { Item: string m } }:
+                    result = ProcessExpression(objexpr);
+                    member = m;
+
+                    break;
+                case MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string m } }:
+                    if (_withcontext_stack.TryPeek(out Variable? variable))
+                    {
+                        result = variable.Value;
+                        member = m;
+
+                        break;
+                    }
+                    else
+                        return WellKnownError("error.invalid_with_access", m);
+            }
+
+            if (result.Is(out Variant value) && member is string)
+            {
+                throw new NotImplementedException();
+            }
+            
+            return result;
         }
 
         private Union<InterpreterError, Variant> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
