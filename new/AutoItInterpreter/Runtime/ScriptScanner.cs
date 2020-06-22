@@ -17,6 +17,23 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class ScriptScanner
     {
+        private const string REGEX_CS = /*language=regex*/@"^#(comments\-start|cs)(\b|$)";
+        private const string REGEX_CE = /*language=regex*/@"^#(comments\-end|ce)(\b|$)";
+        private const string REGEX_REGION = /*language=regex*/@"^#(end-?)?region\b";
+        private const string REGEX_PRAGMA = /*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*";
+        private const string REGEX_LINECONT = /*language=regex*/@"(\s|^)_$";
+        private const string REGEX_1LFUNC = /*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$";
+        private const string REGEX_FUNC = /*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$";
+        private const string REGEX_ENDFUNC = /*language=regex*/@"^endfunc$";
+        private const string REGEX_LABEL = /*language=regex*/@"^(?<name>[a-z_]\w*)\s*:$";
+        private const string REGEX_INCLUDEONCE = /*language=regex*/@" ^#include-once(\b|$)";
+        private const string REGEX_AUSTARTREGISTER = /*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")";
+        private const string REGEX_AUEXITREGISTER = /*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")";
+        private const string REGEX_REQADMIN = /*language=regex*/@"^#requireadmin\b";
+        private const string REGEX_NOTRYICON = /*language=regex*/@"^#notrayicon\b";
+        // TODO : extract all regex constants
+
+
         private readonly ScannedScript _system_script;
         private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
         private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
@@ -97,19 +114,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
             ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));
 
-
-        private const string REGEX_CS = /*language=regex*/@"^#(comments\-start|cs)(\b|$)";
-        private const string REGEX_CE = /*language=regex*/@"^#(comments\-end|ce)(\b|$)";
-        private const string REGEX_REGION = /*language=regex*/@"^#(end-?)?region\b";
-        private const string REGEX_PRAGMA = /*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*";
-        private const string REGEX_LINECONT = /*language=regex*/@"(\s|^)_$";
-        private const string REGEX_1LFUNC = /*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$";
-        private const string REGEX_FUNC = /*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$";
-        private const string REGEX_ENDFUNC = /*language=regex*/@"^endfunc$";
-        private const string REGEX_LABEL = /*language=regex*/@"^(?<name>[a-z_]\w*)\s*:$";
-
-        // TODO : extract all constant
-
         private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content)
         {
             string key = file.FullName;
@@ -141,14 +145,14 @@ namespace Unknown6656.AutoIt3.Runtime
                         continue;
 
                     if (line.Match(
-                        (/*language=regex*/@" ^#include-once(\b|$)", _ => script.IncludeOnlyOnce = true),
-                        (/*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
-                        (/*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                        (REGEX_INCLUDEONCE, _ => script.IncludeOnlyOnce = true),
+                        (REGEX_AUSTARTREGISTER, m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                        (REGEX_AUEXITREGISTER, m => script.AddExitFunction(m.Groups["func"].Value, loc))
                     ))
                         continue;
-                    else if (line.Match(/*language=regex*/@"^#requireadmin\b", out m))
+                    else if (line.Match(REGEX_REQADMIN, out m))
                         line = "#pragma compile(ExecLevel, requireAdministrator)";
-                    else if (line.Match(/*language=regex*/@"^#notrayicon\b", out m))
+                    else if (line.Match(REGEX_NOTRYICON, out m))
                         line = @"Opt(""TrayIconHide"", 1)";
 
                     if (line.Match(REGEX_PRAGMA, out m))

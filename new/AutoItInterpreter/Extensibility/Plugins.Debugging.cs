@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text;
+using System;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
-using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -29,126 +26,72 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
         }
 
-        private static Union<InterpreterError, Variant> DebugVar(CallFrame frame, Variant[] args)
+        private static IDictionary<string, object?> GetVariantInfo(Variant value)
         {
-            int indentation = args.Length < 2 ? 0 : (int)args[1].ToNumber();
-            StringBuilder sb = new StringBuilder();
-
-            if (args[0].AssignedTo is Variable var)
-                sb.Append($@"${var.Name} : {{
-    Value:         {var.Value.ToString().Trim()}
-    Type:          {var.Value.Type}
-    Raw Data:      ""{var.Value.RawData?.ToString().Trim()}"" ({var.Value.RawData?.GetType() ?? typeof(void)})
-    Is Constant:   {var.IsConst}
-    Is Global:     {var.IsGlobal}
-    Decl.Location: {var.DeclaredLocation}
-    Decl.Scope:    {var.DeclaredScope}
-");
-            else
-                sb.Append($@"<unknown> : {{
-    Value:         {args[0].ToString().Trim()}
-    Type:          {args[0].Type}
-    Raw Data:      ""{args[0].RawData?.ToString().Trim()}"" ({args[0].RawData?.GetType() ?? typeof(void)})
-");
-
-            if (args[0].ReferencedVariable is Variable @ref)
-                sb.AppendLine($"    Reference to:  {DebugVar(frame, new[] { @ref.Value, Variant.FromNumber(indentation + 1) }).As<Variant>().ToString().Trim()}");
-
-            sb.AppendLine("}");
-
-            if (indentation == 0)
+            IDictionary<string, object?> dic = new Dictionary<string, object?>
             {
-                frame.Print(sb);
+                ["value"] = value.ToString().Trim(),
+                ["type"] = value.Type,
+                ["raw"] = $"\"{value.RawData?.ToString()?.Trim()}\" ({value.RawData?.GetType() ?? typeof(void)})"
+            };
 
-                return Variant.Null;
-            }
-            else
-                return Variant.FromObject(string.Join("\n", From.String(sb.ToString()).To.Lines().Select(s => new string(' ', indentation * 4) + s)));
+            if (value.AssignedTo is Variable variable)
+                dic["assignedTo"] = variable;
+
+            if (value.ReferencedVariable is Variable @ref)
+                dic["referenceTo"] = GetVariableInfo(@ref);
+
+            return dic;
         }
 
-        private static Union<InterpreterError, Variant> DebugCallFrame(CallFrame frame, Variant[] args)
+        private static IDictionary<string, object?> GetVariableInfo(Variable variable) => new Dictionary<string, object?>
         {
-            StringBuilder sb = new StringBuilder();
+            ["name"] = variable,
+            ["constant"] = variable.IsConst,
+            ["global"] = variable.IsGlobal,
+            ["location"] = variable.DeclaredLocation,
+            ["scope"] = variable.DeclaredScope,
+            ["value"] = GetVariantInfo(variable.Value)
+        };
 
-            if (frame.CallerFrame is CallFrame caller)
-            {
-                Variable[] locals = caller.VariableResolver.LocalVariables;
-
-                sb.Append($@"{caller.GetType().Name} : {{
-    Thread:    {caller.CurrentThread}
-    Function:  {caller.CurrentFunction}
-    Ret.Value: {caller.ReturnValue}
-    Variables: {locals.Length}");
-
-                foreach (Variable var in locals)
-                    sb.Append($@"
-        ${var.Name} : {{
-            Value:         {var.Value}
-            Type:          {var.Value.Type}
-            Raw Data:      ""{var.Value.RawData}"" ({var.Value.RawData?.GetType() ?? typeof(void)})
-            Is Constant:   {var.IsConst}
-            Is Global:     {var.IsGlobal}
-            Decl.Location: {var.DeclaredLocation}
-        }}");
-
-                sb.Append($"\n    Arguments: {caller.PassedArguments.Length}");
-
-                foreach (Variant arg in caller.PassedArguments)
-                    sb.Append($"\n        \"{arg}\" ({arg.Type})");
-            }
-            else
-                sb.AppendLine("<no call frame> : {");
-
-            if (frame.CallerFrame is AU3CallFrame au3)
-                sb.Append($@"
-    Location:  {au3.CurrentLocation}
-    Curr.Line: ""{au3.CurrentLineContent}""");
-
-            sb.AppendLine("\n}");
-
-            frame.Print(sb);
-
-            return Variant.Null;
-        }
-
-        private static Union<InterpreterError, Variant> DebugThread(CallFrame frame, Variant[] _)
+        private static IDictionary<string, object?> GetCallFrameInfo(CallFrame? frame)
         {
-            StringBuilder sb = new StringBuilder();
-            AU3Thread thread = frame.CurrentThread;
+            IDictionary<string, object?> dic = new Dictionary<string, object?>();
 
-            sb.Append($@"Thread 0x{thread.ThreadID:x4} : {{
-    ID:             {thread.ThreadID}
-    Is Disposed:    {thread.IsDisposed}
-    Is Main thread: {thread.IsMainThread}
-    Is Running:     {thread.IsRunning}
-    Callstack:      {0} Frames");
-            CallFrame? cf = frame;
-            int idx = 0;
+            frame = frame?.CallerFrame;
 
-            while (cf is { })
+            if (frame is { })
             {
-                sb.Append($@"
-        {++idx} : {{
-            Location:  {cf}
-            Function:  {cf.CurrentFunction}
-            Arguments: {string.Join<Variant>(", ", cf.PassedArguments)}
-        }}");
+                dic["type"] = frame.GetType().Name;
+                dic["thread"] = frame.CurrentThread;
+                dic["function"] = frame.CurrentFunction;
+                dic["ret.value"] = frame.ReturnValue;
+                dic["variables"] = frame.VariableResolver.LocalVariables.ToArray(GetVariableInfo);
+                dic["arguments"] = frame.PassedArguments.ToArray(GetVariantInfo);
 
-                cf = cf.CallerFrame;
+                if (frame is AU3CallFrame au3)
+                {
+                    dic["location"] = au3.CurrentLocation;
+                    dic["line"] = $"\"{au3.CurrentLineContent}\"";
+                }
             }
 
-            sb.AppendLine("\n}");
-
-            frame.Print(sb);
-
-            return Variant.Null;
+            return dic;
         }
 
-        private static Union<InterpreterError, Variant> DebugAllVars(CallFrame frame, Variant[] _)
+        private static IDictionary<string, object?> GetThreadInfo(AU3Thread thread) => new Dictionary<string, object?>
         {
-            Union<InterpreterError, Variant> result;
-            StringBuilder sb = new StringBuilder();
-            List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            ["id"] = thread.ThreadID,
+            ["disposed"] = thread.IsDisposed,
+            ["isMain"] = thread.IsMainThread,
+            ["running"] = thread.IsRunning,
+            ["callstack"] = thread.CallStack.ToArray(GetCallFrameInfo)
+        };
+
+        private static IDictionary<string, object?> GetAllVariables(Interpreter interpreter)
+        {
+            IDictionary<string, object?> dic = new Dictionary<string, object?>();
+            List<VariableScope> scopes = new List<VariableScope> { interpreter.VariableResolver };
             int count;
 
             do
@@ -164,36 +107,97 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             while (count != scopes.Count);
 
             foreach (VariableScope scope in scopes)
-            {
-                sb.Append($@"{scope.InternalName} : {{
-    Call frame:     {scope.CallFrame}
-    Function:       {scope.CallFrame?.CurrentFunction}
-    Is global:      {scope.IsGlobalScope}
-    Parent scope:   {scope.Parent}
-    Child sopes:    {scope.ChildScopes.Length}
-");
-                foreach (var child in scope.ChildScopes)
-                    sb.AppendLine($"      - {child}");
-
-                sb.AppendLine($"    Variable count: {scope.LocalVariables.Length}\n    Variables:");
-
-                foreach (Variable global in scope.LocalVariables)
+                dic[scope.InternalName] = new Dictionary<string, object?>
                 {
-                    result = DebugVar(frame, new Variant[] { global.Value, 2 });
+                    ["frame"] = scope.CallFrame,
+                    ["function"] = scope.CallFrame?.CurrentFunction,
+                    ["isGlobal"] = scope.IsGlobalScope,
+                    ["parent"] = scope.Parent,
+                    ["children"] = scope.ChildScopes.ToArray(c => c.InternalName),
+                    ["variables"] = scope.LocalVariables.ToArray(GetVariableInfo),
+                };
 
-                    if (result.Is<InterpreterError>())
-                        return result;
-                    else if (result.Is(out Variant value))
-                        sb.AppendLine("      - " + value.ToString().Trim());
+            return dic;
+        }
+
+        private static string SerializeDictionary(IDictionary<string, object?> dic, string title)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine(title + ": {");
+
+            void serialize(IDictionary<string, object?> dic, int level)
+            {
+                int w = dic.Keys.Select(k => k.Length).Append(0).Max();
+
+                foreach (string key in dic.Keys)
+                {
+                    sb.Append($"{new string(' ', level * 4)}{(key + ':').PadRight(w + 1)} ");
+
+                    switch (dic[key])
+                    {
+                        case IDictionary<string, object?> d:
+                            sb.AppendLine();
+                            serialize(d, level + 1);
+
+                            break;
+                        case Array { Length: 0 }:
+                            sb.Append($"(0)");
+
+                            break;
+                        case Array arr:
+                            sb.AppendLine($"({arr.Length})");
+
+                            int index = 0;
+                            int rad = 1 + (int)Math.Log10(arr.Length);
+
+                            foreach (object? elem in arr)
+                            {
+                                sb.Append($"{new string(' ', (level + 1) * 4)}[{index.ToString().PadLeft(rad, '0')}]: ");
+
+                                if (elem is IDictionary<string, object?> d)
+                                {
+                                    sb.AppendLine();
+                                    serialize(d, level + 2);
+                                }
+                                else
+                                    sb.Append(elem?.ToString());
+
+                                ++index;
+                            }
+
+                            break;
+                        case object obj:
+                            sb.Append(obj);
+
+                            break;
+                    }
+
+                    if (!sb.ToString().EndsWith(Environment.NewLine))
+                        sb.AppendLine();
                 }
-
-                sb.AppendLine("}");
             }
 
-            frame.Print(sb);
+            serialize(dic, 1);
+
+            return sb.AppendLine("}")
+                     .ToString();
+        }
+
+        private static Variant SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
+        {
+            frame.Print(SerializeDictionary(dic, title is string s ? s : title?.ToString() ?? ""));
 
             return Variant.Zero;
         }
+
+        private static Union<InterpreterError, Variant> DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
+
+        private static Union<InterpreterError, Variant> DebugCallFrame(CallFrame frame, Variant[] args) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
+
+        private static Union<InterpreterError, Variant> DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
+
+        private static Union<InterpreterError, Variant> DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
 
         private static Union<InterpreterError, Variant> DebugAllThreads(CallFrame frame, Variant[] _)
         {
