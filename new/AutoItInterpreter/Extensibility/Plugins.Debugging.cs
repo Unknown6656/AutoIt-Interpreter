@@ -17,6 +17,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
             ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
             ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
+            ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
             ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
         };
 
@@ -198,6 +199,48 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         private static Union<InterpreterError, Variant> DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
 
         private static Union<InterpreterError, Variant> DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
+
+        private static Union<InterpreterError, Variant> DebugAllVarsCompact(CallFrame frame, Variant[] _)
+        {
+            List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            int count;
+
+            do
+            {
+                count = scopes.Count;
+
+                foreach (VariableScope scope in from indexed in scopes.ToArray()
+                                                from s in indexed.ChildScopes
+                                                where !scopes.Contains(s)
+                                                select s)
+                    scopes.Add(scope);
+            }
+            while (count != scopes.Count);
+
+            StringBuilder sb = new StringBuilder();
+            (string name, string type, string value)[]? variables = (from scope in scopes
+                                                                     from variable in scope.LocalVariables
+                                                                     let name = scope.InternalName + '$' + variable.Name
+                                                                     orderby name ascending
+                                                                     select (name, variable.Value.Type.ToString(), variable.Value.ToString())).ToArray();
+            int w_name = variables.Select(t => t.name.Length).Append(4).Max();
+            int w_type = variables.Select(t => t.type.Length).Append(4).Max();
+            int w_value = variables.Select(t => t.value.Length).Append(5).Max();
+
+            w_value = Math.Min(w_value, Console.BufferWidth - 12 - w_type - w_name);
+
+            sb.Append($@"{variables.Length} Variables:
+| {"Name".PadRight(w_name)} | {"Type".PadRight(w_type)} | {"Value".PadRight(w_value)} |
+|{new string('-', w_name + 2)}+{new string('-', w_type + 2)}+{new string('-', w_value + 2)}|
+");
+
+            foreach ((string name, string type, string value) in variables)
+                sb.AppendLine($"| {name.PadRight(w_name)} | {type.PadRight(w_type)} | {value.PadLeft(w_value)} |");
+
+            frame.Print(sb.ToString());
+
+            return Variant.Zero;
+        }
 
         private static Union<InterpreterError, Variant> DebugAllThreads(CallFrame frame, Variant[] _)
         {

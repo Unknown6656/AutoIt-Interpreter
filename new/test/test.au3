@@ -15,10 +15,8 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 ;EndWith
 ;Exit
 
-DebugVar($_)
 for $i = 0 to 5 step 0.5
-DebugAllVars()
-   ConsoleWrite($i & @crlf)
+   DebugAllVarsCompact()
 next
 exit
 
