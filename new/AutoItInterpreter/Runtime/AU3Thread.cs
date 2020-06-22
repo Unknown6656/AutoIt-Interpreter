@@ -567,21 +567,24 @@ namespace Unknown6656.AutoIt3.Runtime
                             if (depth == 0)
                             {
                                 Variable temp = VariableResolver.CreateTemporaryVariable();
-                                string first = '$' + temp.Name;
+                                string last = '$' + temp.Name;
 
-                                temp.Value = true;
+                                temp.Value = Variant.False;
 
                                 _line_cache.RemoveAt(_instruction_pointer);
                                 _line_cache.InsertRange(_instruction_pointer, new[] {
+                                    (CurrentLocation, $"If {last} Then"),
+                                    (CurrentLocation, $"ExitLoop"),
+                                    (CurrentLocation, $"Else"),
                                     (CurrentLocation, $"{counter} += {step}"),
-                                    (CurrentLocation, $"WEnd"),
+                                    (CurrentLocation, $"If {counter} == {m.Groups["stop"]} Then"),
+                                    (CurrentLocation, $"{last} = True"),
+                                    (CurrentLocation, $"EndIf"),
+                                    (CurrentLocation, $"EndIf"),
+                                    (CurrentLocation, $"Until False"),
                                 });
                                 _instruction_pointer = eip_for;
-                                _line_cache.RemoveAt(_instruction_pointer);
-                                _line_cache.InsertRange(_instruction_pointer, new[] {
-                                    (CurrentLocation, $"While ({first} Or ({counter} <> {m.Groups["stop"].Value}))"),
-                                    (CurrentLocation, $"{first} = False"),
-                                });
+                                _line_cache[_instruction_pointer] = (CurrentLocation, "Do");
                                 _instruction_pointer--;
 
                                 return InterpreterResult.OK;
@@ -665,13 +668,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (condition.Is(out InterpreterError? error))
                         return error;
-                    if (condition.As<Variant>().ToBoolean())
-                        _if_stack.Push(true);
                     else
                     {
-                        _if_stack.Push(false);
+                        bool cond = condition.As<Variant>().ToBoolean();
 
-                        MoveToEndOf(BlockStatementType.If);
+                        _if_stack.Push(cond);
+
+                        if (!cond)
+                            MoveToEndOf(BlockStatementType.If);
                     }
 
                     return InterpreterResult.OK;
@@ -758,18 +762,29 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (type is BlockStatementType.If)
                 while (MoveNext())
                 {
+                    bool @if = false;
+
                     if (CurrentLineContent.Match(REGEX_IF, out Match m))
+                    {
+                        @if = true;
+
                         if (m.Groups["elif"].Length > 0)
                             --depth;
                         else
                             ++depth;
+                    }
                     else if (CurrentLineContent.Match(REGEX_ELSE, out Match _))
                         --depth;
                     else if (CurrentLineContent.Match(REGEX_ENDIF, out Match _))
                         --depth;
 
                     if (depth == 0)
+                    {
+                        if (@if)
+                            --_instruction_pointer;
+
                         break;
+                    }
                 }
 
             // TODO : other block types
