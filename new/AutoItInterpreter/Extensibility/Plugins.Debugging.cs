@@ -227,7 +227,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             int w_type = variables.Select(t => t.type.Length).Append(4).Max();
             int w_value = variables.Select(t => t.value.Length).Append(5).Max();
 
-            w_value = Math.Min(w_value, Console.BufferWidth - 12 - w_type - w_name);
+            w_value = Math.Min(w_value + 3, Console.BufferWidth - 12 - w_type - w_name);
 
             sb.Append($@"{variables.Length} Variables:
 | {"Name".PadRight(w_name)} | {"Type".PadRight(w_type)} | {"Value".PadRight(w_value)} |
@@ -235,7 +235,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 ");
 
             foreach ((string name, string type, string value) in variables)
-                sb.AppendLine($"| {name.PadRight(w_name)} | {type.PadRight(w_type)} | {value.PadLeft(w_value)} |");
+            {
+                string val = value.Length > w_value - 3 ? value[..^3] + "..."  : value.PadLeft(w_value);
+
+                sb.AppendLine($"| {name.PadRight(w_name)} | {type.PadRight(w_type)} | {val} |");
+            }
 
             frame.Print(sb.ToString());
 
