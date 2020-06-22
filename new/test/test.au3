@@ -16,7 +16,8 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 ;Exit
 
 for $i = 0 to 5 step 0.5
-   DebugAllVarsCompact()
+   ConsoleWriteLine($i)
+   ; DebugAllVarsCompact()
 next
 exit
 

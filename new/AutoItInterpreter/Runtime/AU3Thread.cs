@@ -566,20 +566,23 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             if (depth == 0)
                             {
-                                string temp = '$' + VariableResolver.CreateTemporaryVariable().Name;
+                                Variable temp = VariableResolver.CreateTemporaryVariable();
+                                string first = '$' + temp.Name;
 
-                                _line_cache[_instruction_pointer] = (_line_cache[_instruction_pointer].LineLocation, $"Until ({counter} <> {m.Groups["stop"].Value})");
-                                _line_cache.RemoveAt(eip_for);
-                                _line_cache.InsertRange(eip_for, new[] {
-                                    (loc_for, $"{temp} = True"),
-                                    (loc_for, $"do"),
-                                    (loc_for, $"If {temp} Then"),
-                                    (loc_for, $"{temp} = False"),
-                                    (loc_for, $"Else"),
-                                    (loc_for, $"{counter} += {step}"),
-                                    (loc_for, $"EndIf"),
+                                temp.Value = true;
+
+                                _line_cache.RemoveAt(_instruction_pointer);
+                                _line_cache.InsertRange(_instruction_pointer, new[] {
+                                    (CurrentLocation, $"{counter} += {step}"),
+                                    (CurrentLocation, $"WEnd"),
                                 });
-                                _instruction_pointer = eip_for - 1;
+                                _instruction_pointer = eip_for;
+                                _line_cache.RemoveAt(_instruction_pointer);
+                                _line_cache.InsertRange(_instruction_pointer, new[] {
+                                    (CurrentLocation, $"While ({first} Or ({counter} <> {m.Groups["stop"].Value}))"),
+                                    (CurrentLocation, $"{first} = False"),
+                                });
+                                _instruction_pointer--;
 
                                 return InterpreterResult.OK;
                             }
@@ -612,7 +615,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
 
-                    if (result.Is(out InterpreterError error))
+                    if (result.Is(out InterpreterError? error))
                         return error;
                     else if (!result.As<Variant>().ToBoolean())
                         MoveAfter(topmost.loc);
@@ -625,7 +628,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
 
-                    if (result.Is(out InterpreterError error))
+                    if (result.Is(out InterpreterError? error))
                         return error;
 
                     if (!result.As<Variant>().ToBoolean())
