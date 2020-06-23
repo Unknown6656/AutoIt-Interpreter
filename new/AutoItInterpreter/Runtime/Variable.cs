@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using System;
@@ -95,7 +96,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variable? AssignedTo { get; }
 
-        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject or VariantType.Map;
+        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject or VariantType.Map or VariantType.String;
 
         public readonly bool IsReference => Type is VariantType.Reference;
 
@@ -105,7 +106,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool IsDefault => Type is VariantType.Default;
 
-        public readonly int Length => (RawData as Array)?.Length ?? 0; // TODO : maps
+        public readonly int Length => (RawData as IEnumerable)?.Count() ?? 0;
 
         #endregion
         #region .CTOR
@@ -173,7 +174,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 foreach (Variant key in dic.Keys)
                     output[key] = dic[key];
             else
-                ; // TODO : object
+                ; // TODO : objects
 
             return output;
         }
@@ -182,8 +183,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool TrySetIndexed(Variant index, Variant value)
         {
-            if (RawData is Array arr && (int)index is int idx)
+            if (RawData is string _)
+                return false; // RawData = s[..index] + value + s[(index + 1)..];
+            else if (RawData is Array arr)
             {
+                int idx = (int)index;
+
                 if (idx < 0 || idx >= arr.Length)
                     return false;
                 else
@@ -205,9 +210,30 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool TryGetIndexed(Variant index, out Variant value)
         {
+            if (RawData is IDictionary<Variant, Variant> dic)
+                return dic.TryGetValue(index, out value);
+            else if (index.EqualsCaseInsensitive(nameof(Length)))
+            {
+                value = Length;
+
+                return true;
+            }
+
+            int idx = (int)index;
             value = Null;
 
-            if (RawData is Array arr && (int)index is int idx)
+            if (RawData is string s)
+            {
+                if (idx < 0 || idx >= s.Length)
+                    return false;
+                else
+                {
+                    value = s[idx];
+
+                    return true;
+                }
+            }
+            else if (RawData is Array arr)
             {
                 if (idx < 0 || idx >= arr.Length)
                     return false;
@@ -218,8 +244,6 @@ namespace Unknown6656.AutoIt3.Runtime
                     return true;
                 }
             }
-            else if (RawData is IDictionary<Variant, Variant> dic)
-                return dic.TryGetValue(index, out value);
             else
                 return false; // TODO : objects
         }
@@ -261,13 +285,12 @@ namespace Unknown6656.AutoIt3.Runtime
             char c => FromString(c.ToString()),
             string str => FromString(str),
             StringBuilder strb => FromString(strb.ToString()),
-            (Variant, Variant)[] dic => FromMap(dic),
-            IDictionary<Variant, Variant> dic => FromMap(dic),
             Array arr => FromArray(arr),
+            IDictionary<Variant, Variant> dic => FromMap(dic),
             _ => FromNETObject(obj),
         };
 
-        public static Variant FromMap(params (Variant key, Variant value)[] pairs) => FromMap(pairs.ToDictionary(fst, snd));
+        public static Variant FromMap(params (Variant key, Variant value)[] pairs) => FromMap(pairs.ToDictionary());
 
         public static Variant FromMap(IDictionary<Variant, Variant> dic)
         {

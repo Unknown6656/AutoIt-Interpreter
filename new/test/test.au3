@@ -1,16 +1,8 @@
-Local $mInternal[] ; Declare a Map
-$mInternal["Internal"] = "AutoIt3" ; Assign an element
-Local $mContainer[] ; Declare a container Map
-$mContainer.Bin = $mInternal ; Assign the first Map as an element
-; All of these return "AutoIt3"
-$sString = $mContainer["Bin"]["Internal"]
-$sString = $mContainer.Bin.Internal
-$sString = $mContainer["Bin"].Internal
-$sString = $mContainer.Bin["Internal"]
+local $arr = [0,1,2]
 
-ConsoleWrite($sString)
+ConsoleWrite($arr["length"])
 
-exit
+exit 0
 
 ;local $xl = ObjCreate("Excel.Application")
 ;With $xl

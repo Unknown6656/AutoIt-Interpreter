@@ -1067,10 +1067,15 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.not_yet_implemented", expression);
         }
 
-        private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index)
-        {
-            throw new NotImplementedException();
-        }
+        private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index) =>
+            ProcessExpression(expr).Match<Union<InterpreterError, Variant>>(err => err, collection =>
+            ProcessExpression(index).Match<Union<InterpreterError, Variant>>(err => err, key =>
+            {
+                if (collection.TryGetIndexed(key, out Variant value))
+                    return value;
+
+                return WellKnownError("error.invalid_index", key);
+            }));
 
         private Union<InterpreterError, Variant> ProcessMember(MEMBER_EXPRESSION expr)
         {
@@ -1098,7 +1103,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (result.Is(out Variant value) && member is string)
             {
-                throw new NotImplementedException();
+                if (value.TryGetIndexed(member, out Variant v))
+                    result = v;
+                else if (member.Equals("length", StringComparison.InvariantCultureIgnoreCase))
+                    result = (Variant)value.Length;
+                else
+                    return WellKnownError("error.unknown_member", member);
             }
             
             return result;

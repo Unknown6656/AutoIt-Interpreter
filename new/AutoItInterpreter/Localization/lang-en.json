@@ -69,9 +69,8 @@
             "invalid_with_target": "The expression following a 'With'-statement must be a non-constant variable expression.",
             "invalid_with_access": "The implicit member access '{0}' can only be used inside a 'With'-block.",
             "au3_caller_only": "The execution of the function '{0}' requires an Au3 (non-native) call frame.",
-
-            "": "",
-
+            "invalid_index": "The index '{0}' is invalid for the current collection/object. Please check that the index is either inside the array range, or that a value is associated with it.",
+            "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",
