@@ -7,7 +7,6 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
-using System.Linq.Expressions;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -23,10 +22,8 @@ namespace Unknown6656.AutoIt3.Runtime
         Number = 2,
         String = 3,
         Array = 4,
-        NETObject = 5,
-
-        // TODO : map type
-
+        Map = 5,
+        NETObject = 6,
         Reference = -2,
         Default = -1,
     }
@@ -35,6 +32,8 @@ namespace Unknown6656.AutoIt3.Runtime
         : IEquatable<Variant>
         , IComparable<Variant>
     {
+        #region STATIC PROPERTIES
+
         public static Variant Null { get; } = GetTypeDefault(VariantType.Null);
 
         public static Variant Default { get; } = GetTypeDefault(VariantType.Default);
@@ -45,6 +44,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant Zero { get; } = 0m;
 
+        #endregion
+        #region INSTANCE PROPERTIES
 
         public readonly VariantType Type { get; }
 
@@ -81,7 +82,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <description><see cref="VariantType.Array"/></description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="Dictionary{K,V}"/> with &lt;<see cref="string"/>,<see cref="Variant"/>&gt;</term>
+        ///         <term><see cref="Dictionary{K,V}"/> with &lt;<see cref="Variant"/>,<see cref="Variant"/>&gt;</term>
         ///         <description><see cref="VariantType.Map"/></description>
         ///     </item>
         ///     <item>
@@ -94,7 +95,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variable? AssignedTo { get; }
 
-        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject; // TODO : maps
+        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject or VariantType.Map;
 
         public readonly bool IsReference => Type is VariantType.Reference;
 
@@ -106,6 +107,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly int Length => (RawData as Array)?.Length ?? 0; // TODO : maps
 
+        #endregion
+        #region .CTOR
 
         private Variant(VariantType type, object? data, Variable? variable)
         {
@@ -114,7 +117,10 @@ namespace Unknown6656.AutoIt3.Runtime
             AssignedTo = variable;
         }
 
-        public int CompareTo(Variant other) => Type is VariantType.String && other.Type is VariantType.String
+        #endregion
+        #region INSTANCE METHODS
+
+        public readonly int CompareTo(Variant other) => Type is VariantType.String && other.Type is VariantType.String
                                              ? ToString().CompareTo(other.ToString())
                                              : ToNumber().CompareTo(other.ToNumber());
 
@@ -156,55 +162,84 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Null or _ => 0m,
         };
 
+        public readonly IDictionary<Variant, Variant> ToMap()
+        {
+            IDictionary<Variant, Variant> output = new Dictionary<Variant, Variant>();
+
+            if (RawData is Array arr)
+                for (int i = 0; i < arr.Length; ++i)
+                    output[i] = FromObject(arr.GetValue(i));
+            else if (RawData is IDictionary<Variant, Variant> dic)
+                foreach (Variant key in dic.Keys)
+                    output[key] = dic[key];
+            else
+                ; // TODO : object
+
+            return output;
+        }
+
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
-        public readonly bool TrySetIndexed(Variant i, Variant variant)
+        public readonly bool TrySetIndexed(Variant index, Variant value)
         {
-            if (RawData is Array arr && (int)i is int idx)
+            if (RawData is Array arr && (int)index is int idx)
             {
                 if (idx < 0 || idx >= arr.Length)
                     return false;
                 else
                 {
-                    arr.SetValue(variant, idx);
+                    arr.SetValue(value, idx);
 
                     return true;
                 }
             }
+            else if (RawData is IDictionary<Variant, Variant> dic)
+            {
+                dic[index] = value;
+
+                return true;
+            }
             else
-                return false; // TODO : maps, objects
+                return false; // TODO : objects
         }
 
-        public readonly bool TryGetIndexed(Variant i, out Variant variant)
+        public readonly bool TryGetIndexed(Variant index, out Variant value)
         {
-            variant = Null;
+            value = Null;
 
-            if (RawData is Array arr && (int)i is int idx)
+            if (RawData is Array arr && (int)index is int idx)
             {
                 if (idx < 0 || idx >= arr.Length)
                     return false;
                 else
                 {
-                    variant = FromObject(arr.GetValue(idx));
+                    value = FromObject(arr.GetValue(idx));
 
                     return true;
                 }
             }
+            else if (RawData is IDictionary<Variant, Variant> dic)
+                return dic.TryGetValue(index, out value);
             else
-                return false; // TODO : maps, objects
+                return false; // TODO : objects
         }
 
+        #endregion
+        #region STATIC METHODS
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
             VariantType.Boolean => FromBoolean(false),
             VariantType.Number => FromNumber(0m),
             VariantType.String => FromString(""),
-            VariantType.Array => FromArray(Array.Empty<Variant>()),
+            VariantType.Array => NewArray(0),
+            VariantType.Map => NewMap(),
             _ => new Variant(type, null, null),
         };
 
-        public static Variant NewArray(int length) => FromArray(new Variant[length]);
+        public static Variant NewMap() => new Variant(VariantType.Map, new Dictionary<Variant, Variant>(), null);
+
+        public static Variant NewArray(int length) => new Variant(VariantType.Array, new Variant[length], null);
 
         public static Variant FromObject(object? obj) => obj switch
         {
@@ -226,14 +261,27 @@ namespace Unknown6656.AutoIt3.Runtime
             char c => FromString(c.ToString()),
             string str => FromString(str),
             StringBuilder strb => FromString(strb.ToString()),
+            (Variant, Variant)[] dic => FromMap(dic),
+            IDictionary<Variant, Variant> dic => FromMap(dic),
             Array arr => FromArray(arr),
-            IDictionary<string, Variant> dic => FromDictionary(dic),
             _ => FromNETObject(obj),
         };
 
-        public static Variant FromDictionary(IDictionary<string, Variant> dic)
+        public static Variant FromMap(params (Variant key, Variant value)[] pairs) => FromMap(pairs.ToDictionary(fst, snd));
+
+        public static Variant FromMap(IDictionary<Variant, Variant> dic)
         {
-            throw new NotImplementedException();
+            Variant v = NewMap();
+            bool error = true;
+
+            foreach (Variant key in dic.Keys)
+                error &= v.TrySetIndexed(key, dic[key]);
+
+            error ^= true;
+
+            // TODO : report error?
+
+            return v;
         }
 
         public static Variant FromArray(Array array)
@@ -278,6 +326,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
+        #endregion
+        #region ARITHMETIC OPERATORS
 
         public static Variant operator ++(Variant v) => v + 1;
 
@@ -316,6 +366,9 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator >(Variant v1, Variant v2) => v1.CompareTo(v2) > 0;
 
         public static bool operator >=(Variant v1, Variant v2) => v1.CompareTo(v2) >= 0;
+
+        #endregion
+        #region CASTING OPERATORS
 
         public static implicit operator Variant (bool b) => FromBoolean(b);
 
@@ -380,6 +433,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public static explicit operator StringBuilder (Variant v) => new StringBuilder(v.ToString());
 
         // public static explicit operator Array (Variant v) => ;
+
+        #endregion
     }
 
     public sealed class Variable

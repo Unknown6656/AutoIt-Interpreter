@@ -1,5 +1,14 @@
-Local $arr[3]
-ConsoleWrite($arr[1] == "")
+Local $mInternal[] ; Declare a Map
+$mInternal["Internal"] = "AutoIt3" ; Assign an element
+Local $mContainer[] ; Declare a container Map
+$mContainer.Bin = $mInternal ; Assign the first Map as an element
+; All of these return "AutoIt3"
+$sString = $mContainer["Bin"]["Internal"]
+$sString = $mContainer.Bin.Internal
+$sString = $mContainer["Bin"].Internal
+$sString = $mContainer.Bin["Internal"]
+
+ConsoleWrite($sString)
 
 exit
 
