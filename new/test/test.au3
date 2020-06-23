@@ -1,10 +1,7 @@
-global $a = Default + (Null * "42"), $b = 42, $c = 7
+Local $arr[3]
+ConsoleWrite($arr[1] == "")
 
-
-;ConsoleWrite(0 <> 1)
-;ConsoleWrite("abc" <> "Ab")
-;exit
-
+exit
 
 ;local $xl = ObjCreate("Excel.Application")
 ;With $xl
@@ -15,11 +12,6 @@ global $a = Default + (Null * "42"), $b = 42, $c = 7
 ;EndWith
 ;Exit
 
-for $i = 0 to 5 step 0.5
-   ConsoleWriteLine($i)
-   ; DebugAllVarsCompact()
-next
-exit
 
 
 
@@ -27,10 +19,7 @@ exit
 
 
 
-; Local $arr[] = [8, 4, 5, 9, 1]
-
-ConsoleWrite()
-
+global $a = Default + (Null * "42"), $b = 42, $c = 7
 
 $b = 9 + $xxxx
 $c = test($b)

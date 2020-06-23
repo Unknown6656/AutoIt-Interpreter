@@ -15,9 +15,6 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using System.Reflection.Metadata;
-using System.Transactions;
-using CommandLine;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -487,7 +484,6 @@ namespace Unknown6656.AutoIt3.Runtime
         private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
         private const string REGEX_DO = /*language=regex*/@"^do$";
         private const string REGEX_UNTIL = /*language=regex*/@"^until\s+(?<expression>.+)$";
-
         private const string REGEX_IF = /*language=regex*/@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$";
         private const string REGEX_ELSE = /*language=regex*/@"^else$";
         private const string REGEX_ENDIF = /*language=regex*/@"^endif$";
@@ -857,11 +853,11 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        private Union<InterpreterError, Variant> ProcessAsVariant(string expression)
+        internal Union<InterpreterError, Variant> ProcessAsVariant(string expression)
         {
             Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessRawExpression(expression);
 
-            if (result.Is(out PARSABLE_EXPRESSION.AnyExpression any))
+            if (result.Is(out PARSABLE_EXPRESSION.AnyExpression? any))
                 return ProcessExpression(any.Item);
             else
                 return (InterpreterError?)result ?? WellKnownError("error.unparsable_line", expression);
@@ -1133,7 +1129,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 target = Variant.Zero;
 
-                if (result.Is(out InterpreterError error))
+                if (result.Is(out InterpreterError? error))
                     return error;
 
                 target = (Variant)result;

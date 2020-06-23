@@ -68,6 +68,11 @@
             "duplicate_jumplabel": "A jump label called '{0}' has already been defined for this method in {1}.",
             "invalid_with_target": "The expression following a 'With'-statement must be a non-constant variable expression.",
             "invalid_with_access": "The implicit member access '{0}' can only be used inside a 'With'-block.",
+            "au3_caller_only": "The execution of the function '{0}' requires an Au3 (non-native) call frame.",
+
+            "": "",
+
+
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",
                 "goto_instructions": "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."

@@ -7,6 +7,7 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
+using System.Linq.Expressions;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -93,6 +94,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variable? AssignedTo { get; }
 
+        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject; // TODO : maps
+
         public readonly bool IsReference => Type is VariantType.Reference;
 
         public readonly Variable? ReferencedVariable => IsReference ? RawData as Variable : null;
@@ -100,6 +103,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly bool IsNull => Type is VariantType.Null;
 
         public readonly bool IsDefault => Type is VariantType.Default;
+
+        public readonly int Length => (RawData as Array)?.Length ?? 0; // TODO : maps
 
 
         private Variant(VariantType type, object? data, Variable? variable)
@@ -153,6 +158,42 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
+        public readonly bool TrySetIndexed(Variant i, Variant variant)
+        {
+            if (RawData is Array arr && (int)i is int idx)
+            {
+                if (idx < 0 || idx >= arr.Length)
+                    return false;
+                else
+                {
+                    arr.SetValue(variant, idx);
+
+                    return true;
+                }
+            }
+            else
+                return false; // TODO : maps, objects
+        }
+
+        public readonly bool TryGetIndexed(Variant i, out Variant variant)
+        {
+            variant = Null;
+
+            if (RawData is Array arr && (int)i is int idx)
+            {
+                if (idx < 0 || idx >= arr.Length)
+                    return false;
+                else
+                {
+                    variant = FromObject(arr.GetValue(idx));
+
+                    return true;
+                }
+            }
+            else
+                return false; // TODO : maps, objects
+        }
+
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
@@ -162,6 +203,8 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Array => FromArray(Array.Empty<Variant>()),
             _ => new Variant(type, null, null),
         };
+
+        public static Variant NewArray(int length) => FromArray(new Variant[length]);
 
         public static Variant FromObject(object? obj) => obj switch
         {
@@ -184,18 +227,27 @@ namespace Unknown6656.AutoIt3.Runtime
             string str => FromString(str),
             StringBuilder strb => FromString(strb.ToString()),
             Array arr => FromArray(arr),
-            IDictionary<string, Variant> dic => FromDictionaray(dic),
+            IDictionary<string, Variant> dic => FromDictionary(dic),
             _ => FromNETObject(obj),
         };
 
-        private static Variant FromDictionaray(IDictionary<string, Variant> dic)
+        public static Variant FromDictionary(IDictionary<string, Variant> dic)
         {
             throw new NotImplementedException();
         }
 
         public static Variant FromArray(Array array)
         {
-            throw new NotImplementedException();
+            Variant v = NewArray(array.Length);
+            Variant i = Zero;
+
+            foreach (object? element in array)
+            {
+                v.TrySetIndexed(i, FromObject(element));
+                ++v;
+            }
+
+            return v;
         }
 
         public static Variant FromLiteral(LITERAL? literal)
@@ -226,6 +278,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
+
+        public static Variant operator ++(Variant v) => v + 1;
+
+        public static Variant operator --(Variant v) => v - 1;
 
         public static Variant operator +(Variant v) => v;
 
