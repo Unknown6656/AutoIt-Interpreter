@@ -127,7 +127,12 @@ and FUNCCALL_EXPRESSION =
             |> List.concat
             |> List.distinct
 
-type VARIABLE_DECLARATION = VARIABLE * EXPRESSION option
+type VARIABLE_DECLARATION =
+    | Scalar of EXPRESSION option
+    | Array of int * EXPRESSION list
+    | Map of unit
+
+type NAMED_VARIABLE_DECLARATION = VARIABLE * VARIABLE_DECLARATION
 
 type PARAMETER_DECLARATION =
     {
@@ -147,7 +152,7 @@ type PARAMETER_DECLARATION =
             sprintf "%s%s%O%s" c r x.Variable d
 
 type PARSABLE_EXPRESSION =
-    | MultiDeclarationExpression of VARIABLE_DECLARATION list
+    | MultiDeclarationExpression of NAMED_VARIABLE_DECLARATION list
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | ParameterDeclaration of PARAMETER_DECLARATION list
     | AnyExpression of EXPRESSION

@@ -15,6 +15,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using System.Linq.Expressions;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -914,28 +915,73 @@ namespace Unknown6656.AutoIt3.Runtime
         private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
         {
             InterpreterError? error = null;
+            Variable? variable;
 
-            foreach ((VARIABLE variable, FSharpOption<EXPRESSION>? expression) in multi_decl.Item.Select(t => t.ToValueTuple()))
+            foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
             {
-                error ??= ProcessVariableDeclaration(variable, decltype);
+                error ??= ProcessVariableDeclaration(variable_ast, decltype);
 
-                if (expression is { })
+                switch (declaration)
                 {
-                    // TODO : enum step handling
+                    case VARIABLE_DECLARATION.Scalar { Item: null }:
+                        if (decltype.HasFlag(DeclarationType.Const))
+                            return WellKnownError("error.uninitialized_constant", variable_ast);
+                        else
+                            break;
+                    case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
+                        {
+                            // TODO : enum step handling
 
-                    var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable), OPERATOR_ASSIGNMENT.Assign, expression.Value).ToTuple();
-                    Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
+                            var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
+                            Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
-                    if (result.Is(out Variant value))
-                        Program.PrintDebugMessage($"{variable} = {value}");
-                    else
-                        error ??= (InterpreterError)result;
+                            if (result.Is(out Variant value))
+                                Program.PrintDebugMessage($"{variable_ast} = {value}");
+                            else
+                                error ??= (InterpreterError)result;
+                        }
+                        break;
+                    case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
+                        if (size < 0)
+                            return WellKnownError("error.invalid_array_size", variable_ast, size);
+                        else if (items.Length > size)
+                            return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
+                        else if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                        {
+                            variable.Value = Variant.NewArray(size);
+
+                            int index = 0;
+
+                            foreach (EXPRESSION item in items)
+                            {
+                                Union<InterpreterError, Variant> result = ProcessExpression(item);
+
+                                if (result.Is(out error))
+                                    return error;
+
+                                variable.Value.TrySetIndexed(index, result);
+                                ++index;
+                            }
+
+                            break;
+                        }
+                        else
+                            return WellKnownError("error.undeclared_variable", variable_ast);
+                    case VARIABLE_DECLARATION.Map { }: // TODO
+                        if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                        {
+                            variable.Value = Variant.NewMap();
+
+                            break;
+                        }
+                        else
+                            return WellKnownError("error.undeclared_variable", variable_ast);
+                    default:
+                        return WellKnownError("error.not_yet_implemented", declaration);
                 }
-                else if (decltype.HasFlag(DeclarationType.Const))
-                    return WellKnownError("error.uninitialized_constant", variable);
             }
 
-            return null;
+            return error;
         }
 
         private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationType decltype)

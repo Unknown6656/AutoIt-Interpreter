@@ -1,6 +1,9 @@
-local $arr = [0,1,2]
+local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
 
-ConsoleWrite($arr["length"])
+$crr["top"] = "kek"
+$crr.lol = 420
+
+DebugAllVarsCompact()
 
 exit 0
 

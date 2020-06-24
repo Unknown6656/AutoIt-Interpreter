@@ -30,7 +30,6 @@ type ExpressionParser(mode : ParserMode) =
             let l = parser s
             if n then -l else l
             |> Decimal
-            |> Number
 
         x.Configurator.LexerSettings.EscapeLiterals <- false
         x.Configurator.LexerSettings.IgnoreCase <- true
@@ -41,11 +40,19 @@ type ExpressionParser(mode : ParserMode) =
                          | multi-decl-expr
                          | any-expr
 
-                multi-decl-expr := multi-decl-expr "," decl-expr
-                                 | decl-expr
+                multi-decl-expr := multi-decl-expr "," named-decl-expr
+                                 | named-decl-expr
 
-                decl-expr := variable "=" any-expr
-                           | variable
+                named-decl-expr := variable decl-expr
+
+                decl-expr := "[" literal-number "]" "=" array-expr
+                           | "[" literal-number "]"
+                           | "[" "]" "=" array-expr
+                           | "=" array-expr
+                           | "=" any-expr
+                           | "[" "]"
+
+                array-expr := "[" arg-list "]"
 
                 assg-target := variable
                              | indexer-expr
@@ -92,32 +99,35 @@ type ExpressionParser(mode : ParserMode) =
                 + -
         *)
         
-        let nt_params_decl_expr     = x.CreateNonTerminal<PARAMETER_DECLARATION list>   "params-decl-expr"
-        let nt_param_decl_expr      = x.CreateNonTerminal<PARAMETER_DECLARATION>        "param-decl-expr"
-        let nt_assg_target          = x.CreateNonTerminal<ASSIGNMENT_TARGET>            "assg-targ"
-        let nt_assg_op              = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>          "assg-op"
-        let nt_multi_decl_expr      = x.CreateNonTerminal<VARIABLE_DECLARATION list>    "multi-decl-expr"
-        let nt_decl_expr            = x.CreateNonTerminal<VARIABLE_DECLARATION>         "decl-expr"
-        let nt_index_expr           = x.CreateNonTerminal<INDEXER_EXPRESSION>           "index-expr"
-        let nt_member_expr          = x.CreateNonTerminal<MEMBER_EXPRESSION>            "member-expr"
-        let nt_object_expr          = x.CreateNonTerminal<EXPRESSION>                   "object-expr"
-        let nt_any_expr             = x.CreateNonTerminal<EXPRESSION>                   "any-expr"
-        let nt_conditional_expr     = x.CreateNonTerminal<EXPRESSION>                   "cond-expr"
-        let nt_func_call            = x.CreateNonTerminal<FUNCCALL_EXPRESSION>          "funccall"
-        let nt_literal              = x.CreateNonTerminal<LITERAL>                      "literal"
-        let nt_args                 = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>           "args"
-        let nt_arglist              = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>           "arglist"
-        let t_operator_assign_add   = x.CreateTerminalF @"\+="                          (fun _ -> AssignAdd)
-        let t_operator_assign_sub   = x.CreateTerminalF @"-="                           (fun _ -> AssignSubtract)
-        let t_operator_assign_mul   = x.CreateTerminalF @"\*="                          (fun _ -> AssignMultiply)
-        let t_operator_assign_div   = x.CreateTerminalF @"/="                           (fun _ -> AssignDivide)
-        let t_operator_assign_con   = x.CreateTerminalF @"&="                           (fun _ -> AssignConcat)
-        let t_operator_comp_neq     = x.CreateTerminalF @"<>"                           (fun _ -> Unequal)
-        let t_operator_comp_gte     = x.CreateTerminalF @">="                           (fun _ -> GreaterEqual)
-        let t_operator_comp_gt      = x.CreateTerminalF @">"                            (fun _ -> Greater)
-        let t_operator_comp_lte     = x.CreateTerminalF @"<="                           (fun _ -> LowerEqual)
-        let t_operator_comp_lt      = x.CreateTerminalF @"<"                            (fun _ -> Lower)
-        let t_operator_comp_eq      = x.CreateTerminalF @"=="                           (fun _ -> EqualCaseSensitive)
+        let nt_params_decl_expr     = x.CreateNonTerminal<PARAMETER_DECLARATION list>       "params-decl-expr"
+        let nt_param_decl_expr      = x.CreateNonTerminal<PARAMETER_DECLARATION>            "param-decl-expr"
+        let nt_assg_target          = x.CreateNonTerminal<ASSIGNMENT_TARGET>                "assg-targ"
+        let nt_assg_op              = x.CreateNonTerminal<OPERATOR_ASSIGNMENT>              "assg-op"
+        let nt_multi_decl_expr      = x.CreateNonTerminal<NAMED_VARIABLE_DECLARATION list>  "multi-decl-expr"
+        let nt_named_decl_expr      = x.CreateNonTerminal<NAMED_VARIABLE_DECLARATION>       "named-decl-expr"
+        let nt_decl_expr            = x.CreateNonTerminal<VARIABLE_DECLARATION>             "decl-expr"
+        let nt_index_expr           = x.CreateNonTerminal<INDEXER_EXPRESSION>               "index-expr"
+        let nt_member_expr          = x.CreateNonTerminal<MEMBER_EXPRESSION>                "member-expr"
+        let nt_array_expr           = x.CreateNonTerminal<EXPRESSION list>                  "array-expr"
+        let nt_object_expr          = x.CreateNonTerminal<EXPRESSION>                       "object-expr"
+        let nt_any_expr             = x.CreateNonTerminal<EXPRESSION>                       "any-expr"
+        let nt_conditional_expr     = x.CreateNonTerminal<EXPRESSION>                       "cond-expr"
+        let nt_func_call            = x.CreateNonTerminal<FUNCCALL_EXPRESSION>              "funccall"
+        let nt_literal              = x.CreateNonTerminal<LITERAL>                          "literal"
+        let nt_literal_num          = x.CreateNonTerminal<decimal>                          "literal-num"
+        let nt_args                 = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "args"
+        let nt_arglist              = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "arglist"
+        let t_operator_assign_add   = x.CreateTerminalF @"\+="                              (fun _ -> AssignAdd)
+        let t_operator_assign_sub   = x.CreateTerminalF @"-="                               (fun _ -> AssignSubtract)
+        let t_operator_assign_mul   = x.CreateTerminalF @"\*="                              (fun _ -> AssignMultiply)
+        let t_operator_assign_div   = x.CreateTerminalF @"/="                               (fun _ -> AssignDivide)
+        let t_operator_assign_con   = x.CreateTerminalF @"&="                               (fun _ -> AssignConcat)
+        let t_operator_comp_neq     = x.CreateTerminalF @"<>"                               (fun _ -> Unequal)
+        let t_operator_comp_gte     = x.CreateTerminalF @">="                               (fun _ -> GreaterEqual)
+        let t_operator_comp_gt      = x.CreateTerminalF @">"                                (fun _ -> Greater)
+        let t_operator_comp_lte     = x.CreateTerminalF @"<="                               (fun _ -> LowerEqual)
+        let t_operator_comp_lt      = x.CreateTerminalF @"<"                                (fun _ -> Lower)
+        let t_operator_comp_eq      = x.CreateTerminalF @"=="                               (fun _ -> EqualCaseSensitive)
         let t_symbol_equal          = x.CreateTerminal  @"="
         let t_symbol_questionmark   = x.CreateTerminal  @"\?"
         let t_symbol_colon          = x.CreateTerminal  @":"
@@ -125,10 +135,10 @@ type ExpressionParser(mode : ParserMode) =
         let t_symbol_comma          = x.CreateTerminal  @","
         let t_symbol_minus          = x.CreateTerminal  @"-"
         let t_symbol_plus           = x.CreateTerminal  @"\+"
-        let t_operator_mul          = x.CreateTerminalF @"\*"                           (fun _ -> Multiply)
-        let t_operator_div          = x.CreateTerminalF @"/"                            (fun _ -> Divide)
-        let t_operator_pow          = x.CreateTerminalF @"^"                            (fun _ -> Power)
-        let t_operator_concat       = x.CreateTerminalF @"&"                            (fun _ -> StringConcat)
+        let t_operator_mul          = x.CreateTerminalF @"\*"                               (fun _ -> Multiply)
+        let t_operator_div          = x.CreateTerminalF @"/"                                (fun _ -> Divide)
+        let t_operator_pow          = x.CreateTerminalF @"^"                                (fun _ -> Power)
+        let t_operator_concat       = x.CreateTerminalF @"&"                                (fun _ -> StringConcat)
         let t_symbol_oparen         = x.CreateTerminal  @"\("
         let t_symbol_cparen         = x.CreateTerminal  @"\)"
         let t_symbol_obrack         = x.CreateTerminal  @"\["
@@ -138,21 +148,20 @@ type ExpressionParser(mode : ParserMode) =
      // let t_keyword_new           = x.CreateTerminal  @"new"
         let t_keyword_const         = x.CreateTerminal  @"const"
         let t_keyword_byref         = x.CreateTerminal  @"byref"
-        let t_keyword_and           = x.CreateTerminalF @"and"                          (fun _ -> And)
-        let t_keyword_or            = x.CreateTerminalF @"or"                           (fun _ -> Or)
-        let t_keyword_not           = x.CreateTerminalF @"(not|!)"                      (fun _ -> Not)
-        let t_literal_true          = x.CreateTerminalF @"true"                         (fun _ -> True)
-        let t_literal_false         = x.CreateTerminalF @"false"                        (fun _ -> False)
-        let t_literal_null          = x.CreateTerminalF @"null"                         (fun _ -> Null)
-        let t_literal_default       = x.CreateTerminalF @"default"                      (fun _ -> Default)
-        let t_literal_empty         = x.CreateTerminalF @"empty"                        (fun _ -> String "")
+        let t_keyword_and           = x.CreateTerminalF @"and"                              (fun _ -> And)
+        let t_keyword_or            = x.CreateTerminalF @"or"                               (fun _ -> Or)
+        let t_keyword_not           = x.CreateTerminalF @"(not|!)"                          (fun _ -> Not)
+        let t_literal_true          = x.CreateTerminalF @"true"                             (fun _ -> True)
+        let t_literal_false         = x.CreateTerminalF @"false"                            (fun _ -> False)
+        let t_literal_null          = x.CreateTerminalF @"null"                             (fun _ -> Null)
+        let t_literal_default       = x.CreateTerminalF @"default"                          (fun _ -> Default)
+        let t_literal_empty         = x.CreateTerminalF @"empty"                            (fun _ -> String "")
         let t_hex                   = x.CreateTerminalF @"(\+|-)?(0[xX][\da-fA-F_]+|[\da-fA-F_][hH])" (parse_num "0x" (fun s -> Int64.Parse(s.Replace("_", "").TrimEnd 'h', NumberStyles.HexNumber)))
         let t_bin                   = x.CreateTerminalF @"(\+|-)?0[bB][01_]+"                         (parse_num "0b" (fun s -> Convert.ToInt64(s.Replace("_", ""), 2)))
         let t_oct                   = x.CreateTerminalF @"(\+|-)?0[oO][0-7_]+"                        (parse_num "0o" (fun s -> Convert.ToInt64(s.Replace("_", ""), 8)))
         let t_dec                   = x.CreateTerminalF @"(\+|-)?\d+(\.\d+)?([eE](\+|-)?\d+)?"        (fun s -> match Decimal.TryParse s with
                                                                                                                 | (true, d) -> d
-                                                                                                                | _ -> Decimal.Parse(s, NumberStyles.Float)
-                                                                                                                |> Number)
+                                                                                                                | _ -> Decimal.Parse(s, NumberStyles.Float))
         let t_variable              = x.CreateTerminalF @"$([^\W\d]|[^\W\d]\w*)"                      (fun s -> VARIABLE(s.Substring 1))
         let t_macro                 = x.CreateTerminalF @"@([^\W\d]|[^\W\d]\w*)"                      (fun s -> MACRO(s.Substring 1))
         let t_string_1              = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""            (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
@@ -185,8 +194,20 @@ type ExpressionParser(mode : ParserMode) =
         | ParserMode.FunctionParameters ->
             reduce_1i nt_result nt_params_decl_expr ParameterDeclaration
             reduce_ci nt_result (fun () -> ParameterDeclaration [])
+            
+            reduce_3i nt_params_decl_expr nt_params_decl_expr t_symbol_comma nt_param_decl_expr (fun xs _ x -> xs@[x])
+            reduce_1i nt_params_decl_expr nt_param_decl_expr (fun x -> [x])
+            
+            reduce_3i nt_param_decl_expr t_keyword_const t_keyword_byref nt_named_decl_expr (fun _ _ (v, Scalar e) -> { IsConst = true; IsByRef = true; Variable = v; DefaultValue = e })
+            reduce_2i nt_param_decl_expr t_keyword_byref nt_named_decl_expr (fun _ (v, Scalar e) -> { IsConst = false; IsByRef = true; Variable = v; DefaultValue = e })
+            reduce_2i nt_param_decl_expr t_keyword_const nt_named_decl_expr (fun _ (v, Scalar e) -> { IsConst = true; IsByRef = false; Variable = v; DefaultValue = e })
+            reduce_1i nt_param_decl_expr nt_named_decl_expr (fun (v, Scalar e) -> { IsConst = false; IsByRef = false; Variable = v; DefaultValue = e })
         | ParserMode.MultiDeclaration ->
             reduce_1i nt_result nt_multi_decl_expr MultiDeclarationExpression
+            
+            reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_named_decl_expr (fun xs _ x -> xs@[x])
+            reduce_1i nt_multi_decl_expr nt_named_decl_expr (fun x -> [x])
+            
         | ParserMode.ArbitraryExpression ->
             reduce_3i nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))
             reduce_1i nt_result nt_any_expr AnyExpression
@@ -195,19 +216,18 @@ type ExpressionParser(mode : ParserMode) =
             |> ArgumentOutOfRangeException
             |> raise
  
-        reduce_3i nt_params_decl_expr nt_params_decl_expr t_symbol_comma nt_param_decl_expr (fun xs _ x -> xs@[x])
-        reduce_1i nt_params_decl_expr nt_param_decl_expr (fun x -> [x])
-        
-        reduce_3i nt_param_decl_expr t_keyword_const t_keyword_byref nt_decl_expr (fun _ _ (v, e) -> { IsConst = true; IsByRef = true; Variable = v; DefaultValue = e })
-        reduce_2i nt_param_decl_expr t_keyword_byref nt_decl_expr (fun _ (v, e) -> { IsConst = false; IsByRef = true; Variable = v; DefaultValue = e })
-        reduce_2i nt_param_decl_expr t_keyword_const nt_decl_expr (fun _ (v, e) -> { IsConst = true; IsByRef = false; Variable = v; DefaultValue = e })
-        reduce_1i nt_param_decl_expr nt_decl_expr (fun (v, e) -> { IsConst = false; IsByRef = false; Variable = v; DefaultValue = e })
+        reduce_2i nt_named_decl_expr t_variable nt_decl_expr (fun v e -> v, e)
 
-        reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_decl_expr (fun xs _ x -> xs@[x])
-        reduce_1i nt_multi_decl_expr nt_decl_expr (fun x -> [x])
-        
-        reduce_3i nt_decl_expr t_variable t_symbol_equal nt_any_expr (fun v _ e -> v, Some e)
-        reduce_1i nt_decl_expr t_variable (fun v -> v, None)
+        if mode = ParserMode.MultiDeclaration then
+            reduce_5i nt_decl_expr t_symbol_obrack nt_literal_num t_symbol_cbrack t_symbol_equal nt_array_expr (fun _ c _ _ e -> Array(int c, e))
+            reduce_4i nt_decl_expr t_symbol_obrack t_symbol_cbrack t_symbol_equal nt_array_expr (fun _ _ _ e -> Array(e.Length, e))
+            reduce_3i nt_decl_expr t_symbol_obrack nt_literal_num t_symbol_cbrack (fun _ c _ -> Array(int c, []))
+            reduce_2i nt_decl_expr t_symbol_equal nt_array_expr (fun _ e -> Array(e.Length, e))
+            reduce_2i nt_decl_expr t_symbol_obrack t_symbol_cbrack (fun _ _ -> Map())
+        reduce_2i nt_decl_expr t_symbol_equal nt_any_expr (fun _ e -> Scalar(Some e))
+        reduce_ci nt_decl_expr (fun () -> Scalar None)
+
+        reduce_3i nt_array_expr t_symbol_obrack nt_arglist t_symbol_cbrack (fun _ a _ -> a)
 
         // reduce_1i nt_assg_op t_symbol_equal (fun _ -> Assign)
         reduce_1i nt_assg_op t_operator_assign_add (fun _ -> AssignAdd)
@@ -261,16 +281,18 @@ type ExpressionParser(mode : ParserMode) =
         reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
         reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
         reduce_2i nt_any_expr t_keyword_not nt_any_expr (fun _ e -> Unary(Not, e))
+        
+        reduce_0i nt_literal_num t_hex
+        reduce_0i nt_literal_num t_bin
+        reduce_0i nt_literal_num t_oct
+        reduce_0i nt_literal_num t_dec
 
         reduce_0i nt_literal t_literal_true
         reduce_0i nt_literal t_literal_false
         reduce_0i nt_literal t_literal_null
         reduce_0i nt_literal t_literal_default
         reduce_0i nt_literal t_literal_empty
-        reduce_0i nt_literal t_hex
-        reduce_0i nt_literal t_bin
-        reduce_0i nt_literal t_oct
-        reduce_0i nt_literal t_dec 
+        reduce_1i nt_literal nt_literal_num Number
         reduce_0i nt_literal t_string_1
         reduce_0i nt_literal t_string_2
 

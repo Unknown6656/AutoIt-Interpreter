@@ -2,8 +2,15 @@
 This directory contains the "new" .NET5-based AutoIt3 Interpreter.
 [TODO : elaborate]
 
+## Usage
+[TODO]
 
 ## Extensibility
+### Built-in extensions
+[TODO]
+### Custom extensions/plugins
+[TODO]
+
 The AutoIt3 Interpreter is designed to be modular and can be extended in multiple ways:
 
 #### 1) Language packs
