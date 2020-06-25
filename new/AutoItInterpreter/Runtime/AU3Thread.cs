@@ -15,7 +15,6 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using System.Linq.Expressions;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -147,12 +146,13 @@ namespace Unknown6656.AutoIt3.Runtime
     }
 
 #pragma warning disable CA1063
+    // TODO : covariant return for 'CurrentFunction'
     public abstract class CallFrame
         : IDisposable
     {
         public AU3Thread CurrentThread { get; }
 
-        public ScriptFunction CurrentFunction { get; }
+        public virtual ScriptFunction CurrentFunction { get; }
 
         public VariableScope VariableResolver { get; }
 
@@ -1014,44 +1014,59 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
         {
             (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
-            Union<InterpreterError, Variant>? result = null;
-            Variable? target_variable = null;
 
             switch (target)
             {
                 case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
-                    if (VariableResolver.TryGetVariable(variable.Name, out target_variable))
                     {
-                        if (target_variable.IsConst && !force)
-                            return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
-                    }
-                    else
-                        target_variable = VariableResolver.CreateVariable(CurrentLocation, variable.Name, false);
+                        if (VariableResolver.TryGetVariable(variable.Name, out Variable? target_variable))
+                        {
+                            if (target_variable.IsConst && !force)
+                                return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
+                        }
+                        else
+                            target_variable = VariableResolver.CreateVariable(CurrentLocation, variable.Name, false);
 
-                    break;
+                        if (target_variable is null)
+                            return WellKnownError("error.invalid_assignment_target", target);
+                        else
+                            return ProcessVariableAssignment(target_variable, expression);
+                    }
                 case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
-                    {
-                        (EXPRESSION expr, EXPRESSION index) = indexer.ToValueTuple();
-                        result = ProcessIndexer(expr, index);
-                    }
-                    break;
-                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: { } member }:
-                    result = ProcessMember(member);
+                    return ProcessExpression(indexer.Item1).Match<Union<InterpreterError, Variant>>(err => err, target =>
+                           ProcessExpression(indexer.Item2).Match<Union<InterpreterError, Variant>>(err => err, key =>
+                           ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                           {
+                               if (target.TrySetIndexed(key, value))
+                                   return value;
+                           
+                               return WellKnownError("error.invalid_index_assg", target.AssignedTo, key);
+                           })));
+                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } targ, Item2: { Item: string memb } } }:
+                    return ProcessExpression(targ).Match<Union<InterpreterError, Variant>>(err => err, target =>
+                           ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                           {
+                               if (target.TrySetIndexed(memb, value))
+                                   return value;
 
-                    break;
+                               return WellKnownError("error.invalid_index_assg", target.AssignedTo, memb);
+                           }));
+                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string member } } }:
+                    {
+                        if (_withcontext_stack.TryPeek(out Variable? variable))
+                            return ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                            {
+                                if (variable.Value.TrySetIndexed(member, value))
+                                    return value;
+
+                                return WellKnownError("error.invalid_index_assg", variable, member);
+                            });
+                        else
+                            return WellKnownError("error.invalid_with_access", member);
+                    }
                 default:
                     return WellKnownError("error.invalid_assignment_target", target);
             }
-
-            if (result?.Is<InterpreterError>() ?? false)
-                return result;
-            else
-                target_variable ??= result?.As<Variant>().AssignedTo;
-
-            if (target_variable is null)
-                return WellKnownError("error.invalid_assignment_target", target);
-            else
-                return ProcessVariableAssignment(target_variable, expression);
         }
 
         private Union<InterpreterError, Variant> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
@@ -1330,7 +1345,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError WellKnownError(string key, params object[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+        private InterpreterError WellKnownError(string key, params object?[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
     }
 
     [Flags]

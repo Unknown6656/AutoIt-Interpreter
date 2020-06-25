@@ -70,6 +70,7 @@
             "invalid_with_access": "The implicit member access '{0}' can only be used inside a 'With'-block.",
             "au3_caller_only": "The execution of the function '{0}' requires an Au3 (non-native) call frame.",
             "invalid_index": "The index '{0}' is invalid for the current collection/object. Please check that the index is either inside the array range, or that a value is associated with it.",
+            "invalid_index_assg": "Invalid index assignment of '{0}' with the index '{1}'. Please check that the target variable is indexable, and that the provided index is not outside the index range.",
             "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable.",
             "invalid_array_size": "Array declaration '{0}' has an invalid array size {0}: The array size must be a positive integer.",
             "too_many_array_items": "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization.",

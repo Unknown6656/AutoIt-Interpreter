@@ -145,6 +145,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly override string ToString() => IsDefault ? "Default" : RawData?.ToString() ?? "";
 
+        public readonly string ToDebugString()
+        {
+            if (RawData is Variant[] arr)
+                return $"({arr.Length}) [{string.Join(", ", arr)}]";
+            else if (Type is VariantType.Map)
+                return $"({Length}) [{string.Join(", ", ToMap().Select(kvp => $"{kvp.Key}={kvp.Value}"))}]";
+            else
+                return ToString();
+        }
+
         public readonly bool ToBoolean() => Type switch
         {
             VariantType.Null or VariantType.Default => false,

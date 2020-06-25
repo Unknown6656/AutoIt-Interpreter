@@ -222,7 +222,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                      from variable in scope.LocalVariables
                                                                      let name = scope.InternalName + '$' + variable.Name
                                                                      orderby name ascending
-                                                                     select (name, variable.Value.Type.ToString(), variable.Value.ToString())).ToArray();
+                                                                     select (name, variable.Value.Type.ToString(), variable.Value.ToDebugString())).ToArray();
             int w_name = variables.Select(t => t.name.Length).Append(4).Max();
             int w_type = variables.Select(t => t.type.Length).Append(4).Max();
             int w_value = variables.Select(t => t.value.Length).Append(5).Max();
