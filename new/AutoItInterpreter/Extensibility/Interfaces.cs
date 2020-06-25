@@ -5,6 +5,8 @@ using System;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
+using System.Linq;
+using System.Collections.Generic;
 
 [assembly: AutoIt3Plugin]
 
@@ -113,29 +115,48 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public override string ToString() => Name;
 
-        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate) => Create(name, (param_count, param_count), @delegate);
+        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate) =>
+            Create(name, param_count, param_count, @delegate);
 
-        public static ProvidedNativeFunction Create(string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate) =>
-            new FromDelegate(@delegate, name, param_count);
+        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate, params Variant[] default_values) =>
+            new FromDelegate(@delegate, name, min_param_count, max_param_count, default_values);
 
-        private sealed class FromDelegate
+
+        internal sealed class FromDelegate
             : ProvidedNativeFunction
         {
             private readonly Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> _exec;
 
+
             public override string Name { get; }
+
+            public Variant[] DefaultValues { get; }
 
             public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
 
-            public FromDelegate(Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> exec, string name, (int min, int max) param_count)
+            public FromDelegate(Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> exec, string name, int min_param_count, int max_param_count, params Variant[] default_values)
             {
                 _exec = exec;
                 Name = name;
-                ParameterCount = param_count;
+                DefaultValues = default_values;
+                ParameterCount = (min_param_count, max_param_count);
             }
 
-            public override Union<InterpreterError, Variant>? Execute(NativeCallFrame frame, Variant[] args) => _exec(frame, args);
+            public override Union<InterpreterError, Variant>? Execute(NativeCallFrame frame, Variant[] args)
+            {
+                List<Variant> a = new List<Variant>();
+
+                a.AddRange(args);
+                a.AddRange(DefaultValues.Skip(args.Length - ParameterCount.MinimumCount));
+
+                if (a.Count < ParameterCount.MaximumCount)
+                    a.AddRange(Enumerable.Repeat(Variant.Null, ParameterCount.MaximumCount - a.Count));
+                else if (a.Count > ParameterCount.MaximumCount)
+                    a.RemoveRange(ParameterCount.MaximumCount, a.Count - ParameterCount.MaximumCount);
+
+                return _exec(frame, a.ToArray());
+            }
         }
     }
 

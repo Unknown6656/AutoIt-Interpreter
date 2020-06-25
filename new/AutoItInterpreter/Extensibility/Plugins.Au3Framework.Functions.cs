@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
@@ -10,13 +11,30 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
+            ProvidedNativeFunction.Create(nameof(Abs), 1, Abs),
+            ProvidedNativeFunction.Create(nameof(ACos), 1, ACos),
+            ProvidedNativeFunction.Create(nameof(ASin), 1, ASin),
+            ProvidedNativeFunction.Create(nameof(ATan), 1, ATan),
+            ProvidedNativeFunction.Create(nameof(Cos), 1, Cos),
+            ProvidedNativeFunction.Create(nameof(Sin), 1, Sin),
+            ProvidedNativeFunction.Create(nameof(Tan), 1, Tan),
+            ProvidedNativeFunction.Create(nameof(Asc), 1, Asc),
+            ProvidedNativeFunction.Create(nameof(AscW), 1, AscW),
+            ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
+            ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
+            ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, 500m, 1000m),
+            //ProvidedNativeFunction.Create(nameof(), 1, ),
+            //ProvidedNativeFunction.Create(nameof(), 1, ),
+            //ProvidedNativeFunction.Create(nameof(), 1, ),
+            //ProvidedNativeFunction.Create(nameof(), 1, ),
+            //ProvidedNativeFunction.Create(nameof(), 1, ),
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
-            ProvidedNativeFunction.Create(nameof(MsgBox), (3, 5), MsgBox),
+            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
             ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
-            ProvidedNativeFunction.Create(nameof(Assign), (2, 3), Assign),
+            ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
             ProvidedNativeFunction.Create(nameof(IsDeclared), 1, IsDeclared),
         };
 
@@ -41,6 +59,56 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             else
                 return InterpreterError.WellKnown(null, "error.au3_caller_only", funcname);
         }
+
+
+        public static Union<InterpreterError, Variant> Abs(CallFrame frame, Variant[] args) => (Variant)Math.Abs(args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> ACos(CallFrame frame, Variant[] args) => (Variant)Math.Acos((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> ASin(CallFrame frame, Variant[] args) => (Variant)Math.Asin((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> ATan(CallFrame frame, Variant[] args) => (Variant)Math.Atan((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> Cos(CallFrame frame, Variant[] args) => (Variant)Math.Cos((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> Sin(CallFrame frame, Variant[] args) => (Variant)Math.Sin((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> Tan(CallFrame frame, Variant[] args) => (Variant)Math.Tan((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> Asc(CallFrame frame, Variant[] args) => (Variant)(byte)args[0].ToString().FirstOrDefault();
+
+        public static Union<InterpreterError, Variant> AscW(CallFrame frame, Variant[] args) => (Variant)(int)args[0].ToString().FirstOrDefault();
+
+        public static Union<InterpreterError, Variant> Chr(CallFrame frame, Variant[] args) => (Variant)((char)(int)args[0]).ToString();
+
+        public static Union<InterpreterError, Variant> ChrW(CallFrame frame, Variant[] args) => (Variant)((char)(byte)args[0]).ToString();
+
+        public static Union<InterpreterError, Variant> Beep(CallFrame frame, Variant[] args)
+        {
+            Console.Beep((int)args[0], (int)args[1]);
+
+            return Variant.True;
+        }
+
+        //public static Union<InterpreterError, Variant>(CallFrame frame, Variant[] args)
+        //{
+        //}
+
+        //public static Union<InterpreterError, Variant>(CallFrame frame, Variant[] args)
+        //{
+        //}
+
+        //public static Union<InterpreterError, Variant>(CallFrame frame, Variant[] args)
+        //{
+        //}
+
+        //public static Union<InterpreterError, Variant>(CallFrame frame, Variant[] args)
+        //{
+        //}
+
+        //public static Union<InterpreterError, Variant>(CallFrame frame, Variant[] args)
+        //{
+        //}
 
         public static Union<InterpreterError, Variant> ConsoleWriteError(CallFrame frame, Variant[] args)
         {
@@ -147,7 +215,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
-            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), (0, 1), ConsoleWriteLine),
+            ProvidedNativeFunction.Create(nameof(ACosh), 1, ACosh),
+            ProvidedNativeFunction.Create(nameof(ASinh), 1, ASinh),
+            ProvidedNativeFunction.Create(nameof(ATanh), 1, ATanh),
+            ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), 0, 1, ConsoleWriteLine),
             ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
         };
 
@@ -155,7 +226,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public AdditionalFunctions(Interpreter interpreter)
             : base(interpreter)
         {
-        }
+    }
+
+        public static Union<InterpreterError, Variant> ACosh(CallFrame frame, Variant[] args) => (Variant)Math.Acosh((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> ASinh(CallFrame frame, Variant[] args) => (Variant)Math.Asinh((double)args[0].ToNumber());
+
+        public static Union<InterpreterError, Variant> ATanh(CallFrame frame, Variant[] args) => (Variant)Math.Atanh((double)args[0].ToNumber());
 
         public static Union<InterpreterError, Variant> ConsoleWriteLine(CallFrame frame, Variant[] args) => 
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });

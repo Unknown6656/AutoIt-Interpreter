@@ -1,9 +1,11 @@
-local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
+Beep("550")
 
-$crr["top"] = "kek"
-$crr.lol = 420
-
-DebugAllVarsCompact()
+; local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
+;
+; $crr["top"] = "kek"
+; $crr.lol = 420
+;
+; DebugAllVarsCompact()
 
 exit 0
 
