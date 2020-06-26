@@ -3,6 +3,9 @@ using System;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
+using Unknown6656.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -96,6 +99,8 @@ STRINGTOBINARY(0.135) = 0x302E313335
             ProvidedNativeFunction.Create(nameof(Cos), 1, Cos),
             ProvidedNativeFunction.Create(nameof(Sin), 1, Sin),
             ProvidedNativeFunction.Create(nameof(Exp), 1, Exp),
+            ProvidedNativeFunction.Create(nameof(Mod), 2, Mod),
+            ProvidedNativeFunction.Create(nameof(Log), 1, Log),
             ProvidedNativeFunction.Create(nameof(Sqrt), 1, Sqrt),
             ProvidedNativeFunction.Create(nameof(Floor), 1, Floor),
             ProvidedNativeFunction.Create(nameof(Ceiling), 1, Ceiling),
@@ -112,6 +117,15 @@ STRINGTOBINARY(0.135) = 0x302E313335
             ProvidedNativeFunction.Create(nameof(BitNOT), 1, BitNOT),
             ProvidedNativeFunction.Create(nameof(BitShift), 2, BitShift),
             ProvidedNativeFunction.Create(nameof(BitRotate), 1, 3, BitRotate, 1, "W"),
+            ProvidedNativeFunction.Create(nameof(String), 1, String),
+            ProvidedNativeFunction.Create(nameof(Binary), 1, Binary),
+            ProvidedNativeFunction.Create(nameof(BinaryLen), 1, BinaryLen),
+            ProvidedNativeFunction.Create(nameof(BinaryMid), 2, 3, BinaryMid, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(Number), 1, Number),
+            ProvidedNativeFunction.Create(nameof(Int), 1, Int),
+            ProvidedNativeFunction.Create(nameof(Hex), 1, 2, Hex, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(BinaryToString), 1, BinaryToString),
+            ProvidedNativeFunction.Create(nameof(StringToBinary), 1, StringToBinary),
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
@@ -119,6 +133,26 @@ STRINGTOBINARY(0.135) = 0x302E313335
             ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
+            ProvidedNativeFunction.Create(nameof(IsArray), 1, IsArray),
+            ProvidedNativeFunction.Create(nameof(IsBinary), 1, IsBinary),
+            ProvidedNativeFunction.Create(nameof(IsBool), 1, IsBool),
+            ProvidedNativeFunction.Create(nameof(IsFloat), 1, IsFloat),
+            ProvidedNativeFunction.Create(nameof(IsFunc), 1, IsFunc),
+            ProvidedNativeFunction.Create(nameof(IsInt), 1, IsInt),
+            ProvidedNativeFunction.Create(nameof(IsKeyword), 1, IsKeyword),
+            ProvidedNativeFunction.Create(nameof(IsNumber), 1, IsNumber),
+            ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
+            ProvidedNativeFunction.Create(nameof(IsString), 1, IsString),
+            ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
+            ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
+            ProvidedNativeFunction.Create(nameof(StringIsDigit), 1, StringIsDigit),
+            ProvidedNativeFunction.Create(nameof(StringIsAlNum), 1, StringIsAlNum),
+            ProvidedNativeFunction.Create(nameof(StringIsAlpha), 1, StringIsAlpha),
+            ProvidedNativeFunction.Create(nameof(StringIsASCII), 1, StringIsASCII),
+            ProvidedNativeFunction.Create(nameof(StringIsLower), 1, StringIsLower),
+            ProvidedNativeFunction.Create(nameof(StringIsSpace), 1, StringIsSpace),
+            ProvidedNativeFunction.Create(nameof(StringIsUpper), 1, StringIsUpper),
+            ProvidedNativeFunction.Create(nameof(StringIsXDigit), 1, StringIsXDigit),
             ProvidedNativeFunction.Create(nameof(IsDeclared), 1, IsDeclared),
             ProvidedNativeFunction.Create(nameof(FuncName), 1, FuncName),
             ProvidedNativeFunction.Create(nameof(SetError), 1, 3, SetError),
@@ -162,6 +196,10 @@ STRINGTOBINARY(0.135) = 0x302E313335
         public static FunctionReturnValue Tan(CallFrame frame, Variant[] args) => (Variant)Math.Tan((double)args[0].ToNumber());
 
         public static FunctionReturnValue Exp(CallFrame frame, Variant[] args) => (Variant)Math.Exp((double)args[0].ToNumber());
+
+        public static FunctionReturnValue Log(CallFrame frame, Variant[] args) => (Variant)Math.Log((double)args[0].ToNumber());
+
+        public static FunctionReturnValue Mod(CallFrame frame, Variant[] args) => args[0] % args[1];
 
         public static FunctionReturnValue Sqrt(CallFrame frame, Variant[] args) => (Variant)Math.Sqrt((double)args[0].ToNumber());
 
@@ -251,6 +289,55 @@ STRINGTOBINARY(0.135) = 0x302E313335
             throw new NotImplementedException();
         }
 
+        public static FunctionReturnValue String(CallFrame frame, Variant[] args) => (Variant)args[0].ToString();
+
+        public static FunctionReturnValue Binary(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary();
+
+        public static FunctionReturnValue BinaryLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary().Length;
+
+        public static FunctionReturnValue BinaryMid(CallFrame frame, Variant[] args)
+        {
+            byte[] bytes = args[0].ToBinary();
+            int start = (int)args[1] - 1;
+            int count = (int)args[2];
+
+            if (start < 0 || start >= bytes.Length)
+                return Variant.EmptyBinary;
+            else if (args[2].IsDefault)
+                return (Variant)bytes[start..];
+            else if (start + count > bytes.Length)
+                return Variant.EmptyBinary;
+            else
+                return (Variant)bytes[start..(start + count)];
+        }
+
+        public static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(decimal)args[0];
+
+        public static FunctionReturnValue Int(CallFrame frame, Variant[] args) => (Variant)(long)args[0];
+
+        public static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String(BytewiseEncoding.Instance);
+
+        public static FunctionReturnValue StringToBinary(CallFrame frame, Variant[] args) => (Variant)From.String(args[0].ToString(), BytewiseEncoding.Instance).To.Bytes;
+
+        public static FunctionReturnValue Hex(CallFrame frame, Variant[] args)
+        {
+            byte[] bytes = args[0].ToBinary();
+            int length = (int)args[1];
+
+            if (args[0].Type is VariantType.Binary || args[1].IsDefault)
+                return (Variant)From.Bytes(bytes).To.Hex();
+            else if (length < 1)
+                return Variant.EmptyString;
+
+            length = Math.Min(length, 16);
+
+            if (bytes.Length < length)
+                bytes = bytes.Concat(Enumerable.Repeat((byte)0, length - bytes.Length)).ToArray();
+
+            return (Variant)From.Bytes(bytes).To.Hex();
+        }
+
+
         public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {
             decimal flag = args[0].ToNumber();
@@ -320,6 +407,42 @@ STRINGTOBINARY(0.135) = 0x302E313335
                     return Variant.Zero;
             });
 
+        public static FunctionReturnValue IsArray(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Array);
+
+        public static FunctionReturnValue IsBinary(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Binary);
+
+        public static FunctionReturnValue IsBool(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Boolean);
+
+        public static FunctionReturnValue IsFloat(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d != d);
+
+        public static FunctionReturnValue IsFunc(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Function);
+
+        public static FunctionReturnValue IsInt(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d == d);
+
+        public static FunctionReturnValue IsKeyword(CallFrame frame, Variant[] args) => (Variant)(args[0].IsDefault ? 1m : args[0].IsNull ? 2m : 0m);
+
+        public static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
+
+        public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.NETObject);
+
+        public static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
+
+        public static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
+
+        public static FunctionReturnValue StringIsAlNum(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetterOrDigit);
+
+        public static FunctionReturnValue StringIsAlpha(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetter);
+
+        public static FunctionReturnValue StringIsASCII(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(c => c < 0x80);
+
+        public static FunctionReturnValue StringIsLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLower);
+
+        public static FunctionReturnValue StringIsSpace(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsWhiteSpace);
+
+        public static FunctionReturnValue StringIsUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsUpper);
+
+        public static FunctionReturnValue StringIsXDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All("0123456789abcdefABCDEF".Contains);
+
         public static FunctionReturnValue SetExtended(CallFrame frame, Variant[] args) => frame.SetExtended((int)args[0], args[1]);
 
         public static FunctionReturnValue SetError(CallFrame frame, Variant[] args) => frame.SetError((int)args[0], (int)args[1], args[2]);
@@ -351,7 +474,7 @@ STRINGTOBINARY(0.135) = 0x302E313335
         public AdditionalFunctions(Interpreter interpreter)
             : base(interpreter)
         {
-    }
+        }
 
         public static FunctionReturnValue ACosh(CallFrame frame, Variant[] args) => (Variant)Math.Acosh((double)args[0].ToNumber());
 
@@ -359,7 +482,7 @@ STRINGTOBINARY(0.135) = 0x302E313335
 
         public static FunctionReturnValue ATanh(CallFrame frame, Variant[] args) => (Variant)Math.Atanh((double)args[0].ToNumber());
 
-        public static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) => 
+        public static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) =>
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
 
         public static FunctionReturnValue ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();

@@ -43,11 +43,15 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant Default { get; } = GetTypeDefault(VariantType.Default);
 
-        public static Variant True { get; } = true;
+        public static Variant EmptyString { get; } = FromString("");
 
-        public static Variant False { get; } = false;
+        public static Variant EmptyBinary { get; } = FromBinary(Array.Empty<byte>());
 
-        public static Variant Zero { get; } = 0m;
+        public static Variant True { get; } = FromBoolean(true);
+
+        public static Variant False { get; } = FromBoolean(false);
+
+        public static Variant Zero { get; } = FromNumber(0m);
 
         #endregion
         #region INSTANCE PROPERTIES
@@ -330,10 +334,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant GetTypeDefault(VariantType type) => type switch
         {
-            VariantType.Boolean => FromBoolean(false),
-            VariantType.Number => FromNumber(0m),
-            VariantType.Binary => FromBinary(Array.Empty<byte>()),
-            VariantType.String => FromString(""),
+            VariantType.Boolean => False,
+            VariantType.Number => Zero,
+            VariantType.Binary => EmptyBinary,
+            VariantType.String => EmptyString,
             VariantType.Array => NewArray(0),
             VariantType.Map => NewMap(),
             _ => new Variant(type, null, null),
@@ -495,69 +499,71 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
         #region CASTING OPERATORS
 
-        public static implicit operator Variant (bool b) => FromBoolean(b);
+        public static implicit operator Variant(bool b) => FromBoolean(b);
 
-        public static implicit operator Variant (sbyte n) => FromNumber(n);
+        public static implicit operator Variant(sbyte n) => FromNumber(n);
 
-        public static implicit operator Variant (byte n) => FromNumber(n);
+        public static implicit operator Variant(byte n) => FromNumber(n);
 
-        public static implicit operator Variant (short n) => FromNumber(n);
+        public static implicit operator Variant(short n) => FromNumber(n);
 
-        public static implicit operator Variant (ushort n) => FromNumber(n);
+        public static implicit operator Variant(ushort n) => FromNumber(n);
 
-        public static implicit operator Variant (int n) => FromNumber(n);
+        public static implicit operator Variant(int n) => FromNumber(n);
 
-        public static implicit operator Variant (uint n) => FromNumber(n);
+        public static implicit operator Variant(uint n) => FromNumber(n);
 
-        public static implicit operator Variant (long n) => FromNumber(n);
+        public static implicit operator Variant(long n) => FromNumber(n);
 
-        public static implicit operator Variant (ulong n) => FromNumber(n);
+        public static implicit operator Variant(ulong n) => FromNumber(n);
 
-        public static implicit operator Variant (float n) => FromObject(n);
+        public static implicit operator Variant(float n) => FromObject(n);
 
-        public static implicit operator Variant (double n) => FromObject(n);
+        public static implicit operator Variant(double n) => FromObject(n);
 
-        public static implicit operator Variant (decimal n) => FromNumber(n);
+        public static implicit operator Variant(decimal n) => FromNumber(n);
 
-        public static implicit operator Variant (char n) => FromObject(n);
+        public static implicit operator Variant(char n) => FromObject(n);
 
-        public static implicit operator Variant (string? n) => FromString(n);
+        public static implicit operator Variant(string? n) => FromString(n);
 
-        public static implicit operator Variant (StringBuilder? n) => FromObject(n);
+        public static implicit operator Variant(StringBuilder? n) => FromObject(n);
 
-        public static implicit operator Variant (Array? n) => FromObject(n);
+        public static implicit operator Variant(Variant[] n) => FromArray(n);
 
-        public static explicit operator bool (Variant v) => v.ToBoolean();
+        public static implicit operator Variant(byte[] n) => FromBinary(n);
 
-        public static explicit operator sbyte (Variant v) => (sbyte)v.ToNumber();
+        public static explicit operator bool(Variant v) => v.ToBoolean();
 
-        public static explicit operator byte (Variant v) => (byte)v.ToNumber();
+        public static explicit operator sbyte(Variant v) => (sbyte)v.ToNumber();
 
-        public static explicit operator short (Variant v) => (short)v.ToNumber();
+        public static explicit operator byte(Variant v) => (byte)v.ToNumber();
 
-        public static explicit operator ushort (Variant v) => (ushort)v.ToNumber();
+        public static explicit operator short(Variant v) => (short)v.ToNumber();
 
-        public static explicit operator int (Variant v) => (int)v.ToNumber();
+        public static explicit operator ushort(Variant v) => (ushort)v.ToNumber();
 
-        public static explicit operator uint (Variant v) => (uint)v.ToNumber();
+        public static explicit operator int(Variant v) => (int)v.ToNumber();
 
-        public static explicit operator long (Variant v) => (long)v.ToNumber();
+        public static explicit operator uint(Variant v) => (uint)v.ToNumber();
 
-        public static explicit operator ulong (Variant v) => (ulong)v.ToNumber();
+        public static explicit operator long(Variant v) => (long)v.ToNumber();
 
-        public static explicit operator float (Variant v) => (float)v.ToNumber();
+        public static explicit operator ulong(Variant v) => (ulong)v.ToNumber();
 
-        public static explicit operator double (Variant v) => (double)v.ToNumber();
+        public static explicit operator float(Variant v) => (float)v.ToNumber();
 
-        public static explicit operator decimal (Variant v) => v.ToNumber();
+        public static explicit operator double(Variant v) => (double)v.ToNumber();
 
-        public static explicit operator char (Variant v) => v.ToString().FirstOrDefault();
+        public static explicit operator decimal(Variant v) => v.ToNumber();
 
-        public static explicit operator string (Variant v) => v.ToString();
+        public static explicit operator char(Variant v) => v.ToString().FirstOrDefault();
 
-        public static explicit operator StringBuilder (Variant v) => new StringBuilder(v.ToString());
+        public static explicit operator string(Variant v) => v.ToString();
 
-        // public static explicit operator Array (Variant v) => ;
+        public static explicit operator StringBuilder(Variant v) => new StringBuilder(v.ToString());
+
+        public static explicit operator byte[](Variant v) => v.ToBinary();
 
         #endregion
     }
