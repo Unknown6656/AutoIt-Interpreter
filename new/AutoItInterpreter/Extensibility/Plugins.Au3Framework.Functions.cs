@@ -4,89 +4,9 @@ using System;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
-
-    /*
-dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary]
-dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "topkek", 0.135]
-
-for $func in $funcs
-   for $input in $inputs
-      ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input) & @CRLF)
-   next
-next
-exit 0
-
-
-
->"C:\Program Files (x86)\AutoIt3\SciTE\..\autoit3.exe" /ErrorStdOut "L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3"    
-STRING(True) = True
-STRING(False) = False
-STRING() = 
-STRING(Default) = Default
-STRING(65280) = 65280
-STRING(255) = 255
-STRING(-81985529216486896) = -81985529216486896
-STRING(0xAAFFBB00) = 0xAAFFBB00
-STRING(0xaaffbb00) = 0xaaffbb00
-STRING(topkek) = topkek
-STRING(0.135) = 0.135
-BINARY(True) = 0x01
-BINARY(False) = 0x00
-BINARY() = 0x00000000
-BINARY(Default) = 0xFFFFFFFF
-BINARY(65280) = 0x00FF0000
-BINARY(255) = 0xFF000000
-BINARY(-81985529216486896) = 0x1032547698BADCFE
-BINARY(0xAAFFBB00) = 0xAAFFBB00
-BINARY(0xaaffbb00) = 0xAAFFBB00
-BINARY(topkek) = 0x746F706B656B
-BINARY(0.135) = 0x48E17A14AE47C13F
-NUMBER(True) = 1
-NUMBER(False) = 0
-NUMBER() = 0
-NUMBER(Default) = 0
-NUMBER(65280) = 65280
-NUMBER(255) = 255
-NUMBER(-81985529216486896) = -81985529216486896
-NUMBER(0xAAFFBB00) = 12320682
-NUMBER(0xaaffbb00) = -1426081024
-NUMBER(topkek) = 0
-NUMBER(0.135) = 0.135
-INT(True) = 1
-INT(False) = 0
-INT() = 0
-INT(Default) = 0
-INT(65280) = 65280
-INT(255) = 255
-INT(-81985529216486896) = -81985529216486896
-INT(0xAAFFBB00) = 12320682
-INT(0xaaffbb00) = -1426081024
-INT(topkek) = 0
-INT(0.135) = 0
-BINARYTOSTRING(True) = 
-BINARYTOSTRING(False) = BINARYTOSTRING() = BINARYTOSTRING(Default) = ��
-BINARYTOSTRING(65280) = BINARYTOSTRING(255) = ��ARYTOSTRING(-81985529216486896) = 2Tvغݾ
-BINARYTOSTRING(0xAAFFBB00) = ˿܂INARYTOSTRING(0xaaffbb00) = ˿܂INARYTOSTRING(topkek) = topkek
-BINARYTOSTRING(0.135) = H⺔χ
-STRINGTOBINARY(True) = 0x54727565
-STRINGTOBINARY(False) = 0x46616C7365
-STRINGTOBINARY() = 
-STRINGTOBINARY(Default) = 0x44656661756C74
-STRINGTOBINARY(65280) = 0x3635323830
-STRINGTOBINARY(255) = 0x323535
-STRINGTOBINARY(-81985529216486896) = 0x2D3831393835353239323136343836383936
-STRINGTOBINARY(0xAAFFBB00) = 0x30784141464642423030
-STRINGTOBINARY(0xaaffbb00) = 0x30786161666662623030
-STRINGTOBINARY(topkek) = 0x746F706B656B
-STRINGTOBINARY(0.135) = 0x302E313335
->Exit code: 0    Time: 0.1133
-     */
-
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider
     {

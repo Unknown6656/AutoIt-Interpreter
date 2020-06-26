@@ -625,6 +625,19 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_FORIN] = m =>
                 {
+                    Union<InterpreterError, Variant> collection = ProcessAsVariant(m.Groups["expression"].Value);
+                    Union<InterpreterError, PARSABLE_EXPRESSION> variable = ProcessRawExpression(m.Groups["variable"].Value);
+
+                    if (variable.Is(out PARSABLE_EXPRESSION? pexpr) && pexpr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION.Variable { Item: VARIABLE varname } })
+                    {
+                        if (VariableResolver.TryGetVariable(varname, out Variable? var) && var.IsConst)
+                            ; // error : const redeclare
+                        else
+                            ; // TODO
+                    }
+                    else
+                        ; // error : unparsable variable
+
                     throw new NotImplementedException();
                 },
                 [REGEX_WITH] = m =>
