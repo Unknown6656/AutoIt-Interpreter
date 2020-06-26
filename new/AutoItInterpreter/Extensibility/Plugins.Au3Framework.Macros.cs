@@ -49,6 +49,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "desktopdir" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
                 "documentscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
                 "exitcode" => Interpreter.ExitCode,
+                "error" => Interpreter.ErrorCode,
+                "extended" => Interpreter.ExtendedErrorCode,
                 "favoritescommondir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
                 "favoritesdir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
                 "homedrive" => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,
