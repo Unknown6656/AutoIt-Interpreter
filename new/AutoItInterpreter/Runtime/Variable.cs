@@ -2,13 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
-using Newtonsoft.Json.Linq;
+using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -20,14 +21,15 @@ namespace Unknown6656.AutoIt3.Runtime
         : int
     {
         Null = 0,
-        Boolean = 1,
-        Number = 2,
-        String = 3,
-        Array = 4,
-        Map = 5,
-        Function = 6,
-        NETObject = 7,
-        Reference = -2,
+        Boolean,
+        Number,
+        String,
+        Binary,
+        Array,
+        Map,
+        Function,
+        NETObject,
+        Reference,
         Default = -1,
     }
 
@@ -87,6 +89,10 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <description><see cref="string"/></description>
         ///     </item>
         ///     <item>
+        ///         <term><see cref="VariantType.Binary"/></term>
+        ///         <description><see cref="byte"/>[]</description>
+        ///     </item>
+        ///     <item>
         ///         <term><see cref="VariantType.Array"/></term>
         ///         <description><see cref="Variant"/>[]</description>
         ///     </item>
@@ -108,7 +114,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variable? AssignedTo { get; }
 
-        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject or VariantType.Map or VariantType.String;
+        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.Binary or VariantType.NETObject or VariantType.Map or VariantType.String;
 
         public readonly bool IsReference => Type is VariantType.Reference;
 
@@ -135,9 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
         #region INSTANCE METHODS
 
-        public readonly int CompareTo(Variant other) => Type is VariantType.String && other.Type is VariantType.String
-                                             ? ToString().CompareTo(other.ToString())
-                                             : ToNumber().CompareTo(other.ToNumber());
+        public readonly int CompareTo(Variant other) => RawData is string s1 && other.RawData is string s2 ? s1.CompareTo(s2) : ToNumber().CompareTo(other.ToNumber());
 
         public readonly bool NotEquals(Variant other) => !EqualsCaseInsensitive(other); // TODO : unit tests
 
@@ -145,6 +149,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             if (Type is VariantType.String && other.Type is VariantType.String)
                 return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+
+            // TODO : binary compare
 
             return EqualsCaseSensitive(other);
         }
@@ -161,7 +167,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariantType.Default => "Default",
             VariantType.Boolean or VariantType.Number or VariantType.String => RawData?.ToString() ?? "",
-            VariantType.Reference => (RawData as Variable)?.Value.ToString() ?? "",
+            _ when RawData is Variable var => var.Value.ToString(),
+            _ when RawData is byte[] bytes => "0x" + From.Bytes(bytes).To.Hex(),
             _ => "",
         };
 
@@ -190,22 +197,39 @@ namespace Unknown6656.AutoIt3.Runtime
                 return ToString();
         }
 
-        public readonly bool ToBoolean() => Type switch
+        public readonly bool ToBoolean() => RawData switch
         {
-            VariantType.Null or VariantType.Default => false,
-            VariantType.Boolean => (bool?)RawData ?? false,
-            VariantType.Number => !((decimal?)RawData is 0m or null),
-            VariantType.String => ToString() != "",
+            _ when Type is VariantType.Null or VariantType.Default => false,
+            byte[] arr => arr.FirstOrDefault() != 0,
+            string s => s.Length > 0,
+            decimal d => d is 0m,
+            bool b => b,
+            null => false,
             _ => true,
         };
 
-        public readonly decimal ToNumber() => Type switch
+        public readonly decimal ToNumber() => RawData switch
         {
-            VariantType.Default => -1m,
-            VariantType.Boolean => (bool?)RawData is true ? 1 : 0,
-            VariantType.Number => (decimal?)RawData ?? 0m,
-            VariantType.String => decimal.TryParse(ToString(), out decimal d) ? d : 0m,
+            _ when Type is VariantType.Default => -1m,
+            true => 1m,
+            false => 0m,
+            decimal d => d,
+            string s when s.ToLower().StartsWith("0x") => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
+            string s => decimal.TryParse(s, out decimal d) ? d : 0m,
             VariantType.Null or _ => 0m,
+        };
+
+        public readonly byte[] ToBinary() => RawData switch
+        {
+            bool b => new[] { (byte)(b ? 1 : 0) },
+            _ when Type is VariantType.Default => From.Unmanaged(-1),
+            null => From.Unmanaged(0),
+            decimal d when d == (int)d => From.Unmanaged((int)d),
+            decimal d when d == (long)d => From.Unmanaged((long)d),
+            decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
+            string s when s.ToLowerInvariant().StartsWith("0x") => From.Hex(s[2..]),
+            string s => From.String(s, BytewiseEncoding.Instance),
+            _ => Array.Empty<byte>(),
         };
 
         public readonly IDictionary<Variant, Variant> ToMap()
@@ -218,6 +242,9 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is IDictionary<Variant, Variant> dic)
                 foreach (Variant key in dic.Keys)
                     output[key] = dic[key];
+            else if (RawData is string s)
+                for (int i = 0; i < s.Length; ++i)
+                    output[i] = FromObject(s[i]);
             else
                 ; // TODO : objects
 
@@ -238,7 +265,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     return false;
                 else
                 {
-                    arr.SetValue(value, idx);
+                    if (arr is Variant[] varr)
+                        varr[idx] = value;
+                    else if (arr is byte[] barr)
+                        barr[idx] = (byte)value;
+                    else
+                        return false;
 
                     return true;
                 }
@@ -300,6 +332,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariantType.Boolean => FromBoolean(false),
             VariantType.Number => FromNumber(0m),
+            VariantType.Binary => FromBinary(Array.Empty<byte>()),
             VariantType.String => FromString(""),
             VariantType.Array => NewArray(0),
             VariantType.Map => NewMap(),
@@ -330,7 +363,8 @@ namespace Unknown6656.AutoIt3.Runtime
             char c => FromString(c.ToString()),
             string str => FromString(str),
             StringBuilder strb => FromString(strb.ToString()),
-            Array arr => FromArray(arr),
+            IEnumerable<byte> bytes => FromBinary(bytes),
+            IEnumerable<Variant> arr => FromArray(arr),
             IDictionary<Variant, Variant> dic => FromMap(dic),
             ScriptFunction func => FromFunction(func),
             _ => FromNETObject(obj),
@@ -353,7 +387,9 @@ namespace Unknown6656.AutoIt3.Runtime
             return v;
         }
 
-        public static Variant FromArray(Array array)
+        public static Variant FromArray(IEnumerable<Variant> collection) => FromArray(collection.ToArray());
+
+        public static Variant FromArray(Variant[] array)
         {
             Variant v = NewArray(array.Length);
             Variant i = Zero;
@@ -366,6 +402,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return v;
         }
+
+        public static Variant FromBinary(IEnumerable<byte> bytes) => FromBinary(bytes.ToArray());
+
+        public static Variant FromBinary(byte[] bytes) => new Variant(VariantType.Binary, bytes, null);
 
         public static Variant FromLiteral(LITERAL? literal)
         {

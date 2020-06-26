@@ -1,4 +1,19 @@
-local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
+dim $funcs = [String, Binary, Number, Int];, BinaryToString, StringToBinary]
+dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
+
+for $func in $funcs
+   for $input in $inputs
+	  ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input) & @CRLF)
+   next
+   ConsoleWrite(@CRLF)
+next
+
+for $byte in Binary(0x182921124)
+   ConsoleWrite($byte)
+next
+exit 0
+
+; local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
 
 $crr["top"] = "kek"
 $crr.lol = 420
@@ -6,6 +21,7 @@ $crr.lol = 420
 func lol(byref $v)
    dim $d = [$v, $v, $_]
    DebugAllVarsCompact()
+   ConsoleWriteLine(FuncName($v))
 endfunc
 
 dim $fptr = lol
