@@ -359,6 +359,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
+        internal static Variant BitwiseAnd(Variant v1, Variant v2) => (int)v1 & (int)v2;
+
+        internal static Variant BitwiseOr(Variant v1, Variant v2) => (int)v1 | (int)v2;
+
+        internal static Variant BitwiseXor(Variant v1, Variant v2) => (int)v1 ^ (int)v2;
+
+        internal static Variant BitwiseNot(Variant v) => ~(int)v;
+
         #endregion
         #region ARITHMETIC OPERATORS
 
@@ -367,6 +375,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Variant operator --(Variant v) => v - 1;
 
         public static Variant operator +(Variant v) => v;
+
+        public static Variant operator ~(Variant v) => BitwiseNot(v);
 
         public static Variant operator !(Variant v) => FromBoolean(!v.ToBoolean());
 
@@ -381,6 +391,10 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Variant operator /(Variant v1, Variant v2) => FromNumber(v1.ToNumber() / v2.ToNumber());
 
         public static Variant operator %(Variant v1, Variant v2) => FromNumber(v1.ToNumber() % v2.ToNumber());
+
+        public static Variant operator <<(Variant v, int offs) => offs < 0 ? v >> -offs : (int)v << offs;
+
+        public static Variant operator >>(Variant v, int offs) => offs < 0 ? v << -offs : (int)v << offs;
 
         /// <summary>This is <b>not</b> XOR - this is the mathematical power operator!</summary>
         public static Variant operator ^(Variant v1, Variant v2) => FromObject(Math.Pow((double)v1.ToNumber(), (double)v2.ToNumber()));

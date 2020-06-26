@@ -17,6 +17,9 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
         private readonly object _main_thread_mutex = new object();
+        private volatile int _error;
+        private volatile int _extended;
+
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {
@@ -36,6 +39,18 @@ namespace Unknown6656.AutoIt3.Runtime
         public ScriptScanner ScriptScanner { get; }
 
         public PluginLoader PluginLoader { get; }
+
+        public int ErrorCode
+        {
+            get => _error;
+            set => _error = value;
+        }
+
+        public int ExtendedErrorCode
+        {
+            get => _extended;
+            set => _extended = value;
+        }
 
         public int ExitCode { get; private set; } = 0;
 
@@ -141,6 +156,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class InterpreterError
     {
+        public static InterpreterError Empty = new InterpreterError(SourceLocation.Unknown, "");
+
         public SourceLocation? Location { get; }
         public string Message { get; }
 

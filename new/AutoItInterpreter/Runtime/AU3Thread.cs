@@ -185,6 +185,8 @@ namespace Unknown6656.AutoIt3.Runtime
             Union<InterpreterError, Variant> result = Variant.Zero;
             ScannedScript script = CurrentFunction.Script;
 
+            SetError(0, 0);
+
             if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
                 result = load_error;
 
@@ -213,6 +215,20 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
+        public Variant SetError(int error, int extended = 0, in Variant @return = default)
+        {
+            Interpreter.ErrorCode = error;
+
+            return SetExtended(extended, in @return);
+        }
+
+        public Variant SetExtended(int extended, in Variant @return = default)
+        {
+            Interpreter.ExtendedErrorCode = extended;
+
+            return @return;
+        }
+
         public void Print(Variant value) => Interpreter.Print(this, value);
 
         public void Print(object? value) => Interpreter.Print(this, value);
@@ -229,7 +245,19 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
-        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args) => (CurrentFunction as NativeFunction)?.Execute(this, args) ?? ReturnValue;
+        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
+        {
+            FunctionReturnValue result = ((NativeFunction)CurrentFunction).Execute(this, args);
+
+            if (result.IsFatal(out InterpreterError? fatal))
+                return fatal;
+            else if (result.IsSuccess(out Variant variant))
+                return variant;
+            else if (result.IsError(out variant, out int error, out int? extended))
+                return SetError(error, extended ?? 0, in variant);
+            else
+                throw new InvalidOperationException("Return value could not be processed");
+        }
 
         public override string ToString() => $"{base.ToString()} native call frame";
     }

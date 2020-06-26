@@ -1,12 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.Common;
-using System.Linq;
-using System.Collections.Generic;
 
 [assembly: AutoIt3Plugin]
 
@@ -111,21 +110,21 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
 
-        public abstract Union<InterpreterError, Variant>? Execute(NativeCallFrame frame, Variant[] args);
-
         public override string ToString() => Name;
 
-        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate) =>
+        public abstract FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args);
+
+        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate) =>
             Create(name, param_count, param_count, @delegate);
 
-        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> @delegate, params Variant[] default_values) =>
+        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
             new FromDelegate(@delegate, name, min_param_count, max_param_count, default_values);
 
 
         internal sealed class FromDelegate
             : ProvidedNativeFunction
         {
-            private readonly Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> _exec;
+            private readonly Func<NativeCallFrame, Variant[], FunctionReturnValue> _exec;
 
 
             public override string Name { get; }
@@ -135,7 +134,7 @@ namespace Unknown6656.AutoIt3.Extensibility
             public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
 
-            public FromDelegate(Func<NativeCallFrame, Variant[], Union<InterpreterError, Variant>?> exec, string name, int min_param_count, int max_param_count, params Variant[] default_values)
+            public FromDelegate(Func<NativeCallFrame, Variant[], FunctionReturnValue> exec, string name, int min_param_count, int max_param_count, params Variant[] default_values)
             {
                 _exec = exec;
                 Name = name;
@@ -143,7 +142,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 ParameterCount = (min_param_count, max_param_count);
             }
 
-            public override Union<InterpreterError, Variant>? Execute(NativeCallFrame frame, Variant[] args)
+            public override FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args)
             {
                 List<Variant> a = new List<Variant>();
 
