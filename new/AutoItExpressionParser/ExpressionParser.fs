@@ -66,6 +66,7 @@ type ExpressionParser(mode : ParserMode) =
                 object-expr := assg-target
                              | macro
                              | literal
+                             | identifier
                              | funccall
                              | "(" any-expr ")"
 
@@ -250,6 +251,7 @@ type ExpressionParser(mode : ParserMode) =
         reduce_1i nt_object_expr nt_member_expr Member
         reduce_1i nt_object_expr t_macro Macro
         reduce_1i nt_object_expr nt_literal Literal
+        reduce_1i nt_object_expr t_identifier FunctionName
         reduce_1i nt_object_expr nt_func_call FunctionCall
         reduce_3i nt_object_expr t_symbol_oparen nt_any_expr t_symbol_cparen (fun _ e _ -> e)
 

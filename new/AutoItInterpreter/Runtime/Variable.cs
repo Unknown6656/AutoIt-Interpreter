@@ -8,6 +8,7 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
+using Newtonsoft.Json.Linq;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -24,7 +25,8 @@ namespace Unknown6656.AutoIt3.Runtime
         String = 3,
         Array = 4,
         Map = 5,
-        NETObject = 6,
+        Function = 6,
+        NETObject = 7,
         Reference = -2,
         Default = -1,
     }
@@ -54,41 +56,51 @@ namespace Unknown6656.AutoIt3.Runtime
         /// This value <b>must</b> have one of the following types:
         /// <para/>
         /// <list type="table">
+        ///     <!--
         ///     <listheader>
-        ///         <term>.NET Type</term>
-        ///         <description><see cref="VariantType"/> value of <see cref="Type"/></description>
+        ///         <term><see cref="VariantType"/> value of <see cref="Type"/></term>
+        ///         <description>.NET Type</description>
         ///     </listheader>
+        ///     -->
         ///     <item>
-        ///         <term>&lt;<see langword="null"/>&gt;</term>
-        ///         <description><see cref="VariantType.Null"/> or <see cref="VariantType.Default"/></description>
+        ///         <term><see cref="VariantType.Null"/></term>
+        ///         <description>&lt;<see langword="null"/>&gt;</description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="Variable"/></term>
-        ///         <description><see cref="VariantType.Reference"/></description>
+        ///         <term><see cref="VariantType.Default"/></term>
+        ///         <description>&lt;<see langword="null"/>&gt;</description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="bool"/></term>
-        ///         <description><see cref="VariantType.Boolean"/></description>
+        ///         <term><see cref="VariantType.Reference"/></term>
+        ///         <description><see cref="Variable"/></description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="decimal"/></term>
-        ///         <description><see cref="VariantType.Number"/></description>
+        ///         <term><see cref="VariantType.Boolean"/></term>
+        ///         <description><see cref="bool"/></description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="string"/></term>
-        ///         <description><see cref="VariantType.String"/></description>
+        ///         <term><see cref="VariantType.Number"/></term>
+        ///         <description><see cref="decimal"/></description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="Variant"/>[]</term>
-        ///         <description><see cref="VariantType.Array"/></description>
+        ///         <term><see cref="VariantType.String"/></term>
+        ///         <description><see cref="string"/></description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="Dictionary{K,V}"/> with &lt;<see cref="Variant"/>,<see cref="Variant"/>&gt;</term>
-        ///         <description><see cref="VariantType.Map"/></description>
+        ///         <term><see cref="VariantType.Array"/></term>
+        ///         <description><see cref="Variant"/>[]</description>
         ///     </item>
         ///     <item>
-        ///         <term><see cref="object"/></term>
-        ///         <description><see cref="VariantType.NETObject"/></description>
+        ///         <term><see cref="VariantType.Map"/></term>
+        ///         <description><see cref="Dictionary{K,V}"/> with &lt;<see cref="Variant"/>,<see cref="Variant"/>&gt;</description>
+        ///     <item>
+        ///     </item>
+        ///         <term><see cref="VariantType.Function"/></term>
+        ///         <description><see cref="ScriptFunction"/></description>
+        ///     </item>
+        ///     <item>
+        ///         <term><see cref="VariantType.NETObject"/></term>
+        ///         <description><see cref="object"/></description>
         ///     </item>
         /// </list>
         /// </summary>
@@ -99,6 +111,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly bool IsIndexable => Type is VariantType.Array or VariantType.NETObject or VariantType.Map or VariantType.String;
 
         public readonly bool IsReference => Type is VariantType.Reference;
+
+        public readonly bool IsFunction => Type is VariantType.Function;
 
         public readonly Variable? ReferencedVariable => IsReference ? RawData as Variable : null;
 
@@ -143,14 +157,35 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly override int GetHashCode() => HashCode.Combine(Type, RawData);
 
-        public readonly override string ToString() => IsDefault ? "Default" : RawData?.ToString() ?? "";
+        public readonly override string ToString() => Type switch
+        {
+            VariantType.Default => "Default",
+            VariantType.Boolean or VariantType.Number or VariantType.String => RawData?.ToString() ?? "",
+            VariantType.Reference => (RawData as Variable)?.Value.ToString() ?? "",
+            _ => "",
+        };
 
         public readonly string ToDebugString()
         {
-            if (RawData is Variant[] arr)
-                return $"({arr.Length}) [{string.Join(", ", arr)}]";
+            static string sanitize(char c) => c switch
+            {
+                < ' ' or (> '~' and < '¡') => $"\\{c:x2}",
+                '\\' or '"' => "\\" + c,
+                _ => c.ToString()
+            };
+
+            if (IsNull || IsDefault)
+                return Type.ToString();
+            else if (RawData is Variant[] arr)
+                return $"[{string.Join(", ", arr.Select(e => e.ToDebugString()))}]";
             else if (Type is VariantType.Map)
-                return $"({Length}) [{string.Join(", ", ToMap().Select(kvp => $"{kvp.Key}={kvp.Value}"))}]";
+                return $"[{string.Join(", ", ToMap().Select(kvp => $"{kvp.Key.ToDebugString()}={kvp.Value.ToDebugString()}"))}]";
+            else if (RawData is string or StringBuilder)
+                return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
+            else if (RawData is Variable v)
+                return $"{v}:{v.Value.ToDebugString()}";
+            else if (RawData is ScriptFunction func)
+                return $"<{func.Location.FileName}>{func.Name}{func.ParameterCount}";
             else
                 return ToString();
         }
@@ -297,6 +332,7 @@ namespace Unknown6656.AutoIt3.Runtime
             StringBuilder strb => FromString(strb.ToString()),
             Array arr => FromArray(arr),
             IDictionary<Variant, Variant> dic => FromMap(dic),
+            ScriptFunction func => FromFunction(func),
             _ => FromNETObject(obj),
         };
 
@@ -359,13 +395,15 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
-        internal static Variant BitwiseAnd(Variant v1, Variant v2) => (int)v1 & (int)v2;
+        public static Variant FromFunction(ScriptFunction func) => new Variant(VariantType.Function, func, null);
 
-        internal static Variant BitwiseOr(Variant v1, Variant v2) => (int)v1 | (int)v2;
+        public static Variant BitwiseAnd(Variant v1, Variant v2) => (int)v1 & (int)v2;
 
-        internal static Variant BitwiseXor(Variant v1, Variant v2) => (int)v1 ^ (int)v2;
+        public static Variant BitwiseOr(Variant v1, Variant v2) => (int)v1 | (int)v2;
 
-        internal static Variant BitwiseNot(Variant v) => ~(int)v;
+        public static Variant BitwiseXor(Variant v1, Variant v2) => (int)v1 ^ (int)v2;
+
+        public static Variant BitwiseNot(Variant v) => ~(int)v;
 
         #endregion
         #region ARITHMETIC OPERATORS
@@ -526,7 +564,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Value = Variant.Null;
         }
 
-        public override string ToString() => $"${Name}: {Value}";
+        public override string ToString() => $"${Name}: {Value.ToDebugString()}";
 
         public override int GetHashCode() => Name.ToLowerInvariant().GetHashCode();
 

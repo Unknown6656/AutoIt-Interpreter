@@ -5,6 +5,7 @@ using System;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
+using System.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -29,11 +30,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         private static IDictionary<string, object?> GetVariantInfo(Variant value)
         {
+            string s = value.RawData?.ToString()?.Trim() ?? "";
+            string ts = value.RawData?.GetType().ToString() ?? "<void>";
+
             IDictionary<string, object?> dic = new Dictionary<string, object?>
             {
-                ["value"] = value.ToString().Trim(),
+                ["value"] = value.ToDebugString(),
                 ["type"] = value.Type,
-                ["raw"] = $"\"{value.RawData?.ToString()?.Trim()}\" ({value.RawData?.GetType() ?? typeof(void)})"
+                ["raw"] = s != ts ? $"\"{s}\" ({ts})" : ts
             };
 
             if (value.AssignedTo is Variable variable)
@@ -229,17 +233,37 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             w_value = Math.Min(w_value + 3, Console.BufferWidth - 12 - w_type - w_name);
 
+            Array.Sort(variables, (x, y) =>
+            {
+                string[] pathx = x.name.Split('/');
+                string[] pathy = y.name.Split('/');
+
+                for (int i = 0, l = Math.Min(pathx.Length, pathy.Length); i < l; ++i)
+                {
+                    bool varx = pathx[i].StartsWith("$");
+                    int cmp = varx ^ pathy[i].StartsWith("$") ? varx ? -1 : 1 : pathx[i].CompareTo(pathy[i]);
+
+                    if (cmp != 0)
+                        return cmp;
+                }
+
+                return string.Compare(x.name, y.name);
+            });
+
             sb.Append($@"{variables.Length} Variables:
-| {"Name".PadRight(w_name)} | {"Type".PadRight(w_type)} | {"Value".PadRight(w_value)} |
-|{new string('-', w_name + 2)}+{new string('-', w_type + 2)}+{new string('-', w_value + 2)}|
+┌{new string('─', w_name + 2)}┬{new string('─', w_type + 2)}┬{new string('─', w_value + 2)}┐
+│ {"Name".PadRight(w_name)} │ {"Type".PadRight(w_type)} │ {"Value".PadRight(w_value)} │
+├{new string('─', w_name + 2)}┼{new string('─', w_type + 2)}┼{new string('─', w_value + 2)}┤
 ");
 
             foreach ((string name, string type, string value) in variables)
             {
                 string val = value.Length > w_value - 3 ? value[..^3] + "..."  : value.PadLeft(w_value);
 
-                sb.AppendLine($"| {name.PadRight(w_name)} | {type.PadRight(w_type)} | {val} |");
+                sb.AppendLine($"│ {name.PadRight(w_name)} │ {type.PadRight(w_type)} │ {val} │");
             }
+
+            sb.AppendLine($"└{new string('─', w_name + 2)}┴{new string('─', w_type + 2)}┴{new string('─', w_value + 2)}┘");
 
             frame.Print(sb.ToString());
 

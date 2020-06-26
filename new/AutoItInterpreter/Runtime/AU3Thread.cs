@@ -1117,40 +1117,29 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 case null:
                     return Variant.Null;
-                case EXPRESSION.Literal literal:
-                    return ProcessLiteral(literal.Item);
-                case EXPRESSION.Variable variable:
-                    return ProcessVariable(variable.Item);
-                case EXPRESSION.Macro macro:
-                    return ProcessMacro(macro.Item);
-                case EXPRESSION.Unary unary:
-                    {
-                        (OPERATOR_UNARY op, EXPRESSION expr) = unary.Item.ToValueTuple();
-
-                        return ProcessUnary(op, expr);
-                    }
-                case EXPRESSION.Binary binary:
-                    {
-                        (EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2) = binary.Item.ToValueTuple();
-
-                        return ProcessBinary(expr1, op, expr2);
-                    }
-                case EXPRESSION.Ternary ternary:
-                    {
-                        (EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) = ternary.Item.ToValueTuple();
-
-                        return ProcessTernary(expr1, expr2, expr3);
-                    }
-                case EXPRESSION.Member member:
-                    return ProcessMember(member.Item);
-                case EXPRESSION.Indexer indexer:
-                    {
-                        (EXPRESSION expr, EXPRESSION index) = indexer.Item.ToValueTuple();
-
-                        return ProcessIndexer(expr, index);
-                    }
-                case EXPRESSION.FunctionCall funccall:
-                    return ProcessFunctionCall(funccall.Item);
+                case EXPRESSION.Literal { Item: LITERAL literal }:
+                    return ProcessLiteral(literal);
+                case EXPRESSION.Variable { Item: VARIABLE variable }:
+                    return ProcessVariable(variable);
+                case EXPRESSION.Macro { Item: MACRO macro }:
+                    return ProcessMacro(macro);
+                case EXPRESSION.FunctionName { Item: { Item: string func_name } }:
+                    if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
+                        return Variant.FromFunction(func);
+                    else
+                        return WellKnownError("error.unresolved_func", func_name);
+                case EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary }:
+                    return ProcessUnary(unary.Item1, unary.Item2);
+                case EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary }:
+                    return ProcessBinary(binary.Item1, binary.Item2, binary.Item3);
+                case EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary }:
+                    return ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3);
+                case EXPRESSION.Member { Item: MEMBER_EXPRESSION member }:
+                    return ProcessMember(member);
+                case EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer }:
+                    return ProcessIndexer(indexer.Item1, indexer.Item2);
+                case EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall }:
+                    return ProcessFunctionCall(funccall);
             }
 
             return WellKnownError("error.not_yet_implemented", expression);

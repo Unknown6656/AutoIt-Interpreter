@@ -1,14 +1,18 @@
-Beep("550")
+local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
 
-; local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
-;
-; $crr["top"] = "kek"
-; $crr.lol = 420
-;
-; DebugAllVarsCompact()
+$crr["top"] = "kek"
+$crr.lol = 420
+
+func lol(byref $v)
+   dim $d = [$v, $v, $_]
+   DebugAllVarsCompact()
+endfunc
+
+dim $fptr = lol
+DebugAllVarsCompact()
+lol($fptr)
 
 exit 0
-
 ;local $xl = ObjCreate("Excel.Application")
 ;With $xl
 ;   .visible = 1
