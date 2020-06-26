@@ -73,6 +73,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
+
+            ParserProvider.Initialize();
         }
 
         public void Dispose()
@@ -126,12 +128,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
 
-        public static InterpreterResult Run(CommandLineOptions opt)
-        {
-            using Interpreter interpreter = new Interpreter(opt);
-
-            return interpreter.Run(opt.FilePath);
-        }
+        public InterpreterResult Run() => Run(CommandLineOptions.FilePath);
     }
 
     public sealed class InterpreterResult

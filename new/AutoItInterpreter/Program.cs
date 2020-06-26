@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -134,8 +133,13 @@ namespace Unknown6656.AutoIt3
                     PrintDebugMessage(JsonConvert.SerializeObject(opt));
                     PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                     PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
+                    PrintDebugMessage("Loading interpreter ...");
 
-                    InterpreterResult result = Interpreter.Run(opt);
+                    using Interpreter interpreter = new Interpreter(opt);
+
+                    PrintDebugMessage($"Interpreter loaded. Running script '{opt.FilePath}' ...");
+
+                    InterpreterResult result = interpreter.Run();
 
                     if (result.OptionalError is InterpreterError err)
                         PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");

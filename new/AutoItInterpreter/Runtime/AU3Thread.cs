@@ -33,7 +33,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
 
-        public SourceLocation? CurrentLocation => CurrentFrame switch {
+        public SourceLocation? CurrentLocation => CallStack.SkipWhile(f => f is not AU3CallFrame).FirstOrDefault() switch {
             AU3CallFrame f => f.CurrentLocation,
             _ => SourceLocation.Unknown
         };
@@ -415,7 +415,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            if (directive.Match(/*language=regex*/@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", out ReadOnlyIndexer<string, string>? g))
+            if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
             {
                 char open = g["open"][0];
                 char close = g["close"][0];
@@ -499,27 +499,33 @@ namespace Unknown6656.AutoIt3.Runtime
         //    return null;
         //}
 
-        private const string REGEX_GOTO = /*language=regex*/@"^goto\s+(?<label>.+)$";
-        private const string REGEX_WHILE = /*language=regex*/@"^while\s+(?<expression>.+)$";
-        private const string REGEX_WEND = /*language=regex*/@"^wend$";
-        private const string REGEX_NEXT = /*language=regex*/@"^next$";
-        private const string REGEX_EXIT = /*language=regex*/@"^exit(\b\s*(?<code>.+))?$";
-        private const string REGEX_RETURN = /*language=regex*/@"^return(\b\s*(?<value>.+))?$";
-        private const string REGEX_FOR = /*language=regex*/@"^for\s+.+$";
-        private const string REGEX_FORTO = /*language=regex*/@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$";
-        private const string REGEX_FORIN = /*language=regex*/@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$";
-        private const string REGEX_WITH = /*language=regex*/@"^with\s+(?<variable>.+)$";
-        private const string REGEX_ENDWITH = /*language=regex*/@"^endwith$";
-        private const string REGEX_REDIM = /*language=regex*/@"^redim\s+(?<expression>.+)$";
-        private const string REGEX_DO = /*language=regex*/@"^do$";
-        private const string REGEX_UNTIL = /*language=regex*/@"^until\s+(?<expression>.+)$";
-        private const string REGEX_IF = /*language=regex*/@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$";
-        private const string REGEX_ELSE = /*language=regex*/@"^else$";
-        private const string REGEX_ENDIF = /*language=regex*/@"^endif$";
+        private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private static readonly Regex REGEX_GOTO = new Regex(@"^goto\s+(?<label>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WEND = new Regex(@"^wend$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_NEXT = new Regex(@"^next$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_EXIT = new Regex(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_RETURN = new Regex(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FOR = new Regex(@"^for\s+.+$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORTO = new Regex(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORIN = new Regex(@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WITH = new Regex(@"^with\s+(?<variable>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDWITH = new Regex(@"^endwith$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REDIM = new Regex(@"^redim\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DO = new Regex(@"^do$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_UNTIL = new Regex(@"^until\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_IF = new Regex(@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ELSE = new Regex(@"^else$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDIF = new Regex(@"^endif$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DECLARATION_MODIFIER = new Regex(@"^(local|static|global|const|dim|enum|step)\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
+
+
 
         private InterpreterResult? ProcessStatement(string line)
         {
-            InterpreterResult? result = line.Match(null, new Dictionary<string, Func<Match, InterpreterResult?>>
+            InterpreterResult? result = line.Match(null, new Dictionary<Regex, Func<Match, InterpreterResult?>>
             {
                 [REGEX_EXIT] = m =>
                 {
@@ -631,7 +637,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (variable.Is(out PARSABLE_EXPRESSION? pexpr) && pexpr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION.Variable { Item: VARIABLE varname } })
                     {
                         if (VariableResolver.TryGetVariable(varname, out Variable? var) && var.IsConst)
-                            ; // error : const redeclare
+                            return WellKnownError("error.constant_assignment", var.Name, var.DeclaredLocation);
                         else
                             ; // TODO
                     }
@@ -798,7 +804,7 @@ namespace Unknown6656.AutoIt3.Runtime
             // TODO
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
-                if (proc is { Regex: string pat } sp && line.Match(pat, out Match _))
+                if (proc is { Regex: Regex pat } sp && line.Match(pat, out Match _))
                     result ??= sp.ProcessStatement(this, line);
 
             return result;
@@ -910,7 +916,7 @@ namespace Unknown6656.AutoIt3.Runtime
             declaration_type = DeclarationType.None;
             enum_step = null;
 
-            while (line.Match(@"^(local|static|global|const|dim|enum|step)\b", out Match m_modifier))
+            while (line.Match(REGEX_DECLARATION_MODIFIER, out Match m_modifier))
             {
                 DeclarationType modifier = (DeclarationType)Enum.Parse(typeof(DeclarationType), m_modifier.Value, true);
 
@@ -918,7 +924,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return WellKnownError("error.duplicate_modifier", modifier);
 
                 if (modifier is DeclarationType.Step)
-                    if (line.Match(@"^(?<op>[+\-*]?)(?<step>\d+)\b", out Match m_step))
+                    if (line.Match(REGEX_ENUM_STEP, out Match m_step))
                     {
                         char op = '+';
                         int amount = int.Parse(m_step.Groups["step"].Value);

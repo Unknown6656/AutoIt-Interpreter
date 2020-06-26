@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Text.RegularExpressions;
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -38,7 +39,7 @@ namespace Unknown6656.AutoIt3.Extensibility
     public abstract class AbstractStatementProcessor
         : AbstractInterpreterPlugin
     {
-        public abstract string Regex { get; }
+        public abstract Regex Regex { get; }
 
 
         protected AbstractStatementProcessor(Interpreter interpreter) : base(interpreter)

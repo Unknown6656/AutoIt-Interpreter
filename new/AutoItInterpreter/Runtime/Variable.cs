@@ -571,6 +571,7 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class Variable
         : IEquatable<Variable>
     {
+        private readonly object _mutex = new object();
         private Variant _value;
 
 
@@ -593,7 +594,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 Variable? target = ReferencedVariable ?? this;
 
-                lock (this) // TODO: is this necessary?
+                lock (_mutex) // fixing CA2002-violation
                     target._value = value.AssignTo(target);
             }
         }
@@ -686,7 +687,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool HasVariable(VARIABLE variable) => HasVariable(variable.Name);
 
-        public bool TryGetVariable(string name, [NotNullWhen(true)] out Variable? variable)
+        public bool TryGetVariable(string name, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable)
         {
             variable = null;
 
@@ -701,7 +702,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return Parent?.TryGetVariable(name, out variable) ?? false;
         }
 
-        public bool TryGetVariable(VARIABLE input, [NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
+        public bool TryGetVariable(VARIABLE input, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
 
         public bool DestroyVariable(string name, bool recursive)
         {

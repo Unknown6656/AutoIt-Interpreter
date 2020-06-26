@@ -1,12 +1,26 @@
+#AutoIt3Wrapper_Run_AU3Check=n
+Local $mControls[]
+$mControls["Input"] = "top"
+$mControls.Combo = "kek"
+$mControls["Button"] = "lul"
+
+for $i in $mControls
+   ConsoleWrite($i & @crlf)
+   next
+
+
+exit 0
+
+
 dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary]
 dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
 
 for $func in $funcs
    for $input in $inputs
-	  ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input))
-	  ConsoleWrite(@CRLF)
+	  ;ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input))
+	  ;ConsoleWrite(@CRLF)
    next
-   ConsoleWrite(@CRLF)
+   ;ConsoleWrite(@CRLF)
 next
 
 exit 0

@@ -18,21 +18,24 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class ScriptScanner
     {
-        private const string REGEX_CS = /*language=regex*/@"^#(comments\-start|cs)(\b|$)";
-        private const string REGEX_CE = /*language=regex*/@"^#(comments\-end|ce)(\b|$)";
-        private const string REGEX_REGION = /*language=regex*/@"^#(end-?)?region\b";
-        private const string REGEX_PRAGMA = /*language=regex*/@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*";
-        private const string REGEX_LINECONT = /*language=regex*/@"(\s|^)_$";
-        private const string REGEX_1LFUNC = /*language=regex*/@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$";
-        private const string REGEX_FUNC = /*language=regex*/@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$";
-        private const string REGEX_ENDFUNC = /*language=regex*/@"^endfunc$";
-        private const string REGEX_LABEL = /*language=regex*/@"^(?<name>[a-z_]\w*)\s*:$";
-        private const string REGEX_INCLUDEONCE = /*language=regex*/@" ^#include-once(\b|$)";
-        private const string REGEX_AUSTARTREGISTER = /*language=regex*/@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")";
-        private const string REGEX_AUEXITREGISTER = /*language=regex*/@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")";
-        private const string REGEX_REQADMIN = /*language=regex*/@"^#requireadmin\b";
-        private const string REGEX_NOTRYICON = /*language=regex*/@"^#notrayicon\b";
-        // TODO : extract all regex constants
+        private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private static readonly Regex REGEX_COMMENT = new Regex(@"\;[^\""\']*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new Regex(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new Regex(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REGION = new Regex(@"^#(end-?)?region\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_PRAGMA = new Regex(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_LINECONT = new Regex(@"(\s|^)_$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1LFUNC = new Regex(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC = new Regex(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDFUNC = new Regex(@"^endfunc$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_LABEL = new Regex(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDEONCE = new Regex(@" ^#include-once(\b|$)", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUSTARTREGISTER = new Regex(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUEXITREGISTER = new Regex(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REQADMIN = new Regex(@"^#requireadmin\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_NOTRYICON = new Regex(@"^#notrayicon\b", _REGEX_OPTIONS);
 
 
         private readonly ScannedScript _system_script;
@@ -321,7 +324,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (string.IsNullOrWhiteSpace(line))
                 return "";
             else if (line.Contains(';'))
-                if (line.Match(@"\;[^\""\']*$", out Match m))
+                if (line.Match(REGEX_COMMENT, out Match m))
                     line = line[..m.Index];
                 else
                 {
@@ -329,9 +332,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (!line.Contains("$\"") && ((before.CountOccurences("\"") % 2) == 0) && (before.CountOccurences("'") % 2) == 0)
                         line = before.Trim();
-                    else if (line.Match(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", out m))
+                    else if (line.Match(REGEX_COMMENT_AFTER_STRING1, out m))
                         line = line[..m.Groups["cmt"].Index];
-                    else if (line.Match(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", out m))
+                    else if (line.Match(REGEX_COMMENT_AFTER_STRING2, out m))
                         line = line[..m.Groups["cmt"].Index];
                 }
 

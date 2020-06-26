@@ -27,11 +27,12 @@ namespace Unknown6656.AutoIt3.Localization
             const string @namespace = nameof(Localization);
             Assembly asm = typeof(LanguageLoader).Assembly;
             Dictionary<string, LanguagePack> langs = new Dictionary<string, LanguagePack>();
-            Match? m = null;
+            Regex regex_json = new Regex($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            Match? match = null;
 
             foreach ((string? code, string name) in from r in asm.GetManifestResourceNames()
-                                                   where r.Match($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", out m)
-                                                   select (m?.Groups["code"].Value.ToLower(), r))
+                                                   where r.Match(regex_json, out match)
+                                                   select (match?.Groups["code"].Value.ToLower(), r))
                 try
                 {
                     using Stream? resource = asm.GetManifestResourceStream(name);
