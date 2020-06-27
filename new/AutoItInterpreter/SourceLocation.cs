@@ -10,7 +10,7 @@ namespace Unknown6656.AutoIt3
         : IEquatable<SourceLocation>
         , IComparable<SourceLocation>
     {
-        public static SourceLocation Unknown { get; } = new SourceLocation(new FileInfo($"<{CurrentLanguage["general.unknown"]}>"), 0);
+        public static SourceLocation Unknown { get; } = new SourceLocation(new FileInfo($"<{CurrentLanguage["general.unknown"]}>"), -1);
 
         /// <summary>
         /// The zero-based start line number.

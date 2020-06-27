@@ -230,8 +230,8 @@ namespace Unknown6656.AutoIt3.Runtime
             bool b => new[] { (byte)(b ? 1 : 0) },
             _ when Type is VariantType.Default => From.Unmanaged(-1),
             null => From.Unmanaged(0),
-            decimal d when d == (int)d => From.Unmanaged((int)d),
-            decimal d when d == (long)d => From.Unmanaged((long)d),
+            decimal d when d <= 2147483647m && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
+            decimal d when d <= 9223372036854775807m && d >= -9223372036854775808m && d == (long)d => From.Unmanaged((long)d),
             decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
             string s when s.ToLowerInvariant().StartsWith("0x") => From.Hex(s[2..]),
             string s => From.String(s, BytewiseEncoding.Instance),
@@ -681,7 +681,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => $"\"{InternalName}\"{(IsGlobalScope ? " (global)" : "")}: {_variables.Count} Variables, {_children.Count} Child scopes";
 
-        public Variable CreateTemporaryVariable() => CreateVariable(SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
+        public Variable CreateTemporaryVariable() => CreateVariable((CallFrame as AU3CallFrame)?.CurrentLocation ?? SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
 
         public Variable CreateVariable(SourceLocation location, string name, bool isConst)
         {

@@ -413,6 +413,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ATanh), 1, ATanh),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), 0, 1, ConsoleWriteLine, ""),
             ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
+            ProvidedNativeFunction.Create(nameof(ConsoleClear), 0, ConsoleClear),
         };
 
 
@@ -426,6 +427,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public static FunctionReturnValue ASinh(CallFrame frame, Variant[] args) => (Variant)Math.Asinh((double)args[0].ToNumber());
 
         public static FunctionReturnValue ATanh(CallFrame frame, Variant[] args) => (Variant)Math.Atanh((double)args[0].ToNumber());
+
+        public static FunctionReturnValue ConsoleClear(CallFrame frame, Variant[] args)
+        {
+            Console.Clear();
+
+            return Variant.Zero;
+        }
 
         public static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) =>
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });

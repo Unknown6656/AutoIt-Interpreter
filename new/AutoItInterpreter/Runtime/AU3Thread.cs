@@ -10,12 +10,12 @@ using Microsoft.FSharp.Core;
 using Piglet.Parser.Configuration.Generic;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework;
+using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -651,13 +651,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 [REGEX_FORIN] = m =>
                 {
                     string counter_variables = m.Groups["variable"].Value.Trim();
-                    Union<InterpreterError, Variant> result_coll = ProcessAsVariant(m.Groups["expression"].Value);
-                    Variant collection;
-
-                    if (result_coll.Is(out InterpreterError? error))
-                        return error;
-                    else if (!(collection = (Variant)result_coll).IsIndexable)
-                        return WellKnownError("error.invalid_forin_source", collection);
 
                     if (counter_variables.Match($"^{REGEX_VARIABLE}$", out Match _))
                         counter_variables = $"${VariableResolver.CreateTemporaryVariable().Name}, {counter_variables}";
@@ -676,43 +669,45 @@ namespace Unknown6656.AutoIt3.Runtime
                             return var;
                     }
 
-                    return get_or_create("key").Match<InterpreterResult?>(err => err, iterator_key =>
-                           get_or_create("value").Match<InterpreterResult?>(err => err, iterator_value =>
-                           {
-                               SourceLocation loc_for = CurrentLocation;
-                               int eip_for = _instruction_pointer;
-                               int depth = 1;
+                    return get_or_create("key").Match(err => err, iterator_key =>
+                        get_or_create("value").Match(err => err, iterator_value =>
+                        {
+                            SourceLocation loc_for = CurrentLocation;
+                            int eip_for = _instruction_pointer;
+                            int depth = 1;
 
-                               while (MoveNext())
-                               {
-                                   if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
-                                       --depth;
-                                   else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
-                                       ++depth;
+                            while (MoveNext())
+                            {
+                                if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
+                                    --depth;
+                                else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
+                                    ++depth;
 
-                                   if (depth == 0)
-                                   {
-                                       string iterator = VariableResolver.CreateTemporaryVariable().Name;
+                                if (depth == 0)
+                                {
+                                    string iterator = VariableResolver.CreateTemporaryVariable().Name;
 
-                                       InternalsFunctionProvider.__iterator_create(this, new Variant[] { iterator, collection });
+                                    InsertReplaceSourceCode(_instruction_pointer,
+                                        $"{nameof(InternalsFunctionProvider.__iterator_movenext)}(\"{iterator}\")",
+                                        $"WEnd",
+                                        $"{nameof(InternalsFunctionProvider.__iterator_destroy)}(\"{iterator}\")"
+                                    );
+                                    InsertReplaceSourceCode(eip_for,
+                                        $"{nameof(InternalsFunctionProvider.__iterator_create)}(\"{iterator}\", {m.Groups["expression"]})",
+                                        // else if (!(collection = (Variant)result_coll).IsIndexable)
+                                        //     return WellKnownError("error.invalid_forin_source", collection);
+                                        $"While {nameof(InternalsFunctionProvider.__iterator_canmove)}(\"{iterator}\")",
+                                        $"${iterator_key.Name} = {nameof(InternalsFunctionProvider.__iterator_currentkey)}(\"{iterator}\")",
+                                        $"${iterator_value.Name} = {nameof(InternalsFunctionProvider.__iterator_currentvalue)}(\"{iterator}\")"
+                                    );
+                                    _instruction_pointer = eip_for - 1;
 
-                                       InsertReplaceSourceCode(_instruction_pointer,
-                                            $"{nameof(InternalsFunctionProvider.__iterator_movenext)}(\"{iterator}\")",
-                                            $"WEnd"
-                                       );
-                                       InsertReplaceSourceCode(eip_for,
-                                            $"While {nameof(InternalsFunctionProvider.__iterator_canmove)}(\"{iterator}\")",
-                                            $"${iterator_key.Name} = {nameof(InternalsFunctionProvider.__iterator_currentkey)}(\"{iterator}\")",
-                                            $"${iterator_value.Name} = {nameof(InternalsFunctionProvider.__iterator_currentvalue)}(\"{iterator}\")"
-                                       );
-                                       _instruction_pointer = eip_for - 1;
+                                    return InterpreterResult.OK;
+                                }
+                            }
 
-                                       return InterpreterResult.OK;
-                                   }
-                               }
-
-                               return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
-                           }));
+                            return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
+                        }));
                 },
                 [REGEX_WITH] = m =>
                 {
@@ -886,9 +881,11 @@ namespace Unknown6656.AutoIt3.Runtime
             if (type is BlockStatementType.While)
                 while (MoveNext())
                 {
-                    if (CurrentLineContent.Match(REGEX_WEND, out Match _))
+                    string line = CurrentLineContent.Trim();
+
+                    if (line.Match(REGEX_WEND, out Match _))
                         --depth;
-                    else if (CurrentLineContent.Match(REGEX_WHILE, out Match _))
+                    else if (line.Match(REGEX_WHILE, out Match _))
                         ++depth;
 
                     if (depth == 0)
@@ -897,9 +894,10 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (type is BlockStatementType.If)
                 while (MoveNext())
                 {
+                    string line = CurrentLineContent.Trim();
                     bool @if = false;
 
-                    if (CurrentLineContent.Match(REGEX_IF, out Match m))
+                    if (line.Match(REGEX_IF, out Match m))
                     {
                         @if = true;
 
@@ -908,9 +906,9 @@ namespace Unknown6656.AutoIt3.Runtime
                         else
                             ++depth;
                     }
-                    else if (CurrentLineContent.Match(REGEX_ELSE, out Match _))
+                    else if (line.Match(REGEX_ELSE, out Match _))
                         --depth;
-                    else if (CurrentLineContent.Match(REGEX_ENDIF, out Match _))
+                    else if (line.Match(REGEX_ENDIF, out Match _))
                         --depth;
 
                     if (depth == 0)
@@ -951,7 +949,10 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             catch (Exception ex)
             {
-                return WellKnownError("error.unparsable_line", line, ex.Message);
+                if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
+                    return new InterpreterError(CurrentLocation, $"{Program.CurrentLanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                else
+                    return WellKnownError("error.unparsable_line", line, ex.Message);
             }
         }
 
