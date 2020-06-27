@@ -184,14 +184,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue Call(CallFrame frame, Variant[] args)
         {
-            Variant[] call_args = frame.PassedArguments.Length switch
-            {
-                1 => Array.Empty<Variant>(),
-                2 when args[1] is { Type: VariantType.Array } arr &&
-                       arr.TryGetIndexed(0, out Variant caa) &&
-                       caa.ToString().Equals("CallArgArray") => arr.ToArray()[1..],
-                _ => args
-            };
+            Variant[] call_args = frame.PassedArguments.Length == 2 &&
+                                  args[1] is { Type: VariantType.Array } arr &&
+                                  arr.TryGetIndexed(0, out Variant caa) &&
+                                  caa.ToString().Equals("CallArgArray") ? arr.ToArray() : args;
+
+            call_args = call_args[1..];
 
             if (!args[0].IsFunction(out ScriptFunction? func))
                 func = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());

@@ -1,5 +1,5 @@
 
-dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary]
+dim $funcs = [lol2, String, Binary, Number, Int, BinaryToString, StringToBinary]
 dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
 
 for $func in $funcs
@@ -9,6 +9,10 @@ for $func in $funcs
    next
    ConsoleWrite(@CRLF)
 next
+func lol2($in)
+   debugallvarscompact()
+   exit 1
+endfunc
 
 exit 0
 
