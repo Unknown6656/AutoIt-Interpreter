@@ -31,9 +31,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
             ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
             ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, 500m, 1000m),
-            ProvidedNativeFunction.Create(nameof(BitAND), 2, 255, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
-            ProvidedNativeFunction.Create(nameof(BitOR), 2, 255, BitOR),
-            ProvidedNativeFunction.Create(nameof(BitXOR), 2, 255, BitXOR),
+            ProvidedNativeFunction.Create(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
+            ProvidedNativeFunction.Create(nameof(BitOR), 2, 256, BitOR),
+            ProvidedNativeFunction.Create(nameof(BitXOR), 2, 256, BitXOR),
             ProvidedNativeFunction.Create(nameof(BitNOT), 1, BitNOT),
             ProvidedNativeFunction.Create(nameof(BitShift), 2, BitShift),
             ProvidedNativeFunction.Create(nameof(BitRotate), 1, 3, BitRotate, 1, "W"),
@@ -46,6 +46,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(Hex), 1, 2, Hex, Variant.Default),
             ProvidedNativeFunction.Create(nameof(BinaryToString), 1, BinaryToString),
             ProvidedNativeFunction.Create(nameof(StringToBinary), 1, StringToBinary),
+            ProvidedNativeFunction.Create(nameof(Call), 1, 256, Call),
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
@@ -181,6 +182,33 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             };
         }
 
+        public static FunctionReturnValue Call(CallFrame frame, Variant[] args)
+        {
+            Variant[] call_args = frame.PassedArguments.Length switch
+            {
+                1 => Array.Empty<Variant>(),
+                2 when args[1] is { Type: VariantType.Array } arr &&
+                       arr.TryGetIndexed(0, out Variant caa) &&
+                       caa.ToString().Equals("CallArgArray") => arr.ToArray()[1..],
+                _ => args
+            };
+
+            if (!args[0].IsFunction(out ScriptFunction? func))
+                func = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
+
+            if (func is null)
+                return FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+            else if (call_args.Length > func.ParameterCount.MaximumCount)
+                Array.Resize(ref call_args, func.ParameterCount.MaximumCount);
+
+            Union<InterpreterError, Variant> result = frame.Call(func, call_args);
+
+            if (result.Is(out Variant @return))
+                return @return;
+            else
+                return FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+        }
+
         public static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
@@ -256,7 +284,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             return (Variant)From.Bytes(bytes).To.Hex();
         }
-
 
         public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {

@@ -124,8 +124,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool IsReference => Type is VariantType.Reference;
 
-        public readonly bool IsFunction => Type is VariantType.Function;
-
         public readonly Variable? ReferencedVariable => IsReference ? RawData as Variable : null;
 
         public readonly bool IsNull => Type is VariantType.Null;
@@ -146,6 +144,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         #endregion
         #region INSTANCE METHODS
+
+        public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
         public readonly int CompareTo(Variant other) => RawData is string s1 && other.RawData is string s2 ? s1.CompareTo(s2) : ToNumber().CompareTo(other.ToNumber());
 
@@ -237,6 +237,16 @@ namespace Unknown6656.AutoIt3.Runtime
             string s => From.String(s, BytewiseEncoding.Instance),
             _ => Array.Empty<byte>(),
         };
+
+        public readonly Variant[] ToArray()
+        {
+            if (RawData is Array arr)
+                return arr.Cast<object>().ToArray(FromObject);
+            else if (RawData is string s)
+                return s.Cast<object>().ToArray(FromObject);
+            else
+                return Array.Empty<Variant>();
+        }
 
         public readonly (Variant key, Variant value)[] AsOrderedMap()
         {
