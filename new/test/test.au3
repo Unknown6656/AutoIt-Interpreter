@@ -1,21 +1,3 @@
-func debug()
-ConsoleClear()
-debugallvarscompact()
-ConsoleReadLine()
-endfunc
-dim $arr = [0, 1, 2, 3]
-for $r_index,$r_value in $arr
-   debug()
-   for $s_index,$s_value in "abcd"
-	  debug()
-   next
-   debug()
-next
-debug()
-exit 0
-
-
-
 dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary]
 dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
 for $func in $funcs

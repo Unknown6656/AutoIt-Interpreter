@@ -949,10 +949,13 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             catch (Exception ex)
             {
-                if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
-                    return new InterpreterError(CurrentLocation, $"{Program.CurrentLanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
-                else
-                    return WellKnownError("error.unparsable_line", line, ex.Message);
+                return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate
+                {
+                    if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
+                        return new InterpreterError(CurrentLocation, $"{Program.CurrentLanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                    else
+                        return WellKnownError("error.unparsable_line", line, ex.Message);
+                });
             }
         }
 
@@ -966,7 +969,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             catch (Exception ex)
             {
-                return WellKnownError("error.unparsable_line", expression, ex.Message);
+                return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, () => WellKnownError("error.unparsable_line", expression, ex.Message));
             }
         }
 

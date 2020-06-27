@@ -40,6 +40,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public PluginLoader PluginLoader { get; }
 
+        public Telemetry Telemetry { get; }
+
         public int ErrorCode
         {
             get => _error;
@@ -56,8 +58,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         public Interpreter(CommandLineOptions opt)
+            : this(opt, new Telemetry())
+        {
+        }
+
+        public Interpreter(CommandLineOptions opt, Telemetry telemetry)
         {
             CommandLineOptions = opt;
+            Telemetry = telemetry;
             ScriptScanner = new ScriptScanner(this);
             PluginLoader = new PluginLoader(this, PLUGIN_DIR);
 

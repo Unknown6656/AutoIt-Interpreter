@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-vq ../test/test"
+      "commandLineArgs": "-vn ../test/test"
     }
   }
 }

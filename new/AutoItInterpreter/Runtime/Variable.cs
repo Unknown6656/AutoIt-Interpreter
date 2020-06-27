@@ -174,7 +174,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Default => "Default",
             VariantType.Boolean or VariantType.Number or VariantType.String => RawData?.ToString() ?? "",
             _ when RawData is Variable var => var.Value.ToString(),
-            _ when RawData is byte[] bytes => "0x" + From.Bytes(bytes).To.Hex(),
+            _ when RawData is byte[] { Length: > 0 } bytes => "0x" + From.Bytes(bytes).To.Hex(),
             _ => "",
         };
 

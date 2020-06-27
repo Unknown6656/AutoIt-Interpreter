@@ -43,6 +43,7 @@ namespace Unknown6656.AutoIt3.Localization
                 }
                 catch
                 {
+                    Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                 }
 
             foreach (FileInfo nfo in LANG_DIR.EnumerateFiles("./*.json"))
@@ -56,6 +57,7 @@ namespace Unknown6656.AutoIt3.Localization
                 }
                 catch
                 {
+                    Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                 }
 
             LanguagePacks = langs.ToImmutableDictionary();

@@ -78,202 +78,206 @@ namespace Unknown6656.AutoIt3.Runtime
             return func;
         }
 
-        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path, bool relative)
-        {
-            (FileInfo physical, string content)? file = null;
-
-            if (Program.CommandLineOptions.StrictMode)
-                try
-                {
-                    if (ResolveUNC(path) is { } res)
-                        return res;
-                }
-                catch
-                {
-                }
-            else
+        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path, bool relative) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, (FileInfo, string)>>(TelemetryCategory.ResolveScript, delegate
             {
-                foreach (Func<string, (FileInfo, string)?> resolver in _existing_resolvers)
+                (FileInfo physical, string content)? file = null;
+
+                if (Program.CommandLineOptions.StrictMode)
                     try
                     {
-                        if (resolver(path) is { } res)
+                        if (ResolveUNC(path) is { } res)
                             return res;
                     }
                     catch
                     {
+                        Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                     }
+                else
+                {
+                    foreach (Func<string, (FileInfo, string)?> resolver in _existing_resolvers)
+                        try
+                        {
+                            if (resolver(path) is { } res)
+                                return res;
+                        }
+                        catch
+                        {
+                            Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
+                        }
 
-                foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
-                    if (res.TryResolve(path, out file))
-                        return file;
-            }
+                    foreach (AbstractIncludeResolver res in Interpreter.PluginLoader.IncludeResolvers)
+                        if (res.TryResolve(path, out file))
+                            return file;
+                }
 
-            if (!relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
-                return file;
+                if (!relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
+                    return file;
 
-            return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
-        }
+                return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
+            });
 
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
             ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));
 
-        private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content)
-        {
-            string key = file.FullName;
-
-            if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
+        private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, ScannedScript>>(TelemetryCategory.ScanScript, delegate
             {
-                script = new ScannedScript(file);
+                string key = file.FullName;
 
-                AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
-                List<(string line, SourceLocation loc)> lines = From.String(content)
-                                                                    .To
-                                                                    .Lines()
-                                                                    .Select((l, i) => (l, new SourceLocation(file, i)))
-                                                                    .ToList();
-                int comment_lvl = 0;
-                Match m;
-
-                for (int i = 0; i < lines.Count; ++i)
+                if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
                 {
-                    (string line, SourceLocation loc) = lines[i];
+                    script = new ScannedScript(file);
 
-                    line = TrimComment(line.TrimStart());
+                    AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
+                    List<(string line, SourceLocation loc)> lines = From.String(content)
+                                                                        .To
+                                                                        .Lines()
+                                                                        .Select((l, i) => (l, new SourceLocation(file, i)))
+                                                                        .ToList();
+                    int comment_lvl = 0;
+                    Match m;
 
-                    if (line.Match(
-                        (REGEX_CS, _ => ++comment_lvl),
-                        (REGEX_CE, _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
-                        (REGEX_REGION, delegate { }
-                    )) || comment_lvl > 0)
-                        continue;
-
-                    if (line.Match(
-                        (REGEX_INCLUDEONCE, _ => script.IncludeOnlyOnce = true),
-                        (REGEX_AUSTARTREGISTER, m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
-                        (REGEX_AUEXITREGISTER, m => script.AddExitFunction(m.Groups["func"].Value, loc))
-                    ))
-                        continue;
-                    else if (line.Match(REGEX_REQADMIN, out m))
-                        line = "#pragma compile(ExecLevel, requireAdministrator)";
-                    else if (line.Match(REGEX_NOTRYICON, out m))
-                        line = @"Opt(""TrayIconHide"", 1)";
-
-                    if (line.Match(REGEX_PRAGMA, out m))
+                    for (int i = 0; i < lines.Count; ++i)
                     {
-                        string option = m.Groups["option"].Value.Trim();
-                        string @params = m.Groups["params"].Value;
-                        string? value = null;
+                        (string line, SourceLocation loc) = lines[i];
 
-                        if (@params.IndexOf(',') is int idx && idx > 0)
-                        {
-                            @params = @params[..idx].ToLower().Trim();
-                            value = @params[(idx + 1)..].Trim();
-                        }
+                        line = TrimComment(line.TrimStart());
 
-                        if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
-                            return err;
-                        else
+                        if (line.Match(
+                            (REGEX_CS, _ => ++comment_lvl),
+                            (REGEX_CE, _ => comment_lvl = Math.Max(0, comment_lvl - 1)),
+                            (REGEX_REGION, delegate { }
+                        )) || comment_lvl > 0)
                             continue;
-                    }
 
-                    while (line.Match(REGEX_LINECONT, out m))
-                        if (i++ == lines.Count - 1)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
-                        else
+                        if (line.Match(
+                            (REGEX_INCLUDEONCE, _ => script.IncludeOnlyOnce = true),
+                            (REGEX_AUSTARTREGISTER, m => script.AddStartupFunction(m.Groups["func"].Value, loc)),
+                            (REGEX_AUEXITREGISTER, m => script.AddExitFunction(m.Groups["func"].Value, loc))
+                        ))
+                            continue;
+                        else if (line.Match(REGEX_REQADMIN, out m))
+                            line = "#pragma compile(ExecLevel, requireAdministrator)";
+                        else if (line.Match(REGEX_NOTRYICON, out m))
+                            line = @"Opt(""TrayIconHide"", 1)";
+
+                        if (line.Match(REGEX_PRAGMA, out m))
                         {
-                            line = line[..m.Index] + ' ' + TrimComment(lines[i].line.TrimStart());
-                            loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
-                        }
+                            string option = m.Groups["option"].Value.Trim();
+                            string @params = m.Groups["params"].Value;
+                            string? value = null;
 
-                    if (line.Match(REGEX_1LFUNC, out m))
-                    {
-                        if (Program.CommandLineOptions.StrictMode)
-                            return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
-
-                        lines.InsertRange(i + 1, new[]
-                        {
-                            (m.Groups["decl"].Value, loc),
-                            (m.Groups["body"].Value, loc),
-                            ("endfunc", loc),
-                        });
-                    }
-                    else if (line.Match(REGEX_FUNC, out m))
-                    {
-                        string name = m.Groups["name"].Value;
-                        string args = m.Groups["args"].Value;
-                        bool @volatile = m.Groups["volatile"].Length > 0;
-
-                        if (ScriptFunction.RESERVED_NAMES.Contains(name.ToLower()))
-                            return InterpreterError.WellKnown(loc, "error.reserved_name", name);
-                        else if (!curr_func.IsMainFunction)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                        else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
-                            return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
-
-                        IEnumerable<PARAMETER_DECLARATION> @params;
-                        HashSet<VARIABLE> parnames = new HashSet<VARIABLE>();
-                        bool optional = false;
-
-                        try
-                        {
-                             @params = ((PARSABLE_EXPRESSION.ParameterDeclaration)ParserProvider.ParameterParser.Parse(args).ParsedValue).Item;
-                        }
-                        catch (Exception ex)
-                        {
-                            return InterpreterError.WellKnown(loc, "error.unparsable_line", args, ex.Message);
-                        }
-
-                        foreach (PARAMETER_DECLARATION p in @params)
-                            if (p.IsByRef && p.IsOptional)
-                                return InterpreterError.WellKnown(loc, "error.byref_default", p.Variable);
-                            else if (optional && !p.IsOptional)
-                                return InterpreterError.WellKnown(loc, "error.missing_default", parnames.Count + 1, p.Variable);
-                            else if (parnames.Contains(p.Variable))
-                                return InterpreterError.WellKnown(loc, "error.duplicate_param", p.Variable);
-                            else
+                            if (@params.IndexOf(',') is int idx && idx > 0)
                             {
-                                optional = p.IsOptional;
-                                parnames.Add(p.Variable);
+                                @params = @params[..idx].ToLower().Trim();
+                                value = @params[(idx + 1)..].Trim();
                             }
 
-                        curr_func = script.GetOrCreateAU3Function(name, @params);
-                        curr_func.IsVolatile = @volatile;
-                        _cached_functions.TryAdd(name.ToLower(), curr_func);
+                            if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
+                                return err;
+                            else
+                                continue;
+                        }
 
-                        Program.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
+                        while (line.Match(REGEX_LINECONT, out m))
+                            if (i++ == lines.Count - 1)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_line_cont");
+                            else
+                            {
+                                line = line[..m.Index] + ' ' + TrimComment(lines[i].line.TrimStart());
+                                loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
+                            }
+
+                        if (line.Match(REGEX_1LFUNC, out m))
+                        {
+                            if (Program.CommandLineOptions.StrictMode)
+                                return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
+
+                            lines.InsertRange(i + 1, new[]
+                            {
+                                (m.Groups["decl"].Value, loc),
+                                (m.Groups["body"].Value, loc),
+                                ("endfunc", loc),
+                            });
+                        }
+                        else if (line.Match(REGEX_FUNC, out m))
+                        {
+                            string name = m.Groups["name"].Value;
+                            string args = m.Groups["args"].Value;
+                            bool @volatile = m.Groups["volatile"].Length > 0;
+
+                            if (ScriptFunction.RESERVED_NAMES.Contains(name.ToLower()))
+                                return InterpreterError.WellKnown(loc, "error.reserved_name", name);
+                            else if (!curr_func.IsMainFunction)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
+                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
+                                return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
+
+                            IEnumerable<PARAMETER_DECLARATION> @params;
+                            HashSet<VARIABLE> parnames = new HashSet<VARIABLE>();
+                            bool optional = false;
+
+                            try
+                            {
+                                @params = ((PARSABLE_EXPRESSION.ParameterDeclaration)ParserProvider.ParameterParser.Parse(args).ParsedValue).Item;
+                            }
+                            catch (Exception ex)
+                            {
+                                return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, () => InterpreterError.WellKnown(loc, "error.unparsable_line", args, ex.Message));
+                            }
+
+                            foreach (PARAMETER_DECLARATION p in @params)
+                                if (p.IsByRef && p.IsOptional)
+                                    return InterpreterError.WellKnown(loc, "error.byref_default", p.Variable);
+                                else if (optional && !p.IsOptional)
+                                    return InterpreterError.WellKnown(loc, "error.missing_default", parnames.Count + 1, p.Variable);
+                                else if (parnames.Contains(p.Variable))
+                                    return InterpreterError.WellKnown(loc, "error.duplicate_param", p.Variable);
+                                else
+                                {
+                                    optional = p.IsOptional;
+                                    parnames.Add(p.Variable);
+                                }
+
+                            curr_func = script.GetOrCreateAU3Function(name, @params);
+                            curr_func.IsVolatile = @volatile;
+                            _cached_functions.TryAdd(name.ToLower(), curr_func);
+
+                            Program.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
+                        }
+                        else if (line.Match(REGEX_ENDFUNC, out Match _))
+                        {
+                            if (curr_func.IsMainFunction)
+                                return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
+
+                            curr_func = (AU3Function)script.MainFunction;
+                        }
+                        else if (line.Match(REGEX_LABEL, out m))
+                        {
+                            if (Program.CommandLineOptions.StrictMode)
+                                return InterpreterError.WellKnown(loc, "error.experimental.goto_instructions");
+
+                            string name = m.Groups["name"].Value;
+
+                            if (curr_func.JumpLabels[name] is JumpLabel label)
+                                return InterpreterError.WellKnown(loc, "error.duplicate_jumplabel", name, label.Location);
+
+                            curr_func.AddJumpLabel(loc, name);
+                            curr_func.AddLine(loc, "");
+                        }
+                        else if (!string.IsNullOrWhiteSpace(line))
+                            curr_func.AddLine(loc, line);
                     }
-                    else if (line.Match(REGEX_ENDFUNC, out Match _))
-                    {
-                        if (curr_func.IsMainFunction)
-                            return InterpreterError.WellKnown(loc, "error.unexpected_endfunc");
 
-                        curr_func = (AU3Function)script.MainFunction;
-                    }
-                    else if (line.Match(REGEX_LABEL, out m))
-                    {
-                        if (Program.CommandLineOptions.StrictMode)
-                            return InterpreterError.WellKnown(loc, "error.experimental.goto_instructions");
+                    if (!curr_func.IsMainFunction)
+                        return InterpreterError.WellKnown(new SourceLocation(file, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
 
-                        string name = m.Groups["name"].Value;
-
-                        if (curr_func.JumpLabels[name] is JumpLabel label)
-                            return InterpreterError.WellKnown(loc, "error.duplicate_jumplabel", name, label.Location);
-
-                        curr_func.AddJumpLabel(loc, name);
-                        curr_func.AddLine(loc, "");
-                    }
-                    else if (!string.IsNullOrWhiteSpace(line))
-                        curr_func.AddLine(loc, line);
+                    _cached_scripts.TryAdd(key, script);
                 }
 
-                if (!curr_func.IsMainFunction)
-                    return InterpreterError.WellKnown(new SourceLocation(file, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
-
-                _cached_scripts.TryAdd(key, script);
-            }
-
-            return script;
-        }
+                return script;
+            });
 
         private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
         {

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -14,6 +15,10 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
+using Unknown6656.Common;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Net;
 
 namespace Unknown6656.AutoIt3
 {
@@ -65,104 +70,124 @@ namespace Unknown6656.AutoIt3
         private static volatile bool _isrunning = true;
         private static volatile bool _finished = false;
 #nullable disable
-        public static LanguagePack CurrentLanguage { get; private set; }
         public static CommandLineOptions CommandLineOptions { get; private set; }
+        public static LanguagePack CurrentLanguage { get; private set; }
 #nullable enable
+        public static Telemetry Telemetry { get; } = new Telemetry();
 
 
         public static int Main(string[] argv)
         {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
             using Task printer = Task.Factory.StartNew(PrinterTask);
             int code = 0;
 
-            try
+            Telemetry.Measure(TelemetryCategory.ProgramRuntime, delegate
             {
-                Console.WindowWidth = Math.Max(Console.WindowWidth, 120);
-                Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                Console.OutputEncoding = Encoding.Unicode;
-                Console.InputEncoding = Encoding.Unicode;
-                // Console.BackgroundColor = ConsoleColor.Black;
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-
-                using Parser parser = new Parser(p => p.HelpWriter = null);
-                ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
-
-                result.WithNotParsed(err =>
+                try
                 {
-                    HelpText help = HelpText.AutoBuild(result, h =>
-                    {
-                        h.AdditionalNewLineAfterOption = false;
-                        h.MaximumDisplayWidth = 119;
-                        h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
-                        h.Copyright = __module__.Copyright;
-                        h.AddDashesToOption = true;
-                        h.AutoHelp = true;
-                        h.AutoVersion = true;
+                    Console.WindowWidth = Math.Max(Console.WindowWidth, 120);
+                    Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                    Console.OutputEncoding = Encoding.Unicode;
+                    Console.InputEncoding = Encoding.Unicode;
+                    // Console.BackgroundColor = ConsoleColor.Black;
+                    ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
-                        return HelpText.DefaultParsingErrorsHandler(result, h);
-                    }, e => e);
+                    using Parser parser = new Parser(p => p.HelpWriter = null);
+                    ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
-                    if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                    result.WithNotParsed(err =>
                     {
-                        Console.WriteLine(help.Heading);
-                        Console.WriteLine(help.Copyright);
-                    }
-                    else
-                    {
-                        Console.WriteLine(help);
+                        HelpText help = HelpText.AutoBuild(result, h =>
+                        {
+                            h.AdditionalNewLineAfterOption = false;
+                            h.MaximumDisplayWidth = 119;
+                            h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
+                            h.Copyright = __module__.Copyright;
+                            h.AddDashesToOption = true;
+                            h.AutoHelp = true;
+                            h.AutoVersion = true;
 
-                        code = -1;
-                    }
-                });
-                result.WithParsed(opt =>
+                            return HelpText.DefaultParsingErrorsHandler(result, h);
+                        }, e => e);
+
+                        if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                        {
+                            Console.WriteLine(help.Heading);
+                            Console.WriteLine(help.Copyright);
+                        }
+                        else
+                        {
+                            Console.WriteLine(help);
+
+                            code = -1;
+                        }
+                    });
+                    result.WithParsed(opt =>
+                    {
+                        CommandLineOptions = opt;
+
+                        if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
+                            CurrentLanguage = lang;
+                        else
+                        {
+                            code = -1;
+                            PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LanguagePacks.Values.Select(p => p.LanguageCode))}'");
+
+                            return;
+                        }
+
+                        PrintBanner();
+                        PrintDebugMessage(JsonConvert.SerializeObject(opt));
+                        PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
+                        PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
+                        PrintDebugMessage("Loading interpreter ...");
+
+                        using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry));
+
+                        PrintDebugMessage($"Interpreter loaded. Running script '{opt.FilePath}' ...");
+
+                        InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+
+                        if (result.OptionalError is InterpreterError err)
+                            PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
+
+                        code = result.ProgramExitCode;
+                    });
+                }
+                catch (Exception ex)
+                // when (!Debugger.IsAttached)
                 {
-                    CommandLineOptions = opt;
-
-                    if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
-                        CurrentLanguage = lang;
-                    else
+                    Telemetry.Measure(TelemetryCategory.Exceptions, delegate
                     {
-                        code = -1;
-                        PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LanguagePacks.Values.Select(p => p.LanguageCode))}'");
+                        code = ex.HResult;
 
-                        return;
-                    }
+                        PrintException(ex);
+                    });
+                }
+            });
 
-                    PrintBanner();
-                    PrintDebugMessage(JsonConvert.SerializeObject(opt));
-                    PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
-                    PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
-                    PrintDebugMessage("Loading interpreter ...");
-
-                    using Interpreter interpreter = new Interpreter(opt);
-
-                    PrintDebugMessage($"Interpreter loaded. Running script '{opt.FilePath}' ...");
-
-                    InterpreterResult result = interpreter.Run();
-
-                    if (result.OptionalError is InterpreterError err)
-                        PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
-
-                    code = result.ProgramExitCode;
-                });
-            }
-            catch (Exception ex)
-            // when (!Debugger.IsAttached)
+            if (CommandLineOptions is { Verbosity: > Verbosity.q })
             {
-                code = ex.HResult;
+                while (_print_queue.Count > 0)
+                    Thread.Sleep(100);
 
-                PrintException(ex);
-            }
-            finally
-            {
-                _isrunning = false;
+                sw.Stop();
+                Telemetry.Submit(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
 
-                ConsoleExtensions.RestoreConsoleState(state);
+                PrintTelemetry(Telemetry);
             }
+
+            _isrunning = false;
 
             while (!_finished)
                 printer.Wait();
+
+            ConsoleExtensions.RestoreConsoleState(state);
 
             return code;
         }
@@ -171,12 +196,12 @@ namespace Unknown6656.AutoIt3
         {
             while (_isrunning)
                 if (_print_queue.TryDequeue(out Action? func))
-                    func();
+                    Telemetry.Measure(TelemetryCategory.Printing, func);
                 else
                     await Task.Delay(50);
 
             while (_print_queue.TryDequeue(out Action? func))
-                func();
+                Telemetry.Measure(TelemetryCategory.Printing, func);
 
             _finished = true;
         }
@@ -206,11 +231,11 @@ namespace Unknown6656.AutoIt3
             });
         }
 
-        internal static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message, false);
+        public static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message, false);
 
-        internal static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message, false);
+        public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message, false);
 
-        internal static void PrintScriptMessage(FileInfo? script, string message)
+        public static void PrintScriptMessage(FileInfo? script, string message)
         {
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
@@ -218,7 +243,7 @@ namespace Unknown6656.AutoIt3
                 SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message.Trim(), true);
         }
 
-        internal static void PrintException(this Exception? ex)
+        public static void PrintException(this Exception? ex)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -231,7 +256,7 @@ namespace Unknown6656.AutoIt3
             PrintError(sb.ToString());
         }
 
-        internal static void PrintError(this string message) => _print_queue.Enqueue(delegate
+        public static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
             bool extensive = !CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n;
 
@@ -273,7 +298,125 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(new string('_', Console.WindowWidth - 1));
         });
 
-        private static void PrintBanner()
+        public static void PrintTelemetry(Telemetry telemetry) => _print_queue.Enqueue(delegate
+        {
+            int width = Math.Min(Console.WindowWidth, Console.BufferWidth) - 1;
+
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine(new string('_', width));
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
+            Console.WriteLine("\n\t\tTELEMETRY REPORT");
+
+            RGBAColor col_table = RGBAColor.DimGray;
+            RGBAColor col_text = RGBAColor.White;
+
+            string[] headers = {
+                "Path",
+                "Count",
+                "Total Time",
+                "Average Time",
+                "Minimum Time",
+                "Maximum Time",
+                "Time % of Parent",
+                "Time % of Total",
+            };
+            List<(string[] cells, TelemetryNode node)> rows = new();
+            void traverse(TelemetryNode node, string prefix = "", bool last = true)
+            {
+                rows.Add((new[]
+                {
+                    prefix.Length switch
+                    {
+                        0 => " ·─ " + node.Name,
+                        _ => string.Concat(prefix.Select(c => c is 'x' ? " │  " : "    ").Append(last ? " └─ " : " ├─ ").Append(node.Name))
+                    },
+                    node.Timings.Length.ToString(),
+                    node.Total.ToString(),
+                    node.Average.ToString(),
+                    node.Min.ToString(),
+                    node.Max.ToString(),
+                    $"{node.PercentageOfParent * 100,9:F5} %",
+                    $"{node.PercentageOfTotal * 100,9:F5} %",
+                }, node));
+
+                TelemetryNode[] children = node.Children.OrderByDescending(c => c.PercentageOfTotal).ToArray();
+
+                for (int i = 0; i < children.Length; i++)
+                {
+                    TelemetryNode child = children[i];
+
+                    traverse(child, prefix + (last ? ' ' : 'x'), i == children.Length - 1);
+                }
+            }
+
+            traverse(TelemetryNode.FromTelemetry(telemetry));
+
+            int[] widths = headers.ToArray(h => h.Length + 2);
+
+            foreach (string[] cells in rows.Select(r => r.cells))
+                for (int i = 0; i < widths.Length; i++)
+                    widths[i] = Math.Max(widths[i], cells[i].Length + 2);
+
+            ConsoleExtensions.RGBForegroundColor = col_table;
+
+            for (int i = 0, l = widths.Length; i < l; i++)
+            {
+                if (i == 0)
+                {
+                    ConsoleExtensions.WriteVertical("┌│├");
+                    Console.CursorTop -= 2;
+                }
+
+                int yoffs = Console.CursorTop;
+                int xoffs = Console.CursorLeft;
+
+                Console.Write(new string('─', widths[i]));
+                ConsoleExtensions.RGBForegroundColor = col_text;
+                ConsoleExtensions.Write($" {headers[i].PadRight(widths[i] - 2)} ", (xoffs, yoffs + 1));
+                ConsoleExtensions.RGBForegroundColor = col_table;
+                ConsoleExtensions.Write(new string('─', widths[i]), (xoffs, yoffs + 2));
+                ConsoleExtensions.WriteVertical(i == l - 1 ? "┐│┤" : "┬│┼", (xoffs + widths[i], yoffs));
+                Console.CursorTop = yoffs;
+                
+                if (i == l - 1)
+                {
+                    Console.CursorTop += 2;
+                    Console.WriteLine();
+                }
+            }
+
+            foreach ((string[] cells, TelemetryNode node) in rows)
+            {
+                for (int i = 0, l = cells.Length; i < l; i++)
+                {
+                    ConsoleExtensions.RGBForegroundColor = col_table;
+                    if (i == 0)
+                        Console.Write('│');
+                    ConsoleExtensions.RGBForegroundColor = col_text;
+                    Console.Write($" {cells[i].PadRight(widths[i] - 2)} ");
+                    ConsoleExtensions.RGBForegroundColor = col_table;
+                    Console.Write('│');
+                }
+
+                Console.WriteLine();
+            }
+
+            ConsoleExtensions.RGBForegroundColor = col_table;
+
+            for (int i = 0, l = widths.Length; i < l; i++)
+            {
+                if (i == 0)
+                    Console.Write('└');
+                Console.Write(new string('─', widths[i]));
+                Console.Write(i == l - 1 ? '┘' : '┴');
+            }
+
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine();
+            Console.WriteLine(new string('_', width));
+        });
+
+        public static void PrintBanner()
         {
             if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
                 return;
