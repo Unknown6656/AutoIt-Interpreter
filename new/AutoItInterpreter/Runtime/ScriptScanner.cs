@@ -37,16 +37,15 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_REQADMIN = new Regex(@"^#requireadmin\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_NOTRYICON = new Regex(@"^#notrayicon\b", _REGEX_OPTIONS);
 
-
-        private readonly ScannedScript _system_script;
-        private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
-        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
         private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
         {
             ResolveUNC,
             ResolveHTTP,
             ResolveFTP,
         };
+        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
+        private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
+        private readonly ScannedScript _system_script;
 
 
         public ScannedScript[] ActiveScripts => (from thread in Interpreter.Threads

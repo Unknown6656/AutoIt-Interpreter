@@ -74,6 +74,8 @@
             "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable.",
             "invalid_array_size": "Array declaration '{0}' has an invalid array size {0}: The array size must be a positive integer.",
             "too_many_array_items": "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization.",
+            "unparsable_iteration_variable": "The expression '{0}' could not be parsed as a valid iteration variable for a 'For ... In'-loop.",
+            "invalid_forin_source": "Invalid iteration source '{0}': Iterations may only be performed over indexable values, such as arrays, maps, objects, or strings.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",

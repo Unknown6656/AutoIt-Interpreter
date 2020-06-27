@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
 using System.Globalization;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System;
@@ -33,6 +34,7 @@ namespace Unknown6656.AutoIt3.Runtime
         Default = -1,
     }
 
+    [DebuggerDisplay("{" + nameof(ToDebugString) + "(),nq}")]
     public readonly struct Variant
         : IEquatable<Variant>
         , IComparable<Variant>
@@ -236,24 +238,26 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => Array.Empty<byte>(),
         };
 
-        public readonly IDictionary<Variant, Variant> ToMap()
+        public readonly (Variant key, Variant value)[] AsOrderedMap()
         {
-            IDictionary<Variant, Variant> output = new Dictionary<Variant, Variant>();
+            List<(Variant, Variant)> output = new();
 
             if (RawData is Array arr)
                 for (int i = 0; i < arr.Length; ++i)
-                    output[i] = FromObject(arr.GetValue(i));
+                    output.Add((i, FromObject(arr.GetValue(i))));
             else if (RawData is IDictionary<Variant, Variant> dic)
                 foreach (Variant key in dic.Keys)
-                    output[key] = dic[key];
+                    output.Add((key, dic[key]));
             else if (RawData is string s)
                 for (int i = 0; i < s.Length; ++i)
-                    output[i] = FromObject(s[i]);
+                    output.Add((i, FromObject(s[i])));
             else
                 ; // TODO : objects
 
-            return output;
+            return output.ToArray();
         }
+
+        public readonly IDictionary<Variant, Variant> ToMap() => AsOrderedMap().ToDictionary();
 
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
@@ -594,7 +598,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 Variable? target = ReferencedVariable ?? this;
 
-                lock (_mutex) // fixing CA2002-violation
+                lock (_mutex)
                     target._value = value.AssignTo(target);
             }
         }
@@ -699,7 +703,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     return true;
                 }
 
-            return Parent?.TryGetVariable(name, out variable) ?? false;
+            if (Parent is null)
+                return false;
+
+            return Parent.TryGetVariable(name, out variable);
         }
 
         public bool TryGetVariable(VARIABLE input, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);

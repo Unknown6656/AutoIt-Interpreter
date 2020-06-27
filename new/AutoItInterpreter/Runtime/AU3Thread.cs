@@ -15,6 +15,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -387,6 +388,23 @@ namespace Unknown6656.AutoIt3.Runtime
             ReturnValue = value;
         }
 
+        private void InsertReplaceSourceCode(int instruction_ptr, params string[] lines)
+        {
+            int eip = _instruction_pointer;
+
+            _instruction_pointer = instruction_ptr;
+
+            if (lines.Length == 1)
+                _line_cache[_instruction_pointer] = (CurrentLocation, lines[0]);
+            else
+            {
+                _line_cache.RemoveAt(_instruction_pointer);
+                _line_cache.InsertRange(_instruction_pointer, lines.Select(l => (CurrentLocation, l)));
+            }
+
+            _instruction_pointer = eip;
+        }
+
         public InterpreterResult? ParseCurrentLine()
         {
             (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
@@ -462,6 +480,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
         private readonly ConcurrentStack<int> _forloop_eip_stack = new ConcurrentStack<int>();
         private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
+        private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new ConcurrentDictionary<string, IEnumerator<(Variant, Variant)>>();
 
 
         private InterpreterResult PushBlockStatement(BlockStatementType statement)
@@ -500,6 +519,7 @@ namespace Unknown6656.AutoIt3.Runtime
         //}
 
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private static readonly Regex REGEX_VARIABLE = new Regex(@"\$([^\W\d]|[^\W\d]\w*)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_GOTO = new Regex(@"^goto\s+(?<label>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WEND = new Regex(@"^wend$", _REGEX_OPTIONS);
@@ -509,6 +529,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_FOR = new Regex(@"^for\s+.+$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FORTO = new Regex(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FORIN = new Regex(@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORIN_VARIABLES = new Regex(@"^\$(?<key>[^\W\d]|[^\W\d]\w*)\s*,\s*\$(?<value>[^\W\d]|[^\W\d]\w*)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WITH = new Regex(@"^with\s+(?<variable>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENDWITH = new Regex(@"^endwith$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_REDIM = new Regex(@"^redim\s+(?<expression>.+)$", _REGEX_OPTIONS);
@@ -604,21 +625,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
                                 temp.Value = Variant.False;
 
-                                _line_cache.RemoveAt(_instruction_pointer);
-                                _line_cache.InsertRange(_instruction_pointer, new[] {
-                                    (CurrentLocation, $"If {last} Then"),
-                                    (CurrentLocation, $"ExitLoop"),
-                                    (CurrentLocation, $"Else"),
-                                    (CurrentLocation, $"{counter} += {step}"),
-                                    (CurrentLocation, $"If {counter} == {m.Groups["stop"]} Then"),
-                                    (CurrentLocation, $"{last} = True"),
-                                    (CurrentLocation, $"EndIf"),
-                                    (CurrentLocation, $"EndIf"),
-                                    (CurrentLocation, $"Until False"),
-                                });
-                                _instruction_pointer = eip_for;
-                                _line_cache[_instruction_pointer] = (CurrentLocation, "Do");
-                                _instruction_pointer--;
+                                InsertReplaceSourceCode(_instruction_pointer,
+                                    $"If {last} Then",
+                                    $"ExitLoop",
+                                    $"Else",
+                                    $"{counter} += {step}",
+                                    $"If {counter} == {m.Groups["stop"]} Then",
+                                    $"{last} = True",
+                                    $"EndIf",
+                                    $"EndIf",
+                                    $"Until False"
+                                );
+                                InsertReplaceSourceCode(eip_for, "Do");
+                                _instruction_pointer = eip_for - 1;
 
                                 return InterpreterResult.OK;
                             }
@@ -631,20 +650,69 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_FORIN] = m =>
                 {
-                    Union<InterpreterError, Variant> collection = ProcessAsVariant(m.Groups["expression"].Value);
-                    Union<InterpreterError, PARSABLE_EXPRESSION> variable = ProcessRawExpression(m.Groups["variable"].Value);
+                    string counter_variables = m.Groups["variable"].Value.Trim();
+                    Union<InterpreterError, Variant> result_coll = ProcessAsVariant(m.Groups["expression"].Value);
+                    Variant collection;
 
-                    if (variable.Is(out PARSABLE_EXPRESSION? pexpr) && pexpr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION.Variable { Item: VARIABLE varname } })
+                    if (result_coll.Is(out InterpreterError? error))
+                        return error;
+                    else if (!(collection = (Variant)result_coll).IsIndexable)
+                        return WellKnownError("error.invalid_forin_source", collection);
+
+                    if (counter_variables.Match($"^{REGEX_VARIABLE}$", out Match _))
+                        counter_variables = $"${VariableResolver.CreateTemporaryVariable().Name}, {counter_variables}";
+
+                    if (!counter_variables.Match(REGEX_FORIN_VARIABLES, out Match m_iterator_variables))
+                        return WellKnownError("error.unparsable_iteration_variable", m.Groups["variable"]);
+
+                    Union<InterpreterError, Variable> get_or_create(string group)
                     {
-                        if (VariableResolver.TryGetVariable(varname, out Variable? var) && var.IsConst)
+                        if (!VariableResolver.TryGetVariable(m_iterator_variables.Groups[group].Value, out Variable? var))
+                            var = VariableResolver.CreateVariable(CurrentLocation, m_iterator_variables.Groups[group].Value, false);
+
+                        if (var.IsConst)
                             return WellKnownError("error.constant_assignment", var.Name, var.DeclaredLocation);
                         else
-                            ; // TODO
+                            return var;
                     }
-                    else
-                        ; // error : unparsable variable
 
-                    throw new NotImplementedException();
+                    return get_or_create("key").Match<InterpreterResult?>(err => err, iterator_key =>
+                           get_or_create("value").Match<InterpreterResult?>(err => err, iterator_value =>
+                           {
+                               SourceLocation loc_for = CurrentLocation;
+                               int eip_for = _instruction_pointer;
+                               int depth = 1;
+
+                               while (MoveNext())
+                               {
+                                   if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
+                                       --depth;
+                                   else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
+                                       ++depth;
+
+                                   if (depth == 0)
+                                   {
+                                       string iterator = VariableResolver.CreateTemporaryVariable().Name;
+
+                                       InternalsFunctionProvider.__iterator_create(this, new Variant[] { iterator, collection });
+
+                                       InsertReplaceSourceCode(_instruction_pointer,
+                                            $"{nameof(InternalsFunctionProvider.__iterator_movenext)}(\"{iterator}\")",
+                                            $"WEnd"
+                                       );
+                                       InsertReplaceSourceCode(eip_for,
+                                            $"While {nameof(InternalsFunctionProvider.__iterator_canmove)}(\"{iterator}\")",
+                                            $"${iterator_key.Name} = {nameof(InternalsFunctionProvider.__iterator_currentkey)}(\"{iterator}\")",
+                                            $"${iterator_value.Name} = {nameof(InternalsFunctionProvider.__iterator_currentvalue)}(\"{iterator}\")"
+                                       );
+                                       _instruction_pointer = eip_for - 1;
+
+                                       return InterpreterResult.OK;
+                                   }
+                               }
+
+                               return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
+                           }));
                 },
                 [REGEX_WITH] = m =>
                 {
