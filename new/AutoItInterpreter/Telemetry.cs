@@ -15,9 +15,28 @@ namespace Unknown6656.AutoIt3
         Printing,
         Exceptions,
         InterpreterInitialization,
+        LoadPluginFile,
+        LoadPlugin,
+        ParserInitialization,
         InterpreterRuntime,
-        ResolveScript,
         ScanScript,
+        ResolveScript,
+        ScriptExecution,
+        ThreadRun,
+        OnAutoItStart,
+        OnAutoItExit,
+        Au3ScriptExecution,
+        NativeScriptExecution,
+        ScriptConsoleOut,
+        ScriptConsoleIn,
+        ProcessLine,
+        ProcessDirective,
+        ProcessStatement,
+        ProcessExpressionStatement,
+        ProcessDeclaration,
+        ProcessExpression,
+        ProcessAssignment,
+        EvaluateExpression,
     }
 
     public sealed class Telemetry
@@ -76,10 +95,11 @@ namespace Unknown6656.AutoIt3
         public string Name { get; }
         public string Path => IsRoot ? Name : $"{Parent.Path}/{Name}";
         public bool IsRoot => ReferenceEquals(this, Root);
+        public bool IsHot => !IsRoot && PercentageOfParent > .1 && PercentageOfTotal > .01 && Siblings.All(s => s.PercentageOfParent < PercentageOfParent);
         public TelemetryNode Root { get; }
         public TelemetryNode Parent { get; }
         public TelemetryNode[] Children => _children.ToArray();
-
+        public TelemetryNode[] Siblings => IsRoot ? Array.Empty<TelemetryNode>() : Parent._children.Except(new[] { this }).ToArray();
         public TimeSpan[] Timings { get; }
         public TimeSpan Average { get; }
         public TimeSpan Total { get; }
@@ -123,20 +143,44 @@ namespace Unknown6656.AutoIt3
 
         public static TelemetryNode FromTelemetry(Telemetry telemetry)
         {
-            TimeSpan[] get_timings(TelemetryCategory cat) => telemetry.Timings[cat].ToArray();
+            TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();
             TelemetryNode root = new TelemetryNode(null, "Total", get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
-            TelemetryNode nd_interpreter, nd_runtime;
+            TelemetryNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc;
 
             nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
             root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
             root.AddChild("Printing", get_timings(TelemetryCategory.Printing));
 
-            nd_interpreter.AddChild("Initialization", get_timings(TelemetryCategory.InterpreterInitialization));
-            nd_runtime = nd_interpreter.AddChild("Runtime", get_timings(TelemetryCategory.InterpreterInitialization));
-            
+            nd_init = nd_interpreter.AddChild("Initialization", get_timings(TelemetryCategory.InterpreterInitialization));
+            nd_runtime = nd_interpreter.AddChild("Runtime", get_timings(TelemetryCategory.InterpreterRuntime));
+
+            nd_init.AddChild("Load Plugin DLL", get_timings(TelemetryCategory.LoadPluginFile));
+            nd_init.AddChild("Plugin Initialization", get_timings(TelemetryCategory.LoadPlugin));
+            nd_init.AddChild("Parser Construction", get_timings(TelemetryCategory.ParserInitialization));
+
             nd_runtime.AddChild("Script Resolution", get_timings(TelemetryCategory.ResolveScript));
             nd_runtime.AddChild("Script Scan", get_timings(TelemetryCategory.ScanScript));
-            // TODO
+            nd_codeexec = nd_runtime.AddChild("Script Execution", get_timings(TelemetryCategory.ScriptExecution));
+
+            nd_thread = nd_codeexec.AddChild("Run/Start Thread", get_timings(TelemetryCategory.ThreadRun));
+
+            nd_codeexec.AddChild("On Start", get_timings(TelemetryCategory.OnAutoItStart));
+            nd_codeexec.AddChild("On Exit", get_timings(TelemetryCategory.OnAutoItExit));
+            nd_au3 = nd_thread.AddChild("Au3", get_timings(TelemetryCategory.Au3ScriptExecution));
+            nd_native = nd_thread.AddChild("Native", get_timings(TelemetryCategory.NativeScriptExecution));
+
+            nd_native.AddChild("Console Out", get_timings(TelemetryCategory.ScriptConsoleOut));
+            nd_native.AddChild("Console In", get_timings(TelemetryCategory.ScriptConsoleIn));
+
+            nd_proc = nd_au3.AddChild("Line Processing", get_timings(TelemetryCategory.ProcessLine));
+
+            nd_proc.AddChild("Directives", get_timings(TelemetryCategory.ProcessDirective));
+            nd_proc.AddChild("Statements", get_timings(TelemetryCategory.ProcessStatement));
+            nd_proc.AddChild("Expression Statements", get_timings(TelemetryCategory.ProcessExpressionStatement));
+            nd_proc.AddChild("Declaration Statements", get_timings(TelemetryCategory.ProcessDeclaration));
+            nd_proc.AddChild("Assginment Statements", get_timings(TelemetryCategory.ProcessAssignment));
+            nd_proc.AddChild("Expressions", get_timings(TelemetryCategory.ProcessExpression));
+            nd_proc.AddChild("Expression Evaluation", get_timings(TelemetryCategory.EvaluateExpression));
 
             return root;
         }

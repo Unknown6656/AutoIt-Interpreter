@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -16,9 +18,6 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Net;
 
 namespace Unknown6656.AutoIt3
 {
@@ -36,6 +35,9 @@ namespace Unknown6656.AutoIt3
         [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
         public bool IgnoreErrors { get; }
 
+        [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.")]
+        public bool PrintTelemetry { get; }
+
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
         public Verbosity Verbosity { get; }
 
@@ -46,10 +48,11 @@ namespace Unknown6656.AutoIt3
         public string FilePath { get; }
 
 
-        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, bool ignoreErrors, Verbosity verbosity, string language, string filePath)
+        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, bool ignoreErrors, bool printTelemetry, Verbosity verbosity, string language, string filePath)
         {
             HideBanner = hideBanner;
             DontLoadPlugins = dontLoadPlugins;
+            PrintTelemetry = printTelemetry;
             StrictMode = strictMode;
             IgnoreErrors = ignoreErrors;
             Verbosity = verbosity;
@@ -90,12 +93,13 @@ namespace Unknown6656.AutoIt3
             {
                 try
                 {
-                    Console.WindowWidth = Math.Max(Console.WindowWidth, 120);
+                    Console.WindowWidth = Math.Max(Console.WindowWidth, 100);
                     Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
                     Console.OutputEncoding = Encoding.Unicode;
                     Console.InputEncoding = Encoding.Unicode;
-                    // Console.BackgroundColor = ConsoleColor.Black;
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+                    // Console.BackgroundColor = ConsoleColor.Black;
+                    // Console.Clear();
 
                     using Parser parser = new Parser(p => p.HelpWriter = null);
                     ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
@@ -130,6 +134,12 @@ namespace Unknown6656.AutoIt3
                     result.WithParsed(opt =>
                     {
                         CommandLineOptions = opt;
+
+                        if (opt.Verbosity > Verbosity.q)
+                        {
+                            Console.WindowWidth = Math.Max(Console.WindowWidth, 180);
+                            Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                        }
 
                         if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
                             CurrentLanguage = lang;
@@ -171,7 +181,7 @@ namespace Unknown6656.AutoIt3
                 }
             });
 
-            if (CommandLineOptions is { Verbosity: > Verbosity.q })
+            if (CommandLineOptions is { Verbosity: > Verbosity.q } or { PrintTelemetry: true })
             {
                 while (_print_queue.Count > 0)
                     Thread.Sleep(100);
@@ -235,13 +245,13 @@ namespace Unknown6656.AutoIt3
 
         public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message, false);
 
-        public static void PrintScriptMessage(FileInfo? script, string message)
+        public static void PrintScriptMessage(FileInfo? script, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
                 SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message.Trim(), true);
-        }
+        });
 
         public static void PrintException(this Exception? ex)
         {
@@ -307,8 +317,10 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
             Console.WriteLine("\n\t\tTELEMETRY REPORT");
 
-            RGBAColor col_table = RGBAColor.DimGray;
+            RGBAColor col_table = RGBAColor.LightGray;
             RGBAColor col_text = RGBAColor.White;
+            RGBAColor col_backg = RGBAColor.DarkSlateGray;
+            RGBAColor col_hotpath = RGBAColor.IndianRed;
 
             string[] headers = {
                 "Path",
@@ -390,10 +402,38 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 for (int i = 0, l = cells.Length; i < l; i++)
                 {
                     ConsoleExtensions.RGBForegroundColor = col_table;
+
                     if (i == 0)
                         Console.Write('│');
-                    ConsoleExtensions.RGBForegroundColor = col_text;
-                    Console.Write($" {cells[i].PadRight(widths[i] - 2)} ");
+                    
+                    ConsoleExtensions.RGBForegroundColor = node.IsHot ? col_hotpath : col_text;
+
+                    string cell = cells[i];
+
+                    if (i == 0)
+                    {
+                        Console.Write(' ' + cell);
+                        ConsoleExtensions.RGBForegroundColor = col_backg;
+                        Console.Write(new string('─', widths[i] - cell.Length - 1));
+                    }
+                    else
+                    {
+                        int xoffs = Console.CursorLeft;
+
+                        ConsoleExtensions.RGBForegroundColor = col_backg;
+                        Console.Write(new string('─', widths[i]));
+                        ConsoleExtensions.RGBForegroundColor = node.IsHot ? col_hotpath : col_text;
+                        Console.CursorLeft = xoffs + 1;
+
+                        for (int j = 0, k = Math.Min(widths[i] - 2, cell.Length); j < k; ++j)
+                            if (char.IsWhiteSpace(cell[j]))
+                                ++Console.CursorLeft;
+                            else
+                                Console.Write(cell[j]);
+
+                       Console.CursorLeft = xoffs + widths[i];
+                    }
+
                     ConsoleExtensions.RGBForegroundColor = col_table;
                     Console.Write('│');
                 }
@@ -407,6 +447,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             {
                 if (i == 0)
                     Console.Write('└');
+
                 Console.Write(new string('─', widths[i]));
                 Console.Write(i == l - 1 ? '┘' : '┴');
             }

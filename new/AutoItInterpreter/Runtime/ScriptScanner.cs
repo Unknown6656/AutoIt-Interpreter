@@ -61,7 +61,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _system_script = new ScannedScript(Program.ASM);
         }
 
-        internal void ScanNativeFunctions()
+        internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
@@ -69,7 +69,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
                 _cached_functions.TryAdd(func.Key.ToLower(), func.Value);
-        }
+        });
 
         public ScriptFunction? TryResolveFunction(string name)
         {
@@ -220,7 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             try
                             {
-                                @params = ((PARSABLE_EXPRESSION.ParameterDeclaration)ParserProvider.ParameterParser.Parse(args).ParsedValue).Item;
+                                @params = ((PARSABLE_EXPRESSION.ParameterDeclaration)Interpreter.ParserProvider.ParameterParser.Parse(args).ParsedValue).Item;
                             }
                             catch (Exception ex)
                             {

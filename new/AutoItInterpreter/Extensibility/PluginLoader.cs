@@ -83,29 +83,34 @@ namespace Unknown6656.AutoIt3.Extensibility
             foreach (FileInfo file in assemblies.Append(Program.ASM))
                 try
                 {
-                    Assembly asm = Assembly.LoadFrom(file.FullName);
-
-                    if (asm.GetCustomAttribute<AutoIt3PluginAttribute>() is { })
+                    Interpreter.Telemetry.Measure(TelemetryCategory.LoadPluginFile, delegate
                     {
-                        _plugin_files.Add(file);
-                        types.AddRange(asm.GetTypes());
-                    }
+                        Assembly asm = Assembly.LoadFrom(file.FullName);
+
+                        if (asm.GetCustomAttribute<AutoIt3PluginAttribute>() is { })
+                        {
+                            _plugin_files.Add(file);
+                            types.AddRange(asm.GetTypes());
+                        }
+                    });
                 }
                 catch
                 {
+                    Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                 }
 
             foreach (Type type in types)
                 if (!type.IsAbstract && typeof(AbstractInterpreterPlugin).IsAssignableFrom(type))
-                {
-                    TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
-                    TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
-                    TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
-                    TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
-                    TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
-                    TryRegister<AbstractFunctionProvider>(type, RegisterFunctionProvider);
-                    TryRegister<AbstractMacroProvider>(type, RegisterMacroProvider);
-                }
+                    Interpreter.Telemetry.Measure(TelemetryCategory.LoadPlugin, delegate
+                    {
+                        TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
+                        TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
+                        TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
+                        TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
+                        TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
+                        TryRegister<AbstractFunctionProvider>(type, RegisterFunctionProvider);
+                        TryRegister<AbstractMacroProvider>(type, RegisterMacroProvider);
+                    });
         }
 
         private void TryRegister<T>(Type type, Action<T> register_func)

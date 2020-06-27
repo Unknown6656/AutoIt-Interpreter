@@ -61,22 +61,23 @@ namespace Unknown6656.AutoIt3.Runtime
             Program.PrintDebugMessage($"Created thread {this}");
         }
 
-        public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args)
-        {
-            if (_running)
-                return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
-            else
-                _running = true;
-
-            Union<InterpreterError, Variant> result = Call(function, args);
-
-            _running = false;
-
-            if (_override_exitcode is int code)
-                return Variant.FromNumber(code);
-
-            return result;
-        }
+        public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ThreadRun, delegate
+            {
+                if (_running)
+                    return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
+                else
+                    _running = true;
+            
+                Union<InterpreterError, Variant> result = Call(function, args);
+            
+                _running = false;
+            
+                if (_override_exitcode is int code)
+                    return Variant.FromNumber(code);
+            
+                return result;
+            });
 
         public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args)
         {
@@ -188,8 +189,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
             SetError(0, 0);
 
-            if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
-                result = load_error;
+            Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItStart, delegate
+            {
+                if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
+                    result = load_error;
+            });
 
             (int min_argc, int max_argc) = CurrentFunction.ParameterCount;
 
@@ -202,11 +206,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     Program.PrintDebugMessage($"Executing {CurrentFunction} ...");
 
-                    result = InternalExec(args);
+                    result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
                 }
 
-            if (CurrentFunction.IsMainFunction && result.Is<Variant>() && script.UnLoadScript(this) is InterpreterError unload_error)
-                result = unload_error;
+            Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItExit, delegate
+            {
+                if (CurrentFunction.IsMainFunction && result.Is<Variant>() && script.UnLoadScript(this) is InterpreterError unload_error)
+                    result = unload_error;
+            });
 
             if (result.Is(out Variant @return))
                 ReturnValue = @return;
@@ -248,7 +255,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
-            FunctionReturnValue result = ((NativeFunction)CurrentFunction).Execute(this, args);
+            FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => ((NativeFunction)CurrentFunction).Execute(this, args));
 
             if (result.IsFatal(out InterpreterError? fatal))
                 return fatal;
@@ -282,6 +289,8 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
+        public override string ToString() => $"{base.ToString()} {CurrentLocation}";
+
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
@@ -313,7 +322,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     EXPRESSION expr = param.DefaultValue.Value;
                     Union<InterpreterError, Variant> result = ProcessExpression(expr);
 
-                    if (result.Is(out InterpreterError error))
+                    if (result.Is(out InterpreterError? error))
                         return error;
                     else if (result.Is(out Variant value))
                         args[i] = value;
@@ -322,15 +331,18 @@ namespace Unknown6656.AutoIt3.Runtime
                 param_var.Value = args[i];
             }
 
-            _instruction_pointer = 0;
+            return Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.Au3ScriptExecution, delegate
+            {
+                _instruction_pointer = 0;
 
-            while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
-                if (ParseCurrentLine()?.OptionalError is InterpreterError error)
-                    return error;
-                else if (!MoveNext())
-                    break;
+                while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
+                    if (ParseCurrentLine()?.OptionalError is InterpreterError error)
+                        return error;
+                    else if (!MoveNext())
+                        break;
 
-            return ReturnValue;
+                return ReturnValue;
+            });
         }
 
         private bool MoveNext()
@@ -415,10 +427,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
             Program.PrintDebugMessage($"({loc}) {line}");
 
-            result ??= ProcessDirective(line);
-            result ??= ProcessStatement(line);
-            result ??= UseExternalLineProcessors(line);
-            result ??= ProcessExpressionStatement(line);
+            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessLine, delegate
+            {
+                result ??= ProcessDirective(line);
+                result ??= ProcessStatement(line);
+                result ??= UseExternalLineProcessors(line);
+                result ??= ProcessExpressionStatement(line);
+            });
 
             if (Interpreter.CommandLineOptions.IgnoreErrors && !(result?.IsOK ?? true))
                 result = null;
@@ -433,42 +448,43 @@ namespace Unknown6656.AutoIt3.Runtime
 
             directive = directive[1..];
 
-            if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
+            InterpreterResult? result = Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, delegate
             {
-                char open = g["open"][0];
-                char close = g["close"][0];
-                bool relative = open != '<';
-
-                if (open != close && open != '<' && close != '>')
-                    return WellKnownError("error.mismatched_quotes", open, close);
-
-                return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script =>
+                if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
                 {
-                    ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
+                    char open = g["open"][0];
+                    char close = g["close"][0];
+                    bool relative = open != '<';
 
-                    if (active.Contains(script))
+                    if (open != close && open != '<' && close != '>')
+                        return WellKnownError("error.mismatched_quotes", open, close);
+
+                    return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script =>
                     {
-                        if (script.IncludeOnlyOnce)
-                            return InterpreterResult.OK;
+                        ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
+
+                        if (active.Contains(script))
+                        {
+                            if (script.IncludeOnlyOnce)
+                                return InterpreterResult.OK;
+                            else
+                                return WellKnownError("error.circular_include", script.Location.FullName);
+                        }
+                        else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
+                            return err;
                         else
-                            return WellKnownError("error.circular_include", script.Location.FullName);
-                    }
-                    else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
-                        return err;
-                    else
-                        return InterpreterResult.OK;
-                });
-            }
+                            return InterpreterResult.OK;
+                    });
+                }
 
-            InterpreterResult? result = null;
+                return null;
+            });
 
-            foreach (AbstractDirectiveProcessor? proc in Interpreter.PluginLoader.DirectiveProcessors)
-                result ??= proc?.ProcessDirective(this, directive);
+            foreach (AbstractDirectiveProcessor proc in Interpreter.PluginLoader.DirectiveProcessors)
+                result ??= Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.ProcessDirective(this, directive));
 
             return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
         }
-
-        public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
 
 
@@ -544,7 +560,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
 
-        private InterpreterResult? ProcessStatement(string line)
+        private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
         {
             InterpreterResult? result = line.Match(null, new Dictionary<Regex, Func<Match, InterpreterResult?>>
             {
@@ -871,7 +887,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     result ??= sp.ProcessStatement(this, line);
 
             return result;
-        }
+        });
 
         private InterpreterResult? MoveToEndOf(BlockStatementType type)
         {
@@ -928,14 +944,14 @@ namespace Unknown6656.AutoIt3.Runtime
             return depth == 0 ? InterpreterResult.OK : WellKnownError("error.no_matching_close", type, init);
         }
 
-        private InterpreterError? ProcessExpressionStatement(string line)
+        private InterpreterError? ProcessExpressionStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessExpressionStatement, delegate
         {
             try
             {
                 if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
                     return err;
 
-                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? ParserProvider.ExpressionParser : ParserProvider.MultiDeclarationParser;
+                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
                 Program.PrintDebugMessage($"Parsed \"{expression}\"");
@@ -957,21 +973,22 @@ namespace Unknown6656.AutoIt3.Runtime
                         return WellKnownError("error.unparsable_line", line, ex.Message);
                 });
             }
-        }
+        });
 
-        private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessRawExpression(string expression)
-        {
-            try
+        private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessRawExpression(string expression) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, PARSABLE_EXPRESSION>>(TelemetryCategory.ProcessExpression, delegate
             {
-                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = ParserProvider.ExpressionParser;
+                try
+                {
+                    ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = Interpreter.ParserProvider.ExpressionParser;
 
-                return provider.Parse(expression).ParsedValue;
-            }
-            catch (Exception ex)
-            {
-                return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, () => WellKnownError("error.unparsable_line", expression, ex.Message));
-            }
-        }
+                    return provider.Parse(expression).ParsedValue;
+                }
+                catch (Exception ex)
+                {
+                    return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, () => WellKnownError("error.unparsable_line", expression, ex.Message));
+                }
+            });
 
         internal Union<InterpreterError, Variant> ProcessAsVariant(string expression)
         {
@@ -1031,77 +1048,78 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step)
-        {
-            InterpreterError? error = null;
-            Variable? variable;
-
-            foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
+        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step) =>
+            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
             {
-                error ??= ProcessVariableDeclaration(variable_ast, decltype);
+                InterpreterError? error = null;
+                Variable? variable;
 
-                switch (declaration)
+                foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
                 {
-                    case VARIABLE_DECLARATION.Scalar { Item: null }:
-                        if (decltype.HasFlag(DeclarationType.Const))
-                            return WellKnownError("error.uninitialized_constant", variable_ast);
-                        else
-                            break;
-                    case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
-                        {
-                            // TODO : enum step handling
+                    error ??= ProcessVariableDeclaration(variable_ast, decltype);
 
-                            var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
-                            Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
-
-                            if (result.Is(out Variant value))
-                                Program.PrintDebugMessage($"{variable_ast} = {value}");
+                    switch (declaration)
+                    {
+                        case VARIABLE_DECLARATION.Scalar { Item: null }:
+                            if (decltype.HasFlag(DeclarationType.Const))
+                                return WellKnownError("error.uninitialized_constant", variable_ast);
                             else
-                                error ??= (InterpreterError)result;
-                        }
-                        break;
-                    case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
-                        if (size < 0)
-                            return WellKnownError("error.invalid_array_size", variable_ast, size);
-                        else if (items.Length > size)
-                            return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
-                        else if (VariableResolver.TryGetVariable(variable_ast, out variable))
-                        {
-                            variable.Value = Variant.NewArray(size);
-
-                            int index = 0;
-
-                            foreach (EXPRESSION item in items)
+                                break;
+                        case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
                             {
-                                Union<InterpreterError, Variant> result = ProcessExpression(item);
+                                // TODO : enum step handling
 
-                                if (result.Is(out error))
-                                    return error;
+                                var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
+                                Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
-                                variable.Value.TrySetIndexed(index, result);
-                                ++index;
+                                if (result.Is(out Variant value))
+                                    Program.PrintDebugMessage($"{variable_ast} = {value}");
+                                else
+                                    error ??= (InterpreterError)result;
                             }
-
                             break;
-                        }
-                        else
-                            return WellKnownError("error.undeclared_variable", variable_ast);
-                    case VARIABLE_DECLARATION.Map { }: // TODO
-                        if (VariableResolver.TryGetVariable(variable_ast, out variable))
-                        {
-                            variable.Value = Variant.NewMap();
+                        case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
+                            if (size < 0)
+                                return WellKnownError("error.invalid_array_size", variable_ast, size);
+                            else if (items.Length > size)
+                                return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
+                            else if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                            {
+                                variable.Value = Variant.NewArray(size);
 
-                            break;
-                        }
-                        else
-                            return WellKnownError("error.undeclared_variable", variable_ast);
-                    default:
-                        return WellKnownError("error.not_yet_implemented", declaration);
+                                int index = 0;
+
+                                foreach (EXPRESSION item in items)
+                                {
+                                    Union<InterpreterError, Variant> result = ProcessExpression(item);
+
+                                    if (result.Is(out error))
+                                        return error;
+
+                                    variable.Value.TrySetIndexed(index, result);
+                                    ++index;
+                                }
+
+                                break;
+                            }
+                            else
+                                return WellKnownError("error.undeclared_variable", variable_ast);
+                        case VARIABLE_DECLARATION.Map { }: // TODO
+                            if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                            {
+                                variable.Value = Variant.NewMap();
+
+                                break;
+                            }
+                            else
+                                return WellKnownError("error.undeclared_variable", variable_ast);
+                        default:
+                            return WellKnownError("error.not_yet_implemented", declaration);
+                    }
                 }
-            }
 
-            return error;
-        }
+                return error;
+            });
 
         private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationType decltype)
         {
@@ -1130,63 +1148,64 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force)
-        {
-            (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
-
-            switch (target)
+        private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessAssignment, delegate
             {
-                case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
-                    {
-                        if (VariableResolver.TryGetVariable(variable.Name, out Variable? target_variable))
+                (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+
+                switch (target)
+                {
+                    case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
                         {
-                            if (target_variable.IsConst && !force)
-                                return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
-                        }
-                        else
-                            target_variable = VariableResolver.CreateVariable(CurrentLocation, variable.Name, false);
-
-                        if (target_variable is null)
-                            return WellKnownError("error.invalid_assignment_target", target);
-                        else
-                            return ProcessVariableAssignment(target_variable, expression);
-                    }
-                case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
-                    return ProcessExpression(indexer.Item1).Match<Union<InterpreterError, Variant>>(err => err, target =>
-                           ProcessExpression(indexer.Item2).Match<Union<InterpreterError, Variant>>(err => err, key =>
-                           ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
-                           {
-                               if (target.TrySetIndexed(key, value))
-                                   return value;
-                           
-                               return WellKnownError("error.invalid_index_assg", target.AssignedTo, key);
-                           })));
-                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } targ, Item2: { Item: string memb } } }:
-                    return ProcessExpression(targ).Match<Union<InterpreterError, Variant>>(err => err, target =>
-                           ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
-                           {
-                               if (target.TrySetIndexed(memb, value))
-                                   return value;
-
-                               return WellKnownError("error.invalid_index_assg", target.AssignedTo, memb);
-                           }));
-                case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string member } } }:
-                    {
-                        if (_withcontext_stack.TryPeek(out Variable? variable))
-                            return ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                            if (VariableResolver.TryGetVariable(variable.Name, out Variable? target_variable))
                             {
-                                if (variable.Value.TrySetIndexed(member, value))
-                                    return value;
+                                if (target_variable.IsConst && !force)
+                                    return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
+                            }
+                            else
+                                target_variable = VariableResolver.CreateVariable(CurrentLocation, variable.Name, false);
 
-                                return WellKnownError("error.invalid_index_assg", variable, member);
-                            });
-                        else
-                            return WellKnownError("error.invalid_with_access", member);
-                    }
-                default:
-                    return WellKnownError("error.invalid_assignment_target", target);
-            }
-        }
+                            if (target_variable is null)
+                                return WellKnownError("error.invalid_assignment_target", target);
+                            else
+                                return ProcessVariableAssignment(target_variable, expression);
+                        }
+                    case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
+                        return ProcessExpression(indexer.Item1).Match<Union<InterpreterError, Variant>>(err => err, target =>
+                               ProcessExpression(indexer.Item2).Match<Union<InterpreterError, Variant>>(err => err, key =>
+                               ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                               {
+                                   if (target.TrySetIndexed(key, value))
+                                       return value;
+
+                                   return WellKnownError("error.invalid_index_assg", target.AssignedTo, key);
+                               })));
+                    case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } targ, Item2: { Item: string memb } } }:
+                        return ProcessExpression(targ).Match<Union<InterpreterError, Variant>>(err => err, target =>
+                               ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                               {
+                                   if (target.TrySetIndexed(memb, value))
+                                       return value;
+
+                                   return WellKnownError("error.invalid_index_assg", target.AssignedTo, memb);
+                               }));
+                    case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string member } } }:
+                        {
+                            if (_withcontext_stack.TryPeek(out Variable? variable))
+                                return ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                                {
+                                    if (variable.Value.TrySetIndexed(member, value))
+                                        return value;
+
+                                    return WellKnownError("error.invalid_index_assg", variable, member);
+                                });
+                            else
+                                return WellKnownError("error.invalid_with_access", member);
+                        }
+                    default:
+                        return WellKnownError("error.invalid_assignment_target", target);
+                }
+            });
 
         private Union<InterpreterError, Variant> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
@@ -1202,39 +1221,40 @@ namespace Unknown6656.AutoIt3.Runtime
             return value;
         }
 
-        private Union<InterpreterError, Variant> ProcessExpression(EXPRESSION? expression)
-        {
-            switch (expression)
+        private Union<InterpreterError, Variant> ProcessExpression(EXPRESSION? expression) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.EvaluateExpression, delegate
             {
-                case null:
-                    return Variant.Null;
-                case EXPRESSION.Literal { Item: LITERAL literal }:
-                    return ProcessLiteral(literal);
-                case EXPRESSION.Variable { Item: VARIABLE variable }:
-                    return ProcessVariable(variable);
-                case EXPRESSION.Macro { Item: MACRO macro }:
-                    return ProcessMacro(macro);
-                case EXPRESSION.FunctionName { Item: { Item: string func_name } }:
-                    if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
-                        return Variant.FromFunction(func);
-                    else
-                        return WellKnownError("error.unresolved_func", func_name);
-                case EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary }:
-                    return ProcessUnary(unary.Item1, unary.Item2);
-                case EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary }:
-                    return ProcessBinary(binary.Item1, binary.Item2, binary.Item3);
-                case EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary }:
-                    return ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3);
-                case EXPRESSION.Member { Item: MEMBER_EXPRESSION member }:
-                    return ProcessMember(member);
-                case EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer }:
-                    return ProcessIndexer(indexer.Item1, indexer.Item2);
-                case EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall }:
-                    return ProcessFunctionCall(funccall);
-            }
+                switch (expression)
+                {
+                    case null:
+                        return Variant.Null;
+                    case EXPRESSION.Literal { Item: LITERAL literal }:
+                        return ProcessLiteral(literal);
+                    case EXPRESSION.Variable { Item: VARIABLE variable }:
+                        return ProcessVariable(variable);
+                    case EXPRESSION.Macro { Item: MACRO macro }:
+                        return ProcessMacro(macro);
+                    case EXPRESSION.FunctionName { Item: { Item: string func_name } }:
+                        if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
+                            return Variant.FromFunction(func);
+                        else
+                            return WellKnownError("error.unresolved_func", func_name);
+                    case EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary }:
+                        return ProcessUnary(unary.Item1, unary.Item2);
+                    case EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary }:
+                        return ProcessBinary(binary.Item1, binary.Item2, binary.Item3);
+                    case EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary }:
+                        return ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3);
+                    case EXPRESSION.Member { Item: MEMBER_EXPRESSION member }:
+                        return ProcessMember(member);
+                    case EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer }:
+                        return ProcessIndexer(indexer.Item1, indexer.Item2);
+                    case EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall }:
+                        return ProcessFunctionCall(funccall);
+                }
 
-            return WellKnownError("error.not_yet_implemented", expression);
-        }
+                return WellKnownError("error.not_yet_implemented", expression);
+            });
 
         private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index) =>
             ProcessExpression(expr).Match<Union<InterpreterError, Variant>>(err => err, collection =>

@@ -7,20 +7,26 @@ using Unknown6656.AutoIt3.ExpressionParser;
 namespace Unknown6656.AutoIt3.Runtime
 {
     using exprparser = ExpressionParser.ExpressionParser;
+    using wrapper = ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper;
 
 
-    public static class ParserProvider
+    public sealed class ParserProvider
     {
-        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper ExpressionParser { get; }
-        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper ParameterParser { get; }
-        public static ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper MultiDeclarationParser { get; }
+        public wrapper ExpressionParser { get; }
+        public wrapper ParameterParser { get; }
+        public wrapper MultiDeclarationParser { get; }
+        public Interpreter Interpreter { get; }
 
 
-        static ParserProvider()
+        internal ParserProvider(Interpreter interpreter)
         {
-            ParameterParser = new exprparser(ParserMode.FunctionParameters).CreateParser();
-            ExpressionParser = new exprparser(ParserMode.ArbitraryExpression).CreateParser();
-            MultiDeclarationParser = new exprparser(ParserMode.MultiDeclaration).CreateParser();
+            Interpreter = interpreter;
+
+            wrapper create(ParserMode mode) => interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new exprparser(mode).CreateParser);
+
+            ParameterParser = create(ParserMode.FunctionParameters);
+            ExpressionParser = create(ParserMode.ArbitraryExpression);
+            MultiDeclarationParser = create(ParserMode.MultiDeclaration);
         }
 
         /// <summary>

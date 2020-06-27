@@ -40,7 +40,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public PluginLoader PluginLoader { get; }
 
+        public ParserProvider ParserProvider { get; }
+
         public Telemetry Telemetry { get; }
+
+        public int ExitCode { get; private set; } = 0;
 
         public int ErrorCode
         {
@@ -53,8 +57,6 @@ namespace Unknown6656.AutoIt3.Runtime
             get => _extended;
             set => _extended = value;
         }
-
-        public int ExitCode { get; private set; } = 0;
 
 
         public Interpreter(CommandLineOptions opt)
@@ -77,12 +79,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount],
             });
 
+            ParserProvider = new ParserProvider(this);
+
             ScriptScanner.ScanNativeFunctions();
 
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
-
-            ParserProvider.Initialize();
         }
 
         public void Dispose()

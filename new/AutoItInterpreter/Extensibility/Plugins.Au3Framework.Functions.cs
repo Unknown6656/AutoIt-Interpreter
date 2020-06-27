@@ -207,14 +207,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(0xDEAD, 0xBEEF);
         }
 
-        public static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args)
-        {
-            string s = args[0].ToString();
+        public static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args) =>
+            frame.Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.ScriptConsoleOut, delegate
+            {
+                string s = args[0].ToString();
 
-            Console.Error.Write(s);
+                Console.Error.Write(s);
 
-            return Variant.FromNumber(s.Length);
-        }
+                return Variant.FromNumber(s.Length);
+            });
 
         public static FunctionReturnValue ConsoleWrite(CallFrame frame, Variant[] args)
         {
@@ -225,15 +226,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(s.Length);
         }
 
-        public static FunctionReturnValue ConsoleRead(CallFrame frame, Variant[] args)
-        {
-            bool peek = args[0].ToBoolean();
-            bool binary = args[1].ToBoolean();
+        public static FunctionReturnValue ConsoleRead(CallFrame frame, Variant[] args) =>
+            frame.Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.ScriptConsoleIn, delegate
+            {
+                bool peek = args[0].ToBoolean();
+                bool binary = args[1].ToBoolean();
 
-            // TODO
+                // TODO
 
-            throw new NotImplementedException();
-        }
+                throw new NotImplementedException();
+            });
 
         public static FunctionReturnValue String(CallFrame frame, Variant[] args) => (Variant)args[0].ToString();
 
