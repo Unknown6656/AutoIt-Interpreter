@@ -47,7 +47,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant EmptyString { get; } = FromString("");
 
-        public static Variant EmptyBinary { get; } = FromBinary(Array.Empty<byte>());
+        public static Variant EmptyBinary { get; } = FromBinary(System.Array.Empty<byte>());
 
         public static Variant True { get; } = FromBoolean(true);
 
@@ -235,7 +235,7 @@ namespace Unknown6656.AutoIt3.Runtime
             decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
             string s when s.ToLowerInvariant().StartsWith("0x") => From.Hex(s[2..]),
             string s => From.String(s, BytewiseEncoding.Instance),
-            _ => Array.Empty<byte>(),
+            _ => System.Array.Empty<byte>(),
         };
 
         public readonly Variant[] ToArray()
@@ -245,7 +245,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is string s)
                 return s.Cast<object>().ToArray(FromObject);
             else
-                return Array.Empty<Variant>();
+                return System.Array.Empty<Variant>();
         }
 
         public readonly (Variant key, Variant value)[] AsOrderedMap()
@@ -341,6 +341,11 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else
                 return false; // TODO : objects
+        }
+
+        public readonly bool ResizeArray(int new_size)
+        {
+
         }
 
         #endregion

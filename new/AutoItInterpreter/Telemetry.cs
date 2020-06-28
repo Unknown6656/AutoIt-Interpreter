@@ -37,6 +37,7 @@ namespace Unknown6656.AutoIt3
         ProcessExpression,
         ProcessAssignment,
         EvaluateExpression,
+        ExternalProcessor,
     }
 
     public sealed class Telemetry
@@ -60,7 +61,9 @@ namespace Unknown6656.AutoIt3
 
         public void Reset() => _recorded_timings.Clear();
 
-        public void Submit(TelemetryCategory category, long ticks) => _recorded_timings.Add((category, new TimeSpan(ticks)));
+        // TODO : other stuff, such as exceptions, mem usage, cpu usage, etc.
+
+        public void SubmitTimings(TelemetryCategory category, long ticks) => _recorded_timings.Add((category, new TimeSpan(ticks)));
 
         public void Measure(TelemetryCategory category, Action function) => Measure<__empty>(category, delegate
         {
@@ -78,7 +81,7 @@ namespace Unknown6656.AutoIt3
             result = function();
             sw.Stop();
 
-            Submit(category, sw.ElapsedTicks);
+            SubmitTimings(category, sw.ElapsedTicks);
 
             return result;
         }
@@ -86,20 +89,24 @@ namespace Unknown6656.AutoIt3
         public void Add(Telemetry other) => _recorded_timings.AddRange(other._recorded_timings);
 
         public void Print() => Program.PrintTelemetry(this);
+
+        internal void StopPerformanceMonitor() => throw new NotImplementedException();
+
+        internal void StartPerformanceMonitor() => throw new NotImplementedException();
     }
 
-    public sealed class TelemetryNode
+    public sealed class TelemetryTimingsNode
     {
-        private readonly List<TelemetryNode> _children = new();
+        private readonly List<TelemetryTimingsNode> _children = new();
 
         public string Name { get; }
         public string Path => IsRoot ? Name : $"{Parent.Path}/{Name}";
         public bool IsRoot => ReferenceEquals(this, Root);
         public bool IsHot => !IsRoot && PercentageOfParent > .1 && PercentageOfTotal > .01 && Siblings.All(s => s.PercentageOfParent < PercentageOfParent);
-        public TelemetryNode Root { get; }
-        public TelemetryNode Parent { get; }
-        public TelemetryNode[] Children => _children.ToArray();
-        public TelemetryNode[] Siblings => IsRoot ? Array.Empty<TelemetryNode>() : Parent._children.Except(new[] { this }).ToArray();
+        public TelemetryTimingsNode Root { get; }
+        public TelemetryTimingsNode Parent { get; }
+        public TelemetryTimingsNode[] Children => _children.ToArray();
+        public TelemetryTimingsNode[] Siblings => IsRoot ? Array.Empty<TelemetryTimingsNode>() : Parent._children.Except(new[] { this }).ToArray();
         public TimeSpan[] Timings { get; }
         public TimeSpan Average { get; }
         public TimeSpan Total { get; }
@@ -112,7 +119,7 @@ namespace Unknown6656.AutoIt3
         public double PercentageOfTotal => (double)Total.Ticks / Root.Total.Ticks;
 
 
-        private TelemetryNode(TelemetryNode? parent, string name, TimeSpan[] timings)
+        private TelemetryTimingsNode(TelemetryTimingsNode? parent, string name, TimeSpan[] timings)
         {
             Name = name;
             Parent = parent ?? this;
@@ -132,20 +139,20 @@ namespace Unknown6656.AutoIt3
 
         public override string ToString() => $"{Path}: {Total}";
 
-        public TelemetryNode AddChild(string name, TimeSpan[] timings)
+        public TelemetryTimingsNode AddChild(string name, TimeSpan[] timings)
         {
-            TelemetryNode node = new TelemetryNode(this, name, timings);
+            TelemetryTimingsNode node = new TelemetryTimingsNode(this, name, timings);
 
             _children.Add(node);
 
             return node;
         }
 
-        public static TelemetryNode FromTelemetry(Telemetry telemetry)
+        public static TelemetryTimingsNode FromTelemetry(Telemetry telemetry)
         {
             TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();
-            TelemetryNode root = new TelemetryNode(null, "Total", get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
-            TelemetryNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc;
+            TelemetryTimingsNode root = new TelemetryTimingsNode(null, "Total", get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
+            TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc;
 
             nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
             root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
@@ -181,6 +188,7 @@ namespace Unknown6656.AutoIt3
             nd_proc.AddChild("Assginment Statements", get_timings(TelemetryCategory.ProcessAssignment));
             nd_proc.AddChild("Expressions", get_timings(TelemetryCategory.ProcessExpression));
             nd_proc.AddChild("Expression Evaluation", get_timings(TelemetryCategory.EvaluateExpression));
+            nd_proc.AddChild("External Processing", get_timings(TelemetryCategory.ExternalProcessor));
 
             return root;
         }

@@ -710,6 +710,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                     );
                                     InsertReplaceSourceCode(eip_for,
                                         $"{nameof(InternalsFunctionProvider.__iterator_create)}(\"{iterator}\", {m.Groups["expression"]})",
+                                        // TODO
                                         // else if (!(collection = (Variant)result_coll).IsIndexable)
                                         //     return WellKnownError("error.invalid_forin_source", collection);
                                         $"While {nameof(InternalsFunctionProvider.__iterator_canmove)}(\"{iterator}\")",
@@ -755,7 +756,25 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_REDIM] = m =>
                 {
-                    throw new NotImplementedException();
+                    Union<InterpreterError, PARSABLE_EXPRESSION>? parsed = ProcessRawExpression(m.Groups["expression"].Value);
+
+                    if (parsed.Is(out PARSABLE_EXPRESSION? expr) && expr is PARSABLE_EXPRESSION.AnyExpression
+                    {
+                        Item: EXPRESSION.Indexer { Item: { Item1: EXPRESSION.Variable { Item: { Name: string varname } }, Item2: EXPRESSION index } }
+                    })
+                        if (VariableResolver.TryGetVariable(varname, out Variable? variable) && !variable.IsConst && variable.Value.Type is VariantType.Array)
+                        {
+                            Union<InterpreterError, Variant> size = ProcessExpression(index);
+
+                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray((int)size_value))
+                                return InterpreterResult.OK;
+
+                            return WellKnownError("error.invalid_redim_size", index);
+                        }
+                        else
+                            return WellKnownError("error.invalid_redim_expression", varname);
+
+                    return parsed.As<InterpreterError>() ?? WellKnownError("error.invalid_redim_expression", m.Groups["expression"]);
                 },
                 [REGEX_DO] = _ => PushBlockStatement(BlockStatementType.Do),
                 [REGEX_UNTIL] = m =>
@@ -1466,8 +1485,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterResult? UseExternalLineProcessors(string line)
         {
-            foreach (AbstractLineProcessor? proc in Interpreter.PluginLoader.LineProcessors)
-                if ((proc?.CanProcessLine(line) ?? false) && proc?.ProcessLine(this, line) is { } res)
+            foreach (AbstractLineProcessor proc in Interpreter.PluginLoader.LineProcessors)
+                if (proc.CanProcessLine(line) && Interpreter.Telemetry.Measure(TelemetryCategory.ExternalProcessor, () => proc.ProcessLine(this, line)) is { } res)
                     return res;
 
             return null;

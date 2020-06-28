@@ -76,6 +76,9 @@
             "too_many_array_items": "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization.",
             "unparsable_iteration_variable": "The expression '{0}' could not be parsed as a valid iteration variable for a 'For ... In'-loop.",
             "invalid_forin_source": "Invalid iteration source '{0}': Iterations may only be performed over indexable values, such as arrays, maps, objects, or strings.",
+            "invalid_redim_expression": "Invalid 'ReDim'-expression '{0}'. Only an array variable followed by indexing brackets is permitted.",
+            "invalid_redim_target": "Invalid 'ReDim'-target '{0}'. The target variable must be an one-dimensional non-constant array.",
+            "invalid_redim_size": "Invalid array size expression '{0}'. Please make sure that the size is (castable to) a non-negative integer.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",

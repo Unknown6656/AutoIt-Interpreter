@@ -78,11 +78,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return func;
         }
 
-        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path, bool relative) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, (FileInfo, string)>>(TelemetryCategory.ResolveScript, delegate
+        public Union<InterpreterError, (FileInfo physical_file, string content)> ResolveScriptFile(SourceLocation include_loc, string path, bool relative)
+        {
+            (FileInfo physical, string content)? file = Interpreter.Telemetry.Measure<(FileInfo, string)?>(TelemetryCategory.ResolveScript, delegate
             {
-                (FileInfo physical, string content)? file = null;
-
                 if (Program.CommandLineOptions.StrictMode)
                     try
                     {
@@ -111,11 +110,19 @@ namespace Unknown6656.AutoIt3.Runtime
                             return file;
                 }
 
-                if (!relative && ResolveScriptFile(include_loc, Path.Combine(Program.INCLUDE_DIR.FullName, path), false).Is(out file) && file is { })
-                    return file;
-
-                return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
+                return null;
             });
+
+            if (file is { })
+                return file;
+
+            string combined = Path.Combine(Program.INCLUDE_DIR.FullName, path);
+
+            if (!relative && combined != path && ResolveScriptFile(include_loc, combined, false).Is(out file) && file is { })
+                return file;
+
+            return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
+        }
 
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
             ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));

@@ -86,7 +86,8 @@ namespace Unknown6656.AutoIt3
             sw.Start();
 
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
-            using Task printer = Task.Factory.StartNew(PrinterTask);
+            using Task printer_task = Task.Factory.StartNew(PrinterTask);
+            using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitor);
             int code = 0;
 
             Telemetry.Measure(TelemetryCategory.ProgramRuntime, delegate
@@ -187,15 +188,19 @@ namespace Unknown6656.AutoIt3
                     Thread.Sleep(100);
 
                 sw.Stop();
-                Telemetry.Submit(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
+                Telemetry.SubmitTimings(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
+                Telemetry.StopPerformanceMonitor();
+                telemetry_task.Wait();
 
                 PrintTelemetry(Telemetry);
             }
+            else
+                Telemetry.StopPerformanceMonitor();
 
             _isrunning = false;
 
             while (!_finished)
-                printer.Wait();
+                printer_task.Wait();
 
             ConsoleExtensions.RestoreConsoleState(state);
 
@@ -320,10 +325,10 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             RGBAColor col_table = RGBAColor.LightGray;
             RGBAColor col_text = RGBAColor.White;
             RGBAColor col_backg = RGBAColor.DarkSlateGray;
-            RGBAColor col_hotpath = RGBAColor.IndianRed;
+            RGBAColor col_hotpath = RGBAColor.Salmon;
 
             string[] headers = {
-                "Path",
+                "Timings category",
                 "Count",
                 "Total Time",
                 "Average Time",
@@ -332,8 +337,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 "Time % of Parent",
                 "Time % of Total",
             };
-            List<(string[] cells, TelemetryNode node)> rows = new();
-            void traverse(TelemetryNode node, string prefix = "", bool last = true)
+            List<(string[] cells, TelemetryTimingsNode node)> rows = new();
+            void traverse(TelemetryTimingsNode node, string prefix = "", bool last = true)
             {
                 rows.Add((new[]
                 {
@@ -351,17 +356,17 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     $"{node.PercentageOfTotal * 100,9:F5} %",
                 }, node));
 
-                TelemetryNode[] children = node.Children.OrderByDescending(c => c.PercentageOfTotal).ToArray();
+                TelemetryTimingsNode[] children = node.Children.OrderByDescending(c => c.PercentageOfTotal).ToArray();
 
                 for (int i = 0; i < children.Length; i++)
                 {
-                    TelemetryNode child = children[i];
+                    TelemetryTimingsNode child = children[i];
 
                     traverse(child, prefix + (last ? ' ' : 'x'), i == children.Length - 1);
                 }
             }
 
-            traverse(TelemetryNode.FromTelemetry(telemetry));
+            traverse(TelemetryTimingsNode.FromTelemetry(telemetry));
 
             int[] widths = headers.ToArray(h => h.Length + 2);
 
@@ -397,7 +402,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 }
             }
 
-            foreach ((string[] cells, TelemetryNode node) in rows)
+            foreach ((string[] cells, TelemetryTimingsNode node) in rows)
             {
                 for (int i = 0, l = cells.Length; i < l; i++)
                 {
