@@ -519,20 +519,77 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        //private InterpreterError? PopBlockStatement(params BlockStatementType[] accepted)
-        //{
-        //    if (accepted.Length == 0)
-        //        _blockstatement_stack.TryPop(out _);
-        //    else
-        //    {
-        //        _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
+        // private Union<InterpreterError, BlockStatementType> PopBlockStatement(params BlockStatementType[] accepted)
+        // {
+        //     if (accepted.Length == 0)
+        //         _blockstatement_stack.TryPop(out _);
+        //     else
+        //     {
+        //         _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
+        // 
+        //         if (!accepted.Contains(statement.type))
+        //             return WellKnownError("error.no_matching_close", statement.type, statement.loc);
+        //     }
+        // 
+        //     return null;
+        // }
 
-        //        if (!accepted.Contains(statement.type))
-        //            return WellKnownError("error.no_matching_close", statement.type, statement.loc);
-        //    }
+        private InterpreterResult? MoveToEndOf(BlockStatementType type)
+        {
+            SourceLocation init = CurrentLocation;
+            int depth = 1;
 
-        //    return null;
-        //}
+            if (type is BlockStatementType.While)
+                while (MoveNext())
+                {
+                    string line = CurrentLineContent.Trim();
+
+                    if (line.Match(REGEX_WEND, out Match _))
+                        --depth;
+                    else if (line.Match(REGEX_WHILE, out Match _))
+                        ++depth;
+
+                    if (depth == 0)
+                        break;
+                }
+            else if (type is BlockStatementType.If)
+                while (MoveNext())
+                {
+                    string line = CurrentLineContent.Trim();
+                    bool @if = false;
+
+                    if (line.Match(REGEX_IF, out Match m))
+                    {
+                        @if = true;
+
+                        if (m.Groups["elif"].Length > 0)
+                            --depth;
+                        else
+                            ++depth;
+                    }
+                    else if (line.Match(REGEX_ELSE, out Match _))
+                        --depth;
+                    else if (line.Match(REGEX_ENDIF, out Match _))
+                        --depth;
+
+                    if (depth == 0)
+                    {
+                        if (@if)
+                            --_instruction_pointer;
+
+                        break;
+                    }
+                }
+
+            // TODO : other block types
+
+            else
+                return WellKnownError("error.not_yet_implemented", type);
+
+            return depth == 0 ? InterpreterResult.OK : WellKnownError("error.no_matching_close", type, init);
+        }
+
+
 
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
         private static readonly Regex REGEX_VARIABLE = new Regex(@"\$([^\W\d]|[^\W\d]\w*)\b", _REGEX_OPTIONS);
@@ -557,7 +614,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_DECLARATION_MODIFIER = new Regex(@"^(local|static|global|const|dim|enum|step)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
-
+        private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new Regex(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_EXITLOOP = new Regex(@"^exitloop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
 
 
         private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
@@ -762,12 +820,16 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         Item: EXPRESSION.Indexer { Item: { Item1: EXPRESSION.Variable { Item: { Name: string varname } }, Item2: EXPRESSION index } }
                     })
-                        if (VariableResolver.TryGetVariable(varname, out Variable? variable) && !variable.IsConst && variable.Value.Type is VariantType.Array)
+                        if (VariableResolver.TryGetVariable(varname, out Variable? variable) && !variable.IsConst)
                         {
                             Union<InterpreterError, Variant> size = ProcessExpression(index);
 
-                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray((int)size_value))
+                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray((int)size_value, out Variant? new_arr) && new_arr is Variant arr)
+                            {
+                                variable.Value = arr;
+
                                 return InterpreterResult.OK;
+                            }
 
                             return WellKnownError("error.invalid_redim_size", index);
                         }
@@ -870,21 +932,34 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
 
 
-                //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
-                //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
-                //[/*language=regex*/@"^continueloop\s*(?<level>\d+)?\s*$"] = m =>
-                //{
-                //    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-                //    InterpreterResult? result = InterpreterResult.OK;
-                //
-                //    while (level-- > 1)
-                //        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
-                //
-                //    // TODO : continue
-                //
-                //
-                //    throw new NotImplementedException();
-                //},
+                [REGEX_CONTINUELOOP_EXITLOOP] = m =>
+                {
+                    InterpreterResult? result = InterpreterResult.OK;
+                    bool exit = m.Groups["mode"].Value.Equals("exit", StringComparison.InvariantCultureIgnoreCase);
+                    int level = 1;
+
+                    if (m.Groups["level"].Length > 0)
+                    {
+                        Union<InterpreterError, Variant> parsed = ProcessAsVariant(m.Groups["level"].Value);
+
+                        if (parsed.Is(out InterpreterError? error))
+                            return error;
+
+                        level = (int)(Variant)parsed;
+                    }
+
+                    while (level --> 1)
+                    {
+
+
+                    }
+                       //  result = PopBlockStatement(BlockStatementType.For, BlockStatementType.While, BlockStatementType.Do);
+
+                    // TODO : continue
+
+
+                    throw new NotImplementedException();
+                },
                 //[/*language=regex*/@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
                 //{
                 //    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
@@ -897,6 +972,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 //
                 //    return result;
                 //},
+                //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
+                //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
             });
 
             // TODO
@@ -907,61 +984,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return result;
         });
-
-        private InterpreterResult? MoveToEndOf(BlockStatementType type)
-        {
-            SourceLocation init = CurrentLocation;
-            int depth = 1;
-
-            if (type is BlockStatementType.While)
-                while (MoveNext())
-                {
-                    string line = CurrentLineContent.Trim();
-
-                    if (line.Match(REGEX_WEND, out Match _))
-                        --depth;
-                    else if (line.Match(REGEX_WHILE, out Match _))
-                        ++depth;
-
-                    if (depth == 0)
-                        break;
-                }
-            else if (type is BlockStatementType.If)
-                while (MoveNext())
-                {
-                    string line = CurrentLineContent.Trim();
-                    bool @if = false;
-
-                    if (line.Match(REGEX_IF, out Match m))
-                    {
-                        @if = true;
-
-                        if (m.Groups["elif"].Length > 0)
-                            --depth;
-                        else
-                            ++depth;
-                    }
-                    else if (line.Match(REGEX_ELSE, out Match _))
-                        --depth;
-                    else if (line.Match(REGEX_ENDIF, out Match _))
-                        --depth;
-
-                    if (depth == 0)
-                    {
-                        if (@if)
-                            --_instruction_pointer;
-
-                        break;
-                    }
-                }
-
-            // TODO : other block types
-
-            else
-                return WellKnownError("error.not_yet_implemented", type);
-
-            return depth == 0 ? InterpreterResult.OK : WellKnownError("error.no_matching_close", type, init);
-        }
 
         private InterpreterError? ProcessExpressionStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessExpressionStatement, delegate
         {

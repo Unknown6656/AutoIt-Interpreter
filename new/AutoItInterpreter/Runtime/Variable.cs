@@ -343,9 +343,24 @@ namespace Unknown6656.AutoIt3.Runtime
                 return false; // TODO : objects
         }
 
-        public readonly bool ResizeArray(int new_size)
+        public readonly bool ResizeArray(int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
         {
+            if (RawData is byte[] bytes)
+            {
+                Array.Resize(ref bytes, new_size);
 
+                new_array = FromBinary(bytes);
+            }
+            else if (RawData is Variant[] arr)
+            {
+                Array.Resize(ref arr, new_size);
+
+                new_array = FromArray(arr);
+            }
+            else
+                new_array = null;
+            
+            return new_array is { };
         }
 
         #endregion

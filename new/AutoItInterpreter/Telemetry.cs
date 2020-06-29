@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System;
@@ -12,6 +13,7 @@ namespace Unknown6656.AutoIt3
     {
         ProgramRuntimeAndPrinting,
         ProgramRuntime,
+        PerformanceMonitor,
         Printing,
         Exceptions,
         InterpreterInitialization,
@@ -42,8 +44,12 @@ namespace Unknown6656.AutoIt3
 
     public sealed class Telemetry
     {
+        private readonly List<(DateTime timestamp, double cpu_total, double cpu_user, double cpu_kernel, long ram_used)> _performance_measurements = new();
         private readonly List<(TelemetryCategory category, TimeSpan duration)> _recorded_timings = new();
+        private volatile bool _run_performancemonitor;
 
+
+        public (DateTime Timestamp, double TotalCPU, double UserCPU, double KernelCPU, long RAMUsed)[] PerformanceMeasurements => _performance_measurements.ToArray();
 
         public ReadOnlyIndexer<TelemetryCategory, IEnumerable<TimeSpan>> Timings { get; }
 
@@ -90,9 +96,59 @@ namespace Unknown6656.AutoIt3
 
         public void Print() => Program.PrintTelemetry(this);
 
-        internal void StopPerformanceMonitor() => throw new NotImplementedException();
+        public async Task StartPerformanceMonitorAsync()
+        {
+            if (_run_performancemonitor)
+                _performance_measurements.Clear();
 
-        internal void StartPerformanceMonitor() => throw new NotImplementedException();
+            _run_performancemonitor = true;
+
+            using Process proc = Process.GetCurrentProcess();
+            Stopwatch sw = new Stopwatch();
+            TimeSpan ts_total, ts_user, ts_kernel;
+            int cores = Environment.ProcessorCount;
+
+            while (_run_performancemonitor)
+            {
+                sw.Restart();
+                ts_total = proc.TotalProcessorTime;
+                ts_user = proc.UserProcessorTime;
+                ts_kernel = proc.PrivilegedProcessorTime;
+
+                await Task.Delay(_performance_measurements.Count switch
+                {
+                    < 200 => 20,
+                    < 1000 => 30,
+                    < 5000 => 50,
+                    _ => 100,
+                });
+
+                Measure(TelemetryCategory.PerformanceMonitor, delegate
+                {
+                    ts_total = proc.TotalProcessorTime - ts_total;
+                    ts_user = proc.UserProcessorTime - ts_user;
+                    ts_kernel = proc.PrivilegedProcessorTime - ts_kernel;
+                    sw.Stop();
+
+                    double cpu_total = (double)ts_total.Ticks / sw.ElapsedTicks / cores;
+                    double cpu_user = (double)ts_user.Ticks / sw.ElapsedTicks / cores;
+                    double cpu_kernel = (double)ts_kernel.Ticks / sw.ElapsedTicks / cores;
+
+                    if (!double.IsFinite(cpu_user))
+                        cpu_user = 0;
+
+                    if (!double.IsFinite(cpu_kernel))
+                        cpu_kernel = 0;
+
+                    if (!double.IsFinite(cpu_total) || cpu_total < cpu_user + cpu_kernel)
+                        cpu_total = cpu_user + cpu_kernel;
+                    
+                    _performance_measurements.Add((DateTime.Now, cpu_total, cpu_user, cpu_kernel, proc.PrivateMemorySize64));
+                });
+            }
+        }
+
+        public void StopPerformanceMonitor() => _run_performancemonitor = false;
     }
 
     public sealed class TelemetryTimingsNode
@@ -157,6 +213,7 @@ namespace Unknown6656.AutoIt3
             nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
             root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
             root.AddChild("Printing", get_timings(TelemetryCategory.Printing));
+            root.AddChild("Performance Monitoring", get_timings(TelemetryCategory.PerformanceMonitor));
 
             nd_init = nd_interpreter.AddChild("Initialization", get_timings(TelemetryCategory.InterpreterInitialization));
             nd_runtime = nd_interpreter.AddChild("Runtime", get_timings(TelemetryCategory.InterpreterRuntime));

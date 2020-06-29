@@ -87,7 +87,7 @@ namespace Unknown6656.AutoIt3
 
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
             using Task printer_task = Task.Factory.StartNew(PrinterTask);
-            using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitor);
+            using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitorAsync);
             int code = 0;
 
             Telemetry.Measure(TelemetryCategory.ProgramRuntime, delegate
@@ -322,6 +322,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
             Console.WriteLine("\n\t\tTELEMETRY REPORT");
 
+            #region TIMTINGS : FETCH DATA, INIT
+
             RGBAColor col_table = RGBAColor.LightGray;
             RGBAColor col_text = RGBAColor.White;
             RGBAColor col_backg = RGBAColor.DarkSlateGray;
@@ -374,6 +376,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 for (int i = 0; i < widths.Length; i++)
                     widths[i] = Math.Max(widths[i], cells[i].Length + 2);
 
+            #endregion
+            #region TIMINGS : PRINT HEADER
+
             ConsoleExtensions.RGBForegroundColor = col_table;
 
             for (int i = 0, l = widths.Length; i < l; i++)
@@ -401,6 +406,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.WriteLine();
                 }
             }
+
+            #endregion
+            #region TIMINGS : PRINT DATA
 
             foreach ((string[] cells, TelemetryTimingsNode node) in rows)
             {
@@ -446,6 +454,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.WriteLine();
             }
 
+            #endregion
+            #region TIMINGS : PRINT FOOTER
+
             ConsoleExtensions.RGBForegroundColor = col_table;
 
             for (int i = 0, l = widths.Length; i < l; i++)
@@ -457,8 +468,134 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.Write(i == l - 1 ? '┘' : '┴');
             }
 
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine();
+
+            #endregion
+            #region PERFORMANCE : FETCH DATA
+
+            const int PADDING = 22;
+            List<(DateTime, double total, double user, double kernel, long ram)> performance_data = new();
+            int width_perf = width - 2 - PADDING;
+            const int height_perf_cpu = 15;
+
+            performance_data.AddRange(telemetry.PerformanceMeasurements);
+
+            if (performance_data.Count > width_perf)
+            {
+                int step = performance_data.Count / (performance_data.Count - width_perf);
+                int index = performance_data.Count - 1;
+
+                while (index > 0 && performance_data.Count > width_perf)
+                {
+                    performance_data.RemoveAt(index);
+                    index -= step;
+                }
+            }
+
+            width_perf = performance_data.Count + PADDING;
+
+            #endregion
+            #region PERFORMANCE : PRINT FRAME
+
+            int ypos = Console.CursorTop;
+            RGBAColor col_cpu_user = RGBAColor.Chartreuse;
+            RGBAColor col_cpu_kernel = RGBAColor.LimeGreen;
+            RGBAColor col_ram = RGBAColor.CornflowerBlue;
+
+            ConsoleExtensions.RGBForegroundColor = col_table;
+            Console.WriteLine('┌' + new string('─', width_perf) + '┐');
+            ConsoleExtensions.WriteVertical(new string('│', height_perf_cpu));
+            ConsoleExtensions.WriteVertical(new string('│', height_perf_cpu), (width_perf + 1, ypos + 1));
+            Console.WriteLine();
+            Console.WriteLine('└' + new string('─', width_perf) + '┘');
+
+            Console.SetCursorPosition(2, ypos + 1);
+            ConsoleExtensions.RGBForegroundColor = col_text;
+            ConsoleExtensions.WriteUnderlined("CPU Load");
+            Console.SetCursorPosition(2, ypos + 3);
+            ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+            Console.Write("███ ");
+            ConsoleExtensions.RGBForegroundColor = col_text;
+            Console.Write("User");
+            Console.SetCursorPosition(2, ypos + 4);
+            ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+            Console.Write("███ ");
+            ConsoleExtensions.RGBForegroundColor = col_text;
+            Console.Write("Kernel");
+
+            for (int j = 0; j < height_perf_cpu; ++j)
+            {
+                ConsoleExtensions.RGBForegroundColor = col_text;
+                Console.SetCursorPosition(PADDING - 7, ypos + height_perf_cpu - j);
+                Console.Write($"{100 * j / (height_perf_cpu - 1d),3:F0} %");
+                ConsoleExtensions.RGBForegroundColor = col_backg;
+                Console.Write(new string('─', performance_data.Count + 2));
+            }
+
+            #endregion
+            #region PERFORMANCE : PRINT DATA
+
+            string bars = "░▒▄▓█";
+
+            for (int i = 0; i < performance_data.Count; i++)
+            {
+                (_, double cpu, _, double kernel, _) = performance_data[i];
+
+                for (int j = 0; j < height_perf_cpu; ++j)
+                {
+                    Console.SetCursorPosition(PADDING + i, ypos + height_perf_cpu - j);
+
+                    double lo = j / (height_perf_cpu - 1d);
+                    double hi = (j + 1) / (height_perf_cpu - 1d);
+
+                    if (cpu < lo)
+                        break;
+                    else if (cpu < hi)
+                    {
+                        ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+                        Console.Write(bars[(int)(Math.Min(.99, (hi - cpu) / (hi - lo)) * bars.Length)]);
+                    }
+                    else if (kernel < lo)
+                    {
+                        ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+                        Console.Write(bars[^1]);
+                    }
+                    else if (kernel < hi)
+                    {
+                        ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+                        ConsoleExtensions.RGBBackgroundColor = col_cpu_user;
+                        Console.Write(bars[(int)(Math.Min(.99, (hi - kernel) / (hi - lo)) * bars.Length)]);
+                        Console.Write("\x1b[0m");
+                    }
+                    else
+                    {
+                        ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+                        Console.Write(bars[^1]);
+                    }
+                }
+            }
+
+            IEnumerable<double> c_total = performance_data.Select(p => p.total * 100);
+            IEnumerable<double> c_user = performance_data.Select(p => p.user * 100);
+            IEnumerable<double> c_kernel = performance_data.Select(p => p.kernel * 100);
+            IEnumerable<double> c_ram = performance_data.Select(p => p.ram / 1024d / 1024d);
+
+            Console.SetCursorPosition(0, ypos + height_perf_cpu);
+            ConsoleExtensions.RGBForegroundColor = col_table;
+            Console.WriteLine($@"
+├────────────┬──────────────┬──────────────┬
+│ Category   │ Maximum Load │ Average Load │
+├────────────┼──────────────┼──────────────┤
+│ Total CPU  │ {c_total.Max(),10:F5} % │ {c_total.Average(),10:F5} % │
+│ User CPU   │ {c_user.Max(),10:F5} % │ {c_user.Average(),10:F5} % │
+│ Kernel CPU │ {c_kernel.Max(),10:F5} % │ {c_kernel.Average(),10:F5} % │
+│ RAM        │ {c_ram.Max(),9:F3} MB │ {c_ram.Average(),9:F3} MB │
+└────────────┴──────────────┴──────────────┘
+");
+
+            #endregion
+
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', width));
         });
 

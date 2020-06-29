@@ -3,6 +3,10 @@ dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, B
 for $func in $funcs
    for $input in $inputs
 	  ConsoleWriteLine(FuncName($func) & "(" & $input & ") = " & Call($func, $input))
+
+	  if $input > 1 Then
+		 ;ExitLoop 2
+	  endif
    next
    ConsoleWriteLine()
    next
