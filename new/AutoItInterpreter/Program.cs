@@ -535,7 +535,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             #endregion
             #region PERFORMANCE : PRINT DATA
 
-            string bars = "░▒▄▓█";
+            string bars = "_‗▄░▒▓█";
 
             for (int i = 0; i < performance_data.Count; i++)
             {
@@ -553,7 +553,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     else if (cpu < hi)
                     {
                         ConsoleExtensions.RGBForegroundColor = col_cpu_user;
-                        Console.Write(bars[(int)(Math.Min(.99, (hi - cpu) / (hi - lo)) * bars.Length)]);
+                        ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - cpu) / (hi - lo)) * bars.Length)].ToString());
                     }
                     else if (kernel < lo)
                     {
@@ -564,7 +564,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     {
                         ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
                         ConsoleExtensions.RGBBackgroundColor = col_cpu_user;
-                        Console.Write(bars[(int)(Math.Min(.99, (hi - kernel) / (hi - lo)) * bars.Length)]);
+                        ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - kernel) / (hi - lo)) * bars.Length)].ToString());
                         Console.Write("\x1b[0m");
                     }
                     else

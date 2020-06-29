@@ -79,6 +79,7 @@
             "invalid_redim_expression": "Invalid 'ReDim'-expression '{0}'. Only an array variable followed by indexing brackets is permitted.",
             "invalid_redim_target": "Invalid 'ReDim'-target '{0}'. The target variable must be an one-dimensional non-constant array.",
             "invalid_redim_size": "Invalid array size expression '{0}'. Please make sure that the size is (castable to) a non-negative integer.",
+            "unexpected_contexitloop": "Unexpected statement '{0}'. '{0}' may only be used inside 'For'-, 'Do'-, or 'While'-loops.",
 
             "experimental": {
                 "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",

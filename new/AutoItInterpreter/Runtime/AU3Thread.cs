@@ -281,6 +281,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
 
+        public Dictionary<string, int> InternalJumpLabels => _line_cache.WithIndex().Where(l => REGEX_INTERNAL_LABEL.IsMatch(l.Item.LineContent)).ToDictionary(l => l.Item.LineContent, l => l.Index);
+
+
 
         internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
             : base(thread, caller, function, args)
@@ -380,7 +383,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterError? MoveTo(string jump_label)
         {
-            if ((CurrentFunction as AU3Function)?.JumpLabels[jump_label] is JumpLabel label)
+            if (InternalJumpLabels.TryGetValue(jump_label, out int index))
+            {
+                _instruction_pointer = index;
+
+                return null;
+            }
+            else if ((CurrentFunction as AU3Function)?.JumpLabels[jump_label] is JumpLabel label)
             {
                 MoveTo(label);
 
@@ -400,6 +409,32 @@ namespace Unknown6656.AutoIt3.Runtime
             ReturnValue = value;
         }
 
+        private bool RemoveInternalJumpLabel(string jump_label)
+        {
+            if (REGEX_INTERNAL_LABEL.IsMatch(jump_label))
+                for (int i = 0; i < _line_cache.Count; i++)
+                    if (jump_label.Equals(_line_cache[i].LineContent))
+                    {
+                        _line_cache.RemoveAt(i);
+
+                        return true;
+                    }
+
+            return false;
+        }
+
+        private string InsertInternalJumpLabel()
+        {
+            string name = $"§{Guid.NewGuid():N}";
+
+            if (_instruction_pointer < _line_cache.Count)
+                _line_cache.Insert(_instruction_pointer, (CurrentLocation, name));
+            else
+                _line_cache.Add((SourceLocation.Unknown, name));
+
+            return name;
+        }
+        
         private void InsertReplaceSourceCode(int instruction_ptr, params string[] lines)
         {
             int eip = _instruction_pointer;
@@ -422,7 +457,9 @@ namespace Unknown6656.AutoIt3.Runtime
             (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
             InterpreterResult? result = null;
 
-            if (string.IsNullOrWhiteSpace(line))
+            line = line.Trim();
+
+            if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return InterpreterResult.OK;
 
             Program.PrintDebugMessage($"({loc}) {line}");
@@ -492,16 +529,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         // TODO
-        private readonly ConcurrentStack<(BlockStatementType BlockType, SourceLocation Location)> _blockstatement_stack = new ConcurrentStack<(BlockStatementType, SourceLocation)>();
+        private readonly ConcurrentStack<(BlockStatementType BlockType, string internal_label)> _blockstatement_stack = new();
+        private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
         private readonly ConcurrentStack<int> _forloop_eip_stack = new ConcurrentStack<int>();
         private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
-        private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new ConcurrentDictionary<string, IEnumerator<(Variant, Variant)>>();
 
 
         private InterpreterResult PushBlockStatement(BlockStatementType statement)
         {
-            _blockstatement_stack.Push((statement, CurrentLocation));
+            _blockstatement_stack.Push((statement, InsertInternalJumpLabel()));
 
             return InterpreterResult.OK;
         }
@@ -511,7 +548,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (expected.Length == 0)
                 return null;
 
-            _blockstatement_stack.TryPeek(out (BlockStatementType type, SourceLocation) statement);
+            _blockstatement_stack.TryPeek(out (BlockStatementType type, string) statement);
 
             if (!expected.Contains(statement.type))
                 return WellKnownError("error.expected_statement_block", statement.type, string.Join(", ", expected));
@@ -519,22 +556,22 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        // private Union<InterpreterError, BlockStatementType> PopBlockStatement(params BlockStatementType[] accepted)
-        // {
-        //     if (accepted.Length == 0)
-        //         _blockstatement_stack.TryPop(out _);
-        //     else
-        //     {
-        //         _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
-        // 
-        //         if (!accepted.Contains(statement.type))
-        //             return WellKnownError("error.no_matching_close", statement.type, statement.loc);
-        //     }
-        // 
-        //     return null;
-        // }
+        //private bool TryPopBlockStatement(out BlockStatementType statement, out string label)
+        //{
+        //    if (accepted.Length == 0)
+        //        _blockstatement_stack.TryPop(out _);
+        //    else
+        //    {
+        //        _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
 
-        private InterpreterResult? MoveToEndOf(BlockStatementType type)
+        //        if (!accepted.Contains(statement.type))
+        //            return WellKnownError("error.no_matching_close", statement.type, statement.loc);
+        //    }
+
+        //    return null;
+        //}
+
+        private InterpreterError? MoveToEndOf(BlockStatementType type)
         {
             SourceLocation init = CurrentLocation;
             int depth = 1;
@@ -586,7 +623,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else
                 return WellKnownError("error.not_yet_implemented", type);
 
-            return depth == 0 ? InterpreterResult.OK : WellKnownError("error.no_matching_close", type, init);
+            return depth == 0 ? null : WellKnownError("error.no_matching_close", type, init);
         }
 
 
@@ -615,7 +652,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new Regex(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_EXITLOOP = new Regex(@"^exitloop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INTERNAL_LABEL = new Regex(@"^§\w+$", _REGEX_OPTIONS);
 
 
         private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
@@ -841,7 +878,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 [REGEX_DO] = _ => PushBlockStatement(BlockStatementType.Do),
                 [REGEX_UNTIL] = m =>
                 {
-                    _blockstatement_stack.TryPeek(out (BlockStatementType type, SourceLocation loc) topmost);
+                    _blockstatement_stack.TryPeek(out (BlockStatementType type, string label) topmost);
 
                     if (topmost.type != BlockStatementType.Do)
                         return WellKnownError("error.unexpected_until");
@@ -851,9 +888,14 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (result.Is(out InterpreterError? error))
                         return error;
                     else if (!result.As<Variant>().ToBoolean())
-                        MoveAfter(topmost.loc);
+                    {
+                        if (MoveTo(topmost.label) is InterpreterError e)
+                            return e;
+                    }
                     else
                         _blockstatement_stack.TryPop(out _);
+
+                    RemoveInternalJumpLabel(topmost.label);
 
                     return InterpreterResult.OK;
                 },
@@ -865,7 +907,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return error;
 
                     if (!result.As<Variant>().ToBoolean())
-                        return MoveToEndOf(BlockStatementType.While);
+                        return MoveToEndOf(BlockStatementType.While) ?? InterpreterResult.OK;
                     else
                         PushBlockStatement(BlockStatementType.While);
 
@@ -873,12 +915,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_WEND] = _ =>
                 {
-                    _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) topmost);
+                    _blockstatement_stack.TryPop(out (BlockStatementType type, string label) topmost);
 
                     if (topmost.type != BlockStatementType.While)
                         return WellKnownError("error.unexpected_wend");
+                    else if (MoveTo(topmost.label) is InterpreterError error)
+                        return error;
 
-                    MoveBefore(topmost.loc);
+                    RemoveInternalJumpLabel(topmost.label);
 
                     return InterpreterResult.OK;
                 },
@@ -904,8 +948,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
                         _if_stack.Push(cond);
 
-                        if (!cond)
-                            MoveToEndOf(BlockStatementType.If);
+                        if (!cond && MoveToEndOf(BlockStatementType.If) is InterpreterError err)
+                            return err;
                     }
 
                     return InterpreterResult.OK;
@@ -914,8 +958,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     if (_if_stack.TryPop(out bool cond))
                     {
-                        if (cond)
-                            MoveToEndOf(BlockStatementType.If);
+                        if (cond && MoveToEndOf(BlockStatementType.If) is InterpreterError error)
+                            return error;
                     }
                     else
                         return WellKnownError("error.missing_if");
@@ -930,11 +974,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return MoveTo(m.Groups["label"].Value) ?? InterpreterResult.OK;
                 },
-
-
                 [REGEX_CONTINUELOOP_EXITLOOP] = m =>
                 {
-                    InterpreterResult? result = InterpreterResult.OK;
                     bool exit = m.Groups["mode"].Value.Equals("exit", StringComparison.InvariantCultureIgnoreCase);
                     int level = 1;
 
@@ -948,30 +989,26 @@ namespace Unknown6656.AutoIt3.Runtime
                         level = (int)(Variant)parsed;
                     }
 
-                    while (level --> 1)
-                    {
+                    while (level-- > 1)
+                    { 
+                        if (!_blockstatement_stack.TryPop(out (BlockStatementType type, string label) block) || block.type is not (BlockStatementType.For or BlockStatementType.While or BlockStatementType.Do))
+                            return WellKnownError("error.unexpected_contexitloop", exit ? "ExitLoop" : "ContinueLoop");
+                        else if (exit)
+                        {
+                            if (MoveToEndOf(block.type) is InterpreterError error)
+                                return error;
+                        }
+                        else
+                        {
+                            if (MoveTo(block.label) is InterpreterError error)
+                                return error;
+                        }
 
-
+                        RemoveInternalJumpLabel(block.label);
                     }
-                       //  result = PopBlockStatement(BlockStatementType.For, BlockStatementType.While, BlockStatementType.Do);
 
-                    // TODO : continue
-
-
-                    throw new NotImplementedException();
+                    return InterpreterResult.OK;
                 },
-                //[/*language=regex*/@"^exitloop\s*(?<level>\d+)?\s*$"] = m =>
-                //{
-                //    int level = int.TryParse(m.Groups["level"].Value, out int l) ? l : 1;
-                //    InterpreterResult? result = InterpreterResult.OK;
-                //
-                //    while (level-- > 0)
-                //        result = PopBlockStatement(BlockStatementType.For, BlockStatementType.ForIn, BlockStatementType.While, BlockStatementType.Do);
-                //
-                //    throw new NotImplementedException();
-                //
-                //    return result;
-                //},
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
             });

@@ -5,7 +5,7 @@ for $func in $funcs
 	  ConsoleWriteLine(FuncName($func) & "(" & $input & ") = " & Call($func, $input))
 
 	  if $input > 1 Then
-		 ;ExitLoop 2
+		 ExitLoop 2
 	  endif
    next
    ConsoleWriteLine()
