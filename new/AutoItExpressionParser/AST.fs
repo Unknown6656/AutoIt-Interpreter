@@ -92,16 +92,25 @@ type OPERATOR_BINARY =
             | Divide -> "/"
             | Power -> "^"
 
+type CAST_OPERATOR = 
+    | CBool
+    | CInt
+    | CNumber
+    | CString
+    | CBinary
+
 type OPERATOR_UNARY =
     | Identity
     | Negate
     | Not
+    | Cast of CAST_OPERATOR
     with
         override x.ToString() =
             match x with
             | Identity -> "+"
             | Negate -> "-"
             | Not -> "!"
+            | Cast c -> sprintf "(:%O)" c
 
 type EXPRESSION =
     | Literal of LITERAL

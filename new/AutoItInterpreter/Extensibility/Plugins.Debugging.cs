@@ -19,6 +19,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
             ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
             ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
+            ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
             ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
         };
 
@@ -273,7 +274,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             foreach ((string name, string loc, string type, string value) in variables)
             {
-                string val = value.Length > w_value - 3 ? value[..(w_value - 3)] + "..."  : value.PadLeft(w_value);
+                string val = value.Length > w_value ? value[..(w_value - 3)] + "..."  : value.PadLeft(w_value);
 
                 sb.AppendLine($"│{name.PadRight(w_name)}│{loc.PadRight(w_loc)}│{type.PadRight(w_type)}│{val}│");
             }
@@ -281,6 +282,51 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             sb.AppendLine($"└{new string('─', w_name)}┴{new string('─', w_loc)}┴{new string('─', w_type)}┴{new string('─', w_value)}┘");
 
             frame.Print(sb.ToString());
+
+            return Variant.Zero;
+        }
+
+        private static FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
+        {
+            if (frame.CurrentThread.CallStack.OfType<AU3CallFrame>().FirstOrDefault() is AU3CallFrame au3frame)
+            {
+                StringBuilder sb = new StringBuilder();
+                (SourceLocation loc, string txt)[] lines = au3frame.CurrentLineCache;
+                int w_num = (int)Math.Max(4, Math.Log10(lines.Length) + 1);
+                int w_loc = lines.Select(l => l.loc.ToString().Length).Append(8).Max();
+                int w_txt = lines.Select(l => l.txt.ToString().Length).Append(7).Max();
+                int cwidth = Math.Min(Console.BufferWidth, Console.WindowWidth);
+                int eip = au3frame.CurrentInstructionPointer;
+
+                sb.Append($@"{lines.Length} Lines:
+┌{new string('─', w_num)}┬{new string('─', w_loc)}┬{new string('─', w_txt)}┐
+│{"Line".PadRight(w_num)}│{"Location".PadRight(w_loc)}│{"Content".PadRight(w_txt)}│
+├{new string('─', w_num)}┼{new string('─', w_loc)}┼{new string('─', w_txt)}┤
+");
+
+                if (w_num + w_loc + w_txt + 4 > cwidth)
+                    w_txt = cwidth - 4 - w_num - w_loc;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    (SourceLocation loc, string txt) = lines[i];
+                    void append(object o) => sb.Append(eip == i ? $"\x1b[7m{o}\x1b[27m" : o);
+
+                    txt = txt.Length > w_txt ? txt[..(w_txt - 3)] + "..." : txt.PadRight(w_txt);
+
+                    sb.Append('│');
+                    append(i.ToString().PadLeft(w_num));
+                    sb.Append('│');
+                    append(loc.ToString().PadRight(w_loc));
+                    sb.Append('│');
+                    append(txt);
+                    sb.AppendLine("│");
+                }
+
+                sb.AppendLine($"└{new string('─', w_num)}┴{new string('─', w_loc)}┴{new string('─', w_txt)}┘");
+
+                frame.Print(sb.ToString());
+            }
 
             return Variant.Zero;
         }

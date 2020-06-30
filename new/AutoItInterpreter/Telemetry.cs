@@ -40,6 +40,9 @@ namespace Unknown6656.AutoIt3
         ProcessAssignment,
         EvaluateExpression,
         ExternalProcessor,
+        ExpressionCleanup,
+        VariableResolution,
+        VariableCreation,
     }
 
     public sealed class Telemetry
@@ -208,7 +211,7 @@ namespace Unknown6656.AutoIt3
         {
             TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();
             TelemetryTimingsNode root = new TelemetryTimingsNode(null, "Total", get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
-            TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc;
+            TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc, nd_vars;
 
             nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
             root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
@@ -236,16 +239,22 @@ namespace Unknown6656.AutoIt3
             nd_native.AddChild("Console Out", get_timings(TelemetryCategory.ScriptConsoleOut));
             nd_native.AddChild("Console In", get_timings(TelemetryCategory.ScriptConsoleIn));
 
+            nd_au3.AddChild("Expression Evaluation", get_timings(TelemetryCategory.EvaluateExpression));
+            nd_au3.AddChild("Constant Folding", get_timings(TelemetryCategory.ExpressionCleanup));
+            nd_vars = nd_au3.AddChild("Variables", get_timings(TelemetryCategory.VariableResolution, TelemetryCategory.VariableCreation));
             nd_proc = nd_au3.AddChild("Line Processing", get_timings(TelemetryCategory.ProcessLine));
 
+            nd_vars.AddChild("Resolution", get_timings(TelemetryCategory.VariableResolution));
+            nd_vars.AddChild("Creation", get_timings(TelemetryCategory.VariableCreation));
+
             nd_proc.AddChild("Directives", get_timings(TelemetryCategory.ProcessDirective));
-            nd_proc.AddChild("Statements", get_timings(TelemetryCategory.ProcessStatement));
+            nd_proc.AddChild("Control Statements", get_timings(TelemetryCategory.ProcessStatement));
             nd_proc.AddChild("Expression Statements", get_timings(TelemetryCategory.ProcessExpressionStatement));
             nd_proc.AddChild("Declaration Statements", get_timings(TelemetryCategory.ProcessDeclaration));
             nd_proc.AddChild("Assginment Statements", get_timings(TelemetryCategory.ProcessAssignment));
             nd_proc.AddChild("Expressions", get_timings(TelemetryCategory.ProcessExpression));
-            nd_proc.AddChild("Expression Evaluation", get_timings(TelemetryCategory.EvaluateExpression));
             nd_proc.AddChild("External Processing", get_timings(TelemetryCategory.ExternalProcessor));
+
 
             return root;
         }

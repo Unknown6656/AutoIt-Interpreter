@@ -208,7 +208,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ when Type is VariantType.Null or VariantType.Default => false,
             byte[] arr => arr.FirstOrDefault() != 0,
             string s => s.Length > 0,
-            decimal d => d is 0m,
+            decimal d => d != 0m,
             bool b => b,
             null => false,
             _ => true,
@@ -703,7 +703,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variable CreateTemporaryVariable() => CreateVariable((CallFrame as AU3CallFrame)?.CurrentLocation ?? SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
 
-        public Variable CreateVariable(SourceLocation location, string name, bool isConst)
+        public Variable CreateVariable(SourceLocation location, VARIABLE variable, bool isConst) => CreateVariable(location, variable.Name, isConst);
+
+        public Variable CreateVariable(SourceLocation location, string name, bool isConst) => Interpreter.Telemetry.Measure(TelemetryCategory.VariableCreation, delegate
         {
             if (!TryGetVariable(name, out Variable? var))
             {
@@ -713,33 +715,34 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             return var;
-        }
-
-        public Variable CreateVariable(SourceLocation location, VARIABLE variable, bool isConst) => CreateVariable(location, variable.Name, isConst);
+        });
 
         public bool HasVariable(string name) => TryGetVariable(name, out _);
 
         public bool HasVariable(VARIABLE variable) => HasVariable(variable.Name);
 
+        public bool TryGetVariable(VARIABLE input, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
+
         public bool TryGetVariable(string name, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable)
         {
-            variable = null;
+            Variable? v = null;
+            bool res = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolution, delegate
+            {
+                foreach (Variable var in _variables.Keys)
+                    if (var.Equals(name))
+                    {
+                        v = var;
 
-            foreach (Variable var in _variables.Keys)
-                if (var.Equals(name))
-                {
-                    variable = var;
+                        return true;
+                    }
 
-                    return true;
-                }
+                return Parent is null ? false : Parent.TryGetVariable(name, out v);
+            });
 
-            if (Parent is null)
-                return false;
+            variable = v;
 
-            return Parent.TryGetVariable(name, out variable);
+            return res;
         }
-
-        public bool TryGetVariable(VARIABLE input, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
 
         public bool DestroyVariable(string name, bool recursive)
         {

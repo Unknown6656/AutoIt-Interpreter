@@ -1,16 +1,3 @@
-dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary, Hex]
-dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
-for $func in $funcs
-   for $input in $inputs
-	  ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input) & @CRLF)
-	  if $input > 1 Then
-		 ExitLoop 2
-	  endif
-   next
-   ConsoleWrite(@CRLF)
-   next
-exit 0
-
 ; local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
 
 $crr["top"] = "kek"

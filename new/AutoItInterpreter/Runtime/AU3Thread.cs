@@ -277,6 +277,10 @@ namespace Unknown6656.AutoIt3.Runtime
         private List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
 
+        public int CurrentInstructionPointer => _instruction_pointer;
+
+        public (SourceLocation LineLocation, string LineContent)[] CurrentLineCache => _line_cache.ToArray();
+
         public SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
         public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
@@ -735,30 +739,32 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             if (depth == 0)
                             {
-                                Variable temp = VariableResolver.CreateTemporaryVariable();
-                                string last = '$' + temp.Name;
+                                Variable v_first = VariableResolver.CreateTemporaryVariable();
+                                string first = '$' + v_first.Name;
+                                string stop = '$' + VariableResolver.CreateTemporaryVariable().Name;
 
-                                temp.Value = Variant.False;
+                                v_first.Value = Variant.True;
 
-                                InsertReplaceSourceCode(_instruction_pointer,
-                                    $"If {last} Then",
-                                    $"ExitLoop",
+                                InsertReplaceSourceCode(_instruction_pointer, $"WEnd");
+                                InsertReplaceSourceCode(eip_for,
+                                    $"While True",
+                                    $"If {first} Then",
+                                    $"{first} = False",
                                     $"Else",
+                                    $"{stop} = Number({m.Groups["stop"]})",
+                                    $"If {counter} = {stop} Then",
+                                    $"ExitLoop",
+                                    $"EndIf",
                                     $"{counter} += {step}",
-                                    $"If {counter} == {m.Groups["stop"]} Then",
-                                    $"{last} = True",
-                                    $"EndIf",
-                                    $"EndIf",
-                                    $"Until False"
+                                    $"EndIf"
                                 );
-                                InsertReplaceSourceCode(eip_for, "Do");
                                 _instruction_pointer = eip_for - 1;
 
                                 return InterpreterResult.OK;
                             }
                         }
 
-                        return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
+                        return WellKnownError("error.no_matching_close", "For", loc_for);
                     }
                     else
                         return WellKnownError("error.malformed_for_expr", m.Groups["start"]);
@@ -803,7 +809,6 @@ namespace Unknown6656.AutoIt3.Runtime
                                     string iterator = VariableResolver.CreateTemporaryVariable().Name;
 
                                     InsertReplaceSourceCode(_instruction_pointer,
-                                        $"{nameof(InternalsFunctionProvider.__iterator_movenext)}(\"{iterator}\")",
                                         $"WEnd",
                                         $"{nameof(InternalsFunctionProvider.__iterator_destroy)}(\"{iterator}\")"
                                     );
@@ -814,7 +819,8 @@ namespace Unknown6656.AutoIt3.Runtime
                                         //     return WellKnownError("error.invalid_forin_source", collection);
                                         $"While {nameof(InternalsFunctionProvider.__iterator_canmove)}(\"{iterator}\")",
                                         $"${iterator_key.Name} = {nameof(InternalsFunctionProvider.__iterator_currentkey)}(\"{iterator}\")",
-                                        $"${iterator_value.Name} = {nameof(InternalsFunctionProvider.__iterator_currentvalue)}(\"{iterator}\")"
+                                        $"${iterator_value.Name} = {nameof(InternalsFunctionProvider.__iterator_currentvalue)}(\"{iterator}\")",
+                                        $"{nameof(InternalsFunctionProvider.__iterator_movenext)}(\"{iterator}\")"
                                     );
                                     _instruction_pointer = eip_for - 1;
 
@@ -822,7 +828,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 }
                             }
 
-                            return WellKnownError("error.no_matching_close", BlockStatementType.For, loc_for);
+                            return WellKnownError("error.no_matching_close", "For", loc_for);
                         }));
                 },
                 [REGEX_WITH] = m =>
@@ -879,32 +885,41 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return parsed.As<InterpreterError>() ?? WellKnownError("error.invalid_redim_expression", m.Groups["expression"]);
                 },
-                [REGEX_DO] = _ => PushBlockStatement(BlockStatementType.Do),
-                [REGEX_UNTIL] = m =>
+                [REGEX_DO] = _ =>
                 {
-                    _blockstatement_stack.TryPeek(out (BlockStatementType type, string label) topmost);
+                    SourceLocation do_loc = CurrentLocation;
+                    int eip_do = _instruction_pointer;
+                    int depth = 1;
 
-                    if (topmost.type != BlockStatementType.Do)
-                        return WellKnownError("error.unexpected_until");
+                    while (MoveNext())
+                        if (CurrentLineContent.Match(REGEX_DO, out Match _))
+                            ++depth;
+                        else if (CurrentLineContent.Match(REGEX_UNTIL, out Match m))
+                        {
+                            --depth;
 
-                    Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
+                            if (depth == 0)
+                            {
+                                InsertReplaceSourceCode(_instruction_pointer, "WEnd");
 
-                    if (result.Is(out InterpreterError? error))
-                        return error;
-                    else if (!result.As<Variant>().ToBoolean())
-                    {
-                        if (MoveTo(topmost.label) is InterpreterError e)
-                            return e;
-                    }
-                    else
-                        _blockstatement_stack.TryPop(out _);
+                                Variable temp = VariableResolver.CreateTemporaryVariable();
+                                string first = '$' + temp.Name;
 
-                    RemoveInternalJumpLabel(topmost.label);
+                                temp.Value = Variant.True;
 
-                    --_instruction_pointer;
+                                InsertReplaceSourceCode(eip_do,
+                                    $"While ({first} Or Not({m.Groups["expression"]}))",
+                                    $"{first} = False"
+                                );
+                                _instruction_pointer = eip_do - 1;
 
-                    return InterpreterResult.OK;
+                                return InterpreterResult.OK;
+                            }
+                        }
+
+                    return WellKnownError("error.no_matching_close", "Do", do_loc);
                 },
+                [REGEX_UNTIL] = _ => WellKnownError("error.unexpected_until"),
                 [REGEX_WHILE] = m =>
                 {
                     Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
@@ -999,7 +1014,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     while (level-- > 0)
                     { 
-                        if (!_blockstatement_stack.TryPop(out (BlockStatementType type, string label) block) || block.type is not (BlockStatementType.For or BlockStatementType.While or BlockStatementType.Do))
+                        if (!_blockstatement_stack.TryPop(out (BlockStatementType type, string label) block) || block.type is not BlockStatementType.While)
                             return WellKnownError("error.unexpected_contexitloop", exit ? "ExitLoop" : "ContinueLoop");
                         else if (exit)
                         {
@@ -1086,7 +1101,11 @@ namespace Unknown6656.AutoIt3.Runtime
             Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessRawExpression(expression);
 
             if (result.Is(out PARSABLE_EXPRESSION.AnyExpression? any))
-                return ProcessExpression(any.Item);
+            {
+                EXPRESSION folded = Interpreter.Telemetry.Measure(TelemetryCategory.ExpressionCleanup, () => Cleanup.FoldConstants(any.Item));
+
+                return ProcessExpression(folded);
+            }
             else
                 return (InterpreterError?)result ?? WellKnownError("error.unparsable_line", expression);
         }
@@ -1242,7 +1261,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessAssignment, delegate
             {
-                (ASSIGNMENT_TARGET target, EXPRESSION expression) = Cleanup.CleanUpExpression(assignment);
+                (ASSIGNMENT_TARGET target, EXPRESSION expression) = Interpreter.Telemetry.Measure(TelemetryCategory.ExpressionCleanup, () => Cleanup.CleanUpExpression(assignment));
 
                 switch (target)
                 {
@@ -1398,6 +1417,19 @@ namespace Unknown6656.AutoIt3.Runtime
                     result = -value;
                 else if (op.IsNot)
                     result = !value;
+                else if (op is OPERATOR_UNARY.Cast { Item: { } cop })
+                    if (cop.IsCBool)
+                        result = (Variant)value.ToBoolean();
+                    else if (cop.IsCInt)
+                        result = (Variant)(int)value.ToNumber();
+                    else if (cop.IsCNumber)
+                        result = (Variant)value.ToNumber();
+                    else if (cop.IsCString)
+                        result = (Variant)value.ToString();
+                    else if (cop.IsCBinary)
+                        result = (Variant)value.ToBinary();
+                    else
+                        result = WellKnownError("error.unsupported_operator", cop);
                 else
                     result = WellKnownError("error.unsupported_operator", op);
 
@@ -1578,11 +1610,8 @@ namespace Unknown6656.AutoIt3.Runtime
         : int
     {
         __function__ = default,
-        For,
         While,
-        Do,
         If,
-        // With,
         // Select,
         // Switch,
         // Case,
