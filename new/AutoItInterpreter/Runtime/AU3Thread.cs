@@ -448,11 +448,20 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = instruction_ptr;
 
             if (lines.Length == 1)
-                _line_cache[_instruction_pointer] = (CurrentLocation, lines[0]);
+            {
+                if (_instruction_pointer < _line_cache.Count)
+                    _line_cache[_instruction_pointer] = (CurrentLocation, lines[0]);
+                else
+                    _line_cache.Add((SourceLocation.Unknown, lines[0]));
+            }
             else
             {
                 _line_cache.RemoveAt(_instruction_pointer);
-                _line_cache.InsertRange(_instruction_pointer, lines.Select(l => (CurrentLocation, l)));
+
+                if (_instruction_pointer < _line_cache.Count)
+                    _line_cache.InsertRange(_instruction_pointer, lines.Select(l => (CurrentLocation, l)));
+                else
+                    _line_cache.AddRange(lines.Select(l => (SourceLocation.Unknown, l)));
             }
 
             _instruction_pointer = eip;
@@ -1034,10 +1043,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return InterpreterResult.OK;
                 },
+
+                // TODO : select
+                // TODO : switch
+                // TODO : endselect
+                // TODO : endswitch
+                // TODO : case
+                // TODO : continuecase
+
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
-
-                // TODO
             });
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
