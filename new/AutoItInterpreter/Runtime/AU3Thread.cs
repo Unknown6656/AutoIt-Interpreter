@@ -997,7 +997,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         level = (int)(Variant)parsed;
                     }
 
-                    while (level-- > 1)
+                    while (level-- > 0)
                     { 
                         if (!_blockstatement_stack.TryPop(out (BlockStatementType type, string label) block) || block.type is not (BlockStatementType.For or BlockStatementType.While or BlockStatementType.Do))
                             return WellKnownError("error.unexpected_contexitloop", exit ? "ExitLoop" : "ContinueLoop");
@@ -1013,6 +1013,8 @@ namespace Unknown6656.AutoIt3.Runtime
                         }
 
                         RemoveInternalJumpLabel(block.label);
+
+                        --_instruction_pointer;
                     }
 
                     return InterpreterResult.OK;

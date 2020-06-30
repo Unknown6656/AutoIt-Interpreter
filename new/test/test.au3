@@ -4,7 +4,7 @@ for $func in $funcs
    for $input in $inputs
 	  ConsoleWrite(FuncName($func) & "(" & $input & ") = " & Call($func, $input) & @CRLF)
 	  if $input > 1 Then
-		 ExitLoop 1
+		 ExitLoop 2
 	  endif
    next
    ConsoleWrite(@CRLF)
