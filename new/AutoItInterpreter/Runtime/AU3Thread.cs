@@ -432,6 +432,8 @@ namespace Unknown6656.AutoIt3.Runtime
             else
                 _line_cache.Add((SourceLocation.Unknown, name));
 
+            ++_instruction_pointer;
+
             return name;
         }
         
@@ -459,10 +461,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
             line = line.Trim();
 
+            Program.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
+            Program.PrintDebugMessage($"Location:      {loc}");
+            Program.PrintDebugMessage($"Line Content:  {line}");
+
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return InterpreterResult.OK;
-
-            Program.PrintDebugMessage($"({loc}) {line}");
 
             Interpreter.Telemetry.Measure(TelemetryCategory.ProcessLine, delegate
             {
@@ -897,6 +901,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     RemoveInternalJumpLabel(topmost.label);
 
+                    --_instruction_pointer;
+
                     return InterpreterResult.OK;
                 },
                 [REGEX_WHILE] = m =>
@@ -923,6 +929,8 @@ namespace Unknown6656.AutoIt3.Runtime
                         return error;
 
                     RemoveInternalJumpLabel(topmost.label);
+
+                    --_instruction_pointer;
 
                     return InterpreterResult.OK;
                 },
@@ -1011,9 +1019,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
                 //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
-            });
 
-            // TODO
+                // TODO
+            });
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
                 if (proc is { Regex: Regex pat } sp && line.Match(pat, out Match _))
@@ -1032,7 +1040,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
-                Program.PrintDebugMessage($"Parsed \"{expression}\"");
+                Program.PrintDebugMessage($"Expr.statemt.: {expression}");
 
                 if (declaration_type == DeclarationType.None)
                     return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
@@ -1059,8 +1067,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 try
                 {
                     ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = Interpreter.ParserProvider.ExpressionParser;
+                    PARSABLE_EXPRESSION parsed = provider.Parse(expression).ParsedValue;
 
-                    return provider.Parse(expression).ParsedValue;
+                    Program.PrintDebugMessage($"Raw expr:      {parsed}");
+
+                    return parsed;
                 }
                 catch (Exception ex)
                 {
@@ -1300,38 +1311,31 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private Union<InterpreterError, Variant> ProcessExpression(EXPRESSION? expression) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.EvaluateExpression, delegate
+            Interpreter.Telemetry.Measure(TelemetryCategory.EvaluateExpression, delegate
             {
-                switch (expression)
+                Union<InterpreterError, Variant> value = expression switch
                 {
-                    case null:
-                        return Variant.Null;
-                    case EXPRESSION.Literal { Item: LITERAL literal }:
-                        return ProcessLiteral(literal);
-                    case EXPRESSION.Variable { Item: VARIABLE variable }:
-                        return ProcessVariable(variable);
-                    case EXPRESSION.Macro { Item: MACRO macro }:
-                        return ProcessMacro(macro);
-                    case EXPRESSION.FunctionName { Item: { Item: string func_name } }:
-                        if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
-                            return Variant.FromFunction(func);
-                        else
-                            return WellKnownError("error.unresolved_func", func_name);
-                    case EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary }:
-                        return ProcessUnary(unary.Item1, unary.Item2);
-                    case EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary }:
-                        return ProcessBinary(binary.Item1, binary.Item2, binary.Item3);
-                    case EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary }:
-                        return ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3);
-                    case EXPRESSION.Member { Item: MEMBER_EXPRESSION member }:
-                        return ProcessMember(member);
-                    case EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer }:
-                        return ProcessIndexer(indexer.Item1, indexer.Item2);
-                    case EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall }:
-                        return ProcessFunctionCall(funccall);
-                }
+                    null => Variant.Null,
+                    EXPRESSION.Literal { Item: LITERAL literal } => ProcessLiteral(literal),
+                    EXPRESSION.Variable { Item: VARIABLE variable } => ProcessVariable(variable),
+                    EXPRESSION.Macro { Item: MACRO macro } => ProcessMacro(macro),
+                    EXPRESSION.FunctionName { Item: { Item: string func_name } } =>
+                        Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func
+                        ? (Union<InterpreterError, Variant>)Variant.FromFunction(func)
+                        : (Union<InterpreterError, Variant>)WellKnownError("error.unresolved_func", func_name),
+                    EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary } => ProcessUnary(unary.Item1, unary.Item2),
+                    EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary } => ProcessBinary(binary.Item1, binary.Item2, binary.Item3),
+                    EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary } => ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3),
+                    EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member),
+                    EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer } => ProcessIndexer(indexer.Item1, indexer.Item2),
+                    EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall } => ProcessFunctionCall(funccall),
+                    _ => WellKnownError("error.not_yet_implemented", expression),
+                };
 
-                return WellKnownError("error.not_yet_implemented", expression);
+                if (value.Is(out Variant v))
+                    Program.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString()}");
+
+                return value;
             });
 
         private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index) =>

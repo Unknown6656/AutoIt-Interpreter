@@ -61,6 +61,7 @@
             "invalid_return": "The 'Return'-statement is not supported in the global scope. If you wish to terminate the program, use the 'Exit'-statement instead.",
             "circular_include": "Including the script '{0}' would result in a circular dependency.",
             "unexpected_until": "The statement 'Until' can only be used in combination with a previously opened 'Do'-statement.",
+            "unexpected_wend": "The statement 'WEnd' can only be used in combination with a previously opened 'While'-statement.",
             "malformed_for_expr": "Malformed variable declaration '{0}' statement inside 'For'-Block.",
             "unexpected_eof": "Unexpected end of file.",
             "missing_if": "'Else'- or 'ElseIf'-statements can only be used after an opening 'If ... Then'-statement.",

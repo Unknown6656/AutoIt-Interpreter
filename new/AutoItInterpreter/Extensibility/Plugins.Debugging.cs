@@ -229,7 +229,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                           $"/iter/{kvp.Key}",
                                                                           SourceLocation.Unknown.ToString(),
                                                                           "Iterator",
-                                                                          $"I:{index}, L:{kvp.Value.collection.Length}, K:{tuple.key.ToDebugString()}, V:{tuple.value.ToDebugString()}"
+                                                                          $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString()}, Value:{tuple.value.ToDebugString()}"
                                                                       );
             (string name, string loc, string type, string value)[] variables = (from scope in scopes
                                                                                 from variable in scope.LocalVariables

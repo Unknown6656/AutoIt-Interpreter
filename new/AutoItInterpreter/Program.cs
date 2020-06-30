@@ -18,6 +18,7 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.Runtime.InteropServices;
 
 namespace Unknown6656.AutoIt3
 {
@@ -136,12 +137,6 @@ namespace Unknown6656.AutoIt3
                     {
                         CommandLineOptions = opt;
 
-                        if (opt.Verbosity > Verbosity.q)
-                        {
-                            Console.WindowWidth = Math.Max(Console.WindowWidth, 180);
-                            Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                        }
-
                         if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
                             CurrentLanguage = lang;
                         else
@@ -239,8 +234,8 @@ namespace Unknown6656.AutoIt3
                 ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.PaleTurquoise : RGBAColor.Cyan;
                 Console.Write(prefix);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
-                Console.Write("]  ");
-                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.White : RGBAColor.Cyan;
+                Console.Write("] ");
+                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.White : RGBAColor.Aquamarine;
                 Console.WriteLine(msg);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             });
@@ -279,7 +274,7 @@ namespace Unknown6656.AutoIt3
                 Console.WriteLine();
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', Console.WindowWidth - 1));
+            Console.WriteLine(new string('_', Console.WindowWidth));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
 
             if (extensive)
@@ -310,12 +305,24 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', Console.WindowWidth - 1));
+            Console.WriteLine(new string('_', Console.WindowWidth));
         });
 
         public static void PrintTelemetry(Telemetry telemetry) => _print_queue.Enqueue(delegate
         {
-            int width = Math.Min(Console.WindowWidth, Console.BufferWidth) - 1;
+            const int MIN_WIDTH = 180;
+
+            Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
+            Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+
+            int width = Math.Min(Console.WindowWidth, Console.BufferWidth);
+
+            if (width < MIN_WIDTH)
+            {
+                PrintError($"Unable to print the telemetry report. The minimum console window width must be {MIN_WIDTH} chars.");
+
+                return;
+            }
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', width));
