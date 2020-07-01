@@ -18,48 +18,56 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.Runtime.InteropServices;
+
+[assembly: AssemblyUsage(@"
+Run the interpreter quitely (only print the script's output):
+    autoit3 -vq ~/Documents/my_script.au3
+
+Run the interpreter in telemetry/full debugging mode:
+    autoit3 -t ~/Documents/my_script.au3
+    autoit3 -vv ~/Documents/my_script.au3
+
+Run a script which is not on the local machine:
+    autoit3 ""\\192.168.0.1\Public Documents\My Script.au3""
+    autoit3 https://example.com/my-script.au3
+    autoit3 ftp://username:password@example.com/path/to/script.au3
+    autoit3 ssh://username:password@example.com/~/Documents/my_script.au3
+    autoit3 scp://username:password@192.168.0.100:22/script.au3
+
+Use an other display language than English for the interpreter:
+    autoit3 -l fr C:\User\Public\Script.au3
+
+-------------------------------------------------------------------------------
+
+COMMAND LINE OPTIONS:")]
 
 namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
         [Option('B', "nobanner", Default = false, HelpText = "Suppress the banner.")]
-        public bool HideBanner { get; }
+        public bool HideBanner { set; get; }
 
         [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins.")]
-        public bool DontLoadPlugins { get; }
+        public bool DontLoadPlugins { set; get; }
 
         [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
-        public bool StrictMode { get; }
+        public bool StrictMode { set; get; }
 
         [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
-        public bool IgnoreErrors { get; }
+        public bool IgnoreErrors { set; get; }
 
         [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.")]
-        public bool PrintTelemetry { get; }
+        public bool PrintTelemetry { set; get; }
 
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
-        public Verbosity Verbosity { get; }
+        public Verbosity Verbosity { set; get; } = Verbosity.n;
 
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
-        public string Language { get; }
+        public string Language { set; get; } = "en";
 
         [Value(0, HelpText = "The file path to the AutoIt-3 srcript.", Required = true)]
-        public string FilePath { get; }
-
-
-        public CommandLineOptions(bool hideBanner, bool dontLoadPlugins, bool strictMode, bool ignoreErrors, bool printTelemetry, Verbosity verbosity, string language, string filePath)
-        {
-            HideBanner = hideBanner;
-            DontLoadPlugins = dontLoadPlugins;
-            PrintTelemetry = printTelemetry;
-            StrictMode = strictMode;
-            IgnoreErrors = ignoreErrors;
-            Verbosity = verbosity;
-            Language = language;
-            FilePath = filePath;
-        }
+        public string? FilePath { set; get; }
     }
 
     public static class Program
@@ -117,6 +125,8 @@ namespace Unknown6656.AutoIt3
                             h.AddDashesToOption = true;
                             h.AutoHelp = true;
                             h.AutoVersion = true;
+                            h.AddNewLineBetweenHelpSections = true;
+                            h.AddEnumValuesToHelpText = false;
 
                             return HelpText.DefaultParsingErrorsHandler(result, h);
                         }, e => e);
