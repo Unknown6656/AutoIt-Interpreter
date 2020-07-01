@@ -790,7 +790,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     Union<InterpreterError, Variable> get_or_create(string group)
                     {
-                        if (!VariableResolver.TryGetVariable(m_iterator_variables.Groups[group].Value, out Variable? var))
+                        if (!VariableResolver.TryGetVariable(m_iterator_variables.Groups[group].Value, VariableSearchScope.Local, out Variable? var))
                             var = VariableResolver.CreateVariable(CurrentLocation, m_iterator_variables.Groups[group].Value, false);
 
                         if (var.IsConst)
@@ -852,7 +852,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         {
                             Item: VARIABLE variable
                         }
-                    } && VariableResolver.TryGetVariable(variable, out Variable? withctx) && !withctx.IsConst)
+                    } && VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? withctx) && !withctx.IsConst)
                     {
                         _withcontext_stack.Push(withctx);
 
@@ -876,7 +876,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         Item: EXPRESSION.Indexer { Item: { Item1: EXPRESSION.Variable { Item: { Name: string varname } }, Item2: EXPRESSION index } }
                     })
-                        if (VariableResolver.TryGetVariable(varname, out Variable? variable) && !variable.IsConst)
+                        if (VariableResolver.TryGetVariable(varname, VariableSearchScope.Global, out Variable? variable) && !variable.IsConst)
                         {
                             Union<InterpreterError, Variant> size = ProcessExpression(index);
 
@@ -1208,7 +1208,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return WellKnownError("error.invalid_array_size", variable_ast, size);
                             else if (items.Length > size)
                                 return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
-                            else if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                            else if (VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable))
                             {
                                 variable.Value = Variant.NewArray(size);
 
@@ -1229,8 +1229,8 @@ namespace Unknown6656.AutoIt3.Runtime
                             }
                             else
                                 return WellKnownError("error.undeclared_variable", variable_ast);
-                        case VARIABLE_DECLARATION.Map { }: // TODO
-                            if (VariableResolver.TryGetVariable(variable_ast, out variable))
+                        case VARIABLE_DECLARATION.Map:
+                            if (VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable))
                             {
                                 variable.Value = Variant.NewMap();
 
@@ -1259,7 +1259,7 @@ namespace Unknown6656.AutoIt3.Runtime
             // if (decltype.HasFlag(DeclarationType.Dim) || decltype == DeclarationType.None)
             //     global = CurrentFunction.IsMainFunction;
 
-            if (scope.TryGetVariable(variable, out Variable? var))
+            if (scope.TryGetVariable(variable, VariableSearchScope.Global, out Variable? var))
             {
                 if (!(var.IsGlobal && decltype.HasFlag(DeclarationType.Local))) // potential conflict
                     if (constant && !var.IsConst)
@@ -1267,8 +1267,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     else if (var.IsConst)
                         return WellKnownError("error.redefining_constant", var, var.DeclaredLocation);
             }
-            else
-                scope.CreateVariable(CurrentLocation, variable, constant);
+
+            scope.CreateVariable(CurrentLocation, variable, constant);
 
             return null;
         }
@@ -1282,7 +1282,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     case ASSIGNMENT_TARGET.VariableAssignment { Item: VARIABLE variable }:
                         {
-                            if (VariableResolver.TryGetVariable(variable.Name, out Variable? target_variable))
+                            if (VariableResolver.TryGetVariable(variable.Name, VariableSearchScope.Global, out Variable? target_variable))
                             {
                                 if (target_variable.IsConst && !force)
                                     return WellKnownError("error.constant_assignment", target_variable, target_variable.DeclaredLocation);
@@ -1335,7 +1335,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, Variant> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
             foreach (VARIABLE v in expression.ReferencedVariables)
-                if (!VariableResolver.HasVariable(v))
+                if (!VariableResolver.HasVariable(v, VariableSearchScope.Global))
                     return WellKnownError("error.undeclared_variable", v);
 
             Union<InterpreterError, Variant> value = ProcessExpression(expression);
@@ -1580,7 +1580,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (variable == VARIABLE.Discard)
                 return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, FrameworkMacros.MACRO_DISCARD);
 
-            if (VariableResolver.TryGetVariable(variable, out Variable? var))
+            if (VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? var))
             {
                 Variant value = var.Value;
 

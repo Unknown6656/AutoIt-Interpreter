@@ -707,7 +707,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variable CreateVariable(SourceLocation location, string name, bool isConst) => Interpreter.Telemetry.Measure(TelemetryCategory.VariableCreation, delegate
         {
-            if (!TryGetVariable(name, out Variable? var))
+            if (!TryGetVariable(name, VariableSearchScope.Local, out Variable? var))
             {
                 var = new Variable(this, location, name, isConst);
 
@@ -717,16 +717,17 @@ namespace Unknown6656.AutoIt3.Runtime
             return var;
         });
 
-        public bool HasVariable(string name) => TryGetVariable(name, out _);
+        public bool HasVariable(string name, VariableSearchScope scope) => TryGetVariable(name, scope, out _);
 
-        public bool HasVariable(VARIABLE variable) => HasVariable(variable.Name);
+        public bool HasVariable(VARIABLE variable, VariableSearchScope scope) => HasVariable(variable.Name, scope);
 
-        public bool TryGetVariable(VARIABLE input, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) => TryGetVariable(input.Name, out variable);
+        public bool TryGetVariable(VARIABLE input, VariableSearchScope scope, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable) =>
+            TryGetVariable(input.Name, scope, out variable);
 
-        public bool TryGetVariable(string name, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable)
+        public bool TryGetVariable(string name, VariableSearchScope scope, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable)
         {
             Variable? v = null;
-            bool res = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolution, delegate
+            bool resolved = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolution, delegate
             {
                 foreach (Variable var in _variables.Keys)
                     if (var.Equals(name))
@@ -736,21 +737,20 @@ namespace Unknown6656.AutoIt3.Runtime
                         return true;
                     }
 
-                return Parent is null ? false : Parent.TryGetVariable(name, out v);
+                return Parent is { } && scope != VariableSearchScope.Local ? Parent.TryGetVariable(name, scope, out v) : false;
             });
 
             variable = v;
 
-            return res;
+            return resolved && variable is { };
         }
 
-        public bool DestroyVariable(string name, bool recursive)
+        public bool DestroyVariable(string name, VariableSearchScope scope)
         {
-            if (TryGetVariable(name, out Variable? var))
-                if (_variables.TryRemove(var, out _))
-                    return true;
-                else if (recursive)
-                    return Parent?.DestroyVariable(name, recursive) ?? false;
+            if (TryGetVariable(name, scope, out Variable? var) && _variables.TryRemove(var, out _))
+                return true;
+            else if (scope != VariableSearchScope.Local)
+                return Parent?.DestroyVariable(name, scope) ?? false;
 
             return false;
         }
@@ -774,5 +774,11 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null, null);
+    }
+
+    public enum VariableSearchScope
+    {
+        Local,
+        Global
     }
 }

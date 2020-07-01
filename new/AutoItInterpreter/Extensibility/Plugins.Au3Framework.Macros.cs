@@ -108,7 +108,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 "lf" => "\n",
 
-                _ when name.Equals(MACRO_DISCARD, StringComparison.InvariantCultureIgnoreCase) => frame.VariableResolver.TryGetVariable(VARIABLE.Discard, out Variable? discard) ? discard.Value : Variant.Null,
+                _ when name.Equals(MACRO_DISCARD, StringComparison.InvariantCultureIgnoreCase) =>
+                    frame.VariableResolver.TryGetVariable(VARIABLE.Discard, VariableSearchScope.Global, out Variable? discard) ? discard.Value : Variant.Null,
                 _ => (Variant?)null,
             };
 

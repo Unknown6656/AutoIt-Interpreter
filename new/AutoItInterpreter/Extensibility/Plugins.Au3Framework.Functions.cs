@@ -313,7 +313,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public static FunctionReturnValue Eval(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
-                if (au3.VariableResolver.TryGetVariable(args[0].ToString(), out Variable? variable))
+                if (au3.VariableResolver.TryGetVariable(args[0].ToString(), VariableSearchScope.Global, out Variable? variable))
                     return variable.Value;
 
                 return InterpreterError.WellKnown(au3.CurrentLocation, "error.undeclared_variable", args[0]);
@@ -330,7 +330,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 if (flags.HasFlag(AssignFlags.ForceGlobal) && flags.HasFlag(AssignFlags.ForceLocal))
                     return Variant.False;
-                else if (scope.TryGetVariable(name, out variable!))
+                else if (scope.TryGetVariable(name, flags.HasFlag(AssignFlags.ForceLocal) ? VariableSearchScope.Local : VariableSearchScope.Global, out variable!))
                 {
                     if (variable.IsConst || flags.HasFlag(AssignFlags.ExistFail))
                         return Variant.False;
@@ -348,7 +348,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public static FunctionReturnValue IsDeclared(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
-                if (au3.VariableResolver.TryGetVariable(args[0].ToString(), out Variable? variable))
+                if (au3.VariableResolver.TryGetVariable(args[0].ToString(), VariableSearchScope.Global, out Variable? variable))
                     return (Variant)(variable.IsGlobal ? 1 : -1);
                 else
                     return Variant.Zero;

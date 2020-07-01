@@ -353,8 +353,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 "Average Time",
                 "Minimum Time",
                 "Maximum Time",
-                "Time % of Parent",
-                "Time % of Total",
+                "%Time (Parent)",
+                "%Time (Total)",
             };
             List<(string[] cells, TelemetryTimingsNode node)> rows = new();
             void traverse(TelemetryTimingsNode node, string prefix = "", bool last = true)

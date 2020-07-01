@@ -1,17 +1,21 @@
-; local $arr = [0,1,2], $brr[3] = [1,2], $crr[], $d = 42
+Dim $u = "U"
+Local $v = "V"
+Global $w = "W"
+Dim $x = "X"
 
-$crr["top"] = "kek"
-$crr.lol = 420
-
-func lol(byref $v)
-   dim $d = [$v, $v, $_]
+Func DoNotModifyGlobals()
+   Local $u = "A"
+   Local $v = "B"
+   Local $w = "C"
+   local $arr =[1,2,3]
+   for $x in $arr
+   next
    DebugAllVarsCompact()
-   ConsoleWriteLine(FuncName($v))
-endfunc
+EndFunc
 
-dim $fptr = lol
 DebugAllVarsCompact()
-lol($fptr)
+DoNotModifyGlobals()
+DebugAllVarsCompact()
 
 exit 0
 ;local $xl = ObjCreate("Excel.Application")
