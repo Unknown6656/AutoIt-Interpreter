@@ -151,7 +151,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 a.AddRange(DefaultValues.Skip(args.Length - ParameterCount.MinimumCount));
 
                 if (a.Count < ParameterCount.MaximumCount)
-                    a.AddRange(Enumerable.Repeat(Variant.Null, ParameterCount.MaximumCount - a.Count));
+                    a.AddRange(Enumerable.Repeat(Variant.Default, ParameterCount.MaximumCount - a.Count));
                 else if (a.Count > ParameterCount.MaximumCount)
                     a.RemoveRange(ParameterCount.MaximumCount, a.Count - ParameterCount.MaximumCount);
 

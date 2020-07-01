@@ -6,21 +6,21 @@ ________________________________________
 |       [x] closed point               |
 |______________________________________|
 
-[ ] Implement all default macros
-[ ] Implement all default functions
-[ ] Implement Collections
-    [ ] Arrays
-    [ ] Maps
-    [ ] Declaration
-    [ ] Indexing
-[ ] Implement Objects
+[-] Implement all default macros
+[-] Implement all default functions
+[x] Implement Collections
+    [x] Arrays
+    [x] Maps
+    [x] Declaration
+    [x] Indexing
+[-] Implement Objects
     [ ] COM Objects
     [ ] NET Objects
 [ ] Implement P/Invoke
-[ ] Add thread inspection methods
-[ ] Add variable inspection methods
-[-] Add error-flag (on syntax error continue and set @error)
+[x] Add thread inspection methods
+[x] Add variable inspection methods
+[x] Add error-flag (on syntax error continue and set @error)
 [ ] Test all on linux
 [ ] Test all on macos
-[-] Add argument passing
-    [-] ByRef variables
+[x] Add argument passing
+    [x] ByRef variables

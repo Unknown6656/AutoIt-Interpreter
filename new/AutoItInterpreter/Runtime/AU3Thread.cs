@@ -198,9 +198,9 @@ namespace Unknown6656.AutoIt3.Runtime
             (int min_argc, int max_argc) = CurrentFunction.ParameterCount;
 
             if (args.Length < min_argc)
-                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", min_argc, args.Length);
+                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", CurrentFunction.Name, min_argc, args.Length);
             else if (args.Length > max_argc)
-                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", max_argc, args.Length);
+                return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", CurrentFunction.Name, max_argc, args.Length);
             else if (result.Is<Variant>())
                 if (CurrentThread.IsRunning)
                 {

@@ -272,15 +272,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             byte[] bytes = args[0].ToBinary();
             int length = (int)args[1];
 
-            if (args[0].Type is VariantType.Binary || args[1].IsDefault)
+            if (args[0].Type is VariantType.Binary)
                 return (Variant)From.Bytes(bytes).To.Hex();
-            else if (length < 1)
+            else if (!args[1].IsDefault && length < 1)
                 return Variant.EmptyString;
 
-            length = Math.Min(length, 16);
+            length = Math.Max(4, Math.Min(length, 16));
 
             if (bytes.Length < length)
-                bytes = bytes.Concat(Enumerable.Repeat((byte)0, length - bytes.Length)).ToArray();
+                bytes = new byte[length - bytes.Length].Concat(bytes).ToArray();
 
             return (Variant)From.Bytes(bytes).To.Hex();
         }

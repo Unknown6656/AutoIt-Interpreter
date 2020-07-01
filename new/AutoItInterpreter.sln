@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{60D6A33F-B
 		test\program1.au3 = test\program1.au3
 		test\program2.au3 = test\program2.au3
 		test\test.au3 = test\test.au3
+		test\unittest-conversions.au3 = test\unittest-conversions.au3
+		test\unittest-loop.au3 = test\unittest-loop.au3
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{FF40DCDE-4803-4B83-9E99-4859187CBC5A}"
