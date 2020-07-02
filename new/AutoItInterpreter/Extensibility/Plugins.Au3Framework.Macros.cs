@@ -41,7 +41,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "commonfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
                 "compiled" => false,
                 "computername" => Environment.MachineName,
-                "comspec" => Environment.GetEnvironmentVariable(Interpreter.OperatingSystem == Runtime.OperatingSystem.Windows ? "comspec" : "SHELL"),
+                "comspec" => Environment.GetEnvironmentVariable(NativeInterop.DoPlatformDependent("comspec", "SHELL")),
                 "cr" => "\r",
                 "crlf" => Environment.NewLine,
                 "cpuarch" or "osarch" => Environment.Is64BitOperatingSystem ? "X64" : "X86",
@@ -65,6 +65,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "msec" => DateTime.Now.ToString("fff"),
                 "mydocumentsdir" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                 "numparams" => (frame as AU3CallFrame)?.PassedArguments.Length ?? 0,
+                "muilang" or "oslang" => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default),
                 "tab" => "\t",
                 "sw_disable" => 65,
                 "sw_enable" => 64,
@@ -82,9 +83,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "sw_shownoactivate" => 4,
                 "sw_shownormal" => 1,
                 "sw_unlock" => 67,
-                "tempdir" => Interpreter.OperatingSystem == Runtime.OperatingSystem.Windows ? Environment.GetEnvironmentVariable("temp") : "/tmp",
+                "tempdir" => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"),
 
                 "osbuild" => Environment.OSVersion.Version.Build,
+                "ostype" => NativeInterop.DoPlatformDependent("WIN32_NT", "UNIX", "MACOS_X"),
 
                 "programfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "programscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),

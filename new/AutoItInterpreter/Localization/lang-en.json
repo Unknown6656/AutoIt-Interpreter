@@ -18,6 +18,10 @@
             "no_plugins_loaded": "No plugin files have been loaded.",
             "plugins_loaded": "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
         },
+        "warning": {
+            "warning_in": "WARNING in {0}",
+            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder."
+        },
         "error": {
             "error_in": "ERROR in {0}",
             "not_yet_implemented": "The functionality '{0}' has not yet been implemented. We're sorry :/",
@@ -76,9 +80,8 @@
             "unhandled_pragma_option": "The pragma option '{0}' could not be handled. If you have a plugin for that pragma option, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "uninitialized_constant": "The variable '{0}' has been declared as 'Const' and must therefore has a value assigned to it.",
             "unknown_jumplabel": "The jump label '{0}' could not be found.",
-            "unknown_macro": "The macro '{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "unknown_macro": "The macro '@{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable.",
-            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder.",
             "unparsable_iteration_variable": "The expression '{0}' could not be parsed as a valid iteration variable for a 'For ... In'-loop.",
             "unparsable_line": "The line or expression '{0}' could not be parsed due to the following syntax error: \"{1}\". The syntax is either (currently) unsupported, or no parser plugin has been registered for this kind of statement/expression.",
             "unresolved_func": "Unresolved function name '{0}'.",

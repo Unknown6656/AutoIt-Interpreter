@@ -1,20 +1,7 @@
-select
-   ContinueCase
-   ConsoleWrite("bc")
-   ; case 0 to 10
-   ; ConsoleWrite("r1")
-   case true
-   ConsoleWrite("t")
-   ContinueCase
-   case false
-   ConsoleWrite("f")
-   case 1 to 2
-   ConsoleWrite("r")
-   case else
-   ConsoleWrite("e")
-endselect
+for $i = 0 to 10^6
+next
 
-
+ConsoleWrite(@OSVersion)
 exit
 
 ;local $xl = ObjCreate("Excel.Application")

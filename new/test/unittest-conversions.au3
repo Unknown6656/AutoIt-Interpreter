@@ -63,10 +63,10 @@
 	  INT() = 0
 
 	  BINARYTOSTRING(True) = 
-	  BINARYTOSTRING(False) = 
-	  BINARYTOSTRING() = 
+	  BINARYTOSTRING(False) =
+	  BINARYTOSTRING() =
 	  BINARYTOSTRING(Default) = ÿÿÿÿ
-	  BINARYTOSTRING(65280) = 
+	  BINARYTOSTRING(65280) =
 	  BINARYTOSTRING(255) = ÿ
 	  BINARYTOSTRING(-81985529216486896) = 2Tv˜ºÜþ
 	  BINARYTOSTRING(0xAAFFBB00) = ªÿ»
@@ -106,9 +106,24 @@
 	  HEX(420.135) = 407A4228F5C28F5C
 	  HEX() = 00000000
 	  HEX() = 00000000
+
+	  DEC(True) = 0
+	  DEC(False) = 0
+	  DEC() = 0
+	  DEC(Default) = 0
+	  DEC(65280) = 414336
+	  DEC(255) = 597
+	  DEC(-81985529216486896) = 0
+	  DEC(0xAAFFBB00) = 0
+	  DEC(0xaaffbb00) = 0
+	  DEC(0xfedcba9876543210) = 0
+	  DEC(topkek) = 0
+	  DEC(420.135) = 0
+	  DEC() = 0
+	  DEC() = 0
 #ce
 
-Dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary, Hex]
+Dim $funcs = [String, Binary, Number, Int, BinaryToString, StringToBinary, Hex, Dec]
 Dim $inputs = [True, False, Null, Default, 0xff00, 0x00ff, 0xfedcba9876543210, Binary("0xaaffbb00"), "0xaaffbb00", "0xfedcba9876543210", "topkek", 420.135, $funcs, Binary]
 
 For $func In $funcs

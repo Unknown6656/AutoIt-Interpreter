@@ -22,6 +22,7 @@ using Unknown6656.Common;
 [assembly: AssemblyUsage(@"
 Run the interpreter quitely (only print the script's output):
     autoit3 -vq ~/Documents/my_script.au3
+    autoit3 -vq C:\User\Public\Script              (you can also omit the file extension)
 
 Run the interpreter in telemetry/full debugging mode:
     autoit3 -t ~/Documents/my_script.au3
@@ -280,10 +281,10 @@ namespace Unknown6656.AutoIt3
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', Console.WindowWidth));
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
 
             if (extensive)
             {
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
                 Console.WriteLine(@"
                                ____
                        __,-~~/~    `---.
@@ -309,9 +310,35 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', Console.WindowWidth));
         });
+
+        public static void PrintWarning(SourceLocation location, string msg) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
+        {
+            if (CommandLineOptions.Verbosity == Verbosity.q)
+            {
+                if (Console.CursorLeft > 0)
+                    Console.WriteLine();
+
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                Console.WriteLine(CurrentLanguage["warning.warning_in", location] + ":\n    " + msg.Trim());
+            }
+            else
+            {
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write('[');
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
+                Console.Write(DateTime.Now.ToString("HH:mm:ss.fff"));
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write("][");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                Console.Write("warning");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
+                Console.Write("] ");
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                Console.WriteLine(msg.Trim());
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            }
+        }));
 
         public static void PrintReturnCodeAndTelemetry(int retcode, Telemetry telemetry) => _print_queue.Enqueue(delegate
         {
@@ -349,7 +376,6 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             if (!print_telemetry)
                 return;
 
-            Console.WriteLine(new string('_', width));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
             Console.WriteLine("\n\t\tTELEMETRY REPORT");
 

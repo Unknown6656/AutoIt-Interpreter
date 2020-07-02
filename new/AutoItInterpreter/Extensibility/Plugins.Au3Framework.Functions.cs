@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System.Globalization;
+using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -43,6 +45,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(BinaryMid), 2, 3, BinaryMid, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Number), 1, Number),
             ProvidedNativeFunction.Create(nameof(Int), 1, Int),
+            ProvidedNativeFunction.Create(nameof(Dec), 1, Dec),
             ProvidedNativeFunction.Create(nameof(Hex), 1, 2, Hex, Variant.Default),
             ProvidedNativeFunction.Create(nameof(BinaryToString), 1, BinaryToString),
             ProvidedNativeFunction.Create(nameof(StringToBinary), 1, StringToBinary),
@@ -50,7 +53,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
+            ProvidedNativeFunction.Create(nameof(DirCreate), 1, DirCreate),
+            ProvidedNativeFunction.Create(nameof(DirCopy), 2, 3, DirCopy, 0),
+            ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, 0),
+            ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, 0),
+            ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, 0),
             ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
+            ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
+            ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
+            //ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
             ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
@@ -285,6 +296,146 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)From.Bytes(bytes).To.Hex();
         }
 
+        public static FunctionReturnValue Dec(CallFrame frame, Variant[] args) => (Variant)(long.TryParse(args[0].ToString(), NumberStyles.HexNumber, null, out long l) ? l : 0L);
+
+        public static FunctionReturnValue DirCreate(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                DirectoryInfo dir = new DirectoryInfo(args[0].ToString());
+
+                if (!dir.Exists)
+                    dir.Create();
+
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue DirCopy(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                static void copy_rec(DirectoryInfo source, DirectoryInfo target, bool overwrite)
+                {
+                    foreach (DirectoryInfo dir in source.GetDirectories())
+                        copy_rec(dir, target.CreateSubdirectory(dir.Name), overwrite);
+
+                    foreach (FileInfo src in source.GetFiles())
+                    {
+                        string dest = Path.Combine(target.FullName, src.Name);
+
+                        if (!File.Exists(dest) || overwrite)
+                            src.CopyTo(dest, overwrite);
+                    }
+                }
+
+                copy_rec(new DirectoryInfo(args[0].ToString()), new DirectoryInfo(args[1].ToString()), args[2].ToBoolean());
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue DirMove(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                static void move_rec(DirectoryInfo source, DirectoryInfo target, bool overwrite)
+                {
+                    foreach (DirectoryInfo dir in source.GetDirectories())
+                        move_rec(dir, target.CreateSubdirectory(dir.Name), overwrite);
+
+                    foreach (FileInfo src in source.GetFiles())
+                    {
+                        string dest = Path.Combine(target.FullName, src.Name);
+
+                        if (!File.Exists(dest) || overwrite)
+                            src.MoveTo(dest, overwrite);
+                    }
+
+                    source.Delete();
+                }
+
+                move_rec(new DirectoryInfo(args[0].ToString()), new DirectoryInfo(args[1].ToString()), args[2].ToBoolean());
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue DirRemove(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                static void delete_rec(DirectoryInfo dir, bool recursive)
+                {
+                    if (recursive)
+                    {
+                        foreach (DirectoryInfo sub in dir.GetDirectories())
+                            delete_rec(sub, recursive);
+
+                        foreach (FileInfo src in dir.GetFiles())
+                            src.Delete();
+                    }
+
+                    dir.Delete();
+                }
+
+                delete_rec(new DirectoryInfo(args[0].ToString()), args[2].ToBoolean());
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue DirGetSize(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                long file_count = 0;
+                long dir_count = 0;
+                long total_size = 0;
+                void count_rec(DirectoryInfo dir, bool recurse)
+                {
+                    if (recurse)
+                        foreach (DirectoryInfo sub in dir.GetDirectories())
+                        {
+                            ++dir_count;
+
+                            count_rec(sub, recurse);
+                        }
+
+                    foreach (FileInfo file in dir.GetFiles())
+                    {
+                        ++file_count;
+                        total_size += file.Length;
+                    }
+                }
+
+                count_rec(new DirectoryInfo(args[0].ToString()), args[2].ToNumber() is 0m or 1m);
+
+                return args[2].ToNumber() is 1 ? Variant.FromArray(total_size, file_count, dir_count) : total_size;
+            }
+            catch
+            {
+                return frame.SetError(1, 0, -1m);
+            }
+        }
+
         public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {
             decimal flag = args[0].ToNumber();
@@ -306,6 +457,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             else
                 return FunctionReturnValue.Error("", 1);
         }
+
+        public static FunctionReturnValue EnvGet(CallFrame frame, Variant[] args) => Variant.FromObject(Environment.GetEnvironmentVariable(args[0].ToString()));
+
+        public static FunctionReturnValue EnvSet(CallFrame frame, Variant[] args)
+        {
+            Environment.SetEnvironmentVariable(args[0].ToString(), args[1].IsDefault || args[1].IsNull ? null : args[1].ToString(), EnvironmentVariableTarget.Process);
+
+            return Variant.True;
+        }
+
+        //public static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args)
+        //{
+        //    Environment.
+        //    return Variant.Null;
+        //}
 
         public static FunctionReturnValue Execute(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 => au3.ProcessAsVariant(args[0].ToString()));

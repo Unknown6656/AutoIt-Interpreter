@@ -15,6 +15,7 @@ namespace Unknown6656.AutoIt3
         ProgramRuntime,
         PerformanceMonitor,
         Printing,
+        Warnings,
         Exceptions,
         InterpreterInitialization,
         LoadPluginFile,
@@ -212,6 +213,7 @@ namespace Unknown6656.AutoIt3
             TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc, nd_vars;
 
             nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
+            root.AddChild("Warnings", get_timings(TelemetryCategory.Warnings));
             root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
             root.AddChild("Printing", get_timings(TelemetryCategory.Printing));
             root.AddChild("Performance Monitoring", get_timings(TelemetryCategory.PerformanceMonitor));

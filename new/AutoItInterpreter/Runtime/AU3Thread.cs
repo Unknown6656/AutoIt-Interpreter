@@ -490,8 +490,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 result ??= ProcessExpressionStatement(line);
             });
 
-            if (Interpreter.CommandLineOptions.IgnoreErrors && !(result?.IsOK ?? true))
+            if (Interpreter.CommandLineOptions.IgnoreErrors && result?.OptionalError?.Message is string msg)
+            {
+                Program.PrintWarning(CurrentLocation, msg);
+
                 result = null;
+            }
 
             return result ?? InterpreterResult.OK;
         }
@@ -525,7 +529,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             else
                                 return WellKnownError("error.circular_include", script.Location.FullName);
                         }
-                        else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError err))
+                        else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError? err))
                             return err;
                         else
                             return InterpreterResult.OK;
@@ -538,7 +542,10 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (AbstractDirectiveProcessor proc in Interpreter.PluginLoader.DirectiveProcessors)
                 result ??= Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.ProcessDirective(this, directive));
 
-            return result?.IsOK ?? false ? null : WellKnownError("error.unparsable_dirctive", directive);
+            if (result is null)
+                IssueWarning("warning.unparsable_dirctive", directive);
+
+            return InterpreterResult.OK;
         }
 
 
@@ -1677,6 +1684,8 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private InterpreterError WellKnownError(string key, params object?[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
+
+        private void IssueWarning(string key, params object?[] args) => Program.PrintWarning(CurrentLocation, Program.CurrentLanguage[key, args]);
     }
 
     [Flags]

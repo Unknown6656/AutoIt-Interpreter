@@ -427,7 +427,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromArray(IEnumerable<Variant> collection) => FromArray(collection.ToArray());
 
-        public static Variant FromArray(Variant[] array)
+        public static Variant FromArray(params Variant[] array)
         {
             Variant v = NewArray(array.Length);
             Variant i = Zero;

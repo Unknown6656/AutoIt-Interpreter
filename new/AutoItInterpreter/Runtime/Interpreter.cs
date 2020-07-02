@@ -5,7 +5,6 @@ using System;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -21,13 +20,6 @@ namespace Unknown6656.AutoIt3.Runtime
         private volatile int _error;
         private volatile int _extended;
 
-
-        public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
-        {
-            PlatformID.MacOSX => OperatingSystem.MacOS,
-            PlatformID.Unix => OperatingSystem.Unix,
-            _ => OperatingSystem.Windows
-        };
 
         public AU3Thread? MainThread { get; private set; }
 
@@ -177,13 +169,6 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
-    }
-
-    public enum OperatingSystem
-    {
-        Windows,
-        Unix,
-        MacOS
     }
 }
 
