@@ -97,8 +97,6 @@ namespace Unknown6656.AutoIt3
 
         public void Add(Telemetry other) => _recorded_timings.AddRange(other._recorded_timings);
 
-        public void Print() => Program.PrintTelemetry(this);
-
         public async Task StartPerformanceMonitorAsync()
         {
             if (_run_performancemonitor)

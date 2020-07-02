@@ -16,6 +16,7 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -546,67 +547,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         // TODO
-        private readonly ConcurrentStack<(BlockStatementType BlockType, string internal_label)> _blockstatement_stack = new();
         private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
-        private readonly ConcurrentStack<int> _forloop_eip_stack = new ConcurrentStack<int>();
         private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
+        private readonly ConcurrentStack<string> _while_stack = new();
 
-
-        private InterpreterResult PushBlockStatement(BlockStatementType statement)
-        {
-            _blockstatement_stack.Push((statement, InsertInternalJumpLabel()));
-
-            return InterpreterResult.OK;
-        }
-
-        private InterpreterError? ExpectBlockStatementType(params BlockStatementType[] expected)
-        {
-            if (expected.Length == 0)
-                return null;
-
-            _blockstatement_stack.TryPeek(out (BlockStatementType type, string) statement);
-
-            if (!expected.Contains(statement.type))
-                return WellKnownError("error.expected_statement_block", statement.type, string.Join(", ", expected));
-
-            return null;
-        }
-
-        //private bool TryPopBlockStatement(out BlockStatementType statement, out string label)
-        //{
-        //    if (accepted.Length == 0)
-        //        _blockstatement_stack.TryPop(out _);
-        //    else
-        //    {
-        //        _blockstatement_stack.TryPop(out (BlockStatementType type, SourceLocation loc) statement);
-
-        //        if (!accepted.Contains(statement.type))
-        //            return WellKnownError("error.no_matching_close", statement.type, statement.loc);
-        //    }
-
-        //    return null;
-        //}
+        private readonly ConcurrentStack<(Variant? switch_expression, bool case_handled)> _switchselect_stack = new();
 
         private InterpreterError? MoveToEndOf(BlockStatementType type)
         {
             SourceLocation init = CurrentLocation;
             int depth = 1;
 
-            if (type is BlockStatementType.While)
-                while (MoveNext())
-                {
-                    string line = CurrentLineContent.Trim();
-
-                    if (line.Match(REGEX_WEND, out Match _))
-                        --depth;
-                    else if (line.Match(REGEX_WHILE, out Match _))
-                        ++depth;
-
-                    if (depth == 0)
-                        break;
-                }
-            else if (type is BlockStatementType.If)
+            if (type is BlockStatementType.If)
                 while (MoveNext())
                 {
                     string line = CurrentLineContent.Trim();
@@ -621,9 +574,9 @@ namespace Unknown6656.AutoIt3.Runtime
                         else
                             ++depth;
                     }
-                    else if (line.Match(REGEX_ELSE, out Match _))
+                    else if (REGEX_ELSE.IsMatch(line))
                         --depth;
-                    else if (line.Match(REGEX_ENDIF, out Match _))
+                    else if (REGEX_ENDIF.IsMatch(line))
                         --depth;
 
                     if (depth == 0)
@@ -634,6 +587,30 @@ namespace Unknown6656.AutoIt3.Runtime
                         break;
                     }
                 }
+            else if (type is BlockStatementType.While or BlockStatementType.Select or BlockStatementType.Switch)
+            {
+                (Regex start, Regex end) = type switch
+                {
+                    BlockStatementType.Select => (REGEX_SELECT, REGEX_ENDSELECT),
+                    BlockStatementType.Switch => (REGEX_SWITCH, REGEX_ENDSWITCH),
+                    BlockStatementType.While => (REGEX_WHILE, REGEX_WEND)
+                };
+
+                while (MoveNext())
+                {
+                    string line = CurrentLineContent.Trim();
+
+                    if (end.IsMatch(line))
+                        --depth;
+                    else if (type is not BlockStatementType.While && REGEX_CASE.IsMatch(line))
+                        --depth;
+                    else if (start.IsMatch(line))
+                        ++depth;
+
+                    if (depth == 0)
+                        break;
+                }
+            }
 
             // TODO : other block types
 
@@ -646,6 +623,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private static readonly Regex REGEX_INTERNAL_LABEL = new Regex(@"^§\w+$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_VARIABLE = new Regex(@"\$([^\W\d]|[^\W\d]\w*)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_GOTO = new Regex(@"^goto\s+(?<label>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
@@ -669,7 +647,12 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new Regex(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_INTERNAL_LABEL = new Regex(@"^§\w+$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_SELECT = new Regex(@"^select$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDSELECT = new Regex(@"^endselect$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_SWITCH = new Regex(@"^switch\b\s*(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDSWITCH = new Regex(@"^endswitch$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CASE = new Regex(@"^case\b\s*(?<expression>.+)*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CONTINUECASE = new Regex(@"^continuecase$", _REGEX_OPTIONS);
 
 
         private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
@@ -715,7 +698,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_FORTO] = m =>
                 {
-                    Union<InterpreterError, PARSABLE_EXPRESSION> start = ProcessRawExpression(m.Groups["start"].Value);
+                    Union<InterpreterError, PARSABLE_EXPRESSION> start = ProcessAsRawExpression(m.Groups["start"].Value);
                     string step = m.Groups["step"].Value is { Length: > 0 } s ? s : "1";
 
                     if (start.Is(out InterpreterError? error))
@@ -842,7 +825,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_WITH] = m =>
                 {
-                    Union<InterpreterError, PARSABLE_EXPRESSION> parsed = ProcessRawExpression(m.Groups["variable"].Value);
+                    Union<InterpreterError, PARSABLE_EXPRESSION> parsed = ProcessAsRawExpression(m.Groups["variable"].Value);
 
                     if (parsed.Is(out InterpreterError? error))
                         return error;
@@ -870,7 +853,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 },
                 [REGEX_REDIM] = m =>
                 {
-                    Union<InterpreterError, PARSABLE_EXPRESSION>? parsed = ProcessRawExpression(m.Groups["expression"].Value);
+                    Union<InterpreterError, PARSABLE_EXPRESSION>? parsed = ProcessAsRawExpression(m.Groups["expression"].Value);
 
                     if (parsed.Is(out PARSABLE_EXPRESSION? expr) && expr is PARSABLE_EXPRESSION.AnyExpression
                     {
@@ -928,7 +911,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return WellKnownError("error.no_matching_close", "Do", do_loc);
                 },
-                [REGEX_UNTIL] = _ => WellKnownError("error.unexpected_until"),
+                [REGEX_UNTIL] = _ => WellKnownError("error.unexpected_close", "Until", "Do"), // REGEX_UNTIL is handled by the REGEX_DO-case
                 [REGEX_WHILE] = m =>
                 {
                     Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
@@ -939,20 +922,20 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (!result.As<Variant>().ToBoolean())
                         return MoveToEndOf(BlockStatementType.While) ?? InterpreterResult.OK;
                     else
-                        PushBlockStatement(BlockStatementType.While);
+                        _while_stack.Push(InsertInternalJumpLabel());
 
                     return InterpreterResult.OK;
                 },
                 [REGEX_WEND] = _ =>
                 {
-                    _blockstatement_stack.TryPop(out (BlockStatementType type, string label) topmost);
+                    _while_stack.TryPop(out string? label);
 
-                    if (topmost.type != BlockStatementType.While)
-                        return WellKnownError("error.unexpected_wend");
-                    else if (MoveTo(topmost.label) is InterpreterError error)
+                    if (label is null)
+                        return WellKnownError("error.unexpected_close", "WEnd", "While");
+                    else if (MoveTo(label) is InterpreterError error)
                         return error;
 
-                    RemoveInternalJumpLabel(topmost.label);
+                    RemoveInternalJumpLabel(label);
 
                     --_instruction_pointer;
 
@@ -1022,37 +1005,116 @@ namespace Unknown6656.AutoIt3.Runtime
                     }
 
                     while (level-- > 0)
-                    { 
-                        if (!_blockstatement_stack.TryPop(out (BlockStatementType type, string label) block) || block.type is not BlockStatementType.While)
+                    {
+                        if (!_while_stack.TryPop(out string? label))
                             return WellKnownError("error.unexpected_contexitloop", exit ? "ExitLoop" : "ContinueLoop");
-                        else if (exit)
-                        {
-                            if (MoveToEndOf(block.type) is InterpreterError error)
-                                return error;
-                        }
                         else
                         {
-                            if (MoveTo(block.label) is InterpreterError error)
+                            if ((exit ? MoveToEndOf(BlockStatementType.While) : MoveTo(label)) is InterpreterError error)
                                 return error;
                         }
 
-                        RemoveInternalJumpLabel(block.label);
+                        RemoveInternalJumpLabel(label);
 
                         --_instruction_pointer;
                     }
 
                     return InterpreterResult.OK;
                 },
+                [REGEX_SELECT] = _ =>
+                {
+                    _switchselect_stack.Push((null, false));
 
-                // TODO : select
-                // TODO : switch
-                // TODO : endselect
-                // TODO : endswitch
-                // TODO : case
+                    if (MoveToEndOf(BlockStatementType.Select) is InterpreterError error)
+                        return error;
+
+                    --_instruction_pointer;
+
+                    return InterpreterResult.OK;
+                },
+                [REGEX_SWITCH] = m =>
+                {
+                    Union<InterpreterError, Variant> expression = ProcessAsVariant(m.Groups["expression"].Value);
+
+                    if (expression.Is(out InterpreterError? error))
+                        return error;
+                    else
+                        _switchselect_stack.Push(((Variant)expression, false));
+
+                    error = MoveToEndOf(BlockStatementType.Switch);
+
+                    if (error is null)
+                        --_instruction_pointer;
+
+                    return error ?? InterpreterResult.OK;
+                },
+                [REGEX_ENDSELECT] = m =>
+                {
+                    if (_switchselect_stack.TryPop(out (Variant? expr, bool) topmost) && topmost.expr is null)
+                        return InterpreterResult.OK;
+                    else
+                        return WellKnownError("error.unexpected_close", m.Value, BlockStatementType.Select);
+                },
+                [REGEX_ENDSWITCH] = m =>
+                {
+                    if (_switchselect_stack.TryPop(out (Variant? expr, bool) topmost) && topmost.expr is Variant)
+                        return InterpreterResult.OK;
+                    else
+                        return WellKnownError("error.unexpected_close", m.Value, BlockStatementType.Switch);
+                },
+                [REGEX_CASE] = m =>
+                {
+                    Variant? switch_expr = null;
+
+                    if (!_switchselect_stack.TryPeek(out (Variant? switch_expr, bool handled) topmost))
+                        return WellKnownError("error.unexpected_case");
+                    else if (topmost.handled)
+                    {
+                        if (MoveToEndOf(switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch) is InterpreterError error)
+                            return error!;
+                        else
+                            --_instruction_pointer;
+
+                        return InterpreterResult.OK;
+                    }
+                    else if (REGEX_ELSE.IsMatch(m.Groups["expression"].Value))
+                        return InterpreterResult.OK;
+                    else
+                        switch_expr = topmost.switch_expr;
+
+                    Union<InterpreterError, PARSABLE_EXPRESSION> case_expr = ProcessAsRawExpression(m.Groups["expression"].Value);
+                    InterpreterResult process_success(bool success)
+                    {
+                        _switchselect_stack.TryPop(out topmost);
+                        _switchselect_stack.Push((topmost.switch_expr, success));
+
+                        if (!success)
+                            if (MoveToEndOf(BlockStatementType.Switch) is InterpreterError error)
+                                return error!;
+                            else
+                                --_instruction_pointer;
+
+                        return InterpreterResult.OK;
+                    }
+
+                    if (case_expr.Is(out PARSABLE_EXPRESSION? expression))
+                        if (expression is PARSABLE_EXPRESSION.ToExpression { Item1: EXPRESSION from, Item2: EXPRESSION to })
+                        {
+                            if (switch_expr is Variant sw)
+                                return ProcessExpression(from).Match(err => err!, from =>
+                                       ProcessExpression(to).Match(err => err!, to => process_success(from <= sw && sw <= to)));
+                            else
+                                return WellKnownError("error.invalid_case_range", expression);
+                        }
+                        else if (expression is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION expr })
+                            return ProcessExpression(expr).Match(err => err!, expr => process_success(switch_expr is Variant sw ? expr.EqualsCaseInsensitive(sw) : expr.ToBoolean()));
+                        else
+                            return WellKnownError("error.invalid_case_expr", expression);
+
+                    return (InterpreterError)case_expr;
+                },
+
                 // TODO : continuecase
-
-                //[/*language=regex*/@"^endswitch$"] = _ => PopBlockStatement(BlockStatementType.Switch, BlockStatementType.Case),
-                //[/*language=regex*/@"^endselect$"] = _ => PopBlockStatement(BlockStatementType.Select, BlockStatementType.Case),
             });
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
@@ -1093,7 +1155,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         });
 
-        private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessRawExpression(string expression) =>
+        private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessAsRawExpression(string expression) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, PARSABLE_EXPRESSION>>(TelemetryCategory.ProcessExpression, delegate
             {
                 try
@@ -1113,7 +1175,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal Union<InterpreterError, Variant> ProcessAsVariant(string expression)
         {
-            Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessRawExpression(expression);
+            Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessAsRawExpression(expression);
 
             if (result.Is(out PARSABLE_EXPRESSION.AnyExpression? any))
             {
@@ -1627,8 +1689,8 @@ namespace Unknown6656.AutoIt3.Runtime
         __function__ = default,
         While,
         If,
-        // Select,
-        // Switch,
+        Select,
+        Switch,
         // Case,
     }
 }

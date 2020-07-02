@@ -1,23 +1,20 @@
-Dim $u = "U"
-Local $v = "V"
-Global $w = "W"
-Dim $x = "X"
+select
+   ConsoleWrite("bc")
+   ; case 0 to 10
+   ; ConsoleWrite("r1")
+   case true
+   ConsoleWrite("t")
+   case false
+   ConsoleWrite("f")
+   case 1 to 2
+   ConsoleWrite("r")
+   case else
+   ConsoleWrite("e")
+endselect
 
-Func DoNotModifyGlobals()
-   Local $u = "A"
-   Local $v = "B"
-   Local $w = "C"
-   local $arr =[1,2,3]
-   for $x in $arr
-   next
-   DebugAllVarsCompact()
-EndFunc
 
-DebugAllVarsCompact()
-DoNotModifyGlobals()
-DebugAllVarsCompact()
+exit
 
-exit 0
 ;local $xl = ObjCreate("Excel.Application")
 ;With $xl
 ;   .visible = 1
@@ -26,13 +23,6 @@ exit 0
 ;    MsgBox(0, "", "msg")
 ;EndWith
 ;Exit
-
-
-
-
-
-
-
 
 global $a = Default + (Null * "42"), $b = 42, $c = 7
 

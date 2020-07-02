@@ -147,6 +147,7 @@ type ExpressionParser(mode : ParserMode) =
      // let t_symbol_ocurly         = x.CreateTerminal  @"\{"
      // let t_symbol_ccurly         = x.CreateTerminal  @"\}"
      // let t_keyword_new           = x.CreateTerminal  @"new"
+        let t_keyword_to            = x.CreateTerminal  @"to"
         let t_keyword_const         = x.CreateTerminal  @"const"
         let t_keyword_byref         = x.CreateTerminal  @"byref"
         let t_keyword_and           = x.CreateTerminalF @"and"                              (fun _ -> And)
@@ -190,7 +191,6 @@ type ExpressionParser(mode : ParserMode) =
 
         x.SetPrecedenceList precedences
 
-
         match mode with
         | ParserMode.FunctionParameters ->
             reduce_1i nt_result nt_params_decl_expr ParameterDeclaration
@@ -208,9 +208,9 @@ type ExpressionParser(mode : ParserMode) =
             
             reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_named_decl_expr (fun xs _ x -> xs@[x])
             reduce_1i nt_multi_decl_expr nt_named_decl_expr (fun x -> [x])
-            
         | ParserMode.ArbitraryExpression ->
             reduce_3i nt_result nt_assg_target nt_assg_op nt_any_expr (fun t o e -> AssignmentExpression(t, o, e))
+            reduce_3i nt_result nt_any_expr t_keyword_to nt_any_expr (fun f _ t -> ToExpression(f, t))
             reduce_1i nt_result nt_any_expr AnyExpression
         | _ -> 
             sprintf "The parser mode '%O' is either unknown or unsupported." mode

@@ -246,6 +246,7 @@ type PARSABLE_EXPRESSION =
     | MultiDeclarationExpression of NAMED_VARIABLE_DECLARATION list
     | AssignmentExpression of ASSIGNMENT_EXPRESSION
     | ParameterDeclaration of PARAMETER_DECLARATION list
+    | ToExpression of EXPRESSION * EXPRESSION
     | AnyExpression of EXPRESSION
     with
         override x.ToString() =
@@ -262,11 +263,26 @@ type PARSABLE_EXPRESSION =
                 |> String.concat ", "
                 |> sprintf "(%O)"
             | AnyExpression e -> e.ToString()
+            | ToExpression (f, t) -> sprintf "%O To %O" f t
         /// An array of referenced (not declared!) variables
         member x.ReferencedVariables =
             match x with
-            | AssignmentExpression (target, _, expr) -> 
-                target.ReferencedVariables@expr.ReferencedVariables
-                |> List.distinct
+            | MultiDeclarationExpression decls ->
+                decls
+                |> List.collect (snd >> function
+                                        | Map
+                                        | Scalar None -> []
+                                        | Array (_, es) -> es
+                                        | Scalar (Some e) -> [e])
+                |> List.collect (fun e -> e.ReferencedVariables)
+            | ToExpression (e1, e2) -> e1.ReferencedVariables @ e2.ReferencedVariables
+            | AssignmentExpression (target, _, expr) -> target.ReferencedVariables @ expr.ReferencedVariables
             | AnyExpression expr -> expr.ReferencedVariables
+            | ParameterDeclaration decls ->
+                decls
+                |> List.collect (fun d -> match d.DefaultValue with
+                                          | Some e -> [e]
+                                          | None -> [])
+                |> List.collect (fun e -> e.ReferencedVariables)
+            |> List.distinct
             |> List.toArray

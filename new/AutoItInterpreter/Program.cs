@@ -187,20 +187,15 @@ namespace Unknown6656.AutoIt3
                 }
             });
 
-            if (CommandLineOptions is { Verbosity: > Verbosity.q } or { PrintTelemetry: true })
-            {
-                while (_print_queue.Count > 0)
-                    Thread.Sleep(100);
+            while (_print_queue.Count > 0)
+                Thread.Sleep(100);
 
-                sw.Stop();
-                Telemetry.SubmitTimings(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
-                Telemetry.StopPerformanceMonitor();
-                telemetry_task.Wait();
+            sw.Stop();
+            Telemetry.SubmitTimings(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
+            Telemetry.StopPerformanceMonitor();
+            telemetry_task.Wait();
 
-                PrintTelemetry(Telemetry);
-            }
-            else
-                Telemetry.StopPerformanceMonitor();
+            PrintReturnCodeAndTelemetry(code, Telemetry);
 
             _isrunning = false;
 
@@ -318,23 +313,42 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(new string('_', Console.WindowWidth));
         });
 
-        public static void PrintTelemetry(Telemetry telemetry) => _print_queue.Enqueue(delegate
+        public static void PrintReturnCodeAndTelemetry(int retcode, Telemetry telemetry) => _print_queue.Enqueue(delegate
         {
-            const int MIN_WIDTH = 180;
+            if (Console.CursorLeft > 0)
+                Console.WriteLine();
 
-            Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
-            Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-
+            bool print_telemetry = CommandLineOptions is { Verbosity: > Verbosity.q } or { PrintTelemetry: true };
             int width = Math.Min(Console.WindowWidth, Console.BufferWidth);
 
-            if (width < MIN_WIDTH)
+            if (print_telemetry)
             {
-                PrintError($"Unable to print the telemetry report. The minimum console window width must be {MIN_WIDTH} chars.");
+                const int MIN_WIDTH = 180;
 
-                return;
+                Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
+                Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+
+                width = Math.Min(Console.WindowWidth, Console.BufferWidth);
+
+                if (width < MIN_WIDTH)
+                {
+                    PrintError($"Unable to print the telemetry report. The minimum console window width must be {MIN_WIDTH} chars.");
+
+                    return;
+                }
             }
 
+            TelemetryTimingsNode root = TelemetryTimingsNode.FromTelemetry(telemetry);
+
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+            Console.WriteLine(new string('_', width));
+            ConsoleExtensions.RGBForegroundColor = retcode == 0 ? RGBAColor.SpringGreen : RGBAColor.Salmon;
+            Console.WriteLine($"Exit code: {retcode}     Time: {root.Total}");
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+
+            if (!print_telemetry)
+                return;
+
             Console.WriteLine(new string('_', width));
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
             Console.WriteLine("\n\t\tTELEMETRY REPORT");
@@ -385,7 +399,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 }
             }
 
-            traverse(TelemetryTimingsNode.FromTelemetry(telemetry));
+            traverse(root);
 
             int[] widths = headers.ToArray(h => h.Length + 2);
 
