@@ -139,7 +139,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
 
-        public InterpreterResult Run() => Run(CommandLineOptions.FilePath);
+        public InterpreterResult Run() => CommandLineOptions.FilePath is string s ? Run(s) : new InterpreterResult(-1, InterpreterError.WellKnown(null, "error.unresolved_script", "<null>"));
     }
 
     public sealed class InterpreterResult

@@ -1,9 +1,11 @@
 select
+   ContinueCase
    ConsoleWrite("bc")
    ; case 0 to 10
    ; ConsoleWrite("r1")
    case true
    ConsoleWrite("t")
+   ContinueCase
    case false
    ConsoleWrite("f")
    case 1 to 2

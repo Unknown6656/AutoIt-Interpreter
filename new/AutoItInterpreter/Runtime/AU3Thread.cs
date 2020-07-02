@@ -593,7 +593,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     BlockStatementType.Select => (REGEX_SELECT, REGEX_ENDSELECT),
                     BlockStatementType.Switch => (REGEX_SWITCH, REGEX_ENDSWITCH),
-                    BlockStatementType.While => (REGEX_WHILE, REGEX_WEND)
+                    BlockStatementType.While => (REGEX_WHILE, REGEX_WEND),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type)),
                 };
 
                 while (MoveNext())
@@ -1113,8 +1114,17 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return (InterpreterError)case_expr;
                 },
+                [REGEX_CONTINUECASE] = _ =>
+                {
+                    if (!_switchselect_stack.TryPeek(out (Variant? switch_expr, bool) topmost))
+                        return WellKnownError("error.unexpected_continuecase");
+                    else if (MoveToEndOf(topmost.switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch) is InterpreterError error)
+                        return error;
+                    else if (!REGEX_CASE.IsMatch(CurrentLineContent))
+                        _switchselect_stack.TryPop(out topmost);
 
-                // TODO : continuecase
+                    return InterpreterResult.OK;
+                },
             });
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)

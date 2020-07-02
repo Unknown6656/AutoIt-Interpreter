@@ -187,7 +187,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             Variant[] call_args = frame.PassedArguments.Length == 2 &&
                                   args[1] is { Type: VariantType.Array } arr &&
                                   arr.TryGetIndexed(0, out Variant caa) &&
-                                  caa.ToString().Equals("CallArgArray") ? arr.ToArray() : args;
+                                  caa.ToString().Equals("CallArgArray", StringComparison.InvariantCultureIgnoreCase) ? arr.ToArray() : args;
 
             call_args = call_args[1..];
 

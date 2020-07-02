@@ -220,7 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime
             true => 1m,
             false => 0m,
             decimal d => d,
-            string s when s.ToLower().StartsWith("0x") => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
+            string s when s.ToLowerInvariant().StartsWith("0x") => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
             string s => decimal.TryParse(s, out decimal d) ? d : 0m,
             VariantType.Null or _ => 0m,
         };
@@ -559,7 +559,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant(char n) => FromObject(n);
 
-        public static implicit operator Variant(string? n) => FromString(n);
+        public static implicit operator Variant(string? n) => n is null ? FromObject(null) : FromString(n);
 
         public static implicit operator Variant(StringBuilder? n) => FromObject(n);
 

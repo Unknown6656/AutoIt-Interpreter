@@ -73,7 +73,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScriptFunction? TryResolveFunction(string name)
         {
-            _cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? func);
+            _cached_functions.TryGetValue(name.ToLowerInvariant(), out ScriptFunction? func);
 
             return func;
         }

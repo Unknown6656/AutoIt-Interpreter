@@ -65,6 +65,7 @@
             "undeclared_variable": "The variable '{0}' has not been declared previously to this line and can therefore not be used in this expression.",
             "unexpected_case": "Unexpected 'Case'-statement outside a 'Switch'- or 'Select'-block.",
             "unexpected_close": "Unexpected statement '{0}': A '{1}'-statement must be opened before it can be closed.",
+            "unexpected_continuecase": "Unexpected 'ContinueCase'-statement outside a 'Switch'- or 'Select'-block.",
             "unexpected_contexitloop": "Unexpected statement '{0}'. '{0}' may only be used inside 'For'-, 'Do'-, or 'While'-loops.",
             "unexpected_endfunc": "Unexpected 'EndFunc'-statement. Did you mean to declare a function?",
             "unexpected_eof": "Unexpected end of file.",

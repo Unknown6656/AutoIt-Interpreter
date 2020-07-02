@@ -32,7 +32,7 @@ namespace Unknown6656.AutoIt3.Localization
 
             foreach ((string? code, string name) in from r in asm.GetManifestResourceNames()
                                                    where r.Match(regex_json, out match)
-                                                   select (match?.Groups["code"].Value.ToLower(), r))
+                                                   select (match?.Groups["code"].Value.ToLowerInvariant(), r))
                 try
                 {
                     using Stream? resource = asm.GetManifestResourceStream(name);
@@ -76,7 +76,7 @@ namespace Unknown6656.AutoIt3.Localization
         {
             get
             {
-                string fmt_str = _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpper()}]";
+                string fmt_str = _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpperInvariant()}]";
                 int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}").Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0).Append(0).Max();
 
                 if (args.Length < argc)
@@ -107,12 +107,12 @@ namespace Unknown6656.AutoIt3.Localization
                 {
                     foreach (KeyValuePair<string, JToken?> kvp in dic)
                     {
-                        string path = prefix + DELIMITER + kvp.Key.ToLower();
+                        string path = prefix + DELIMITER + kvp.Key.ToLowerInvariant();
 
                         if (kvp.Value is JObject jo)
                             traverse(path, jo);
                         else
-                            _strings[path[1..]] = kvp.Value?.ToString() ?? $"[{path[1..].ToUpper()}]";
+                            _strings[path[1..]] = kvp.Value?.ToString() ?? $"[{path[1..].ToUpperInvariant()}]";
                     }
                 }
             }
