@@ -1,3 +1,5 @@
+![Banner image](artwork/banner.png)
+
 # AutoIt3 Interpreter
 This directory contains the "new" .NET5-based AutoIt3 Interpreter.
 [TODO : elaborate]

@@ -3,7 +3,7 @@
 ![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
 
-![Banner image](old/artwork/banner.png)
+![Banner image](new/artwork/banner.png)
 
 # Platform-Independent AutoIt3 Intepreter
 
