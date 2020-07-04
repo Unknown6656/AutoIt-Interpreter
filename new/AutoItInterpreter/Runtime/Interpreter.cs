@@ -29,6 +29,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CommandLineOptions CommandLineOptions { get; }
 
+        public GlobalObjectStorage GlobalObjectStorage { get; }
+
         public ScriptScanner ScriptScanner { get; }
 
         public PluginLoader PluginLoader { get; }
@@ -76,6 +78,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             ScriptScanner.ScanNativeFunctions();
 
+            GlobalObjectStorage = new GlobalObjectStorage(this);
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
         }

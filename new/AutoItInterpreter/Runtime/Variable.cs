@@ -29,7 +29,8 @@ namespace Unknown6656.AutoIt3.Runtime
         Array,
         Map,
         Function,
-        NETObject,
+        //NETObject,
+        Handle,
         Reference,
         Default = -1,
     }
@@ -111,6 +112,10 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <description><see cref="ScriptFunction"/></description>
         ///     </item>
         ///     <item>
+        ///         <term><see cref="VariantType.Handle"/></term>
+        ///         <description><see cref="int"/></description>
+        ///     </item>
+        ///     <item>
         ///         <term><see cref="VariantType.NETObject"/></term>
         ///         <description><see cref="object"/></description>
         ///     </item>
@@ -120,7 +125,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly Variable? AssignedTo { get; }
 
-        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.Binary or VariantType.NETObject or VariantType.Map or VariantType.String;
+        public readonly bool IsIndexable => Type is VariantType.Array or VariantType.Binary or VariantType.Map or VariantType.String;
 
         public readonly bool IsReference => Type is VariantType.Reference;
 
@@ -130,7 +135,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool IsDefault => Type is VariantType.Default;
 
+        public readonly bool IsHandle => Type is VariantType.Handle;
+
         public readonly int Length => (RawData as IEnumerable)?.Count() ?? 0;
+
+        public readonly bool IsBinary => Type is VariantType.Binary;
 
         #endregion
         #region .CTOR
@@ -172,7 +181,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly override string ToString() => Type switch
         {
             VariantType.Default => "Default",
-            VariantType.Boolean or VariantType.Number or VariantType.String => RawData?.ToString() ?? "",
+            VariantType.Boolean or VariantType.Number or VariantType.String or VariantType.Handle => RawData?.ToString() ?? "",
             _ when RawData is Variable var => var.Value.ToString(),
             _ when RawData is byte[] { Length: > 0 } bytes => "0x" + From.Bytes(bytes).To.Hex(),
             _ => "",
@@ -196,9 +205,11 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is string or StringBuilder)
                 return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
             else if (RawData is Variable v)
-                return $"{v}:{v.Value.ToDebugString()}";
+                return $"${v.Name}:{v.Value.ToDebugString()}";
             else if (RawData is ScriptFunction func)
                 return $"<{func.Location.FileName}>{func.Name}{func.ParameterCount}";
+            else if (Type is VariantType.Handle && RawData is int i)
+                return $"hnd:0x{i:x8}";
             else
                 return ToString();
         }
@@ -209,6 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime
             byte[] arr => arr.FirstOrDefault() != 0,
             string s => s.Length > 0,
             decimal d => d != 0m,
+            int l => l != 0,
             bool b => b,
             null => false,
             _ => true,
@@ -219,6 +231,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ when Type is VariantType.Default => -1m,
             true => 1m,
             false => 0m,
+            int i => i,
             decimal d => d,
             string s when s.ToLowerInvariant().StartsWith("0x") => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
             string s => decimal.TryParse(s, out decimal d) ? d : 0m,
@@ -230,6 +243,7 @@ namespace Unknown6656.AutoIt3.Runtime
             bool b => new[] { (byte)(b ? 1 : 0) },
             _ when Type is VariantType.Default => From.Unmanaged(-1),
             null => From.Unmanaged(0),
+            int i => From.Unmanaged(i),
             decimal d when d <= 2147483647m && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
             decimal d when d <= 9223372036854775807m && d >= -9223372036854775808m && d == (long)d => From.Unmanaged((long)d),
             decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
@@ -245,7 +259,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is string s)
                 return s.Cast<object>().ToArray(FromObject);
             else
-                return System.Array.Empty<Variant>();
+                return Array.Empty<Variant>();
         }
 
         public readonly (Variant key, Variant value)[] AsOrderedMap()
@@ -363,6 +377,13 @@ namespace Unknown6656.AutoIt3.Runtime
             return new_array is { };
         }
 
+        public readonly bool TryResolveHandle(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out object? value)
+        {
+            value = null;
+
+            return Type is VariantType.Handle && RawData is int key && interpreter.GlobalObjectStorage.TryGet(key, out value);
+        }
+
         #endregion
         #region STATIC METHODS
 
@@ -405,7 +426,10 @@ namespace Unknown6656.AutoIt3.Runtime
             IEnumerable<Variant> arr => FromArray(arr),
             IDictionary<Variant, Variant> dic => FromMap(dic),
             ScriptFunction func => FromFunction(func),
-            _ => FromNETObject(obj),
+
+
+            _ => throw new NotImplementedException(obj.ToString()),
+            //_ => FromNETObject(obj),
         };
 
         public static Variant FromMap(params (Variant key, Variant value)[] pairs) => FromMap(pairs.ToDictionary());
@@ -465,7 +489,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromReference(Variable variable) => new Variant(VariantType.Reference, variable, null);
 
-        public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
+        //public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
         public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d, null);
 
@@ -774,6 +798,64 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null, null);
+    }
+
+    public sealed class GlobalObjectStorage
+        : IDisposable
+    {
+        private readonly ConcurrentDictionary<int, object> _objects = new ConcurrentDictionary<int, object>();
+
+
+        public Interpreter Interpreter { get; }
+
+        public int ObjectCount => _objects.Count;
+
+
+        internal GlobalObjectStorage(Interpreter interpreter)
+        {
+            Interpreter = interpreter;
+        }
+
+        private int GetFreeId()
+        {
+            int id = 1;
+
+            foreach (int key in _objects.Keys.OrderBy(Generics.id))
+                if (key == id)
+                    ++id;
+                else
+                    break;
+
+            return id;
+        }
+
+        public int Store<T>(T item) where T : class
+        {
+            int id = GetFreeId();
+
+            Update(id, item);
+
+            return id;
+        }
+
+        public bool TryGet(int id, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue(id, out item);
+
+        public bool TryGet<T>(int id, out T? item) where T : class
+        {
+            bool res = TryGet(id, out object? value);
+
+            item = value as T;
+
+            return res;
+        }
+
+        public void Update<T>(int id, T item) where T : class => _objects[id] = item;
+
+        public void Dispose()
+        {
+            _objects.Values.OfType<IDisposable>().AsParallel().Do(d => d.Dispose());
+            _objects.Clear();
+        }
     }
 
     public enum VariableSearchScope

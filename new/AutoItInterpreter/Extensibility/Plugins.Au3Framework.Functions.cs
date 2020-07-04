@@ -1,11 +1,14 @@
-﻿using System.Globalization;
+﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
+using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.IO;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -64,6 +67,42 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             //ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
             ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
+            ProvidedNativeFunction.Create(nameof(FileChangeDir), 1, FileChangeDir),
+            ProvidedNativeFunction.Create(nameof(FileClose), 1, FileClose),
+            ProvidedNativeFunction.Create(nameof(FileCopy), 2, 3, FileCopy, 0),
+            ProvidedNativeFunction.Create(nameof(FileCreateNTFSLink), , FileCreateNTFSLink),
+            ProvidedNativeFunction.Create(nameof(FileCreateShortcut), , FileCreateShortcut),
+            ProvidedNativeFunction.Create(nameof(FileDelete), 1, FileDelete),
+            ProvidedNativeFunction.Create(nameof(FileExists), 1, FileExists),
+            ProvidedNativeFunction.Create(nameof(FileFindFirstFile), , FileFindFirstFile),
+            ProvidedNativeFunction.Create(nameof(FileFindNextFile), , FileFindNextFile),
+            ProvidedNativeFunction.Create(nameof(FileFlush), 1, FileFlush),
+            ProvidedNativeFunction.Create(nameof(FileGetAttrib), 1, FileGetAttrib),
+            ProvidedNativeFunction.Create(nameof(FileGetEncoding), , FileGetEncoding),
+            ProvidedNativeFunction.Create(nameof(FileGetLongName), 1, FileGetLongName),
+            ProvidedNativeFunction.Create(nameof(FileGetPos), 1, FileGetPos),
+            ProvidedNativeFunction.Create(nameof(FileGetShortcut), , FileGetShortcut),
+            ProvidedNativeFunction.Create(nameof(FileGetShortName), 1, 2, FileGetShortName, 0),
+            ProvidedNativeFunction.Create(nameof(FileGetSize), , FileGetSize),
+            ProvidedNativeFunction.Create(nameof(FileGetTime), 1, 3, FileGetTime, 0, 0),
+            ProvidedNativeFunction.Create(nameof(FileGetVersion), , FileGetVersion),
+            ProvidedNativeFunction.Create(nameof(FileInstall), , FileInstall),
+            ProvidedNativeFunction.Create(nameof(FileMove), 2, 3, FileMove, 0),
+            ProvidedNativeFunction.Create(nameof(FileOpen), 1, 2, FileOpen, 0),
+            ProvidedNativeFunction.Create(nameof(FileOpenDialog), , FileOpenDialog),
+            ProvidedNativeFunction.Create(nameof(FileRead), 1, 2, FileRead, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(FileReadLine), 1, 2, FileReadLine, 1),
+            ProvidedNativeFunction.Create(nameof(FileReadToArray), , FileReadToArray),
+            ProvidedNativeFunction.Create(nameof(FileRecycle), 1, FileRecycle),
+            ProvidedNativeFunction.Create(nameof(FileRecycleEmpty), 0, 1, FileRecycleEmpty, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(FileSaveDialog), , FileSaveDialog),
+            ProvidedNativeFunction.Create(nameof(FileSelectFolder), , FileSelectFolder),
+            ProvidedNativeFunction.Create(nameof(FileSetAttrib), , FileSetAttrib),
+            ProvidedNativeFunction.Create(nameof(FileSetEnd), , FileSetEnd),
+            ProvidedNativeFunction.Create(nameof(FileSetPos), 3, FileSetPos),
+            ProvidedNativeFunction.Create(nameof(FileSetTime), 4, 2, FileSetTime, 0, 0),
+            ProvidedNativeFunction.Create(nameof(FileWrite), , FileWrite),
+            ProvidedNativeFunction.Create(nameof(FileWriteLine), , FileWriteLine),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
             ProvidedNativeFunction.Create(nameof(IsArray), 1, IsArray),
             ProvidedNativeFunction.Create(nameof(IsBinary), 1, IsBinary),
@@ -73,7 +112,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(IsInt), 1, IsInt),
             ProvidedNativeFunction.Create(nameof(IsKeyword), 1, IsKeyword),
             ProvidedNativeFunction.Create(nameof(IsNumber), 1, IsNumber),
-            ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
+            //ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
             ProvidedNativeFunction.Create(nameof(IsString), 1, IsString),
             ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
             ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
@@ -432,7 +471,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
             catch
             {
-                return frame.SetError(1, 0, -1m);
+                return FunctionReturnValue.Error(-1m, 1, 0);
             }
         }
 
@@ -485,6 +524,572 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return InterpreterError.WellKnown(au3.CurrentLocation, "error.undeclared_variable", args[0]);
             });
 
+        public static FunctionReturnValue FileChangeDir(CallFrame frame, Variant[] args)
+        {
+            string curr = Directory.GetCurrentDirectory();
+
+            Directory.SetCurrentDirectory(args[0].ToString());
+
+            return Variant.FromBoolean(Directory.GetCurrentDirectory() != curr);
+        }
+
+        public static FunctionReturnValue FileClose(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileCopy(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                FileInfo src = new FileInfo(args[0].ToString());
+                FileInfo dst = new FileInfo(args[1].ToString());
+                long flags = (long)args[2];
+
+                if ((flags & 8) != 0 && dst.Directory is { Exists: false } dir)
+                    dir.Create();
+
+                src.CopyTo(dst.FullName, (flags & 1) != 0);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileCreateNTFSLink(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileCreateShortcut(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileDelete(CallFrame frame, Variant[] args)
+        {
+            string path = args[0].ToString();
+
+            try
+            {
+                foreach (FileSystemInfo entry in FileSystemExtensions.ResolveWildCards(path))
+                    if (entry.Exists)
+                        if (entry is DirectoryInfo dir)
+                            dir.Delete(true);
+                        else
+                            entry.Delete();
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileExists(CallFrame frame, Variant[] args) => Variant.FromBoolean(File.Exists(args[0].ToString()) || Directory.Exists(args[0].ToString()));
+
+        public static FunctionReturnValue FileFindFirstFile(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileFindNextFile(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileFlush(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                {
+                    handle.StreamWriter.Flush();
+                    handle.FileStream.Flush();
+
+                    return Variant.True;
+                }
+            }
+            catch
+            {
+            }
+
+            return Variant.False;
+        }
+
+        public static FunctionReturnValue FileGetAttrib(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+                FileAttributes attr = File.GetAttributes(args[0].ToString());
+                Dictionary<FileAttributes, char> dic = new()
+                {
+                    [FileAttributes.ReadOnly] = 'R',
+                    [FileAttributes.Hidden] = 'H',
+                    [FileAttributes.System] = 'S',
+                    [FileAttributes.Directory] = 'D',
+                    [FileAttributes.Archive] = 'A',
+                    [FileAttributes.Normal] = 'N',
+                    [FileAttributes.Temporary] = 'T',
+                    [FileAttributes.Compressed] = 'C',
+                    [FileAttributes.Offline] = 'O',
+                    [FileAttributes.Encrypted] = 'X',
+                    // the following are optional
+                    [FileAttributes.Device] = 'V',
+                    [FileAttributes.IntegrityStream] = 'I',
+                    [FileAttributes.ReparsePoint] = 'P',
+                    [FileAttributes.NotContentIndexed] = 'Z',
+                };
+
+                foreach (FileAttributes key in dic.Keys)
+                    if (attr.HasFlag(key))
+                        sb.Append(dic[key]);
+
+                return Variant.FromObject(sb);
+            }
+            catch
+            {
+                return FunctionReturnValue.Error("", 1);
+            }
+        }
+
+        public static FunctionReturnValue FileGetEncoding(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileGetShortName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent<Variant>(
+            () => FileSystemExtensions.GetShortPath(args[0].ToString()),
+            () => args[0]
+        );
+
+        public static FunctionReturnValue FileGetPos(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                    return (Variant)handle.FileStream.Position;
+            }
+            catch
+            {
+            }
+
+            return FunctionReturnValue.Error(0m, 1, 0);
+        }
+
+        public static FunctionReturnValue FileGetShortcut(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileGetLongName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent<Variant>(
+            () => FileSystemExtensions.GetSystemInfo(args[0].ToString()).FullName,
+            () => args[0]
+        );
+
+        public static FunctionReturnValue FileGetSize(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileGetTime(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                FileSystemInfo file = new FileInfo(args[0].ToString());
+
+                if (!file.Exists)
+                    file = new DirectoryInfo(args[0].ToString());
+
+                DateTime time = (int)args[1] switch
+                {
+                    1 => file.CreationTime,
+                    2 => file.LastAccessTime,
+                    _ => file.LastWriteTime,
+                };
+
+                return (int)args[2] switch
+                {
+                    1 => time.ToString("yyyyMMddHHmmss"),
+                    _ => Variant.FromArray(
+                        time.Year.ToString("D4"),
+                        time.Month.ToString("D2"),
+                        time.Day.ToString("D2"),
+                        time.Hour.ToString("D2"),
+                        time.Minute.ToString("D2"),
+                        time.Second.ToString("D2")
+                    ),
+                };
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
+        }
+
+        public static FunctionReturnValue FileGetVersion(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileInstall(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileMove(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                FileInfo src = new FileInfo(args[0].ToString());
+                FileInfo dst = new FileInfo(args[1].ToString());
+                long flags = (long)args[2];
+
+                if ((flags & 8) != 0 && dst.Directory is { Exists: false } dir)
+                    dir.Create();
+
+                src.MoveTo(dst.FullName, (flags & 1) != 0);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileOpen(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                FileInfo file = new FileInfo(args[0].ToString());
+                FileOpenFlags flags = (FileOpenFlags)args[1].ToNumber();
+
+                if (flags.HasFlag(FileOpenFlags.FO_CREATEPATH) && file.Directory is { Exists: false } dir)
+                    dir.Create();
+
+                FileStream fs = new FileStream(
+                    file.FullName,
+                    flags.HasFlag(FileOpenFlags.FO_OVERWRITE) ? FileMode.Create : flags.HasFlag(FileOpenFlags.FO_APPEND) ? FileMode.Append : FileMode.OpenOrCreate,
+                    flags.HasFlag(FileOpenFlags.FO_OVERWRITE) || flags.HasFlag(FileOpenFlags.FO_APPEND) ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read
+                );
+                FileHandle handle = new FileHandle(fs, flags);
+
+                return (Variant)frame.Interpreter.GlobalObjectStorage.Store(frame);
+            }
+            catch
+            {
+                return Variant.FromNumber(-1m);
+            }
+        }
+
+        public static FunctionReturnValue FileOpenDialog(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileRead(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                int? count = args[1] < 0 || args[1].IsDefault ? null : (int?)(int)args[1];
+                Variant output;
+
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                {
+                    string s;
+
+                    if (count is int i)
+                    {
+                        char[] buffer = new char[i];
+
+                        i = handle.StreamReader.Read(buffer, 0, i);
+                        s = new string(buffer, 0, i);
+                    }
+                    else
+                        s = handle.StreamReader.ReadToEnd();
+
+                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(From.String(s, handle.Encoding).Data) : Variant.FromString(s);
+                }
+                else
+                {
+                    string s = File.ReadAllText(args[0].ToString());
+
+                    if (count is int i && i < s.Length)
+                        s = s[..i];
+
+                    output = s;
+                }
+
+                frame.SetExtended(output.Length);
+
+                if (count is int len && len > output.Length)
+                    return FunctionReturnValue.Error(output, -1, output.Length); // eof
+
+                return output;
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(0m, 1, 0);
+            }
+        }
+
+        public static FunctionReturnValue FileReadLine(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                Index? line_index = (int)args[1] switch
+                {
+                    0 => null,
+                    _ when args[1].IsDefault => null,
+                    int i when i < 0 => ^i,
+                    int i => i - 1,
+                };
+
+                Variant output;
+                bool eof = false;
+
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                {
+                    string s;
+
+                    if (line_index is Index i)
+                    {
+                        List<string> lines = new List<string>();
+
+                        handle.FileStream.Seek(0, SeekOrigin.Begin);
+
+                        while (handle.StreamReader.ReadLine() is string line)
+                            lines.Add(line);
+
+                        s = lines[i];
+                    }
+                    else
+                        s = handle.StreamReader.ReadLine() ?? "";
+
+                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(From.String(s, handle.Encoding).Data) : Variant.FromString(s);
+                    eof = handle.FileStream.Position < handle.FileStream.Length - 1;
+                }
+                else
+                    output = File.ReadAllLines(args[0].ToString())[line_index ?? 0];
+
+                frame.SetExtended(output.Length);
+
+                if (eof)
+                    return FunctionReturnValue.Error(output, -1, output.Length); // eof
+
+                return output;
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(0m, 1, 0);
+            }
+        }
+
+        public static FunctionReturnValue FileReadToArray(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileRecycle(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                FileInfo file = new FileInfo(args[0].ToString());
+
+                return NativeInterop.DoPlatformDependent(delegate
+                {
+                    SHFILEOPSTRUCT opt = new SHFILEOPSTRUCT
+                    {
+                        hwnd = null,
+                        wFunc = FileFuncFlags.FO_DELETE,
+                        pFrom = $"{file.FullName}\0\0",
+                        pTo = null,
+                        fFlags = FILEOP_FLAGS.FOF_SILENT | FILEOP_FLAGS.FOF_NOCONFIRMATION | FILEOP_FLAGS.FOF_NOERRORUI | FILEOP_FLAGS.FOF_ALLOWUNDO
+                    };
+
+                    return Variant.FromBoolean(NativeInterop.SHFileOperation(ref opt) == 0);
+                }, delegate
+                {
+                    foreach (DirectoryInfo trash in new[]
+                    {
+                        "~/.local/share/Trash/items/",
+                        "~/.local/share/Trash/",
+                        "~/.Trash/",
+                        "~/Desktop/.Trash/items/",
+                        "~/Desktop/.Trash/",
+                        "/var/tmp",
+                    }.Select(p => new DirectoryInfo(p)))
+                    {
+                        if (trash.Exists)
+                        {
+                            file.MoveTo(Path.Combine(trash.FullName, file.Name));
+
+                            return Variant.True;
+                        }
+                    }
+
+                    return Variant.False;
+                });
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static unsafe FunctionReturnValue FileRecycleEmpty(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                return NativeInterop.DoPlatformDependent(
+                    () => Variant.FromBoolean(NativeInterop.SHEmptyRecycleBin(null, args[0].IsDefault ? null : args[0].ToString(), 0) == 0),
+                    delegate
+                    {
+                        foreach (DirectoryInfo trash in new[]
+                        {
+                            "~/.local/share/Trash/items/",
+                            "~/.local/share/Trash/",
+                            "~/.Trash/",
+                            "~/Desktop/.Trash/items/",
+                            "~/Desktop/.Trash/",
+                            "/tmp",
+                        }.Select(p => new DirectoryInfo(p)))
+                        {
+                            if (trash.Exists)
+                            {
+                                trash.EnumerateDirectories().Do(d => d.Delete(true));
+                                trash.EnumerateFiles().Do(f => f.Delete());
+                            }
+                        }
+
+                        return Variant.False;
+                    }
+                );
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileSaveDialog(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileSelectFolder(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileSetAttrib(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileSetEnd(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue FileSetPos(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                {
+                    handle.FileStream.Seek((long)args[1], (SeekOrigin)(int)args[2]);
+
+                    return Variant.True;
+                }
+            }
+            catch
+            {
+            }
+
+            return Variant.False;
+        }
+
+        public static FunctionReturnValue FileSetTime(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                DateTime time;
+
+                if (!DateTime.TryParseExact(args[1].ToString(), "yyyyMMddHHmmss", null, DateTimeStyles.AssumeLocal, out time))
+                    time = DateTime.Now;
+
+                void traverse(FileSystemInfo fsi)
+                {
+                    if (fsi is DirectoryInfo dir && (int)args[3] == 1)
+                        foreach (FileSystemInfo item in dir.EnumerateFileSystemInfos())
+                            traverse(item);
+
+                    if (args[2] == 1m)
+                        fsi.CreationTime = time;
+                    else if (args[2] == 2m)
+                        fsi.LastAccessTime = time;
+                    else
+                        fsi.LastWriteTime = time;
+                }
+
+                FileSystemExtensions.ResolveWildCards(args[0].ToString()).Do(traverse);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileWrite(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                byte[] data = args[1].IsBinary ? args[1].ToBinary() : From.String(args[1].ToString(), Encoding.UTF8).To.Bytes;
+
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                    handle.FileStream.Write(data, 0, data.Length);
+                else
+                    File.WriteAllBytes(args[0].ToString(), data);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue FileWriteLine(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                string content = args[1].ToString();
+
+                if (!content.EndsWith("\r") && !content.EndsWith("\n"))
+                    content += "\r\n";
+
+                if (args[0].TryResolveHandle(frame.Interpreter, out object? obj) && obj is FileHandle handle)
+                    handle.StreamWriter.Write(content);
+                else
+                    File.WriteAllText(args[0].ToString(), content);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
         public static FunctionReturnValue Assign(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
@@ -536,7 +1141,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
 
-        public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.NETObject);
+        //public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.NETObject);
 
         public static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
 
@@ -568,6 +1173,69 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ForceLocal = 1,
             ForceGlobal = 2,
             ExistFail = 4
+        }
+
+        [Flags]
+        private enum FileOpenFlags
+        {
+            FO_READ = 0,
+            FO_APPEND = 1,
+            FO_OVERWRITE = 2,
+            FO_CREATEPATH = 8,
+            FO_BINARY = 16,
+            FO_UNICODE = 32,
+            FO_UTF16_LE = FO_UNICODE,
+            FO_UTF16_BE = 64,
+            FO_UTF8 = 128,
+            FO_UTF8_NOBOM =256,
+            FO_ANSI = 512,
+            FO_UTF16_LE_NOBOM = 1024,
+            FO_UTF16_BE_NOBOM = 2048,
+            FO_FULLFILE_DETECT = 16384,
+        }
+
+        private sealed class FileHandle
+            : IDisposable
+        {
+            public FileOpenFlags Flags { get; }
+            public FileStream FileStream { get; }
+            public StreamReader StreamReader { get; }
+            public StreamWriter StreamWriter { get; }
+            public Encoding Encoding { get; }
+
+
+            public FileHandle(FileStream fs, FileOpenFlags flags)
+            {
+                Flags = flags;
+                FileStream = fs;
+
+
+                /*
+    $FO_BINARY (16) = Force binary mode (See Remarks).
+    $FO_UNICODE or $FO_UTF16_LE (32) = Use Unicode UTF16 Little Endian reading and writing mode.
+    $FO_UTF16_BE (64) = Use Unicode UTF16 Big Endian reading and writing mode.
+    $FO_UTF8 (128) = Use Unicode UTF8 (with BOM) reading and writing mode.
+    $FO_UTF8_NOBOM (256) = Use Unicode UTF8 (without BOM) reading and writing mode.
+    $FO_ANSI (512) = Use ANSI reading and writing mode.
+    $FO_UTF16_LE_NOBOM (1024) = Use Unicode UTF16 Little Endian (without BOM) reading and writing mode.
+    $FO_UTF16_BE_NOBOM (2048) = Use Unicode UTF16 Big Endian (without BOM) reading and writing mode.
+    $FO_FULLFILE_DETECT (16384) = When opening for reading and no BOM is present, use the entire file to determine if it is
+                 */
+
+                Encoding = ;
+                StreamReader = new(fs, Encoding);
+                StreamWriter = new(fs, Encoding);
+            }
+
+            public void Dispose()
+            {
+                StreamWriter.Close();
+                StreamWriter.Dispose();
+                StreamReader.Close();
+                StreamReader.Dispose();
+                FileStream.Close();
+                FileStream.Dispose();
+            }
         }
     }
 

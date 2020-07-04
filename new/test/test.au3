@@ -1,3 +1,6 @@
+ConsoleWrite(Binary(FileOpen("test.au3")))
+
+exit
 for $i = 0 to 10^6
 next
 
