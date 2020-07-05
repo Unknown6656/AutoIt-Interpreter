@@ -35,7 +35,7 @@ Target Framework | .NET 5 and newer | .NET Core 2.1
 Works on Windows | Hell yeah | Yup
 Works on Linux | Not yet tested | Kinda
 Works on MacOs | Not yet tested | Kinda
-Status | In development | Beta-ish
+Status | In development | Discontinued, Beta-ish
 
 
 ## Links

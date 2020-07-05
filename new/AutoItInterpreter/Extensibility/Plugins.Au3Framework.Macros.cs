@@ -51,7 +51,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "documentscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
                 "exitcode" => Interpreter.ExitCode,
                 "error" => Interpreter.ErrorCode,
-                "extended" => Interpreter.ExtendedErrorCode,
+                "extended" => Interpreter.ExtendedValue,
                 "favoritescommondir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
                 "favoritesdir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
                 "homedrive" => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,

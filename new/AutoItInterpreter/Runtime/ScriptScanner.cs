@@ -607,12 +607,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class FunctionReturnValue
     {
-        private readonly Union<InterpreterError, (Variant @return, int? error, int? extended)> _result;
+        private readonly Union<InterpreterError, (Variant @return, int? error, Variant? extended)> _result;
 
 
         private FunctionReturnValue(InterpreterError error) => _result = error;
 
-        private FunctionReturnValue(Variant @return, int? error = null, int? extended = null)
+        private FunctionReturnValue(Variant @return, int? error = null, Variant? extended = null)
         {
             if (extended is int && error is null)
                 error = -1;
@@ -620,17 +620,17 @@ namespace Unknown6656.AutoIt3.Runtime
             _result = (@return, error, extended);
         }
 
-        public bool IsSuccess(out Variant value) => Is(out value, out int? err, out int? ext) && err is null && ext is null;
+        public bool IsSuccess(out Variant value, out Variant? extended) => Is(out value, out int? err, out extended) && err is null;
 
         public bool IsFatal([MaybeNullWhen(false), NotNullWhen(true)] out InterpreterError? error) => _result.Is(out error);
 
         public bool IsError(out int error) => IsError(out _, out error, out _);
 
-        public bool IsError(out int error, out int? extended) => IsError(out _, out error, out extended);
+        public bool IsError(out int error, out Variant? extended) => IsError(out _, out error, out extended);
 
         public bool IsError(out Variant value, out int error) => IsError(out value, out error, out _);
 
-        public bool IsError(out Variant value, out int error, out int? extended)
+        public bool IsError(out Variant value, out int error, out Variant? extended)
         {
             bool res = Is(out value, out int? err, out extended);
 
@@ -642,7 +642,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        private bool Is(out Variant @return, out int? error, out int? extended)
+        private bool Is(out Variant @return, out int? error, out Variant? extended)
         {
             bool res = _result.Is(out (Variant @return, int? error, int? extended) tuple);
 
@@ -653,15 +653,15 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static FunctionReturnValue Success(Variant value) => new FunctionReturnValue(value);
 
+        public static FunctionReturnValue Success(Variant value, Variant extended) => new FunctionReturnValue(value, null, extended);
+
         public static FunctionReturnValue Fatal(InterpreterError error) => new FunctionReturnValue(error);
 
         public static FunctionReturnValue Error(int error) => new FunctionReturnValue(Variant.False, error);
 
-        public static FunctionReturnValue Error(int error, int extended) => new FunctionReturnValue(Variant.False, error, extended);
+        public static FunctionReturnValue Error(int error, Variant extended) => new FunctionReturnValue(Variant.False, error, extended);
 
-        public static FunctionReturnValue Error(Variant value, int error) => new FunctionReturnValue(value, error);
-
-        public static FunctionReturnValue Error(Variant value, int error, int extended) => new FunctionReturnValue(value, error, extended);
+        public static FunctionReturnValue Error(Variant value, int error, Variant extended) => new FunctionReturnValue(value, error, extended);
 
         public static implicit operator FunctionReturnValue(Variant v) => Success(v);
 

@@ -11,6 +11,7 @@ using System;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -382,6 +383,17 @@ namespace Unknown6656.AutoIt3.Runtime
             value = null;
 
             return Type is VariantType.Handle && RawData is int key && interpreter.GlobalObjectStorage.TryGet(key, out value);
+        }
+
+        public readonly bool TryResolveHandle<T>(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out T? value) where T : class
+        {
+            value = null;
+            TryResolveHandle(interpreter, out object? val);
+
+            if (val is T t)
+                value = t;
+
+            return value is T;
         }
 
         #endregion
@@ -856,6 +868,10 @@ namespace Unknown6656.AutoIt3.Runtime
             _objects.Values.OfType<IDisposable>().AsParallel().Do(d => d.Dispose());
             _objects.Clear();
         }
+
+        public bool Delete(Variant handle) => handle.Type is VariantType.Handle && Delete((int)handle);
+
+        public bool Delete(int id) => _objects.TryRemove(id, out _);
     }
 
     public enum VariableSearchScope

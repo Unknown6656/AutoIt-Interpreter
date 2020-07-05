@@ -16,7 +16,6 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.ExpressionParser.AST;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -224,16 +223,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
-        public Variant SetError(int error, int extended = 0, in Variant @return = default)
+        public Variant SetError(int error, Variant? extended = null, in Variant @return = default)
         {
             Interpreter.ErrorCode = error;
 
             return SetExtended(extended, in @return);
         }
 
-        public Variant SetExtended(int extended, in Variant @return = default)
+        public Variant SetExtended(Variant? extended, in Variant @return = default)
         {
-            Interpreter.ExtendedErrorCode = extended;
+            Interpreter.ExtendedValue = extended ?? Variant.Null;
 
             return @return;
         }
@@ -257,13 +256,13 @@ namespace Unknown6656.AutoIt3.Runtime
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => ((NativeFunction)CurrentFunction).Execute(this, args));
+            Variant? extended = null;
+            int error = 0;
 
             if (result.IsFatal(out InterpreterError? fatal))
                 return fatal;
-            else if (result.IsSuccess(out Variant variant))
-                return variant;
-            else if (result.IsError(out variant, out int error, out int? extended))
-                return SetError(error, extended ?? 0, in variant);
+            else if (result.IsSuccess(out Variant variant, out extended) || result.IsError(out variant, out error, out extended))
+                return SetError(error, extended, in variant);
             else
                 throw new InvalidOperationException("Return value could not be processed");
         }
