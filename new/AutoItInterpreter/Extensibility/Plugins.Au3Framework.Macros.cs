@@ -144,7 +144,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value) => (value = name.ToLowerInvariant() switch
         {
             "esc" => "\x1b",
+            "vtab" => "\v",
             "nul" => "\0",
+            "date" => DateTime.Now.ToString("yyyy-MM-dd"),
+            "date_time" => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff"),
+            "e" => Math.E,
+            "nl" => Environment.NewLine,
+            "phi" => 1.618033988749894848204586834m,
+            "pi" => Math.PI,
+            "tau" => Math.PI * 2,
             _ => (Variant?)null,
         }) is Variant;
     }

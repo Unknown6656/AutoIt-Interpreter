@@ -9,8 +9,6 @@ using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Net.Http.Headers;
-using System.Diagnostics;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -19,6 +17,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
+            ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
+            ProvidedNativeFunction.Create(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle),
+            ProvidedNativeFunction.Create(nameof(BlockInput), 1, BlockInput),
+            ProvidedNativeFunction.Create(nameof(CDTray), 2, CDTray),
+            ProvidedNativeFunction.Create(nameof(ClipPut), 1, ClipPut),
             ProvidedNativeFunction.Create(nameof(Abs), 1, Abs),
             ProvidedNativeFunction.Create(nameof(ACos), 1, ACos),
             ProvidedNativeFunction.Create(nameof(ASin), 1, ASin),
@@ -52,8 +55,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(Int), 1, Int),
             ProvidedNativeFunction.Create(nameof(Dec), 1, Dec),
             ProvidedNativeFunction.Create(nameof(Hex), 1, 2, Hex, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(BinaryToString), 1, BinaryToString),
-            ProvidedNativeFunction.Create(nameof(StringToBinary), 1, StringToBinary),
+            ProvidedNativeFunction.Create(nameof(BinaryToString), 1, 2, BinaryToString, 1),
+            ProvidedNativeFunction.Create(nameof(StringToBinary), 1, 2, StringToBinary, 1),
             ProvidedNativeFunction.Create(nameof(Call), 1, 256, Call),
             ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
@@ -153,6 +156,64 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return InterpreterError.WellKnown(null, "error.au3_caller_only", funcname);
         }
 
+
+        public static FunctionReturnValue AutoItWinGetTitle(CallFrame frame, Variant[] args) => (Variant)Console.Title;
+
+        public static FunctionReturnValue AutoItWinSetTitle(CallFrame frame, Variant[] args)
+        {
+            Console.Title = args[0].ToString();
+
+            return Variant.Null;
+        }
+
+        public static FunctionReturnValue BlockInput(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent<Variant>(() => NativeInterop.BlockInput(args[0].ToBoolean()), () => false);
+
+        public static unsafe FunctionReturnValue CDTray(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                return NativeInterop.DoPlatformDependent<Variant>(delegate
+                {
+                    int dwbytes = 0;
+                    void* cdrom = NativeInterop.CreateFile($"\\\\.\\{args[0]}", 0xc0000000u, 0, null, 3, 0, null);
+
+                    return args[1].ToString().ToLower() switch
+                    {
+                        "open" => NativeInterop.DeviceIoControl(cdrom, 0x2d4808, null, 0, null, 0, &dwbytes, null),
+                        "closed" => NativeInterop.DeviceIoControl(cdrom, 0x2d480c, null, 0, null, 0, &dwbytes, null),
+                        _ => false
+                    };
+                }, delegate
+                {
+                    int cdrom = NativeInterop.open(args[0].ToString(), 0x0800);
+
+                    return args[1].ToString().ToLower() switch
+                    {
+                        "open" or "closed" => NativeInterop.ioctl(cdrom, 0x5309, 0), // TODO ?
+                        _ => false
+                    };
+                });
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        public static FunctionReturnValue ClipPut(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                string cmd = NativeInterop.DoPlatformDependent($"echo {args[0]} | clip", $"echo \"{args[0]}\" | pbcopy");
+                (_, int code) = NativeInterop.Bash(cmd);
+
+                return Variant.FromBoolean(code == 0);
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
 
         public static FunctionReturnValue Abs(CallFrame frame, Variant[] args) => (Variant)Math.Abs(args[0].ToNumber());
 
@@ -315,9 +376,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue Int(CallFrame frame, Variant[] args) => (Variant)(long)args[0];
 
-        public static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String(BytewiseEncoding.Instance);
+        public static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String((int)args[1] switch
+        {
+            1 => Encoding.GetEncoding(1252),
+            2 => Encoding.Unicode,
+            3 => Encoding.BigEndianUnicode,
+            4 => Encoding.UTF8,
+            _ => BytewiseEncoding.Instance,
+        });
 
-        public static FunctionReturnValue StringToBinary(CallFrame frame, Variant[] args) => (Variant)From.String(args[0].ToString(), BytewiseEncoding.Instance).To.Bytes;
+        public static FunctionReturnValue StringToBinary(CallFrame frame, Variant[] args) => (Variant)From.String(args[0].ToString(), (int)args[1] switch
+        {
+            1 => Encoding.GetEncoding(1252),
+            2 => Encoding.Unicode,
+            3 => Encoding.BigEndianUnicode,
+            4 => Encoding.UTF8,
+            _ => BytewiseEncoding.Instance,
+        }).To.Bytes;
 
         public static FunctionReturnValue Hex(CallFrame frame, Variant[] args)
         {
@@ -588,14 +663,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 return NativeInterop.DoPlatformDependent<Variant>(
                     () => FileSystemExtensions.CreateNTFSHardLink(linkname.FullName, target.FullName),
-                    delegate
-                    {
-                        using Process process = Process.Start("ln", $"-f \"{linkname.FullName}\" \"{target.FullName}\"");
-
-                        process.WaitForExit();
-
-                        return process.ExitCode == 0;
-                    }
+                    () => NativeInterop.Bash($"ln -f \"{linkname.FullName}\" \"{target.FullName}\"").code == 0
                 );
             }
             catch
@@ -647,13 +715,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                if (args[0].TryResolveHandle(frame.Interpreter, out FileSearchHandle? handle) && handle.Enumerator.MoveNext())
-                {
-                    FileSystemInfo fsi = handle.Enumerator.Current;
-                    bool extended = (bool)args[1];
+                if (args[0].TryResolveHandle(frame.Interpreter, out FileSearchHandle? handle))
+                    if (handle.Enumerator.MoveNext())
+                    {
+                        FileSystemInfo fsi = handle.Enumerator.Current;
+                        bool extended = (bool)args[1];
 
-                    return FunctionReturnValue.Success(fsi.FullName, extended ? (Variant)GetAttributeString(fsi) : fsi.Attributes.HasFlag(FileAttributes.Directory));
-                }
+                        return FunctionReturnValue.Success(fsi.FullName, extended ? (Variant)GetAttributeString(fsi) : fsi.Attributes.HasFlag(FileAttributes.Directory));
+                    }
+                    else
+                        frame.Interpreter.GlobalObjectStorage.Delete((int)args[0]);
             }
             catch
             {
@@ -668,7 +739,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 if (args[0].TryResolveHandle(frame.Interpreter, out FileHandle? handle))
                 {
-                    handle.StreamWriter.Flush();
+                    handle.StreamWriter?.Flush();
                     handle.FileStream.Flush();
 
                     return Variant.True;
@@ -720,19 +791,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     enc = rd.CurrentEncoding;
                 }
 
-                return (Variant)(
-                    enc == new UTF8Encoding(true) ? 128 :
-                    enc == new UTF8Encoding(false) ? 256 :
-                    enc == Encoding.UTF8 ? 256 :
-                    enc == Encoding.Unicode ? 32 :
-                    enc == Encoding.BigEndianUnicode ? 64 :
-                    enc.CodePage == 1252 ? 512 : -1
-                );
+                if (new Dictionary<int, FileOpenFlags>
+                {
+                    [new UnicodeEncoding(false, false).CodePage] = FileOpenFlags.FO_UTF16_LE_NOBOM,
+                    [new UnicodeEncoding(true, false).CodePage] = FileOpenFlags.FO_UTF16_BE_NOBOM,
+                    [new UTF8Encoding(true).CodePage] = FileOpenFlags.FO_UTF8,
+                    [new UTF8Encoding(false).CodePage] = FileOpenFlags.FO_UTF8_NOBOM,
+                    [Encoding.UTF8.CodePage] = FileOpenFlags.FO_UTF8,
+                    [Encoding.Unicode.CodePage] = FileOpenFlags.FO_UTF16_LE,
+                    [Encoding.BigEndianUnicode.CodePage] = FileOpenFlags.FO_UTF16_BE,
+                    [1252] = FileOpenFlags.FO_ANSI,
+                }.TryGetValue(enc.CodePage, out FileOpenFlags flags))
+                    return (Variant)(int)flags;
             }
             catch
             {
-                return Variant.FromNumber(-1m);
             }
+
+            return Variant.FromNumber(-1m);
         }
 
         public static FunctionReturnValue FileGetShortName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
@@ -876,7 +952,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 );
                 FileHandle handle = new FileHandle(fs, flags);
 
-                return (Variant)frame.Interpreter.GlobalObjectStorage.Store(frame);
+                return (Variant)frame.Interpreter.GlobalObjectStorage.Store(handle);
             }
             catch
             {
@@ -897,19 +973,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 if (args[0].TryResolveHandle(frame.Interpreter, out FileHandle? handle))
                 {
-                    string s;
+                    byte[] bytes = new byte[count ?? (handle.FileStream.Length - handle.FileStream.Position)];
+                    int i = handle.FileStream.Read(bytes, 0, bytes.Length);
 
-                    if (count is int i)
-                    {
-                        char[] buffer = new char[i];
+                    Array.Resize(ref bytes, i);
 
-                        i = handle.StreamReader.Read(buffer, 0, i);
-                        s = new string(buffer, 0, i);
-                    }
-                    else
-                        s = handle.StreamReader.ReadToEnd();
-
-                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(From.String(s, handle.Encoding).Data) : Variant.FromString(s);
+                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(bytes) : Variant.FromString(From.Bytes(bytes).To.String(handle.Encoding));
                 }
                 else
                 {
@@ -1244,7 +1313,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     content += "\r\n";
 
                 if (args[0].TryResolveHandle(frame.Interpreter, out FileHandle? handle))
-                    handle.StreamWriter.Write(content);
+                {
+                    if (handle.StreamWriter is null)
+                        return Variant.False;
+                    else
+                        handle.StreamWriter?.Write(content);
+                }
                 else
                     File.WriteAllText(args[0].ToString(), content);
 
@@ -1395,7 +1469,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             public IEnumerator<FileSystemInfo> Enumerator {get; }
 
 
-            public FileSearchHandle(FileSystemInfo[] files) => Enumerator = files.GetEnumerator();
+            public FileSearchHandle(FileSystemInfo[] files) => Enumerator = (IEnumerator<FileSystemInfo>)files.GetEnumerator();
         }
 
         private sealed class FileHandle
@@ -1404,7 +1478,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             public FileOpenFlags Flags { get; }
             public FileStream FileStream { get; }
             public StreamReader StreamReader { get; }
-            public StreamWriter StreamWriter { get; }
+            public StreamWriter? StreamWriter { get; }
             public Encoding Encoding { get; }
 
 
@@ -1412,29 +1486,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 Flags = flags;
                 FileStream = fs;
+                Encoding = flags.HasFlag(FileOpenFlags.FO_UNICODE) || flags.HasFlag(FileOpenFlags.FO_UTF16_LE) ? Encoding.Unicode :
+                           flags.HasFlag(FileOpenFlags.FO_UTF16_BE) ? Encoding.BigEndianUnicode :
+                           flags.HasFlag(FileOpenFlags.FO_UTF8) ? new UTF8Encoding(true) :
+                           flags.HasFlag(FileOpenFlags.FO_UTF8_NOBOM) ? new UTF8Encoding(false) :
+                           flags.HasFlag(FileOpenFlags.FO_ANSI) ? Encoding.GetEncoding(1252) :
+                           flags.HasFlag(FileOpenFlags.FO_UTF16_LE_NOBOM) ? new UnicodeEncoding(false, false) :
+                           flags.HasFlag(FileOpenFlags.FO_UTF16_BE_NOBOM) ? new UnicodeEncoding(true, false) : Encoding.Default;
 
-
-                /*
-    $FO_BINARY (16) = Force binary mode (See Remarks).
-    $FO_UNICODE or $FO_UTF16_LE (32) = Use Unicode UTF16 Little Endian reading and writing mode.
-    $FO_UTF16_BE (64) = Use Unicode UTF16 Big Endian reading and writing mode.
-    $FO_UTF8 (128) = Use Unicode UTF8 (with BOM) reading and writing mode.
-    $FO_UTF8_NOBOM (256) = Use Unicode UTF8 (without BOM) reading and writing mode.
-    $FO_ANSI (512) = Use ANSI reading and writing mode.
-    $FO_UTF16_LE_NOBOM (1024) = Use Unicode UTF16 Little Endian (without BOM) reading and writing mode.
-    $FO_UTF16_BE_NOBOM (2048) = Use Unicode UTF16 Big Endian (without BOM) reading and writing mode.
-    $FO_FULLFILE_DETECT (16384) = When opening for reading and no BOM is present, use the entire file to determine if it is
-                 */
-
-                Encoding = ;
                 StreamReader = new(fs, Encoding);
-                StreamWriter = new(fs, Encoding);
+
+                if (fs.CanWrite)
+                    StreamWriter = new(fs, Encoding);
             }
 
             public void Dispose()
             {
-                StreamWriter.Close();
-                StreamWriter.Dispose();
+                StreamWriter?.Close();
+                StreamWriter?.Dispose();
                 StreamReader.Close();
                 StreamReader.Dispose();
                 FileStream.Close();

@@ -1,8 +1,9 @@
-ConsoleWrite(Binary(FileOpen("test.au3")))
-
-exit
-for $i = 0 to 10^6
-next
+; $file = FileOpen("test.au3")
+; ConsoleWrite(FileRead($file))
+; FileClose($file)
+; DebugAllVarsCompact()
+; exit
+ClipPut('top " kek | jej ')
 
 ConsoleWrite(@OSVersion)
 exit

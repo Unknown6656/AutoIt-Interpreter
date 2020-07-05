@@ -644,7 +644,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private bool Is(out Variant @return, out int? error, out Variant? extended)
         {
-            bool res = _result.Is(out (Variant @return, int? error, int? extended) tuple);
+            bool res = _result.Is(out (Variant @return, int? error, Variant? extended) tuple);
 
             (@return, error, extended) = tuple;
 

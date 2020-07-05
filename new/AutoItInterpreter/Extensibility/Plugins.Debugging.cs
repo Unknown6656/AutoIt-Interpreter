@@ -3,9 +3,9 @@ using System.Linq;
 using System.Text;
 using System;
 
+using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
-using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -50,7 +50,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return dic;
         }
 
-        private static IDictionary<string, object?> GetVariableInfo(Variable variable) => new Dictionary<string, object?>
+        private static IDictionary<string, object?> GetVariableInfo(Variable? variable) => new Dictionary<string, object?>
         {
             ["name"] = variable,
             ["constant"] = variable.IsConst,
@@ -222,16 +222,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             }
             while (count != scopes.Count);
 
+            object? netobj = null;
             StringBuilder sb = new StringBuilder();
             IEnumerable<(string, string, string, string)> iterators = from kvp in InternalsFunctionProvider._iterators
                                                                       let index = kvp.Value.index
                                                                       let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
                                                                       select (
                                                                           $"/iter/{kvp.Key}",
-                                                                          SourceLocation.Unknown.ToString(),
+                                                                          Program.ASM.Name,
                                                                           "Iterator",
                                                                           $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString()}, Value:{tuple.value.ToDebugString()}"
                                                                       );
+            IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.Keys
+                                                                        where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
+                                                                        select (
+                                                                            $"/objs/{id:x8}",
+                                                                            Program.ASM.Name,
+                                                                            ".NET Object",
+                                                                            netobj?.ToString() ?? "<null>"
+                                                                        );
             (string name, string loc, string type, string value)[] variables = (from scope in scopes
                                                                                 from variable in scope.LocalVariables
                                                                                 let name = scope.InternalName + '$' + variable.Name
@@ -241,7 +250,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                                     variable.DeclaredLocation.ToString(),
                                                                                     variable.Value.Type.ToString(),
                                                                                     variable.Value.ToDebugString()
-                                                                                )).Concat(iterators).ToArray();
+                                                                                )).Concat(iterators)
+                                                                                  .Concat(global_objs)
+                                                                                  .ToArray();
             int w_name = variables.Select(t => t.name.Length).Append(4).Max();
             int w_loc = variables.Select(t => t.loc.Length).Append(8).Max();
             int w_type = variables.Select(t => t.type.Length).Append(4).Max();

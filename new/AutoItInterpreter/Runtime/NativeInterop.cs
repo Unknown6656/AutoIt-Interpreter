@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -29,6 +30,58 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
         public static unsafe extern uint SHEmptyRecycleBin(void* hwnd, [MarshalAs(UnmanagedType.LPWStr)] string? pszRootPath, RecycleFlags dwFlags);
 
+        [DllImport("coredll.dll", SetLastError = true)]
+        public static unsafe extern bool DeviceIoControl(void* hDevice, int dwIoControlCode, byte* lpInBuffer, int nInBufferSize, byte* lpOutBuffer, int nOutBufferSize, int* lpBytesReturned, void* lpOverlapped);
+
+        [DllImport("coredll", SetLastError = true)]
+        public static unsafe extern void* CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, void* lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, void* hTemplateFile);
+
+        [DllImport("user32.dll")]
+        public static extern bool BlockInput(bool fBlockIt);
+
+        [DllImport("libc.so")]
+        public static unsafe extern int ioctl(int fd, int arg1, int arg2);
+
+        [DllImport("libc.so", CharSet = CharSet.Ansi)]
+        public static unsafe extern int open([MarshalAs(UnmanagedType.LPStr)] string path, int flags);
+
+
+        public static (string stdout, int code) Bash(string command) => DoPlatformDependent(
+            delegate
+            {
+                static string escape(char c) => c switch
+                {
+                    '^' or '\'' or '"' or '(' or ')' or '|' or '&' => "^" + c,
+                    _ => c.ToString()
+                };
+
+                return Run("cmd.exe", $"/c \"{string.Concat(command.Select(escape))}\"");
+            },
+            () => Run("/bin/bash", $"-c \"{command.Replace("\"", "\\\"")}\"")
+        );
+
+        private static (string stdout, int code) Run(string filename, string arguments)
+        {
+            using Process process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = filename,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = false,
+                }
+            };
+
+            process.Start();
+
+            string result = process.StandardOutput.ReadToEnd();
+
+            process.WaitForExit();
+
+            return (result, process.ExitCode);
+        }
 
         public static T DoPlatformDependent<T>(T on_windows, T on_unix) => DoPlatformDependent(on_windows, on_unix, on_unix);
 

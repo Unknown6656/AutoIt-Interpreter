@@ -380,9 +380,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool TryResolveHandle(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out object? value)
         {
+            int key = (int)this;
             value = null;
 
-            return Type is VariantType.Handle && RawData is int key && interpreter.GlobalObjectStorage.TryGet(key, out value);
+            return interpreter.GlobalObjectStorage.TryGet(key, out value);
         }
 
         public readonly bool TryResolveHandle<T>(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out T? value) where T : class
@@ -819,6 +820,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         public Interpreter Interpreter { get; }
+
+        public int[] Keys => _objects.Keys.ToArray();
 
         public int ObjectCount => _objects.Count;
 

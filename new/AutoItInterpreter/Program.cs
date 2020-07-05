@@ -203,6 +203,7 @@ namespace Unknown6656.AutoIt3
             while (!_finished)
                 printer_task.Wait();
 
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             ConsoleExtensions.RestoreConsoleState(state);
 
             return code;
