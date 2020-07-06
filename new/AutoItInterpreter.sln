@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{510D487F-32FE-4255-9D73-075A628121B4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{BB97AD38-978A-437C-AAFB-47CC9DD16FED} = {BB97AD38-978A-437C-AAFB-47CC9DD16FED}
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB} = {3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{60D6A33F-BC91-4317-B552-6366DB4E2D6A}"
@@ -34,6 +35,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItExpressionParser", "AutoItExpressionParser\AutoItExpressionParser.fsproj", "{6350112E-9412-4078-9F2D-D453D871D7AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COMObjectServer", "util\COMObjectServer\COMObjectServer.csproj", "{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COMInterop", "util\COMInterop\COMInterop.csproj", "{A1D77A01-D0B6-4CD5-A099-072618517C2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,12 +57,22 @@ Global
 		{6350112E-9412-4078-9F2D-D453D871D7AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6350112E-9412-4078-9F2D-D453D871D7AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6350112E-9412-4078-9F2D-D453D871D7AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BB97AD38-978A-437C-AAFB-47CC9DD16FED} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
+		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
+		{A1D77A01-D0B6-4CD5-A099-072618517C2B} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC63CA64-CCD2-471E-8DB3-72D91D747EA9}

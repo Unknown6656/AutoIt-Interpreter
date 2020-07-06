@@ -66,10 +66,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, 0),
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, 0),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, 0),
+            ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
             ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
             ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
             ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
-            //ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
+            ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
             ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
             ProvidedNativeFunction.Create(nameof(FileChangeDir), 1, FileChangeDir),
@@ -119,6 +120,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(IsNumber), 1, IsNumber),
             //ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
             ProvidedNativeFunction.Create(nameof(IsString), 1, IsString),
+            ProvidedNativeFunction.Create(nameof(ObjCreate), 1, 4, ObjCreate, Variant.Default, Variant.Default, Variant.Default),
+            // ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
+            // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
+            // ProvidedNativeFunction.Create(nameof(ObjGet), , ObjGet),
+            // ProvidedNativeFunction.Create(nameof(ObjName), , ObjName),
             ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
             ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
             ProvidedNativeFunction.Create(nameof(StringIsDigit), 1, StringIsDigit),
@@ -552,6 +558,34 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
+        public static FunctionReturnValue DriveGetDrive(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                DriveInfo[] drives = DriveInfo.GetDrives();
+                DriveType? type = args[0].ToString().ToLower() switch
+                {
+                    "cdrom" => DriveType.CDRom,
+                    "removable" => DriveType.Removable,
+                    "fixed" => DriveType.Fixed,
+                    "network" => DriveType.Network,
+                    "ramdisk" => DriveType.Ram,
+                    "unknown" => DriveType.Unknown,
+                    _ => null,
+                };
+
+                if (type is DriveType dt)
+                    drives = drives.Where(d => d.DriveType == dt).ToArray();
+
+                return Variant.FromArray(drives.Select(d => d.Name.TrimEnd('/', '\\')).Prepend(drives.Length.ToString()).ToArray(Variant.FromString));
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
+        }
+
+
         public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {
             decimal flag = args[0].ToNumber();
@@ -583,11 +617,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.True;
         }
 
-        // public static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args)
-        // {
-        //     Environment.
-        //     return Variant.Null;
-        // }
+        public static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args) => Variant.False;
 
         public static FunctionReturnValue Execute(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 => au3.ProcessAsVariant(args[0].ToString()));
@@ -1381,9 +1411,45 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
 
-        //public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.NETObject);
+        public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)args[0].IsObject;
 
         public static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
+
+        public static FunctionReturnValue ObjCreate(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                string?[] confg = args[1..].ToArray(a => a.IsDefault ? null : a.ToString());
+
+                if (Variant.TryCreateCOM(args[0].ToString(), confg[0], confg[1], confg[2], out Variant? com))
+                    return com;
+            }
+            catch
+            {
+            }
+
+            return FunctionReturnValue.Error(Variant.Null, 1, Variant.Null);
+        }
+
+        // public static FunctionReturnValue ObjCreateInterface(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue ObjEvent(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue ObjGet(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         public static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
 

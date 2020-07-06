@@ -61,6 +61,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+        <ProjectReference Include="..\util\COMInterop\COMInterop.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Compile Update="Properties\Resources.Designer.cs">

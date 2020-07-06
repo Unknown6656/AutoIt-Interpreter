@@ -49,11 +49,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         public static (string stdout, int code) Bash(string command) => DoPlatformDependent(
             delegate
             {
-                static string escape(char c) => c switch
-                {
-                    '^' or '\'' or '"' or '(' or ')' or '|' or '&' => "^" + c,
-                    _ => c.ToString()
-                };
+                static string escape(char c) => "^[]|()<>&'\"=$".Contains(c) ? "^" + c : c.ToString();
 
                 return Run("cmd.exe", $"/c \"{string.Concat(command.Select(escape))}\"");
             },
