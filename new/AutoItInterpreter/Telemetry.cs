@@ -44,6 +44,7 @@ namespace Unknown6656.AutoIt3
         ExpressionCleanup,
         VariableResolution,
         VariableCreation,
+        COMConnection,
     }
 
     public sealed class Telemetry
@@ -230,11 +231,12 @@ namespace Unknown6656.AutoIt3
             nd_codeexec = nd_runtime.AddChild("Script Execution", get_timings(TelemetryCategory.ScriptExecution));
 
             nd_thread = nd_codeexec.AddChild("Run/Start Thread", get_timings(TelemetryCategory.ThreadRun));
-
             nd_codeexec.AddChild("On Start", get_timings(TelemetryCategory.OnAutoItStart));
             nd_codeexec.AddChild("On Exit", get_timings(TelemetryCategory.OnAutoItExit));
+
             nd_au3 = nd_thread.AddChild("Au3", get_timings(TelemetryCategory.Au3ScriptExecution));
             nd_native = nd_thread.AddChild("Native", get_timings(TelemetryCategory.NativeScriptExecution));
+            nd_thread.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
 
             nd_native.AddChild("Console Out", get_timings(TelemetryCategory.ScriptConsoleOut));
             nd_native.AddChild("Console In", get_timings(TelemetryCategory.ScriptConsoleIn));

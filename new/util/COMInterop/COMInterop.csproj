@@ -7,5 +7,6 @@
         <AssemblyName>autoit3.com</AssemblyName>
         <RootNamespace>Unknown6656.AutoIt3.COM</RootNamespace>
         <OutputType>Library</OutputType>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 </Project>

@@ -1,4 +1,5 @@
 local $xl = ObjCreate("Excel.Application")
+ConsoleWrite($xl);
 With $xl
    .visible = 1
    ;with $y

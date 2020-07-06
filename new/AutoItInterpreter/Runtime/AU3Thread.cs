@@ -1299,7 +1299,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                     if (result.Is(out error))
                                         return error;
 
-                                    variable.Value.TrySetIndexed(index, result);
+                                    variable.Value.TrySetIndexed(Interpreter, index, result);
                                     ++index;
                                 }
 
@@ -1378,7 +1378,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                ProcessExpression(indexer.Item2).Match<Union<InterpreterError, Variant>>(err => err, key =>
                                ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
                                {
-                                   if (target.TrySetIndexed(key, value))
+                                   if (target.TrySetIndexed(Interpreter, key, value))
                                        return value;
 
                                    return WellKnownError("error.invalid_index_assg", target.AssignedTo, key);
@@ -1387,7 +1387,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return ProcessExpression(targ).Match<Union<InterpreterError, Variant>>(err => err, target =>
                                ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
                                {
-                                   if (target.TrySetIndexed(memb, value))
+                                   if (target.TrySetIndexed(Interpreter, memb, value))
                                        return value;
 
                                    return WellKnownError("error.invalid_index_assg", target.AssignedTo, memb);
@@ -1397,7 +1397,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             if (_withcontext_stack.TryPeek(out Variable? variable))
                                 return ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
                                 {
-                                    if (variable.Value.TrySetIndexed(member, value))
+                                    if (variable.Value.TrySetIndexed(Interpreter, member, value))
                                         return value;
 
                                     return WellKnownError("error.invalid_index_assg", variable, member);
@@ -1456,7 +1456,7 @@ namespace Unknown6656.AutoIt3.Runtime
             ProcessExpression(expr).Match<Union<InterpreterError, Variant>>(err => err, collection =>
             ProcessExpression(index).Match<Union<InterpreterError, Variant>>(err => err, key =>
             {
-                if (collection.TryGetIndexed(key, out Variant value))
+                if (collection.TryGetIndexed(Interpreter, key, out Variant value))
                     return value;
 
                 return WellKnownError("error.invalid_index", key);
@@ -1488,7 +1488,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (result.Is(out Variant value) && member is string)
             {
-                if (value.TryGetIndexed(member, out Variant v))
+                if (value.TryGetIndexed(Interpreter, member, out Variant v))
                     result = v;
                 else if (member.Equals("length", StringComparison.InvariantCultureIgnoreCase))
                     result = (Variant)value.Length;

@@ -305,7 +305,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             Variant[] call_args = frame.PassedArguments.Length == 2 &&
                                   args[1] is { Type: VariantType.Array } arr &&
-                                  arr.TryGetIndexed(0, out Variant caa) &&
+                                  arr.TryGetIndexed(frame.Interpreter, 0, out Variant caa) &&
                                   caa.ToString().Equals("CallArgArray", StringComparison.InvariantCultureIgnoreCase) ? arr.ToArray() : args;
 
             call_args = call_args[1..];
@@ -550,7 +550,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 count_rec(new DirectoryInfo(args[0].ToString()), args[2].ToNumber() is 0m or 1m);
 
-                return args[2].ToNumber() is 1 ? Variant.FromArray(total_size, file_count, dir_count) : total_size;
+                return args[2].ToNumber() is 1 ? Variant.FromArray(frame.Interpreter, total_size, file_count, dir_count) : total_size;
             }
             catch
             {
@@ -563,7 +563,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             try
             {
                 DriveInfo[] drives = DriveInfo.GetDrives();
-                DriveType? type = args[0].ToString().ToLower() switch
+                DriveType? type = args[0].ToString().ToLowerInvariant() switch
                 {
                     "cdrom" => DriveType.CDRom,
                     "removable" => DriveType.Removable,
@@ -608,7 +608,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error("", 1, 0);
         }
 
-        public static FunctionReturnValue EnvGet(CallFrame frame, Variant[] args) => Variant.FromObject(Environment.GetEnvironmentVariable(args[0].ToString()));
+        public static FunctionReturnValue EnvGet(CallFrame frame, Variant[] args) => Variant.FromString(Environment.GetEnvironmentVariable(args[0].ToString()));
 
         public static FunctionReturnValue EnvSet(CallFrame frame, Variant[] args)
         {
@@ -921,6 +921,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 {
                     1 => time.ToString("yyyyMMddHHmmss"),
                     _ => Variant.FromArray(
+                        frame.Interpreter,
                         time.Year.ToString("D4"),
                         time.Month.ToString("D2"),
                         time.Day.ToString("D2"),
@@ -1421,7 +1422,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 string?[] confg = args[1..].ToArray(a => a.IsDefault ? null : a.ToString());
 
-                if (Variant.TryCreateCOM(args[0].ToString(), confg[0], confg[1], confg[2], out Variant? com))
+                if (Variant.TryCreateCOM(frame.Interpreter, args[0].ToString(), confg[0], confg[1], confg[2], out Variant? com))
                     return com;
             }
             catch

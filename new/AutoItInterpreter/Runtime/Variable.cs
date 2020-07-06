@@ -127,7 +127,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.COMObject"/></term>
-        ///         <description><see cref="COMWrapper"/></description>
+        ///         <description><see cref="uint"/></description>
         ///     </item>
         /// </list>
         /// </summary>
@@ -168,7 +168,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
-        public readonly int CompareTo(Variant other) => RawData is string s1 && other.RawData is string s2 ? s1.CompareTo(s2) : ToNumber().CompareTo(other.ToNumber());
+        public readonly int CompareTo(Variant other) =>
+            RawData is string s1 && other.RawData is string s2 ? string.Compare(s1, s2, StringComparison.InvariantCultureIgnoreCase) : ToNumber().CompareTo(other.ToNumber());
 
         public readonly bool NotEquals(Variant other) => !EqualsCaseInsensitive(other); // TODO : unit tests
 
@@ -222,6 +223,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 return $"<{func.Location.FileName}>{func.Name}{func.ParameterCount}";
             else if (Type is VariantType.Handle && RawData is int i)
                 return $"hnd:0x{i:x8}";
+            else if (Type is VariantType.COMObject && RawData is uint com)
+                return $"COM:0x{com:x8}";
             else
                 return ToString();
         }
@@ -245,7 +248,7 @@ namespace Unknown6656.AutoIt3.Runtime
             false => 0m,
             int i => i,
             decimal d => d,
-            string s when s.ToLowerInvariant().StartsWith("0x") => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
+            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
             string s => decimal.TryParse(s, out decimal d) ? d : 0m,
             VariantType.Null or _ => 0m,
         };
@@ -259,7 +262,7 @@ namespace Unknown6656.AutoIt3.Runtime
             decimal d when d <= 2147483647m && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
             decimal d when d <= 9223372036854775807m && d >= -9223372036854775808m && d == (long)d => From.Unmanaged((long)d),
             decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
-            string s when s.ToLowerInvariant().StartsWith("0x") => From.Hex(s[2..]),
+            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => From.Hex(s[2..]),
             string s => From.String(s, BytewiseEncoding.Instance),
             _ => System.Array.Empty<byte>(),
         };
@@ -270,11 +273,16 @@ namespace Unknown6656.AutoIt3.Runtime
                 return arr.Cast<object>().ToArray(FromObject);
             else if (RawData is string s)
                 return s.Cast<object>().ToArray(FromObject);
+
+            // TODO : COM objects
+            // TODO : NET objects
+            // TODO : maps
+
             else
                 return Array.Empty<Variant>();
         }
 
-        public readonly (Variant key, Variant value)[] AsOrderedMap()
+        public readonly (Variant key, Variant value)[] ToOrderedMap()
         {
             List<(Variant, Variant)> output = new();
 
@@ -288,16 +296,20 @@ namespace Unknown6656.AutoIt3.Runtime
                 for (int i = 0; i < s.Length; ++i)
                     output.Add((i, FromObject(s[i])));
             else
-                ; // TODO : objects
+
+                // TODO : COM objects
+                // TODO : NET objects
+
+                ;
 
             return output.ToArray();
         }
 
-        public readonly IDictionary<Variant, Variant> ToMap() => AsOrderedMap().ToDictionary();
+        public readonly IDictionary<Variant, Variant> ToMap() => ToOrderedMap().ToDictionary();
 
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
-        public readonly bool TrySetIndexed(Variant index, Variant value)
+        public readonly bool TrySetIndexed(Interpreter interpreter, Variant index, Variant value)
         {
             if (RawData is string _)
                 return false; // RawData = s[..index] + value + s[(index + 1)..];
@@ -325,17 +337,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return true;
             }
-            else if (RawData is COMWrapper com)
-            {
-                var lol = com.GetDynamicMemberNames();
-
-                throw null;
-            }
+            else if (Type is VariantType.COMObject && RawData is uint id)
+                return interpreter.COMConnector?.TrySetIndexed(id, index, value) ?? false;
             else
-                return false; // TODO : objects
+                return false;
         }
 
-        public readonly bool TryGetIndexed(Variant index, out Variant value)
+        public readonly bool TryGetIndexed(Interpreter interpreter, Variant index, out Variant value)
         {
             if (RawData is IDictionary<Variant, Variant> dic)
                 return dic.TryGetValue(index, out value);
@@ -371,12 +379,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     return true;
                 }
             }
-            else if (Type is VariantType.COMObject && RawData is { } com)
-            {
-                throw null;
-            }
+            else if (Type is VariantType.COMObject && RawData is uint id)
+                return interpreter.COMConnector?.TryGetIndexed(id, index, out value) ?? false;
             else
-                return false; // TODO : objects
+                return false;
         }
 
         public readonly bool ResizeArray(int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
@@ -421,7 +427,7 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
         #region STATIC METHODS
 
-        public static Variant GetTypeDefault(VariantType type) => type switch
+        internal static Variant GetTypeDefault(VariantType type) => type switch
         {
             VariantType.Boolean => False,
             VariantType.Number => Zero,
@@ -458,23 +464,22 @@ namespace Unknown6656.AutoIt3.Runtime
             StringBuilder strb => FromString(strb.ToString()),
             IEnumerable<byte> bytes => FromBinary(bytes),
             IEnumerable<Variant> arr => FromArray(arr),
-            IDictionary<Variant, Variant> dic => FromMap(dic),
+            // IDictionary<Variant, Variant> dic => FromMap(interpreter, dic),
             ScriptFunction func => FromFunction(func),
-            COMWrapper com => FromCOMObject(com),
 
             _ => throw new NotImplementedException(obj.ToString()),
             //_ => FromNETObject(obj),
         };
 
-        public static Variant FromMap(params (Variant key, Variant value)[] pairs) => FromMap(pairs.ToDictionary());
+        public static Variant FromMap(Interpreter interpreter, params (Variant key, Variant value)[] pairs) => FromMap(interpreter, pairs.ToDictionary());
 
-        public static Variant FromMap(IDictionary<Variant, Variant> dic)
+        public static Variant FromMap(Interpreter interpreter, IDictionary<Variant, Variant> dic)
         {
             Variant v = NewMap();
             bool error = true;
 
             foreach (Variant key in dic.Keys)
-                error &= v.TrySetIndexed(key, dic[key]);
+                error &= v.TrySetIndexed(interpreter, key, dic[key]);
 
             error ^= true;
 
@@ -485,14 +490,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromArray(IEnumerable<Variant> collection) => FromArray(collection.ToArray());
 
-        public static Variant FromArray(params Variant[] array)
+        public static Variant FromArray(Interpreter interpreter, params Variant[] array)
         {
             Variant v = NewArray(array.Length);
             Variant i = Zero;
 
             foreach (object? element in array)
             {
-                v.TrySetIndexed(i, FromObject(element));
+                v.TrySetIndexed(interpreter, i, FromObject(element));
                 ++v;
             }
 
@@ -523,30 +528,26 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromReference(Variable variable) => new Variant(VariantType.Reference, variable, null);
 
-        //public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
-
-        public static Variant FromCOMObject(COMWrapper obj) => new Variant(VariantType.COMObject, obj, null);
+        // public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
         public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d, null);
 
-        public static Variant FromString(string s) => new Variant(VariantType.String, s, null);
+        public static Variant FromString(string? s) => s is null ? Null : new Variant(VariantType.String, s, null);
 
         public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
 
         public static Variant FromFunction(ScriptFunction func) => new Variant(VariantType.Function, func, null);
 
-        public static bool TryCreateCOM(string classname, string? server, string? username, string? passwd, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? com_object)
+        internal static Variant FromCOMObject(uint id) => new Variant(VariantType.COMObject, id, null);
+
+        public static bool TryCreateCOM(Interpreter interpreter, string classname, string? server, string? username, string? passwd, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? com_object)
         {
             com_object = null;
 
             try
             {
-                if (System.Type.GetTypeFromProgID(classname, server, false) is Type t && Activator.CreateInstance(t) is object com)
-                {
-                    // TODO : username | passwd
-
-                    com_object = FromCOMObject(new COMWrapper(com));
-                }
+                if (interpreter.COMConnector?.TryCreateCOMObject(classname, server, username, passwd) is uint id)
+                    com_object = FromCOMObject(id);
             }
             catch
             {
@@ -727,7 +728,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => $"${Name}: {Value.ToDebugString()}";
 
-        public override int GetHashCode() => Name.ToLowerInvariant().GetHashCode();
+        public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
 
         public override bool Equals(object? obj) => (obj is Variable v && Equals(v))
                                                  || (obj is string s && Name.Equals(s, StringComparison.InvariantCultureIgnoreCase));
@@ -854,202 +855,6 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null, null);
-    }
-
-    public sealed unsafe class COMWrapper
-        : DynamicObject
-        , IEquatable<COMWrapper>
-        , IDisposable
-        , IReflect
-    {
-        private static readonly MethodInfo _get;
-        private static readonly MethodInfo _set;
-        private static readonly MethodInfo _release;
-
-
-        private readonly HashSet<COMWrapper> _objects = new HashSet<COMWrapper>();
-
-        public bool IsDisposed { get; private set; }
-
-        public Indexer<object, object?> Fields { get; }
-
-        public object COMObject { get; }
-
-        public nint IUnknownPtr { get; }
-
-        public Type ObjectType { get; }
-
-        Type IReflect.UnderlyingSystemType => ObjectType;
-
-
-        static COMWrapper()
-        {
-            Type type = Type.GetType("System.__ComObject")!;
-
-            _set = type.GetMethod("SetData", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            _get = type.GetMethod("GetData", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            _release = type.GetMethod("ReleaseAllData", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        }
-
-        private COMWrapper(Guid guid)
-            : this(Activator.CreateInstance(Type.GetTypeFromCLSID(guid, true)!, true)!)
-        {
-        }
-
-        internal COMWrapper(object com)
-        {
-            COMObject = com;
-            ObjectType = com.GetType();
-            IUnknownPtr = Marshal.GetIUnknownForObject(com);
-            Fields = new Indexer<object, object?>(i => _get.Invoke(com, new[] { i }), (i, v) => _set.Invoke(com, new[] { i, v }));
-        }
-
-        ~COMWrapper() => Dispose(default);
-
-        public void Dispose()
-        {
-            Dispose(default);
-
-            GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(__empty dummy)
-        {
-            if (!IsDisposed)
-            {
-                foreach (COMWrapper com in _objects)
-                    com.Dispose();
-
-                _objects.Clear();
-                _release.Invoke(COMObject, null);
-
-                IsDisposed = true;
-            }
-        }
-
-        public override bool TrySetMember(SetMemberBinder binder, object? value)
-        {
-            ObjectType.InvokeMember(binder.Name, BindingFlags.SetProperty, Type.DefaultBinder, COMObject, new[] { value }, CultureInfo.InvariantCulture);
-
-            return true;
-        }
-
-        public override bool TryGetMember(GetMemberBinder binder, out object? result)
-        {
-            result = TransformValue(ObjectType.InvokeMember(binder.Name, BindingFlags.GetProperty, Type.DefaultBinder, COMObject, null, CultureInfo.InvariantCulture));
-
-            return true;
-        }
-
-        public override bool TryGetIndex(GetIndexBinder binder, object?[] indexes, out object? result)
-        {
-            result = TransformValue(ObjectType.InvokeMember("Item", BindingFlags.InvokeMethod | BindingFlags.GetProperty, Type.DefaultBinder, COMObject, indexes, CultureInfo.InvariantCulture));
-
-            return true;
-        }
-
-        public override bool TrySetIndex(SetIndexBinder binder, object?[] indexes, object? value)
-        {
-            ObjectType.InvokeMember("Item", BindingFlags.InvokeMethod | BindingFlags.SetProperty, Type.DefaultBinder, COMObject, indexes.Append(value).ToArray(), CultureInfo.InvariantCulture);
-
-            return true;
-        }
-
-        public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result)
-        {
-            result = TransformValue(ObjectType.InvokeMember(binder.Name, BindingFlags.InvokeMethod, Type.DefaultBinder, COMObject, args?.ToArray(TransformValue), CultureInfo.InvariantCulture));
-
-            return true;
-        }
-
-
-        [DllImport("ole32.dll", PreserveSig = false)]
-        unsafe static extern void CLSIDFromProgIDEx([MarshalAs(UnmanagedType.LPWStr)] string progId, Guid* clsid);
-        [DllImport("ole32.dll", PreserveSig = false)]
-        unsafe static extern void CLSIDFromProgID([MarshalAs(UnmanagedType.LPWStr)] string progId, Guid* clsid);
-        [DllImport("oleaut32.dll", PreserveSig = false)]
-        unsafe static extern void GetActiveObject(Guid* rclsid, void* reserved, [MarshalAs(UnmanagedType.Interface)] out object ppunk);
-
-
-        public override unsafe IEnumerable<string> GetDynamicMemberNames()
-        {
-            var lol = ObjectType.FindMembers(MemberTypes.All, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, null)
-                .ToArray(o => o.Name);
-
-
-
-
-
-            string id = "Excel.Application";
-            Guid clsid;
-            try
-            {
-                CLSIDFromProgIDEx(id, &clsid);
-            }
-            catch (Exception)
-            {
-                CLSIDFromProgID(id, &clsid);
-            }
-            GetActiveObject(&clsid, null, out object ppunk);
-
-            _ = ((dynamic)COMObject).CalculationVersion;
-
-
-
-
-            throw new NotImplementedException();
-        }
-
-        private object? TransformValue(object? value) => value switch
-        {
-            object com when IsComObject(com) => Do(delegate
-            {
-                COMWrapper wrapper = new COMWrapper(com);
-
-                _objects.Add(wrapper);
-
-                return wrapper;
-            }),
-            IEnumerable a when !IsPrimitive(a) => a.Cast<object>().ToArray(TransformValue),
-            COMWrapper o => o.COMObject,
-            _ => value,
-        };
-
-        public override bool TryConvert(ConvertBinder binder, out object result)
-        {
-            result = COMObject;
-
-            return true;
-        }
-
-        public bool Equals(COMWrapper? other) => Equals(COMObject, other?.COMObject);
-
-        public override bool Equals(object? obj) => ReferenceEquals(this, obj) || (obj is COMWrapper cw && Equals(cw));
-
-        public override int GetHashCode() => COMObject?.GetHashCode() ?? 0;
-
-        public static COMWrapper FromGUID(Guid guid) => new COMWrapper(guid);
-
-        private static bool IsComObject(object o) => o.GetType().Name == "__ComObject";
-
-        private static bool IsPrimitive(object o)
-        {
-            Type t = o.GetType();
-
-            return t.IsPrimitive || t.IsValueType || t == typeof(string);
-        }
-
-        public FieldInfo? GetField(string name, BindingFlags bindingAttr) => throw new NotImplementedException();
-        public FieldInfo[] GetFields(BindingFlags bindingAttr) => throw new NotImplementedException();
-        public MemberInfo[] GetMember(string name, BindingFlags bindingAttr) => throw new NotImplementedException();
-        public MemberInfo[] GetMembers(BindingFlags bindingAttr) => throw new NotImplementedException();
-        public MethodInfo? GetMethod(string name, BindingFlags bindingAttr) => throw new NotImplementedException();
-        public MethodInfo? GetMethod(string name, BindingFlags bindingAttr, Binder? binder, Type[] types, ParameterModifier[]? modifiers) => throw new NotImplementedException();
-        public MethodInfo[] GetMethods(BindingFlags bindingAttr) => throw new NotImplementedException();
-        public PropertyInfo[] GetProperties(BindingFlags bindingAttr) => throw new NotImplementedException();
-        public PropertyInfo? GetProperty(string name, BindingFlags bindingAttr) => throw new NotImplementedException();
-        public PropertyInfo? GetProperty(string name, BindingFlags bindingAttr, Binder? binder, Type? returnType, Type[] types, ParameterModifier[]? modifiers) => throw new NotImplementedException();
-        public object? InvokeMember(string name, BindingFlags invokeAttr, Binder? binder, object? target, object?[]? args, ParameterModifier[]? modifiers, CultureInfo? culture, string[]? namedParameters) => throw new NotImplementedException();
     }
 
     public sealed class GlobalObjectStorage

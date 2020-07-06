@@ -4,6 +4,7 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
@@ -30,6 +31,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public CommandLineOptions CommandLineOptions { get; }
 
         public GlobalObjectStorage GlobalObjectStorage { get; }
+
+        public COMConnector? COMConnector { get; }
 
         public ScriptScanner ScriptScanner { get; }
 
@@ -81,6 +84,9 @@ namespace Unknown6656.AutoIt3.Runtime
             GlobalObjectStorage = new GlobalObjectStorage(this);
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
+
+            if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
+                COMConnector = new COMConnector(this);
         }
 
         public void Dispose()
@@ -90,6 +96,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 thread.Dispose();
                 _threads.TryRemove(thread, out _);
             }
+
+            GlobalObjectStorage.Dispose();
+            COMConnector?.Dispose();
         }
 
         public void Stop(int exitcode)
