@@ -119,11 +119,12 @@ namespace Unknown6656.AutoIt3.COM.Server
                                 {
                                     uint id = reader.ReadUInt32();
                                     string name = reader.ReadString();
+                                    COMData[] args = new COMData[reader.ReadInt32()];
 
-                                    if (reader.ReadCOM<COMWrapper>().IsArray(out COMData[]? args) &&
-                                        _server.TryGetCOMObject(id, out COMWrapper com) &&
-                                        com.TryInvoke(name, args!, out COMData? value_o) &&
-                                        value_o is COMData value)
+                                    for (int i = 0; i < args.Length; ++i)
+                                        args[i] = reader.ReadCOM<COMWrapper>();
+
+                                    if (_server.TryGetCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
                                     {
                                         writer.Write(true);
                                         writer.WriteCOM(value);

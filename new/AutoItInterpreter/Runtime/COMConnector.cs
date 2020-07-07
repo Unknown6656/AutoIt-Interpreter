@@ -131,7 +131,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return _reader.ReadBoolean();
         }
 
-        public bool TryGetIndex(uint id, Variant index, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? value)
+        public bool TryGetIndex(uint id, Variant index, out Variant value)
         {
             COMData com_index = Convert(index);
             bool success;
@@ -141,7 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _writer.Flush();
 
             success = _reader.ReadBoolean();
-            value = null;
+            value = Variant.Null;
 
             if (success)
             {
@@ -165,9 +165,9 @@ namespace Unknown6656.AutoIt3.Runtime
             return _reader.ReadBoolean();
         }
 
-        public bool TryGetMember(uint id, string name, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? value)
+        public bool TryGetMember(uint id, string name, out Variant value)
         {
-            value = null;
+            value = Variant.Null;
 
             _writer.Write(id);
             _writer.Write(name);
@@ -185,12 +185,21 @@ namespace Unknown6656.AutoIt3.Runtime
             return success;
         }
 
-        public bool TryInvoke(uint id, string name, Variant[] arguments, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? value)
+        public bool TryInvoke(uint id, string name, Variant[] arguments, out Variant value)
         {
-            value = null;
+            value = Variant.Null;
 
             _writer.Write(id);
             _writer.Write(name);
+            _writer.Write(arguments.Length);
+
+            for (int i = 0; i < arguments.Length; ++i)
+            {
+                COMData arg = Convert(arguments[i]);
+
+                _writer.WriteCOM(arg);
+            }
+
             _writer.Flush();
 
             bool success = _reader.ReadBoolean();
@@ -207,22 +216,22 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variant Read(BinaryReader reader)
         {
-
+            throw new NotImplementedException();
         }
 
         public void Write(BinaryWriter writer, Variant data)
         {
-
+            throw new NotImplementedException();
         }
 
         private COMData<Variant> Convert(Variant index)
         {
-
+            throw new NotImplementedException();
         }
 
-        private Variant? Convert(COMData<Variant> com_value)
+        private Variant Convert(COMData<Variant> com_value)
         {
-
+            throw new NotImplementedException();
         }
     }
 }

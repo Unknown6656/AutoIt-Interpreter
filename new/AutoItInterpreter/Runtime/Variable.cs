@@ -338,7 +338,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 return true;
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
-                return interpreter.COMConnector?.TrySetIndexed(id, index, value) ?? false;
+                return interpreter.COMConnector?.TrySetIndex(id, index, value) ?? false;
             else
                 return false;
         }
@@ -347,12 +347,6 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             if (RawData is IDictionary<Variant, Variant> dic)
                 return dic.TryGetValue(index, out value);
-            else if (index.EqualsCaseInsensitive(nameof(Length)))
-            {
-                value = Length;
-
-                return true;
-            }
 
             int idx = (int)index;
             value = Null;
@@ -380,9 +374,47 @@ namespace Unknown6656.AutoIt3.Runtime
                 }
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
-                return interpreter.COMConnector?.TryGetIndexed(id, index, out value) ?? false;
+                return interpreter.COMConnector?.TryGetIndex(id, index, out value) ?? false;
+            else if (index.EqualsCaseInsensitive(nameof(Length)))
+            {
+                value = Length;
+
+                return true;
+            }
             else
                 return false;
+        }
+
+        public readonly bool TrySetMember(Interpreter interpreter, string member, Variant value)
+        {
+            if (Type is VariantType.COMObject && RawData is uint id)
+                return interpreter.COMConnector?.TrySetMember(id, member, value) ?? false;
+            else if (RawData is IDictionary<Variant, Variant> dic)
+            {
+                dic[member] = value;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public readonly bool TryGetMember(Interpreter interpreter, string member, out Variant value)
+        {
+            value = default;
+
+            if (Type is VariantType.COMObject && RawData is uint id)
+                return interpreter.COMConnector?.TryGetMember(id, member, out value) ?? false;
+            else if (RawData is IDictionary<Variant, Variant> dic)
+                return dic.TryGetValue(member, out value);
+            else if (string.Equals(member, nameof(Length), StringComparison.InvariantCultureIgnoreCase))
+            {
+                value = Length;
+
+                return true;
+            }
+
+            return false;
         }
 
         public readonly bool ResizeArray(int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
