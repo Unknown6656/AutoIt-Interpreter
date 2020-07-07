@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Threading;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.IO;
@@ -7,7 +9,6 @@ using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.COM;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -21,6 +22,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly BinaryReader _reader;
         private readonly BinaryWriter _writer;
         private readonly Process _process;
+        private readonly Task _debug_monitor;
 
         public Interpreter Interpreter { get; }
 
@@ -39,18 +41,30 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    Arguments = PipeName,
+                    Arguments = $"{PipeName} {PipeName}D",
                     FileName = Program.COM_CONNECTOR.FullName,
                 }
             };
             _process.Start();
+            _debug_monitor = Task.Factory.StartNew(async () => await DebugMonitorTask(PipeName + 'D'));
             _client = new NamedPipeClientStream(PipeName);
             _client.Connect();
             _reader = new BinaryReader(_client);
             _writer = new BinaryWriter(_client);
-            _writer.WriteNative(COMInteropCommand._none_);
 
             Program.PrintDebugMessage($"COM connector service '{PipeName}' started.");
+        }
+
+        private async Task DebugMonitorTask(string debug_channel_name)
+        {
+            using NamedPipeServerStream _debug_server = new NamedPipeServerStream(debug_channel_name);
+
+            await _debug_server.WaitForConnectionAsync();
+
+            using BinaryReader _debug_reader = new BinaryReader(_debug_server);
+
+            while (!_process.HasExited)
+                Program.PrintCOMMessage(Interpreter.Telemetry.Measure(TelemetryCategory.COMConnection, _debug_reader.ReadString));
         }
 
         public void Stop()

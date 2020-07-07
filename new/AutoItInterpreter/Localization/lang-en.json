@@ -20,7 +20,8 @@
         },
         "warning": {
             "warning_in": "WARNING in {0}",
-            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder."
+            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "com_unavailable": "Interactions with the COM (Component Object Model) framework are not possible on this plattform. Currently, COM is only available to Windows-like platforms."
         },
         "error": {
             "error_in": "ERROR in {0}",

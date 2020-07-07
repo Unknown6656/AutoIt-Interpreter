@@ -11,6 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.COM.Server
 {
@@ -19,32 +21,54 @@ namespace Unknown6656.AutoIt3.COM.Server
     public static class Program
     {
         private static readonly COMServer _server = new COMServer();
+        private static BinaryWriter? _debug_writer = null;
+        private static volatile bool _running = true;
 
 
         /*
             ARGUMENTS:
-                <pipe name> [...]
+                <data-pipe> <debugging-pipe> [...]
          */
         public static int Main(string[] argv)
         {
             int code = -1;
 
-            if (argv.Length > 0)
+            if (argv.Length > 1)
                 try
                 {
+                    using Task debug_task = Task.Factory.StartNew(async delegate
+                    {
+                        using NamedPipeClientStream debug = new NamedPipeClientStream(argv[1]);
+
+                        await debug.ConnectAsync();
+
+                        _debug_writer = new BinaryWriter(debug);
+
+                        while (_running)
+                            await Task.Delay(100);
+
+                        _debug_writer.Close();
+                        _debug_writer.Dispose();
+                        _debug_writer = null;
+                        debug.Close();
+                        debug.Dispose();
+                    });
                     using NamedPipeServerStream server = new NamedPipeServerStream(argv[0]);
 
                     server.WaitForConnection();
 
                     using BinaryReader reader = new BinaryReader(server);
                     using BinaryWriter writer = new BinaryWriter(server);
-                    bool running = true;
 
-                    while (running && server.IsConnected)
+                    DebugPrint("COM server is running.");
+
+                    while (_running && server.IsConnected)
                         switch (reader.ReadNative<COMInteropCommand>())
                         {
                             case COMInteropCommand.Quit:
-                                running = false;
+                                DebugPrint("Shutting down COM server.");
+
+                                _running = false;
 
                                 break;
                             case COMInteropCommand.Create:
@@ -55,6 +79,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     string? passwd = reader.ReadNullable();
                                     uint? id = _server.CreateCOMObject(classname, servername, username, passwd);
 
+                                    DebugPrint($"Created COM object '{classname}' on '{username}'@'{servername}'. COM object ID: {id}");
+
                                     writer.WriteNullable(id);
                                 }
                                 goto default;
@@ -62,6 +88,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                 {
                                     uint id = reader.ReadUInt32();
                                     string[] members = _server.GetMemberNames(id);
+
+                                    DebugPrint($"Enumerating members of COM object '{id}' ({members.Length} members).");
 
                                     writer.Write(members.Length);
 
@@ -76,6 +104,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     COMData? value_o = null;
                                     bool success = _server.TryGetCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
 
+                                    DebugPrint($"Fetching index '{index}' of COM object '{id}': {(success ? "success" : "fail")}.");
+
                                     writer.Write(success);
 
                                     if (success)
@@ -89,6 +119,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     COMData value = reader.ReadCOM<COMWrapper>();
                                     bool success = _server.TryGetCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
 
+                                    DebugPrint($"Setting index '{index}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
+
                                     writer.Write(success);
                                 }
                                 goto default;
@@ -98,6 +130,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     string name = reader.ReadString();
                                     COMData? value_o = null;
                                     bool success = _server.TryGetCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
+
+                                    DebugPrint($"Fetching member '{name}' of COM object '{id}': {(success ? "success" : "fail")}.");
 
                                     writer.Write(success);
 
@@ -111,6 +145,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     string name = reader.ReadString();
                                     COMData value = reader.ReadCOM<COMWrapper>();
                                     bool success = _server.TryGetCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
+
+                                    DebugPrint($"Setting member '{name}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
 
                                     writer.Write(success);
                                 }
@@ -137,20 +173,23 @@ namespace Unknown6656.AutoIt3.COM.Server
                                 {
                                     uint id = reader.ReadUInt32();
 
+                                    DebugPrint($"Deleting COM object '{id}'.");
+
                                     _server.DeleteCOMObject(id);
                                 }
                                 goto default;
                             case COMInteropCommand.DeleteAll:
+                                DebugPrint($"Deleting all COM objects.");
+
                                 _server.DeleteAllCOMObjects();
 
                                 break;
-                            case COMInteropCommand._none_:
+                            case COMInteropCommand command:
+                                DebugPrint($"Recieving '{command}'.");
+
+                                break;
                             default:
-                                // TODO : sleep (?)
-
                                 writer.Flush();
-
-                                Thread.Sleep(50);
 
                                 break;
                         }
@@ -176,9 +215,23 @@ namespace Unknown6656.AutoIt3.COM.Server
                 finally
                 {
                     _server.DeleteAllCOMObjects();
+                    _debug_writer?.Close();
+                    _debug_writer?.Dispose();
+                    _debug_writer = null;
                 }
 
             return code;
+        }
+
+        public static void DebugPrint(string message)
+        {
+            if (_debug_writer is { } wr)
+            {
+                message = message.Trim();
+
+                wr.Write(message);
+                wr.Flush();
+            }
         }
     }
 
@@ -208,8 +261,9 @@ namespace Unknown6656.AutoIt3.COM.Server
                     _com_objects[_nextid++] = new COMWrapper(com);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Program.DebugPrint(ex.Message);
             }
 
             return null;

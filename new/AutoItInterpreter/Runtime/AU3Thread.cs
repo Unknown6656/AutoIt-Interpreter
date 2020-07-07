@@ -34,10 +34,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public CallFrame? CurrentFrame => _callstack.TryPeek(out CallFrame? lp) ? lp : null;
 
-        public SourceLocation? CurrentLocation => CallStack.SkipWhile(f => f is not AU3CallFrame).FirstOrDefault() switch {
-            AU3CallFrame f => f.CurrentLocation,
-            _ => SourceLocation.Unknown
-        };
+        public SourceLocation? CurrentLocation => CallStack.OfType<AU3CallFrame>().FirstOrDefault()?.CurrentLocation ?? SourceLocation.Unknown;
 
         public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
 
@@ -164,6 +161,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variant ReturnValue { protected set; get; } = Variant.Zero;
 
+        public virtual SourceLocation CurrentLocation => CurrentThread.CurrentLocation ?? CurrentFunction.Location;
+
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
 
@@ -242,6 +241,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public void Print(object? value) => Interpreter.Print(this, value);
 
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
+
+        internal void IssueWarning(string key, params object?[] args) => Program.PrintWarning(CurrentLocation, Program.CurrentLanguage[key, args]);
     }
 #pragma warning restore CA1063
 
@@ -281,7 +282,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public (SourceLocation LineLocation, string LineContent)[] CurrentLineCache => _line_cache.ToArray();
 
-        public SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
+        public override SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
         public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
 
@@ -1685,8 +1686,6 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         private InterpreterError WellKnownError(string key, params object?[] args) => InterpreterError.WellKnown(CurrentLocation, key, args);
-
-        private void IssueWarning(string key, params object?[] args) => Program.PrintWarning(CurrentLocation, Program.CurrentLanguage[key, args]);
     }
 
     [Flags]

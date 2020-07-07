@@ -251,7 +251,9 @@ namespace Unknown6656.AutoIt3
 
         public static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message, false);
 
-        public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Interpreter-Debug", message, false);
+        public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Debug", message, false);
+
+        internal static void PrintCOMMessage(string message) => SubmitPrint(Verbosity.v, "COM-Server", message, false);
 
         public static void PrintScriptMessage(FileInfo? script, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {
@@ -312,6 +314,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
+
+            if (extensive)
+            {
+                ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
+                Console.WriteLine(new string('_', Console.WindowWidth));
+            }
         });
 
         public static void PrintWarning(SourceLocation location, string msg) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate

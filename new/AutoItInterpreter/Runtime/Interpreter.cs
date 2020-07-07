@@ -19,7 +19,6 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
         private readonly object _main_thread_mutex = new object();
         private volatile int _error;
-        private Variant _extended;
 
 
         public AU3Thread? MainThread { get; private set; }
@@ -33,6 +32,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public GlobalObjectStorage GlobalObjectStorage { get; }
 
         public COMConnector? COMConnector { get; }
+
+        public bool IsCOMAvailable => COMConnector is { };
 
         public ScriptScanner ScriptScanner { get; }
 
@@ -50,11 +51,7 @@ namespace Unknown6656.AutoIt3.Runtime
             set => _error = value;
         }
 
-        public Variant ExtendedValue
-        {
-            get => _extended;
-            set => _extended = value;
-        }
+        public Variant ExtendedValue { get; set; }
 
 
         public Interpreter(CommandLineOptions opt)

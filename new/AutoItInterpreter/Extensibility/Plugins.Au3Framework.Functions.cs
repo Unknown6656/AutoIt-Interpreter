@@ -1418,16 +1418,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue ObjCreate(CallFrame frame, Variant[] args)
         {
-            try
-            {
-                string?[] confg = args[1..].ToArray(a => a.IsDefault ? null : a.ToString());
+            if (!frame.Interpreter.IsCOMAvailable)
+                frame.IssueWarning("warning.com_unavailable");
+            else
+                try
+                {
+                    string?[] confg = args[1..].ToArray(a => a.IsDefault ? null : a.ToString());
 
-                if (Variant.TryCreateCOM(frame.Interpreter, args[0].ToString(), confg[0], confg[1], confg[2], out Variant? com))
-                    return com;
-            }
-            catch
-            {
-            }
+                    if (Variant.TryCreateCOM(frame.Interpreter, args[0].ToString(), confg[0], confg[1], confg[2], out Variant? com))
+                        return com;
+                }
+                catch
+                {
+                }
 
             return FunctionReturnValue.Error(Variant.Null, 1, Variant.Null);
         }
