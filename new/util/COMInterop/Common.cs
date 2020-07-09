@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System.Diagnostics;
+using System.Collections;
 using System.Linq;
 using System.IO;
 using System;
@@ -37,42 +38,28 @@ namespace Unknown6656.AutoIt3.COM
         Array,
     }
 
-    public interface ICOMConverter<T>
+    public interface ICOMResolver<T>
     {
-        T Read(BinaryReader reader);
-        void Write(BinaryWriter writer, T data);
+        bool TryResolveCOMObject(uint id, out T com_object);
     }
 
-    internal sealed class DefaultCOMConverter<T>
-        : ICOMConverter<T>
+    [DebuggerDisplay("{" + nameof(Type) + "}: {" + nameof(Data) + "}")]
+    public readonly struct COMData
     {
-        public static DefaultCOMConverter<T> Instance { get; } = new DefaultCOMConverter<T>();
+        //public static ICOMConverter<T> Converter { get; set; } = DefaultCOMConverter<T>.Instance;
 
+        public static COMData Null { get; } = new COMData(COMDataType.Null, null);
 
-        private DefaultCOMConverter()
-        {
-        }
+        public readonly bool IsNull => Type is COMDataType.Null;
 
-        public T Read(BinaryReader reader) => throw new NotImplementedException();
-
-        public void Write(BinaryWriter writer, T data) => throw new NotImplementedException();
-    }
-
-    public readonly struct COMData<T>
-    {
-        private readonly COMDataType _type;
-
-
-        public static ICOMConverter<T> Converter { get; set; } = DefaultCOMConverter<T>.Instance;
-
-        public static COMData<T> Null { get; } = new COMData<T>(COMDataType.Null, null);
+        public readonly COMDataType Type { get; }
 
         public readonly object? Data { get; }
 
 
         private COMData(COMDataType type, object? data)
         {
-            _type = type;
+            Type = type;
             Data = data;
         }
 
@@ -80,7 +67,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Bool;
+            bool res = Type is COMDataType.Bool;
 
             if (res && Data is bool v)
                 value = v;
@@ -92,7 +79,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Byte;
+            bool res = Type is COMDataType.Byte;
 
             if (res && Data is byte v)
                 value = v;
@@ -104,7 +91,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Short;
+            bool res = Type is COMDataType.Short;
 
             if (res && Data is short v)
                 value = v;
@@ -116,7 +103,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Int;
+            bool res = Type is COMDataType.Int;
 
             if (res && Data is int v)
                 value = v;
@@ -128,7 +115,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Long;
+            bool res = Type is COMDataType.Long;
 
             if (res && Data is long v)
                 value = v;
@@ -140,7 +127,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Float;
+            bool res = Type is COMDataType.Float;
 
             if (res && Data is float v)
                 value = v;
@@ -152,7 +139,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.Double;
+            bool res = Type is COMDataType.Double;
 
             if (res && Data is double v)
                 value = v;
@@ -164,7 +151,7 @@ namespace Unknown6656.AutoIt3.COM
         {
             value = default;
 
-            bool res = _type is COMDataType.String;
+            bool res = Type is COMDataType.String;
 
             if (res && Data is string v)
                 value = v;
@@ -172,21 +159,35 @@ namespace Unknown6656.AutoIt3.COM
             return res;
         }
 
-        public readonly bool IsArray(out COMData<T>[]? value)
+        public readonly bool IsArray(out COMData[]? value)
         {
             value = default;
 
-            bool res = _type is COMDataType.Array;
+            bool res = Type is COMDataType.Array;
 
-            if (res && Data is COMData<T>[] v)
+            if (res && Data is COMData[] v)
                 value = v;
+
+            return res;
+        }
+
+        public readonly bool IsCOM() => Type is COMDataType.COM;
+
+        public readonly bool IsCOM<T>(ICOMResolver<T> resolver, out T com_object)
+        {
+            com_object = default;
+
+            bool res = IsCOM();
+
+            if (res && Data is uint id)
+                res &= resolver.TryResolveCOMObject(id, out com_object);
 
             return res;
         }
 
         public readonly void Serialize(BinaryWriter writer)
         {
-            writer.WriteNative(_type);
+            writer.WriteNative(Type);
 
             if (IsBool(out bool b))
                 writer.Write(b);
@@ -204,18 +205,18 @@ namespace Unknown6656.AutoIt3.COM
                 writer.Write(d);
             else if (IsString(out string? str))
                 writer.Write(str);
-            else if (IsArray(out COMData<T>[]? arr))
+            else if (IsArray(out COMData[]? arr))
             {
                 writer.Write(arr!.Length);
 
                 for (int idx = 0; idx < arr.Length; ++idx)
                     arr[idx].Serialize(writer);
             }
-            else if (_type is COMDataType.COM)
-                Converter.Write(writer, (T)Data!);
+            else if (Type is COMDataType.COM)
+                writer.Write((uint)Data!);
         }
 
-        public static COMData<T> Deserialize(BinaryReader reader)
+        public static COMData Deserialize(BinaryReader reader)
         {
             COMDataType type = reader.ReadNative<COMDataType>();
             object? data;
@@ -255,11 +256,11 @@ namespace Unknown6656.AutoIt3.COM
 
                     break;
                 case COMDataType.COM:
-                    data = Converter.Read(reader);
+                    data = reader.ReadUInt32();
 
                     break;
                 case COMDataType.Array:
-                    COMData<T>[] arr = new COMData<T>[reader.ReadInt32()];
+                    COMData[] arr = new COMData[reader.ReadInt32()];
 
                     for (int i = 0; i < arr.Length; ++i)
                         arr[i] = Deserialize(reader);
@@ -273,28 +274,30 @@ namespace Unknown6656.AutoIt3.COM
                     break;
             }
 
-            return new COMData<T>(type, data);
+            return new COMData(type, data);
         }
 
-        public static COMData<T> FromBool(bool value) => new COMData<T>(COMDataType.Bool, value);
+        public static COMData FromBool(bool value) => new COMData(COMDataType.Bool, value);
 
-        public static COMData<T> FromInt(int value) => new COMData<T>(COMDataType.Int, value);
+        public static COMData FromInt(int value) => new COMData(COMDataType.Int, value);
 
-        public static COMData<T> FromByte(byte value) => new COMData<T>(COMDataType.Byte, value);
+        public static COMData FromByte(byte value) => new COMData(COMDataType.Byte, value);
 
-        public static COMData<T> FromShort(short value) => new COMData<T>(COMDataType.Short, value);
+        public static COMData FromShort(short value) => new COMData(COMDataType.Short, value);
 
-        public static COMData<T> FromLong(long value) => new COMData<T>(COMDataType.Long, value);
+        public static COMData FromLong(long value) => new COMData(COMDataType.Long, value);
 
-        public static COMData<T> FromFloat(float value) => new COMData<T>(COMDataType.Float, value);
+        public static COMData FromFloat(float value) => new COMData(COMDataType.Float, value);
 
-        public static COMData<T> FromDouble(double value) => new COMData<T>(COMDataType.Double, value);
+        public static COMData FromDouble(double value) => new COMData(COMDataType.Double, value);
 
-        public static COMData<T> FromString(string value) => new COMData<T>(COMDataType.String, value);
+        public static COMData FromString(string value) => new COMData(COMDataType.String, value);
 
-        public static COMData<T> FromArray(IEnumerable value) => new COMData<T>(COMDataType.String, value.Cast<object?>().Select(FromObject).ToArray());
+        public static COMData FromArray(IEnumerable value) => new COMData(COMDataType.String, value.Cast<object?>().Select(FromArbitrary).ToArray());
 
-        public static COMData<T> FromObject(object? value) => value switch
+        public static COMData FromCOMObjectID(uint id) => new COMData(COMDataType.COM, id);
+
+        public static COMData FromArbitrary(object? value) => value switch
         {
             null => Null,
             bool b => FromBool(b),
@@ -311,15 +314,16 @@ namespace Unknown6656.AutoIt3.COM
             double d => FromDouble(d),
             string s => FromString(s),
             IEnumerable a => FromArray(a),
-            object o => new COMData<T>(COMDataType.COM, o)
+            COMData com => com,
+            _ => throw new NotImplementedException(),
         };
     }
 
     public static unsafe class StreamExtensions
     {
-        public static void WriteCOM<T>(this BinaryWriter writer, COMData<T> data) => data.Serialize(writer);
+        public static void WriteCOM(this BinaryWriter writer, COMData data) => data.Serialize(writer);
 
-        public static COMData<T> ReadCOM<T>(this BinaryReader reader) => COMData<T>.Deserialize(reader);
+        public static COMData ReadCOM(this BinaryReader reader) => COMData.Deserialize(reader);
 
         public static void WriteNullable<T>(this BinaryWriter writer, T? data) where T : unmanaged
         {

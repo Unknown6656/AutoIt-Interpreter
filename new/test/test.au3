@@ -1,10 +1,13 @@
-local $xl = ObjCreate("Excel.Application")
-ConsoleWrite($xl);
+$xl = ObjCreate("Excel.Application")
 With $xl
    .visible = 1
+   .WorkBooks.Add ; Add a new workbook
+   .ActiveWorkBook.ActiveSheet.Cells(1, 1).Value = "Text" ; Fill a cell
    ;with $y
    ;EndWith
     MsgBox(0, "", "msg")
+   .ActiveWorkBook.Saved = 1 ; Simulate a save of the Workbook
+   .Quit
 EndWith
 Exit
 

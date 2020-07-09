@@ -520,14 +520,14 @@ namespace Unknown6656.AutoIt3.Runtime
             return v;
         }
 
-        public static Variant FromArray(IEnumerable<Variant> collection) => FromArray(collection.ToArray());
+        public static Variant FromArray(IEnumerable<Variant>? collection) => FromArray(collection?.ToArray());
 
-        public static Variant FromArray(Interpreter interpreter, params Variant[] array)
+        public static Variant FromArray(Interpreter interpreter, params Variant[]? array)
         {
-            Variant v = NewArray(array.Length);
+            Variant v = NewArray(array?.Length ?? 0);
             Variant i = Zero;
 
-            foreach (object? element in array)
+            foreach (object? element in array ?? Array.Empty<Variant>())
             {
                 v.TrySetIndexed(interpreter, i, FromObject(element));
                 ++v;
@@ -676,7 +676,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant(StringBuilder? n) => FromObject(n);
 
-        public static implicit operator Variant(Variant[] n) => FromArray(n);
+        public static implicit operator Variant(Variant[]? n) => FromArray(n);
 
         public static implicit operator Variant(byte[] n) => FromBinary(n);
 

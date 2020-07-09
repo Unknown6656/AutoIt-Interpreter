@@ -13,6 +13,8 @@ namespace Unknown6656.AutoIt3
     {
         ProgramRuntimeAndPrinting,
         ProgramRuntime,
+        ParseCommandLine,
+        LoadLanguage,
         PerformanceMonitor,
         Printing,
         Warnings,
@@ -99,14 +101,8 @@ namespace Unknown6656.AutoIt3
 
         public void Add(Telemetry other) => _recorded_timings.AddRange(other._recorded_timings);
 
-        public async Task StartPerformanceMonitorAsync()
+        public async Task StartPerformanceMonitorAsync(Process process)
         {
-            if (_run_performancemonitor)
-                _performance_measurements.Clear();
-
-            _run_performancemonitor = true;
-
-            using Process proc = Process.GetCurrentProcess();
             Stopwatch sw = new Stopwatch();
             TimeSpan ts_total, ts_user, ts_kernel;
             int cores = Environment.ProcessorCount;
@@ -114,9 +110,9 @@ namespace Unknown6656.AutoIt3
             while (_run_performancemonitor)
             {
                 sw.Restart();
-                ts_total = proc.TotalProcessorTime;
-                ts_user = proc.UserProcessorTime;
-                ts_kernel = proc.PrivilegedProcessorTime;
+                ts_total = process.TotalProcessorTime;
+                ts_user = process.UserProcessorTime;
+                ts_kernel = process.PrivilegedProcessorTime;
 
                 await Task.Delay(_performance_measurements.Count switch
                 {
@@ -128,9 +124,9 @@ namespace Unknown6656.AutoIt3
 
                 Measure(TelemetryCategory.PerformanceMonitor, delegate
                 {
-                    ts_total = proc.TotalProcessorTime - ts_total;
-                    ts_user = proc.UserProcessorTime - ts_user;
-                    ts_kernel = proc.PrivilegedProcessorTime - ts_kernel;
+                    ts_total = process.TotalProcessorTime - ts_total;
+                    ts_user = process.UserProcessorTime - ts_user;
+                    ts_kernel = process.PrivilegedProcessorTime - ts_kernel;
                     sw.Stop();
 
                     double cpu_total = (double)ts_total.Ticks / sw.ElapsedTicks / cores;
@@ -145,10 +141,22 @@ namespace Unknown6656.AutoIt3
 
                     if (!double.IsFinite(cpu_total) || cpu_total < cpu_user + cpu_kernel)
                         cpu_total = cpu_user + cpu_kernel;
-                    
-                    _performance_measurements.Add((DateTime.Now, cpu_total, cpu_user, cpu_kernel, proc.PrivateMemorySize64));
+
+                    _performance_measurements.Add((DateTime.Now, cpu_total, cpu_user, cpu_kernel, process.PrivateMemorySize64));
                 });
             }
+        }
+
+        public async Task StartPerformanceMonitorAsync()
+        {
+            if (_run_performancemonitor)
+                _performance_measurements.Clear();
+
+            _run_performancemonitor = true;
+
+            using Process proc = Process.GetCurrentProcess();
+
+            await StartPerformanceMonitorAsync(proc);
         }
 
         public void StopPerformanceMonitor() => _run_performancemonitor = false;
@@ -219,6 +227,8 @@ namespace Unknown6656.AutoIt3
             root.AddChild("Printing", get_timings(TelemetryCategory.Printing));
             root.AddChild("Performance Monitoring", get_timings(TelemetryCategory.PerformanceMonitor));
 
+            nd_interpreter.AddChild("Argument Parsing", get_timings(TelemetryCategory.ParseCommandLine));
+            nd_interpreter.AddChild("Load Language Pack(s)", get_timings(TelemetryCategory.LoadLanguage));
             nd_init = nd_interpreter.AddChild("Initialization", get_timings(TelemetryCategory.InterpreterInitialization));
             nd_runtime = nd_interpreter.AddChild("Runtime", get_timings(TelemetryCategory.InterpreterRuntime));
 
@@ -233,10 +243,10 @@ namespace Unknown6656.AutoIt3
             nd_thread = nd_codeexec.AddChild("Run/Start Thread", get_timings(TelemetryCategory.ThreadRun));
             nd_codeexec.AddChild("On Start", get_timings(TelemetryCategory.OnAutoItStart));
             nd_codeexec.AddChild("On Exit", get_timings(TelemetryCategory.OnAutoItExit));
+            nd_codeexec.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
 
             nd_au3 = nd_thread.AddChild("Au3", get_timings(TelemetryCategory.Au3ScriptExecution));
             nd_native = nd_thread.AddChild("Native", get_timings(TelemetryCategory.NativeScriptExecution));
-            nd_thread.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
 
             nd_native.AddChild("Console Out", get_timings(TelemetryCategory.ScriptConsoleOut));
             nd_native.AddChild("Console In", get_timings(TelemetryCategory.ScriptConsoleIn));
@@ -256,7 +266,6 @@ namespace Unknown6656.AutoIt3
             nd_proc.AddChild("Assginment Statements", get_timings(TelemetryCategory.ProcessAssignment));
             nd_proc.AddChild("Expressions", get_timings(TelemetryCategory.ProcessExpression));
             nd_proc.AddChild("External Processing", get_timings(TelemetryCategory.ExternalProcessor));
-
 
             return root;
         }

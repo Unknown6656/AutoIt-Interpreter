@@ -595,7 +595,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             decimal hwnd = args[4].ToNumber();
 
             // TODO
-
+            Console.ReadLine();
+            return Variant.Zero;
 
             throw new NotImplementedException();
         }

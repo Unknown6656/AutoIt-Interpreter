@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
 namespace Unknown6656.AutoIt3.Runtime.Native
 {
@@ -18,7 +17,6 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             PlatformID.Unix => OperatingSystem.Unix,
             _ => OperatingSystem.Windows
         };
-
 
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
@@ -44,6 +42,21 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         [DllImport("libc.so", CharSet = CharSet.Ansi)]
         public static unsafe extern int open([MarshalAs(UnmanagedType.LPStr)] string path, int flags);
+
+        [DllImport("user32.dll")]
+        public static extern int ShowWindow(int hwnd, int nCmdShow);
+
+        [DllImport("ole32.dll")]
+        public static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
+
+        [DllImport("ole32.dll")]
+        public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static unsafe extern bool SetForegroundWindow(nint hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static unsafe extern void* SetFocus(void* hWnd);
 
 
         public static (string stdout, int code) Bash(string command) => DoPlatformDependent(

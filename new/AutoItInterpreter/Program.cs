@@ -113,45 +113,54 @@ namespace Unknown6656.AutoIt3
                     // Console.BackgroundColor = ConsoleColor.Black;
                     // Console.Clear();
 
-                    using Parser parser = new Parser(p => p.HelpWriter = null);
-                    ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
-
-                    result.WithNotParsed(err =>
+                    Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
                     {
-                        HelpText help = HelpText.AutoBuild(result, h =>
-                        {
-                            h.AdditionalNewLineAfterOption = false;
-                            h.MaximumDisplayWidth = 119;
-                            h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
-                            h.Copyright = __module__.Copyright;
-                            h.AddDashesToOption = true;
-                            h.AutoHelp = true;
-                            h.AutoVersion = true;
-                            h.AddNewLineBetweenHelpSections = true;
-                            h.AddEnumValuesToHelpText = false;
+                        using Parser parser = new Parser(p => p.HelpWriter = null);
 
-                            return HelpText.DefaultParsingErrorsHandler(result, h);
-                        }, e => e);
+                        ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
-                        if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                        result.WithNotParsed(err =>
                         {
-                            Console.WriteLine(help.Heading);
-                            Console.WriteLine(help.Copyright);
-                        }
-                        else
-                        {
-                            Console.WriteLine(help);
+                            HelpText help = HelpText.AutoBuild(result, h =>
+                            {
+                                h.AdditionalNewLineAfterOption = false;
+                                h.MaximumDisplayWidth = 119;
+                                h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
+                                h.Copyright = __module__.Copyright;
+                                h.AddDashesToOption = true;
+                                h.AutoHelp = true;
+                                h.AutoVersion = true;
+                                h.AddNewLineBetweenHelpSections = true;
+                                h.AddEnumValuesToHelpText = false;
 
-                            code = -1;
-                        }
-                    });
-                    result.WithParsed(opt =>
+                                return HelpText.DefaultParsingErrorsHandler(result, h);
+                            }, e => e);
+
+                            if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                            {
+                                Console.WriteLine(help.Heading);
+                                Console.WriteLine(help.Copyright);
+                            }
+                            else
+                            {
+                                Console.WriteLine(help);
+
+                                code = -1;
+                            }
+                        });
+
+                        return result;
+                    }).WithParsed(opt =>
                     {
                         CommandLineOptions = opt;
 
-                        if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
-                            CurrentLanguage = lang;
-                        else
+                        Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
+                        {
+                            if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
+                                CurrentLanguage = lang;
+                        });
+
+                        if (CurrentLanguage is null)
                         {
                             code = -1;
                             PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LanguagePacks.Values.Select(p => p.LanguageCode))}'");
@@ -214,12 +223,26 @@ namespace Unknown6656.AutoIt3
         {
             while (_isrunning)
                 if (_print_queue.TryDequeue(out Action? func))
-                    Telemetry.Measure(TelemetryCategory.Printing, func);
+                    try
+                    {
+                        Telemetry.Measure(TelemetryCategory.Printing, func);
+                    }
+                    catch (Exception ex)
+                    {
+                        PrintException(ex);
+                    }
                 else
                     await Task.Delay(50);
 
             while (_print_queue.TryDequeue(out Action? func))
-                Telemetry.Measure(TelemetryCategory.Printing, func);
+                try
+                {
+                    Telemetry.Measure(TelemetryCategory.Printing, func);
+                }
+                catch (Exception ex)
+                {
+                    PrintException(ex);
+                }
 
             _finished = true;
         }
@@ -284,7 +307,7 @@ namespace Unknown6656.AutoIt3
                 Console.WriteLine();
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', Console.WindowWidth));
+            Console.WriteLine(new string('_', Console.WindowWidth - 1));
 
             if (extensive)
             {
@@ -318,7 +341,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             if (extensive)
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-                Console.WriteLine(new string('_', Console.WindowWidth));
+                Console.WriteLine(new string('_', Console.WindowWidth - 1));
             }
         });
 
@@ -378,7 +401,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             TelemetryTimingsNode root = TelemetryTimingsNode.FromTelemetry(telemetry);
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', width));
+            Console.WriteLine(new string('_', width - 1));
             ConsoleExtensions.RGBForegroundColor = retcode == 0 ? RGBAColor.SpringGreen : RGBAColor.Salmon;
             Console.WriteLine($"Exit code: {retcode}     Time: {root.Total}");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
@@ -399,14 +422,45 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             string[] headers = {
                 "Timings category",
                 "Count",
-                "Total Time",
-                "Average Time",
-                "Minimum Time",
-                "Maximum Time",
+                "Total Time (h:m:s)",
+                "Avg. Time (h:m:s)",
+                "Min. Time (h:m:s)",
+                "Max. Time (h:m:s)",
                 "%Time (Parent)",
                 "%Time (Total)",
             };
             List<(string[] cells, TelemetryTimingsNode node)> rows = new();
+            static string ReplaceStart(string input, string search, string replace)
+            {
+                int idx = 0;
+
+                while (input[idx..].StartsWith(search))
+                {
+                    input = input[..idx] + replace + input[(idx + search.Length)..];
+                    idx += replace.Length;
+                }
+
+                return input;
+            }
+            static string PrintTime(TimeSpan time)
+            {
+                string s = time.ToString(time.TotalSeconds switch
+                {
+                    < 1 => "hh\\:mm\\:ss\\.fffffff",
+                    < 10 => "hh\\:mm\\:ss\\.fffff",
+                    < 60 => "hh\\:mm\\:ss\\.fff",
+                    _ => "hh\\:mm\\:ss\\.f",
+                });
+
+                s = ReplaceStart(s, "00:", "   ").Replace("00.", " 0.").TrimEnd('0');
+
+                if (s.EndsWith("0."))
+                    s = s[..^1];
+                else if (s.IndexOf('.') == 2)
+                    s = s[1..];
+
+                return s;
+            }
             void traverse(TelemetryTimingsNode node, string prefix = "", bool last = true)
             {
                 rows.Add((new[]
@@ -416,11 +470,11 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                         0 => " ·─ " + node.Name,
                         _ => string.Concat(prefix.Select(c => c is 'x' ? " │  " : "    ").Append(last ? " └─ " : " ├─ ").Append(node.Name))
                     },
-                    node.Timings.Length.ToString(),
-                    node.Total.ToString(),
-                    node.Average.ToString(),
-                    node.Min.ToString(),
-                    node.Max.ToString(),
+                    node.Timings.Length.ToString().PadLeft(5),
+                    PrintTime(node.Total),
+                    PrintTime(node.Average),
+                    PrintTime(node.Min),
+                    PrintTime(node.Max),
                     $"{node.PercentageOfParent * 100,9:F5} %",
                     $"{node.PercentageOfTotal * 100,9:F5} %",
                 }, node));
@@ -663,7 +717,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             #endregion
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', width));
+            Console.WriteLine(new string('_', width - 1));
         });
 
         public static void PrintBanner()
