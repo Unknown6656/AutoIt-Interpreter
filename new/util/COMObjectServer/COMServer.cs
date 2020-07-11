@@ -410,12 +410,16 @@ namespace Unknown6656.AutoIt3.COM.Server
         }
 
         internal COMWrapper(object com)
+            : this(com, com.GetType())
+        {
+        }
+
+        internal COMWrapper(object com, Type type)
         {
             COMObject = com;
-            ObjectType = com.GetType();
+            ObjectType = type;
             IUnknownPtr = Marshal.GetIUnknownForObject(com);
 
-            Type? type = ObjectType;
             List<MemberInfo> members = new List<MemberInfo>();
 
             do
@@ -429,7 +433,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                 type = type.BaseType;
             }
-            while (type is { } && type != typeof(object));
+            while (type is { } && type != typeof(object));
 
             _cached_members = members.ToArray();
 
@@ -750,8 +754,6 @@ namespace Unknown6656.AutoIt3.COM.Server
             _ => value,
         };
 
-
-
         private object? TransformValue(object? value, Type type)
         {
             switch (value)
@@ -760,19 +762,27 @@ namespace Unknown6656.AutoIt3.COM.Server
                     if (_objects.FirstOrDefault(w => ReferenceEquals(w.COMObject, com)) is COMWrapper w)
                         return w;
 
-                    COMWrapper wrapper = new COMWrapper(com);
+                    // TODO : force typecast for [com]
+
+                    COMWrapper wrapper = new COMWrapper(com, type);
 
                     _objects.Add(wrapper);
 
                     return wrapper;
                 case IEnumerable enumerable when !IsPrimitive(enumerable):
                     object?[] array = enumerable.Cast<object>().ToArray();
+                    Type? ctype = null;
+
+                    foreach (object? obj in array)
+                        if (obj?.GetType() is Type t)
+                            ctype = (ctype is null ? t : (ctype.GetCommonBaseClass(t) ?? ctype.GetCommonInterface(t))) ?? typeof(object);
+
+                    ctype ??= typeof(object);
 
                     for (int i = 0; i < array.Length; ++i)
-                        array[i] = TransformValue(array[i], );
-                
-                    :
-                        a.Cast<object>().Select(TransformValue).ToArray(),
+                        array[i] = TransformValue(array[i], ctype);
+
+                    return array;
                 default:
                     return value;
             }
