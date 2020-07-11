@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using System.IO;
 using System;
+using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.COM
 {
@@ -40,12 +41,19 @@ namespace Unknown6656.AutoIt3.COM
 
     public interface ICOMResolver<T>
     {
+        uint GetCOMObjectID(T com_object);
         bool TryResolveCOMObject(uint id, out T com_object);
     }
+
+    public delegate bool COMResolver<T>(uint id, out T com);
 
     [DebuggerDisplay("{" + nameof(Type) + "}: {" + nameof(Data) + "}")]
     public readonly struct COMData
     {
+        private static readonly List<(Type expected, Func<object, uint> func)> _converters_from_com = new();
+        private static readonly List<COMResolver<object>> _converters_to_com = new();
+
+
         //public static ICOMConverter<T> Converter { get; set; } = DefaultCOMConverter<T>.Instance;
 
         public static COMData Null { get; } = new COMData(COMDataType.Null, null);
@@ -173,16 +181,24 @@ namespace Unknown6656.AutoIt3.COM
 
         public readonly bool IsCOM() => Type is COMDataType.COM;
 
-        public readonly bool IsCOM<T>(ICOMResolver<T> resolver, out T com_object)
+        public readonly bool IsCOM<T>(out T com_object)
         {
-            com_object = default;
+            com_object = default!;
 
-            bool res = IsCOM();
+            if (IsCOM() && Data is uint id)
+                foreach (COMResolver<object> resolver in _converters_to_com)
+                    if (resolver(id, out object com))
+                        try
+                        {
+                            com_object = (T)com;
 
-            if (res && Data is uint id)
-                res &= resolver.TryResolveCOMObject(id, out com_object);
+                            return true;
+                        }
+                        catch
+                        {
+                        }
 
-            return res;
+            return false;
         }
 
         public readonly void Serialize(BinaryWriter writer)
@@ -315,8 +331,31 @@ namespace Unknown6656.AutoIt3.COM
             string s => FromString(s),
             IEnumerable a => FromArray(a),
             COMData com => com,
-            _ => throw new NotImplementedException(),
+            object obj => new Func<COMData>(delegate
+            {
+                foreach ((Type expected, Func<object, uint> converter) in _converters_from_com)
+                    if (expected.IsAssignableFrom(obj.GetType()))
+                        return FromCOMObjectID(converter(obj));
+
+                throw new NotImplementedException();
+            })(),
         };
+
+        public static void RegisterCOMResolverMethods<T>(Func<T, uint> from_com, COMResolver<T> to_com)
+        {
+            _converters_from_com.Add((typeof(T), o => from_com((T)o)));
+            _converters_to_com.Add(new COMResolver<object>((uint id, out object o) =>
+            {
+                o = null!;
+
+                if (to_com(id, out T obj))
+                    o = obj;
+
+                return o is { };
+            }));
+        }
+
+        public static void RegisterCOMResolver<T>(ICOMResolver<T> com_resolver) => RegisterCOMResolverMethods<T>(com_resolver.GetCOMObjectID, com_resolver.TryResolveCOMObject);
     }
 
     public static unsafe class StreamExtensions

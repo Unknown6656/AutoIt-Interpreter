@@ -9,15 +9,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.COM.Server
 {
     public static class Program
     {
-        private static readonly COMServer _server = new COMServer();
         private static BinaryWriter? _debug_writer = null;
         private static volatile bool _running = true;
 
+        public static COMServer Server { get; } = new COMServer();
 
         /*
             ARGUMENTS:
@@ -62,7 +65,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                             case COMInteropCommand.Quit:
                                 DebugPrint("Shutting down COM server.");
 
-                                _server.DeleteAllCOMObjects();
+                                Server.DeleteAllCOMObjects();
                                 _running = false;
 
                                 break;
@@ -72,7 +75,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     string? servername = reader.ReadNullable();
                                     string? username = reader.ReadNullable();
                                     string? passwd = reader.ReadNullable();
-                                    uint? id = _server.CreateCOMObject(classname, servername, username, passwd);
+                                    uint? id = Server.CreateCOMObject(classname, servername, username, passwd);
 
                                     DebugPrint($"Created COM object '{classname}' on '{username}'@'{servername}'. COM object ID: {id}");
 
@@ -82,7 +85,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                             case COMInteropCommand.EnumerateMembers:
                                 {
                                     uint id = reader.ReadUInt32();
-                                    string[] members = _server.GetMemberNames(id);
+                                    string[] members = Server.GetMemberNames(id);
 
                                     DebugPrint($"Enumerating members of COM object '{id}' ({members.Length} members).");
 
@@ -97,7 +100,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     uint id = reader.ReadUInt32();
                                     COMData index = reader.ReadCOM();
                                     COMData? value_o = null;
-                                    bool success = _server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
+                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
 
                                     DebugPrint($"Fetching index '{index}' of COM object '{id}': {(success ? "success" : "fail")}.");
 
@@ -112,7 +115,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     uint id = reader.ReadUInt32();
                                     COMData index = reader.ReadCOM();
                                     COMData value = reader.ReadCOM();
-                                    bool success = _server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
+                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
 
                                     DebugPrint($"Setting index '{index}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
 
@@ -124,7 +127,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     uint id = reader.ReadUInt32();
                                     string name = reader.ReadString();
                                     COMData? value_o = null;
-                                    bool success = _server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
+                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
 
                                     DebugPrint($"Fetching member '{name}' of COM object '{id}': {(success ? "success" : "fail")}.");
 
@@ -139,7 +142,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     uint id = reader.ReadUInt32();
                                     string name = reader.ReadString();
                                     COMData value = reader.ReadCOM();
-                                    bool success = _server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
+                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
 
                                     DebugPrint($"Setting member '{name}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
 
@@ -155,7 +158,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     for (int i = 0; i < args.Length; ++i)
                                         args[i] = reader.ReadCOM();
 
-                                    if (_server.TryResolveCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
+                                    if (Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
                                     {
                                         writer.Write(true);
                                         writer.WriteCOM(value);
@@ -170,13 +173,13 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                                     DebugPrint($"Deleting COM object '{id}'.");
 
-                                    _server.DeleteCOMObject(id);
+                                    Server.DeleteCOMObject(id);
                                 }
                                 goto default;
                             case COMInteropCommand.DeleteAll:
                                 DebugPrint($"Deleting all COM objects.");
 
-                                _server.DeleteAllCOMObjects();
+                                Server.DeleteAllCOMObjects();
 
                                 break;
                             case COMInteropCommand command:
@@ -210,7 +213,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                 }
                 finally
                 {
-                    _server.DeleteAllCOMObjects();
+                    Server.DeleteAllCOMObjects();
                     _debug_writer?.Flush();
                     _debug_writer?.Close();
                     _debug_writer?.Dispose();
@@ -240,28 +243,45 @@ namespace Unknown6656.AutoIt3.COM.Server
         : ICOMResolver<COMWrapper>
     {
         private readonly ConcurrentDictionary<uint, COMWrapper> _com_objects = new();
+        private readonly object _mutex = new object();
         private volatile uint _nextid = 0;
 
+
+        public COMServer() => COMData.RegisterCOMResolver(this);
+
+        public uint AddCOMObject(object raw)
+        {
+            foreach (uint key in _com_objects.Keys)
+                if (ReferenceEquals(_com_objects[key], raw) || ReferenceEquals(_com_objects[key].COMObject, raw))
+                    return key;
+
+            COMWrapper cw = raw as COMWrapper ?? new COMWrapper(raw);
+
+            lock(_mutex)
+            {
+                uint id = ++_nextid;
+
+                _com_objects[id] = cw;
+
+                return id;
+            }
+        }
+
+        public uint GetCOMObjectID(COMWrapper com_object) => AddCOMObject(com_object);
 
         public uint? CreateCOMObject(string classname, string? server = null, string? user = null, string? passwd = null)
         {
             try
             {
-                COMWrapper? cw = null;
+                object? raw = null;
 
                 if (Guid.TryParse(classname, out Guid uuid))
-                    cw = new COMWrapper(uuid);
+                    raw = new COMWrapper(uuid);
                 else if (Type.GetTypeFromProgID(classname, server, false) is Type t && Activator.CreateInstance(t) is { } com)
-                    cw = new COMWrapper(com); // TODO : username | passwd
+                    raw = com; // TODO : username | passwd
 
-                if (cw is { })
-                {
-                    uint id = ++_nextid;
-
-                    _com_objects[id] = cw;
-
-                    return id;
-                }
+                if (raw is { })
+                    return AddCOMObject(raw);
             }
             catch (Exception ex)
             {
@@ -295,7 +315,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             return Array.Empty<string>();
         }
 
-        internal static object? Cast(object? value, Type target_type)
+        internal object? Cast(object? value, Type target_type)
         {
             if (target_type == typeof(object))
                 return value;
@@ -333,6 +353,8 @@ namespace Unknown6656.AutoIt3.COM.Server
                 return Convert.ToDateTime(value);
             else if (target_type.IsAssignableFrom(value?.GetType()))
                 return value;
+            else if ((value?.GetType()?.IsClass ?? false) && target_type == typeof(COMWrapper))
+                return _com_objects[AddCOMObject(value)];
             else
                 // TODO : array conversion
 
@@ -340,6 +362,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         }
     }
 
+    [DebuggerDisplay("{" + nameof(ObjectType) + "}")]
     public sealed unsafe class COMWrapper
         // : DynamicObject
         : IEquatable<COMWrapper>
@@ -361,7 +384,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
         public bool IsDisposed { get; private set; }
 
-        private object? COMObject { get; set; }
+        internal object? COMObject { get; private set; }
 
         public nint IUnknownPtr { get; }
 
@@ -391,12 +414,24 @@ namespace Unknown6656.AutoIt3.COM.Server
             COMObject = com;
             ObjectType = com.GetType();
             IUnknownPtr = Marshal.GetIUnknownForObject(com);
-            _cached_members = ObjectType.FindMembers(
-                MemberTypes.Field | MemberTypes.Property | MemberTypes.Event | MemberTypes.Method,
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance,
-                (_, _) => true,
-                null
-            );
+
+            Type? type = ObjectType;
+            List<MemberInfo> members = new List<MemberInfo>();
+
+            do
+            {
+                members.AddRange(type.FindMembers(
+                    MemberTypes.Field | MemberTypes.Property | MemberTypes.Event | MemberTypes.Method,
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance,
+                    (_, _) => true,
+                    null
+                ));
+
+                type = type.BaseType;
+            }
+            while (type is { } && type != typeof(object));
+
+            _cached_members = members.ToArray();
 
             Program.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) created.");
         }
@@ -472,7 +507,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             try
             {
-                if (FindMembers(INDEX_NAME) is { Count: > 0 } match)
+                if (FindMembers(INDEX_NAME, MemberFindMode.Getter) is { Count: > 0 } match)
                 {
                     object? data = GetMember(match[0], new[] { index.Data });
 
@@ -492,7 +527,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         {
             try
             {
-                if (FindMembers(INDEX_NAME) is { Count: > 0 } match)
+                if (FindMembers(INDEX_NAME, MemberFindMode.Setter) is { Count: > 0 } match)
                 {
                     SetMember(match[0], value.Data, new[] { index.Data });
 
@@ -512,7 +547,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             try
             {
-                if (FindMembers(name) is { Count: > 0 } match)
+                if (FindMembers(name, MemberFindMode.Getter) is { Count: > 0 } match)
                 {
                     object? data = GetMember(match[0]);
 
@@ -532,7 +567,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         {
             try
             {
-                if (FindMembers(name) is { Count: > 0 } match)
+                if (FindMembers(name, MemberFindMode.Setter) is { Count: > 0 } match)
                 {
                     SetMember(match[0], value.Data);
 
@@ -552,7 +587,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             try
             {
-                if (FindMembers(name) is { Count: > 0 } match)
+                if (FindMembers(name, MemberFindMode.Regular) is { Count: > 0 } match)
                 {
                     // TODO : overload resolution
 
@@ -570,142 +605,127 @@ namespace Unknown6656.AutoIt3.COM.Server
             return false;
         }
 
-        private List<MemberInfo> FindMembers(string name)
+        private List<MemberInfo> FindMembers(string name, MemberFindMode mode)
         {
             List<MemberInfo> members = _cached_members.Where(m => m.Name == name).ToList();
 
             if (members.Count == 0)
                 members.AddRange(_cached_members.Where(m => string.Equals(name, m.Name, StringComparison.InvariantCultureIgnoreCase)));
 
+            if (members.Count == 0)
+            {
+                Regex regex = new Regex("^(" + string.Join("|", new[]
+                {
+                    (MemberFindMode.EventAdd, "add_"),
+                    (MemberFindMode.EventRemove, "remove_"),
+                    (MemberFindMode.Setter, "set_"),
+                    (MemberFindMode.Getter, "get_"),
+                }.Where(t => mode.HasFlag(t.Item1)).Select(t => t.Item2)) + ")?" + name + "$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+                members.AddRange(_cached_members.Where(m => regex.IsMatch(m.Name)));
+            }
+
             return members;
         }
 
-        private object? GetMember(MemberInfo member, object?[]? args = null) => TransformValue(member switch
+        private object? GetMember(MemberInfo member, object?[]? args = null)
         {
-            FieldInfo field => field.GetValue(field.IsStatic ? null : COMObject),
-            MethodInfo method => new Func<object?>(() =>
+            object? value;
+            Type type;
+
+            switch (member)
             {
-                ParameterInfo[] parms = method.GetParameters();
+                case FieldInfo field:
+                    type = field.FieldType;
+                    value = field.GetValue(field.IsStatic ? null : COMObject);
 
-                args = args?.Select(TransformValue).ToArray() ?? Array.Empty<object>();
+                    break;
+                case MethodInfo method:
+                    {
+                        ParameterInfo[] parms = method.GetParameters();
 
-                for (int i = 0; i < parms.Length; ++i)
-                    args[i] = COMServer.Cast(args[i], parms[i].ParameterType);
+                        args ??= new object[parms.Length];
 
-                return method.Invoke(method.IsStatic ? null : COMObject, args);
-            })(),
-            PropertyInfo property => new Func<object?>(() =>
-            {
-                ParameterInfo[] parms = property.GetIndexParameters();
+                        for (int i = 0; i < parms.Length; ++i)
+                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
 
-                args ??= new object[parms.Length];
+                        type = method.ReturnType;
+                        value = method.Invoke(method.IsStatic ? null : COMObject, args);
+                    }
+                    break;
+                case PropertyInfo property:
+                    {
+                        ParameterInfo[] parms = property.GetIndexParameters();
 
-                for (int i = 0; i < parms.Length; ++i)
-                    args[i] = COMServer.Cast(args[i], parms[i].ParameterType);
+                        args ??= new object[parms.Length];
 
-                return property.GetValue(COMObject, args);
-            })(),
+                        for (int i = 0; i < parms.Length; ++i)
+                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
 
-            EventInfo @event => throw new NotImplementedException(),
-            _ => throw new NotImplementedException(),
-        });
+                        type = property.PropertyType;
 
-        private object? SetMember(MemberInfo member, object? value, object?[]? args = null)
+                        if (args.Length == 0)
+                            value = property.GetValue(COMObject);
+                        else
+                            value = property.GetValue(COMObject, args);
+                    }
+                    break;
+                case EventInfo @event:
+                default:
+                    throw new NotImplementedException();
+            }
+
+            return TransformValue(value, type);
+        }
+
+        private void SetMember(MemberInfo member, object? value, object?[]? args = null)
         {
-            return TransformValue(member switch
+            switch (member)
             {
-                FieldInfo field => new Func<object?>(() =>
-                {
-                    value = COMServer.Cast(TransformValue(value), field.FieldType);
+                case FieldInfo field:
+                    {
+                        value = Unbox(Program.Server.Cast(value, field.FieldType));
 
-                    field.SetValue(field.IsStatic ? null : COMObject, value);
+                        field.SetValue(field.IsStatic ? null : COMObject, value);
+                    }
+                    break;
+                case MethodInfo method:
+                    {
+                        ParameterInfo[] parms = method.GetParameters();
 
-                    return value;
-                })(),
-                MethodInfo method => new Func<object?>(() =>
-                {
-                    ParameterInfo[] parms = method.GetParameters();
+                        args = (args is null ? new[] { value } : args.Append(value)).ToArray();
 
-                    args = (args is null ? new[] { value } : args.Append(value)).Select(TransformValue).ToArray();
+                        for (int i = 0; i < parms.Length; ++i)
+                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
 
-                    for (int i = 0; i < parms.Length; ++i)
-                        args[i] = COMServer.Cast(args[i], parms[i].ParameterType);
+                        method.Invoke(method.IsStatic ? null : COMObject, args);
+                    }
+                    break;
+                case PropertyInfo property:
+                    {
+                        ParameterInfo[] parms = property.GetIndexParameters();
 
-                    return method.Invoke(method.IsStatic ? null : COMObject, args);
-                })(),
-                PropertyInfo property => new Func<object?>(() =>
-                {
-                    ParameterInfo[] parms = property.GetIndexParameters();
+                        args ??= new object[parms.Length];
 
-                    args ??= new object[parms.Length];
+                        for (int i = 0; i < parms.Length; ++i)
+                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
 
-                    for (int i = 0; i < parms.Length; ++i)
-                        args[i] = COMServer.Cast(args[i], parms[i].ParameterType);
+                        value = Unbox(Program.Server.Cast(value, property.PropertyType));
 
-                    value = COMServer.Cast(TransformValue(value), property.PropertyType);
-
-                    property.SetValue(COMObject, value, args);
-
-                    return value;
-                })(),
-
-                EventInfo @event => throw new NotImplementedException(),
-                _ => throw new NotImplementedException()
-            });
+                        if (args.Length == 0)
+                            property.SetValue(COMObject, value);
+                        else
+                            property.SetValue(COMObject, value, args);
+                    }
+                    break;
+                case EventInfo @event:
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         #endregion
         #region OVERRIDES
-
-        // public override bool TrySetMember(SetMemberBinder binder, object? value)
-        // {
-        //     SetMember(binder.Name, value);
-        // 
-        //     return true;
-        // }
-        // 
-        // public override bool TryGetMember(GetMemberBinder binder, out object? result)
-        // {
-        //     bool success = TryGetMember(binder.Name, out COMData? value);
-        // 
-        //     result = value?.Data;
-        // 
-        //     return success;
-        // }
-        // 
-        // public override bool TryGetIndex(GetIndexBinder binder, object?[] indices, out object? result)
-        // {
-        //     result = GetIndex(indices);
-        // 
-        //     return true;
-        // }
-        // 
-        // public override bool TrySetIndex(SetIndexBinder binder, object?[] indices, object? value)
-        // {
-        //     SetIndex(indices, value);
-        // 
-        //     return true;
-        // }
-        // 
-        // public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result)
-        // {
-        //     result = InvokeMember(binder.Name, args);
-        // 
-        //     return true;
-        // }
-        // 
-        // public override unsafe IEnumerable<string> GetDynamicMemberNames()
-        // {
-        //     return ObjectType.FindMembers(MemberTypes.Field | MemberTypes.Property | MemberTypes.Method, BindingFlags.Public | BindingFlags.Instance, null, null)
-        //                      .Select(o => o.Name);
-        // }
-        // 
-        // public override bool TryConvert(ConvertBinder binder, out object result)
-        // {
-        //     result = COMObject;
-        // 
-        //     return true;
-        // }
 
         public override int GetHashCode() => COMObject?.GetHashCode() ?? 0;
 
@@ -715,20 +735,48 @@ namespace Unknown6656.AutoIt3.COM.Server
 
         #endregion
 
-        private object? TransformValue(object? value) => value switch
+        private object? Unbox(object? value) => value switch
         {
-            object com when IsComObject(com) => new Func<COMWrapper>(delegate
-            {
-                COMWrapper wrapper = new COMWrapper(com);
-
-                _objects.Add(wrapper);
-
-                return wrapper;
-            })(),
-            IEnumerable a when !IsPrimitive(a) => a.Cast<object>().Select(TransformValue).ToArray(),
             COMWrapper o => o.COMObject,
+            IEnumerable a when !IsPrimitive(a) => a.Cast<object>().Select(Unbox).ToArray(),
+            //object com when IsComObject(com) => new Func<COMWrapper>(delegate
+            //{
+            //    if (_objects.FirstOrDefault(w => ReferenceEquals(w.COMObject, com)) is COMWrapper w)
+            //        return w;
+            //    COMWrapper wrapper = new COMWrapper(com);
+            //    _objects.Add(wrapper);
+            //    return wrapper;
+            //})(),
             _ => value,
         };
+
+
+
+        private object? TransformValue(object? value, Type type)
+        {
+            switch (value)
+            {
+                case object com when IsComObject(com):
+                    if (_objects.FirstOrDefault(w => ReferenceEquals(w.COMObject, com)) is COMWrapper w)
+                        return w;
+
+                    COMWrapper wrapper = new COMWrapper(com);
+
+                    _objects.Add(wrapper);
+
+                    return wrapper;
+                case IEnumerable enumerable when !IsPrimitive(enumerable):
+                    object?[] array = enumerable.Cast<object>().ToArray();
+
+                    for (int i = 0; i < array.Length; ++i)
+                        array[i] = TransformValue(array[i], );
+                
+                    :
+                        a.Cast<object>().Select(TransformValue).ToArray(),
+                default:
+                    return value;
+            }
+        }
 
         public static COMWrapper FromGUID(Guid guid) => new COMWrapper(guid);
 
@@ -740,5 +788,15 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             return t.IsPrimitive || t.IsValueType || t == typeof(string);
         }
+    }
+
+    [Flags]
+    public enum MemberFindMode
+    {
+        Regular = 0,
+        Getter = 1,
+        Setter = 2,
+        EventAdd = 4,
+        EventRemove = 8,
     }
 }

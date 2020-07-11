@@ -39,6 +39,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Program.PrintDebugMessage("Starting COM connector service ...");
 
+            COMData.RegisterCOMResolver(this);
+
             PipeName = $"__autoit3_com_connector_{Guid.NewGuid():N}";
             Interpreter = interpreter;
             ServerProcess = new Process
@@ -67,9 +69,22 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             using Process vs_current = Process.GetCurrentProcess();
 
-            if (VisualStudioAttacher.GetAttachedVisualStudio(vs_current) is (Process vs_proc, _DTE vs_inst))
-                using (vs_proc)
-                    VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
+            try
+            {
+                if (VisualStudioAttacher.GetAttachedVisualStudio(vs_current) is (Process vs_proc, _DTE vs_inst))
+                    using (vs_proc)
+                    {
+                        VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
+
+                        Program.PrintDebugMessage("Visual Studio debugger attached to COM server.");
+
+                        return;
+                    }
+            }
+            catch
+            {
+                Program.PrintWarning(SourceLocation.Unknown, "Unable to attach Visual Studio debugger to COM server.");
+            }
 #endif
         }
 
@@ -280,6 +295,8 @@ namespace Unknown6656.AutoIt3.Runtime
             return true;
         }
 
+        public uint GetCOMObjectID(Variant com_object) => System.Convert.ToUInt32(com_object.RawData);
+
         private COMData Convert(Variant com_data) => com_data.Type switch
         {
             VariantType.Null or VariantType.Default => COMData.Null,
@@ -323,7 +340,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 return d;
             else if (com_data.IsString(out string? str))
                 return str;
-            else if (com_data.IsCOM(this, out Variant com))
+            else if (com_data.IsCOM(out Variant com))
                 return com;
             else if (com_data.IsArray(out COMData[]? array))
                 return array?.ToArray(Convert);
@@ -339,7 +356,7 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         public static string? GetSolutionForVisualStudio(Process vs_process)
         {
-            if (TryGetVsInstance(vs_process.Id, out _DTE isntance))
+            if (TryGetVsInstance(vs_process.Id, out _DTE? isntance))
                 try
                 {
                     return isntance.Solution.FullName;
@@ -384,7 +401,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Process? GetVisualStudioForSolution(string solutionName)
         {
             foreach (Process proc in GetVisualStudioProcesses())
-                if (TryGetVsInstance(proc.Id, out _DTE instance))
+                if (TryGetVsInstance(proc.Id, out _DTE? instance))
                     try
                     {
                         string name = Path.GetFileName(instance.Solution.FullName);
@@ -414,13 +431,13 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 NativeInterop.CreateBindCtx(0, out IBindCtx ctx);
 
-                monikers[0].GetDisplayName(ctx, null, out string runningObjectName);
-                runningObjectTable.GetObject(monikers[0], out object runningObjectVal);
+                monikers[0].GetDisplayName(ctx, null, out string running_name);
+                runningObjectTable.GetObject(monikers[0], out object? running_obj);
 
-                if (runningObjectVal is _DTE && runningObjectName.StartsWith("!VisualStudio"))
-                    if (int.Parse(runningObjectName.Split(':')[1]) == processId)
+                if (running_obj is _DTE && running_name.StartsWith("!VisualStudio"))
+                    if (int.Parse(running_name.Split(':')[1]) == processId)
                     {
-                        instance = (_DTE)runningObjectVal;
+                        instance = (_DTE)running_obj;
 
                         return true;
                     }
