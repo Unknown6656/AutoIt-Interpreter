@@ -182,6 +182,20 @@ namespace Unknown6656.AutoIt3.COM.Server
                                 Server.DeleteAllCOMObjects();
 
                                 break;
+                            case COMInteropCommand.GetInfo:
+                                {
+                                    uint id = reader.ReadUInt32();
+                                    COMObjectInfoMode mode = reader.ReadNative<COMObjectInfoMode>();
+                                    string? info = null;
+                                    
+                                    if (Server.TryResolveCOMObject(id, out COMWrapper com))
+                                        com.TryGetInfo(mode, out info);
+
+                                    DebugPrint($"Fetching info '{mode}' of COM object '{id}': {(info is null ? "fail" : "success")}.");
+
+                                    writer.WriteNullable(info);
+                                }
+                                goto default;
                             case COMInteropCommand command:
                                 DebugPrint($"Recieving '{command}'.");
 
@@ -593,9 +607,11 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 if (FindMembers(name, MemberFindMode.Regular) is { Count: > 0 } match)
                 {
+                    object?[] args = arguments.Select(arg => arg.Data).ToArray();
+
                     // TODO : overload resolution
 
-                    object? data = GetMember(match[0], arguments.Select(arg => arg.Data).ToArray());
+                    object? data = GetMember(match[0], args);
 
                     value = COMData.FromArbitrary(data);
 
@@ -607,6 +623,60 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
 
             return false;
+        }
+
+        public bool TryGetInfo(COMObjectInfoMode mode, out string? info)
+        {
+            info = null;
+
+            IPersist? persist = (IPersist?)COMObject;
+
+            switch (mode)
+            {
+                case COMObjectInfoMode.OBJ_NAME:
+                    info = ObjectType.Name;
+
+                    break;
+                case COMObjectInfoMode.OBJ_STRING:
+                    // TODO : implement
+
+                    break;
+                case COMObjectInfoMode.OBJ_PROGID:
+                    if (persist is IPersist)
+                    {
+                        persist.GetClassID(out Guid guid);
+
+                        NativeInterop.ProgIDFromCLSID(&guid, out info);
+                    }
+
+                    break;
+                case COMObjectInfoMode.OBJ_FILE:
+                    info = ObjectType.Assembly.Location;
+
+                    break;
+                case COMObjectInfoMode.OBJ_MODULE:
+                    info = ObjectType.Module.Name;
+
+                    break;
+                case COMObjectInfoMode.OBJ_CLSID:
+                    if (persist is IPersist)
+                    {
+                        persist.GetClassID(out Guid guid);
+
+                        info = guid.ToString();
+                    }
+
+                    break;
+                case COMObjectInfoMode.OBJ_IID:
+                    info = ObjectType.GetInterfaceHierarchy().FirstOrDefault()?.GUID.ToString();
+
+                    if (info is null)
+                        goto case COMObjectInfoMode.OBJ_CLSID;
+
+                    break;
+            }
+
+            return info is { };
         }
 
         private List<MemberInfo> FindMembers(string name, MemberFindMode mode)
@@ -692,19 +762,11 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                         field.SetValue(field.IsStatic ? null : COMObject, value);
                     }
-                    break;
+                    return;
                 case MethodInfo method:
-                    {
-                        ParameterInfo[] parms = method.GetParameters();
+                    GetMember(method, (args is null ? new[] { value } : args.Append(value)).ToArray());
 
-                        args = (args is null ? new[] { value } : args.Append(value)).ToArray();
-
-                        for (int i = 0; i < parms.Length; ++i)
-                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
-
-                        method.Invoke(method.IsStatic ? null : COMObject, args);
-                    }
-                    break;
+                    return;
                 case PropertyInfo property:
                     {
                         ParameterInfo[] parms = property.GetIndexParameters();
@@ -721,7 +783,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         else
                             property.SetValue(COMObject, value, args);
                     }
-                    break;
+                    return;
                 case EventInfo @event:
                 default:
                     throw new NotImplementedException();

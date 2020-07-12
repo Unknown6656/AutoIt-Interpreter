@@ -7,6 +7,7 @@ using System;
 
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
 
@@ -124,7 +125,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             // ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
             // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             // ProvidedNativeFunction.Create(nameof(ObjGet), , ObjGet),
-            // ProvidedNativeFunction.Create(nameof(ObjName), , ObjName),
+            ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
             ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
             ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
             ProvidedNativeFunction.Create(nameof(StringIsDigit), 1, StringIsDigit),
@@ -1450,11 +1451,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         // {
         // 
         // }
-        // 
-        // public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+
+        public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
+        {
+            if (args[0] is { Type: VariantType.COMObject, RawData: uint id })
+                try
+                {
+                    string? info = null;
+
+                    frame.Interpreter.COMConnector?.TryGetCOMObjectInfo(id, (COMObjectInfoMode)(int)args[1], out info);
+
+                    if (info is string s)
+                        return (Variant)s;
+                }
+                catch
+                {
+                }
+
+            return FunctionReturnValue.Error(1, Variant.EmptyString);
+        }
 
         public static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
 

@@ -288,6 +288,19 @@ namespace Unknown6656.AutoIt3.Runtime
             return success;
         }
 
+        public bool TryGetCOMObjectInfo(uint id, COMObjectInfoMode mode, [MaybeNullWhen(false), NotNullWhen(true)] out string? info)
+        {
+            _writer.WriteNative(COMInteropCommand.GetInfo);
+            _writer.Write(id);
+            _writer.WriteNative(mode);
+            _writer.Flush();
+            _client.Flush();
+
+            info = _reader.ReadNullable();
+
+            return info is string;
+        }
+
         public bool TryResolveCOMObject(uint id, out Variant com_object)
         {
             com_object = Variant.FromCOMObject(id);
@@ -295,7 +308,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return true;
         }
 
-        public uint GetCOMObjectID(Variant com_object) => System.Convert.ToUInt32(com_object.RawData);
+        uint ICOMResolver<Variant>.GetCOMObjectID(Variant com_object) => System.Convert.ToUInt32(com_object.RawData);
 
         private COMData Convert(Variant com_data) => com_data.Type switch
         {

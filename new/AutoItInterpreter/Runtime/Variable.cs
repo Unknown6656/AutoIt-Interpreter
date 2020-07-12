@@ -11,11 +11,6 @@ using System;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.CompilerServices;
-using System.Reflection;
-using System.Dynamic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

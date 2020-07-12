@@ -1,12 +1,24 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
 using System.Collections;
+using System.Diagnostics;
+using System.ComponentModel;
 using System.Linq;
 using System.IO;
 using System;
-using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.COM
 {
+    public enum COMObjectInfoMode
+    {
+        OBJ_NAME = 1,
+        OBJ_STRING = 2,
+        OBJ_PROGID = 3,
+        OBJ_FILE = 4,
+        OBJ_MODULE = 5,
+        OBJ_CLSID = 6,
+        OBJ_IID = 7,
+    }
+
     public enum COMInteropCommand
         : byte
     {
@@ -20,6 +32,8 @@ namespace Unknown6656.AutoIt3.COM
         GetMember = 7,
         SetMember = 8,
         Invoke = 9,
+        GetInfo = 10,
+
         Quit = 255,
     }
 
@@ -478,4 +492,11 @@ namespace Unknown6656.AutoIt3.COM
             while ((typeInHierarchy = typeInHierarchy.BaseType) is { IsInterface : false });
         }
     }
+}
+
+namespace System.Runtime.CompilerServices
+{
+    /// <summary>For C#9 record compatiblity.</summary>
+    [EditorBrowsable(EditorBrowsableState.Never), DebuggerNonUserCode]
+    public sealed class IsExternalInit { }
 }
