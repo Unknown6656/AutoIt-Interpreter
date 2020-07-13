@@ -15,7 +15,7 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Localization
 {
-    using static Program;
+    using static Autoit3;
 
     public sealed class LanguageLoader
     {

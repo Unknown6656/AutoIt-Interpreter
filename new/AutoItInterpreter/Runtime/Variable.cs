@@ -49,7 +49,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant EmptyString { get; } = FromString("");
 
-        public static Variant EmptyBinary { get; } = FromBinary(System.Array.Empty<byte>());
+        public static Variant EmptyBinary { get; } = FromBinary(Array.Empty<byte>());
 
         public static Variant True { get; } = FromBoolean(true);
 
@@ -199,7 +199,14 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             static string sanitize(char c) => c switch
             {
-                < ' ' or (> '~' and < '¡') => $"\\{c:x2}",
+                '\0' => "\\0",
+                '\r' => "\\r",
+                '\n' => "\\n",
+                '\t' => "\\t",
+                '\v' => "\\v",
+                '\b' => "\\b",
+                '\x1b' => "\\e",
+                < ' ' or (> '~' and < '¡') => $"\\{(int)c + 0:x2}",
                 '\\' or '"' => "\\" + c,
                 _ => c.ToString()
             };

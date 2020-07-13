@@ -3,7 +3,7 @@ using System;
 
 namespace Unknown6656.AutoIt3
 {
-    using static Program;
+    using static Autoit3;
 
 
     public readonly struct SourceLocation

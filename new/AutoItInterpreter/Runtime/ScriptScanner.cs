@@ -58,7 +58,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public ScriptScanner(Interpreter interpreter)
         {
             Interpreter = interpreter;
-            _system_script = new ScannedScript(Program.ASM);
+            _system_script = new ScannedScript(Autoit3.ASM);
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
@@ -82,7 +82,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             (FileInfo physical, string content)? file = Interpreter.Telemetry.Measure<(FileInfo, string)?>(TelemetryCategory.ResolveScript, delegate
             {
-                if (Program.CommandLineOptions.StrictMode)
+                if (Autoit3.CommandLineOptions.StrictMode)
                     try
                     {
                         if (ResolveUNC(path) is { } res)
@@ -116,7 +116,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (file is { })
                 return file;
 
-            string combined = Path.Combine(Program.INCLUDE_DIR.FullName, path);
+            string combined = Path.Combine(Autoit3.INCLUDE_DIR.FullName, path);
 
             if (!relative && combined != path && ResolveScriptFile(include_loc, combined, false).Is(out file) && file is { })
                 return file;
@@ -198,7 +198,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                         if (line.Match(REGEX_1LFUNC, out m))
                         {
-                            if (Program.CommandLineOptions.StrictMode)
+                            if (Autoit3.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
 
                             lines.InsertRange(i + 1, new[]
@@ -251,7 +251,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             curr_func.IsVolatile = @volatile;
                             _cached_functions.TryAdd(name.ToLower(), curr_func);
 
-                            Program.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
+                            Autoit3.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
                         }
                         else if (line.Match(REGEX_ENDFUNC, out Match _))
                         {
@@ -262,7 +262,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         }
                         else if (line.Match(REGEX_LABEL, out m))
                         {
-                            if (Program.CommandLineOptions.StrictMode)
+                            if (Autoit3.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.goto_instructions");
 
                             string name = m.Groups["name"].Value;

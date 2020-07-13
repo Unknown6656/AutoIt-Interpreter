@@ -78,9 +78,9 @@ namespace Unknown6656.AutoIt3.Extensibility
             ClearLoadedPlugins();
 
             List<Type> types = new List<Type>();
-            IEnumerable<FileInfo> assemblies = Program.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
+            IEnumerable<FileInfo> assemblies = Autoit3.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
 
-            foreach (FileInfo file in assemblies.Append(Program.ASM))
+            foreach (FileInfo file in assemblies.Append(Autoit3.ASM))
                 try
                 {
                     Interpreter.Telemetry.Measure(TelemetryCategory.LoadPluginFile, delegate

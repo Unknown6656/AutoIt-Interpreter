@@ -3,6 +3,7 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
         <Nullable>enable</Nullable>
+        <StartupObject>$Program.$Main</StartupObject>
         <OutDir>$(SolutionDir)bin</OutDir>
         <LangVersion>preview</LangVersion>
         <Deterministic>false</Deterministic>
@@ -20,7 +21,6 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <StartupObject>Unknown6656.AutoIt3.Program</StartupObject>
         <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
         <AssemblyName>autoit3</AssemblyName>

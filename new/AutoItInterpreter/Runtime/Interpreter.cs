@@ -9,7 +9,7 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using static Program;
+    using static Autoit3;
     using static AST;
 
 
@@ -177,7 +177,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Program.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Autoit3.CurrentLanguage[key, args]);
     }
 }
 

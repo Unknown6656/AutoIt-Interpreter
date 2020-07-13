@@ -13,7 +13,7 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
-    using static Program;
+    using static Autoit3;
     using static AST;
 
     public sealed class FrameworkMacros

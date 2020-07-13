@@ -629,7 +629,15 @@ namespace Unknown6656.AutoIt3.COM.Server
         {
             info = null;
 
-            IPersist? persist = (IPersist?)COMObject;
+            Guid clsid = default;
+
+            try
+            {
+                ((IPersist?)COMObject)?.GetClassID(out clsid);
+            }
+            catch
+            {
+            }
 
             switch (mode)
             {
@@ -642,12 +650,8 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                     break;
                 case COMObjectInfoMode.OBJ_PROGID:
-                    if (persist is IPersist)
-                    {
-                        persist.GetClassID(out Guid guid);
-
-                        NativeInterop.ProgIDFromCLSID(&guid, out info);
-                    }
+                    if (clsid != default)
+                        NativeInterop.ProgIDFromCLSID(&clsid, out info);
 
                     break;
                 case COMObjectInfoMode.OBJ_FILE:
@@ -655,23 +659,12 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                     break;
                 case COMObjectInfoMode.OBJ_MODULE:
-                    info = ObjectType.Module.Name;
+                    info = ObjectType.Module.FullyQualifiedName;
 
                     break;
                 case COMObjectInfoMode.OBJ_CLSID:
-                    if (persist is IPersist)
-                    {
-                        persist.GetClassID(out Guid guid);
-
-                        info = guid.ToString();
-                    }
-
-                    break;
                 case COMObjectInfoMode.OBJ_IID:
-                    info = ObjectType.GetInterfaceHierarchy().FirstOrDefault()?.GUID.ToString();
-
-                    if (info is null)
-                        goto case COMObjectInfoMode.OBJ_CLSID;
+                    info = clsid != default ? clsid.ToString() : (ObjectType.GetInterfaceHierarchy().FirstOrDefault()?.GUID.ToString());
 
                     break;
             }

@@ -10,12 +10,16 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Text.RegularExpressions;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider
     {
+        private static readonly Regex REGEX_WS = new Regex(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
+
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
             ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
@@ -63,10 +67,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
             ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
             ProvidedNativeFunction.Create(nameof(DirCreate), 1, DirCreate),
-            ProvidedNativeFunction.Create(nameof(DirCopy), 2, 3, DirCopy, 0),
-            ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, 0),
-            ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, 0),
-            ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, 0),
+            ProvidedNativeFunction.Create(nameof(DirCopy), 2, 3, DirCopy, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
             ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
             ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
@@ -76,7 +80,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
             ProvidedNativeFunction.Create(nameof(FileChangeDir), 1, FileChangeDir),
             ProvidedNativeFunction.Create(nameof(FileClose), 1, FileClose),
-            ProvidedNativeFunction.Create(nameof(FileCopy), 2, 3, FileCopy, 0),
+            ProvidedNativeFunction.Create(nameof(FileCopy), 2, 3, FileCopy, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(FileCreateNTFSLink), 2, 3, FileCreateNTFSLink, Variant.False),
             //ProvidedNativeFunction.Create(nameof(FileCreateShortcut), , FileCreateShortcut,),
             ProvidedNativeFunction.Create(nameof(FileDelete), 1, FileDelete),
@@ -89,13 +93,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FileGetLongName), 1, FileGetLongName),
             ProvidedNativeFunction.Create(nameof(FileGetPos), 1, FileGetPos),
             //ProvidedNativeFunction.Create(nameof(FileGetShortcut), , FileGetShortcut),
-            ProvidedNativeFunction.Create(nameof(FileGetShortName), 1, 2, FileGetShortName, 0),
+            ProvidedNativeFunction.Create(nameof(FileGetShortName), 1, 2, FileGetShortName, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(FileGetSize), 1, FileGetSize),
-            ProvidedNativeFunction.Create(nameof(FileGetTime), 1, 3, FileGetTime, 0, 0),
+            ProvidedNativeFunction.Create(nameof(FileGetTime), 1, 3, FileGetTime, Variant.Zero, Variant.Zero),
             //ProvidedNativeFunction.Create(nameof(FileGetVersion), , FileGetVersion),
             //ProvidedNativeFunction.Create(nameof(FileInstall), , FileInstall),
-            ProvidedNativeFunction.Create(nameof(FileMove), 2, 3, FileMove, 0),
-            ProvidedNativeFunction.Create(nameof(FileOpen), 1, 2, FileOpen, 0),
+            ProvidedNativeFunction.Create(nameof(FileMove), 2, 3, FileMove, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(FileOpen), 1, 2, FileOpen, Variant.Zero),
             //ProvidedNativeFunction.Create(nameof(FileOpenDialog), , FileOpenDialog),
             ProvidedNativeFunction.Create(nameof(FileRead), 1, 2, FileRead, Variant.Default),
             ProvidedNativeFunction.Create(nameof(FileReadLine), 1, 2, FileReadLine, 1),
@@ -104,10 +108,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FileRecycleEmpty), 0, 1, FileRecycleEmpty, Variant.Default),
             //ProvidedNativeFunction.Create(nameof(FileSaveDialog), , FileSaveDialog),
             //ProvidedNativeFunction.Create(nameof(FileSelectFolder), , FileSelectFolder),
-            ProvidedNativeFunction.Create(nameof(FileSetAttrib), 2, 3 , FileSetAttrib, 0),
+            ProvidedNativeFunction.Create(nameof(FileSetAttrib), 2, 3 , FileSetAttrib, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(FileSetEnd), 1, FileSetEnd),
             ProvidedNativeFunction.Create(nameof(FileSetPos), 3, FileSetPos),
-            ProvidedNativeFunction.Create(nameof(FileSetTime), 4, 2, FileSetTime, 0, 0),
+            ProvidedNativeFunction.Create(nameof(FileSetTime), 4, 2, FileSetTime, Variant.Zero, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(FileWrite), 2, FileWrite),
             ProvidedNativeFunction.Create(nameof(FileWriteLine), 2, FileWriteLine),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
@@ -124,8 +128,29 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ObjCreate), 1, 4, ObjCreate, Variant.Default, Variant.Default, Variant.Default),
             // ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
             // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
-            // ProvidedNativeFunction.Create(nameof(ObjGet), , ObjGet),
+            ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
+            ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
+            ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(StringFormat), , StringFormat),
+            ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), , StringFromASCIIArray),
+            ProvidedNativeFunction.Create(nameof(StringInStr), , StringInStr),
+            ProvidedNativeFunction.Create(nameof(StringLeft), 2, StringLeft),
+            ProvidedNativeFunction.Create(nameof(StringLen), 1, StringLen),
+            ProvidedNativeFunction.Create(nameof(StringLower), 1, StringLower),
+            ProvidedNativeFunction.Create(nameof(StringMid), 2, 3, StringMid, -1),
+            ProvidedNativeFunction.Create(nameof(StringRegExp), , StringRegExp),
+            ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), , StringRegExpReplace ),
+            ProvidedNativeFunction.Create(nameof(StringReplace), , StringReplace),
+            ProvidedNativeFunction.Create(nameof(StringReverse), , StringReverse),
+            ProvidedNativeFunction.Create(nameof(StringRight), 2, StringRight),
+            ProvidedNativeFunction.Create(nameof(StringSplit), , StringSplit),
+            ProvidedNativeFunction.Create(nameof(StringStripCR), 1, StringStripCR),
+            ProvidedNativeFunction.Create(nameof(StringStripWS), 2, StringStripWS),
+            ProvidedNativeFunction.Create(nameof(StringToASCIIArray), 1, 4, StringToASCIIArray, Variant.Zero, Variant.Default, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(StringTrimLeft), 2, StringTrimLeft),
+            ProvidedNativeFunction.Create(nameof(StringTrimRight), 2, StringTrimRight),
+            ProvidedNativeFunction.Create(nameof(StringUpper), 1, StringUpper),
             ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
             ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
             ProvidedNativeFunction.Create(nameof(StringIsDigit), 1, StringIsDigit),
@@ -1446,30 +1471,184 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         // {
         // 
         // }
-        // 
-        // public static FunctionReturnValue ObjGet(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+
+        public static FunctionReturnValue ObjGet(CallFrame frame, Variant[] args)
+        {
+            string path = args[0].ToString();
+
+
+        }
 
         public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
         {
             if (args[0] is { Type: VariantType.COMObject, RawData: uint id })
-                try
-                {
-                    string? info = null;
+            {
+                string? info = null;
 
-                    frame.Interpreter.COMConnector?.TryGetCOMObjectInfo(id, (COMObjectInfoMode)(int)args[1], out info);
+                frame.Interpreter.COMConnector?.TryGetCOMObjectInfo(id, (COMObjectInfoMode)(int)args[1], out info);
 
-                    if (info is string s)
-                        return (Variant)s;
-                }
-                catch
-                {
-                }
+                if (info is string s)
+                    return (Variant)s;
+            }
 
-            return FunctionReturnValue.Error(1, Variant.EmptyString);
+            return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Null);
         }
+
+        public static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n");
+
+        public static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant) string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
+        {
+            1 => StringComparison.CurrentCulture,
+            2 => StringComparison.InvariantCultureIgnoreCase,
+            _ => StringComparison.CurrentCultureIgnoreCase,
+        });
+
+        public static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args)
+        {
+        }
+
+        public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringLeft(CallFrame frame, Variant[] args)
+        {
+            string s = args[0].ToString();
+            int c = Math.Max(0, (int)args[1]);
+
+            return c < s.Length ? s[..c] : Variant.EmptyString;
+        }
+
+        public static FunctionReturnValue StringLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Length;
+
+        public static FunctionReturnValue StringLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToLowerInvariant();
+
+        public static FunctionReturnValue StringMid(CallFrame frame, Variant[] args)
+        {
+            string str = args[0].ToString();
+            int start = (int)args[1] - 1;
+            int len = (int)args[2];
+
+            if (start < 0 || start >= str.Length)
+                return Variant.EmptyString;
+            
+            len = str.Length - start;
+
+            return (Variant)(len < 0 ? "" : str.Substring(start, len));
+        }
+
+        public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringRight(CallFrame frame, Variant[] args)
+        {
+            string s = args[0].ToString();
+
+            return Variant.FromString(((int)args[1]) switch
+            {
+                < 0 => "",
+                int i when i >= s.Length => s,
+                int i => s[^i..],
+            });
+        }
+
+        public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "");
+
+        public static FunctionReturnValue StringStripWS(CallFrame frame, Variant[] args)
+        {
+            string str = args[0].ToString();
+            StringStripFlags flags = (StringStripFlags)(int)args[1];
+
+            if (flags.HasFlag(StringStripFlags.STR_STRIPALL))
+                flags = StringStripFlags.STR_STRIPLEADING | StringStripFlags.STR_STRIPSPACES | StringStripFlags.STR_STRIPTRAILING;
+
+            if (flags.HasFlag(StringStripFlags.STR_STRIPLEADING))
+                str = str.TrimStart();
+
+            if (flags.HasFlag(StringStripFlags.STR_STRIPTRAILING))
+                str = str.TrimEnd();
+
+            if (flags.HasFlag(StringStripFlags.STR_STRIPSPACES))
+                str = REGEX_WS.Replace(str, "");
+
+            return (Variant)str;
+        }
+
+        public static FunctionReturnValue StringToASCIIArray(CallFrame frame, Variant[] args)
+        {
+            string str = args[0].ToString();
+            int start = (int)args[1];
+
+            if (start >= 0 && start < str.Length)
+            {
+                int len = (int)args[2];
+
+                if (len < 0 || len - start >= str.Length)
+                    len = str.Length - start;
+
+                int enc = (int)args[3];
+                IEnumerable<Variant> arr;
+
+                if (enc == 2)
+                    arr = Encoding.UTF8.GetBytes(str).Select(b => Variant.FromNumber(b));
+                else
+                    arr = str.Select(c => Variant.FromNumber(enc == 1 ? (byte)c : (int)c));
+
+                return Variant.FromArray(arr);
+            }
+
+            return Variant.EmptyString;
+        }
+
+        public static FunctionReturnValue StringTrimLeft(CallFrame frame, Variant[] args)
+        {
+            string s = args[0].ToString();
+            int c = Math.Max(0, (int)args[1]);
+
+            return c < s.Length ? s[c..] : Variant.EmptyString;
+        }
+
+        public static FunctionReturnValue StringTrimRight(CallFrame frame, Variant[] args)
+        {
+            string s = args[0].ToString();
+
+            return Variant.FromString(((int)args[1]) switch
+            {
+                < 0 => "",
+                int i when i >= s.Length => s,
+                int i => s[..^i],
+            });
+        }
+
+        public static FunctionReturnValue StringUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToUpperInvariant();
 
         public static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
 
@@ -1548,6 +1727,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             FO_UTF16_LE_NOBOM = 1024,
             FO_UTF16_BE_NOBOM = 2048,
             FO_FULLFILE_DETECT = 16384,
+        }
+
+        [Flags]
+        private enum StringStripFlags
+            : int
+        {
+            STR_STRIPLEADING = 1,
+            STR_STRIPTRAILING = 2,
+            STR_STRIPSPACES = 4,
+            STR_STRIPALL = 8,
         }
 
         private sealed class FileSearchHandle
