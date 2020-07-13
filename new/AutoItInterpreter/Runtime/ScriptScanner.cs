@@ -27,7 +27,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_REGION = new Regex(@"^#(end-?)?region\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_PRAGMA = new Regex(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LINECONT = new Regex(@"(\s|^)_$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1LFUNC = new Regex(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_IF = new Regex(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_FUNC = new Regex(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FUNC = new Regex(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENDFUNC = new Regex(@"^endfunc$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LABEL = new Regex(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
@@ -196,7 +197,14 @@ namespace Unknown6656.AutoIt3.Runtime
                                 loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
-                        if (line.Match(REGEX_1LFUNC, out m))
+                        if (line.Match(REGEX_1L_IF, out m))
+                            lines.InsertRange(i + 1, new[]
+                            {
+                                (m.Groups["if"].Value, loc),
+                                (m.Groups["then"].Value, loc),
+                                ("endif", loc),
+                            });
+                        else if (line.Match(REGEX_1L_FUNC, out m))
                         {
                             if (Autoit3.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
@@ -532,8 +540,8 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class AU3Function
         : ScriptFunction
     {
-        private readonly ConcurrentDictionary<string, JumpLabel> _jumplabels = new ConcurrentDictionary<string, JumpLabel>();
-        private readonly ConcurrentDictionary<SourceLocation, string> _lines = new ConcurrentDictionary<SourceLocation, string>();
+        private readonly ConcurrentDictionary<SourceLocation, List<string>> _lines = new();
+        private readonly ConcurrentDictionary<string, JumpLabel> _jumplabels = new();
 
 
         public PARAMETER_DECLARATION[] Parameters { get; }
@@ -550,11 +558,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsVolatile { get; internal set; }
 
-        public int LineCount => _lines.Count;
+        public int LineCount => _lines.Values.Select(l => l.Count).Append(0).Sum();
 
         public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
-        public (SourceLocation LineLocation, string LineContent)[] Lines => _lines.OrderBy(k => k.Key).ToArray(k => (k.Key, k.Value));
+        public (SourceLocation LineLocation, string LineContent)[] Lines => (from loc in _lines.Keys
+                                                                             orderby loc ascending
+                                                                             from line in _lines[loc]
+                                                                             select (loc, line)).ToArray();
 
         public ReadOnlyIndexer<string, JumpLabel?> JumpLabels { get; }
 
@@ -578,9 +589,14 @@ namespace Unknown6656.AutoIt3.Runtime
             return label;
         }
 
-        public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, content, (_, _) => content);
+        public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, new List<string>() { content }, (_, l) =>
+        {
+            l.Add(content);
 
-        public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{_lines.Count} Lines]";
+            return l;
+        });
+
+        public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
     }
 
     public sealed class NativeFunction

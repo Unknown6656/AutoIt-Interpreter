@@ -132,19 +132,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringFormat), , StringFormat),
-            ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), , StringFromASCIIArray),
-            ProvidedNativeFunction.Create(nameof(StringInStr), , StringInStr),
+            ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
+            // ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), , StringFromASCIIArray),
+            // ProvidedNativeFunction.Create(nameof(StringInStr), , StringInStr),
             ProvidedNativeFunction.Create(nameof(StringLeft), 2, StringLeft),
             ProvidedNativeFunction.Create(nameof(StringLen), 1, StringLen),
             ProvidedNativeFunction.Create(nameof(StringLower), 1, StringLower),
             ProvidedNativeFunction.Create(nameof(StringMid), 2, 3, StringMid, -1),
-            ProvidedNativeFunction.Create(nameof(StringRegExp), , StringRegExp),
-            ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), , StringRegExpReplace ),
-            ProvidedNativeFunction.Create(nameof(StringReplace), , StringReplace),
-            ProvidedNativeFunction.Create(nameof(StringReverse), , StringReverse),
+            // ProvidedNativeFunction.Create(nameof(StringRegExp), , StringRegExp),
+            // ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), , StringRegExpReplace ),
+            // ProvidedNativeFunction.Create(nameof(StringReplace), , StringReplace),
+            // ProvidedNativeFunction.Create(nameof(StringReverse), , StringReverse),
             ProvidedNativeFunction.Create(nameof(StringRight), 2, StringRight),
-            ProvidedNativeFunction.Create(nameof(StringSplit), , StringSplit),
+            // ProvidedNativeFunction.Create(nameof(StringSplit), , StringSplit),
             ProvidedNativeFunction.Create(nameof(StringStripCR), 1, StringStripCR),
             ProvidedNativeFunction.Create(nameof(StringStripWS), 2, StringStripWS),
             ProvidedNativeFunction.Create(nameof(StringToASCIIArray), 1, 4, StringToASCIIArray, Variant.Zero, Variant.Default, Variant.Zero),
@@ -1477,6 +1477,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             string path = args[0].ToString();
 
 
+            throw new NotImplementedException();
         }
 
         public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
@@ -1503,19 +1504,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             _ => StringComparison.CurrentCultureIgnoreCase,
         });
 
-        public static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args)
-        {
-        }
+        public static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args) => (Variant)StringFormatter.FormatString(args[0].ToString(), args[1..]);
 
-        public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
-        {
-
-        }
+        // public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         public static FunctionReturnValue StringLeft(CallFrame frame, Variant[] args)
         {
@@ -1543,25 +1542,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)(len < 0 ? "" : str.Substring(start, len));
         }
 
-        public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args)
-        {
-
-        }
+        // public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         public static FunctionReturnValue StringRight(CallFrame frame, Variant[] args)
         {
@@ -1575,10 +1574,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             });
         }
 
-        public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
-        {
-
-        }
+        // public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         public static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "");
 

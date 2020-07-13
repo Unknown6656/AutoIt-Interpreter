@@ -274,6 +274,44 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class AU3CallFrame
         : CallFrame
     {
+        private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private static readonly Regex REGEX_INTERNAL_LABEL = new Regex(@"^§\w+$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_VARIABLE = new Regex(@"\$([^\W\d]|[^\W\d]\w*)\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_GOTO = new Regex(@"^goto\s+(?<label>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WEND = new Regex(@"^wend$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_NEXT = new Regex(@"^next$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_EXIT = new Regex(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_RETURN = new Regex(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FOR = new Regex(@"^for\s+.+$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORTO = new Regex(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORIN = new Regex(@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FORIN_VARIABLES = new Regex(@"^\$(?<key>[^\W\d]|[^\W\d]\w*)\s*,\s*\$(?<value>[^\W\d]|[^\W\d]\w*)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_WITH = new Regex(@"^with\s+(?<variable>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDWITH = new Regex(@"^endwith$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REDIM = new Regex(@"^redim\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DO = new Regex(@"^do$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_UNTIL = new Regex(@"^until\s+(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_IF = new Regex(@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ELSE = new Regex(@"^else$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDIF = new Regex(@"^endif$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DECLARATION_MODIFIER = new Regex(@"^(local|static|global|const|dim|enum|step)\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new Regex(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_SELECT = new Regex(@"^select$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDSELECT = new Regex(@"^endselect$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_SWITCH = new Regex(@"^switch\b\s*(?<expression>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDSWITCH = new Regex(@"^endswitch$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CASE = new Regex(@"^case\b\s*(?<expression>.+)*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CONTINUECASE = new Regex(@"^continuecase$", _REGEX_OPTIONS);
+
+        private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new();
+        private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
+        private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
+        private readonly ConcurrentStack<string> _while_stack = new();
+        private readonly ConcurrentStack<(Variant? switch_expression, bool case_handled)> _switchselect_stack = new();
+
         private volatile int _instruction_pointer = 0;
         private List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
@@ -287,7 +325,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
 
         public Dictionary<string, int> InternalJumpLabels => _line_cache.WithIndex().Where(l => REGEX_INTERNAL_LABEL.IsMatch(l.Item.LineContent)).ToDictionary(l => l.Item.LineContent, l => l.Index);
-
 
 
         internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
@@ -548,19 +585,6 @@ namespace Unknown6656.AutoIt3.Runtime
             return InterpreterResult.OK;
         }
 
-
-
-
-
-
-        // TODO
-        private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new();
-        private readonly ConcurrentStack<Variable> _withcontext_stack = new ConcurrentStack<Variable>();
-        private readonly ConcurrentStack<bool> _if_stack = new ConcurrentStack<bool>();
-        private readonly ConcurrentStack<string> _while_stack = new();
-
-        private readonly ConcurrentStack<(Variant? switch_expression, bool case_handled)> _switchselect_stack = new();
-
         private InterpreterError? MoveToEndOf(BlockStatementType type)
         {
             SourceLocation init = CurrentLocation;
@@ -627,41 +651,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return depth == 0 ? null : WellKnownError("error.no_matching_close", type, init);
         }
-
-
-
-        private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
-        private static readonly Regex REGEX_INTERNAL_LABEL = new Regex(@"^§\w+$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_VARIABLE = new Regex(@"\$([^\W\d]|[^\W\d]\w*)\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_GOTO = new Regex(@"^goto\s+(?<label>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_WEND = new Regex(@"^wend$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_NEXT = new Regex(@"^next$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_EXIT = new Regex(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_RETURN = new Regex(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FOR = new Regex(@"^for\s+.+$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FORTO = new Regex(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FORIN = new Regex(@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FORIN_VARIABLES = new Regex(@"^\$(?<key>[^\W\d]|[^\W\d]\w*)\s*,\s*\$(?<value>[^\W\d]|[^\W\d]\w*)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_WITH = new Regex(@"^with\s+(?<variable>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDWITH = new Regex(@"^endwith$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_REDIM = new Regex(@"^redim\s+(?<expression>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_DO = new Regex(@"^do$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_UNTIL = new Regex(@"^until\s+(?<expression>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_IF = new Regex(@"^(?<elif>else)?if\s+(?<condition>.+)\s+then$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ELSE = new Regex(@"^else$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDIF = new Regex(@"^endif$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_DECLARATION_MODIFIER = new Regex(@"^(local|static|global|const|dim|enum|step)\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENUM_STEP = new Regex(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_INCLUDE = new Regex(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new Regex(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_SELECT = new Regex(@"^select$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDSELECT = new Regex(@"^endselect$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_SWITCH = new Regex(@"^switch\b\s*(?<expression>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDSWITCH = new Regex(@"^endswitch$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CASE = new Regex(@"^case\b\s*(?<expression>.+)*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CONTINUECASE = new Regex(@"^continuecase$", _REGEX_OPTIONS);
-
 
         private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
         {

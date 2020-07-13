@@ -3,7 +3,7 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <StartupObject>$Program.$Main</StartupObject>
+        <!--<StartupObject>$Program.$Main</StartupObject>-->
         <OutDir>$(SolutionDir)bin</OutDir>
         <LangVersion>preview</LangVersion>
         <Deterministic>false</Deterministic>

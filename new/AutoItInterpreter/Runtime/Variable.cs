@@ -684,25 +684,25 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static explicit operator bool(Variant v) => v.ToBoolean();
 
-        public static explicit operator sbyte(Variant v) => (sbyte)v.ToNumber();
+        public static explicit operator sbyte(Variant v) => Convert.ToSByte(v.ToNumber());
 
-        public static explicit operator byte(Variant v) => (byte)v.ToNumber();
+        public static explicit operator byte(Variant v) => Convert.ToByte(v.ToNumber());
 
-        public static explicit operator short(Variant v) => (short)v.ToNumber();
+        public static explicit operator short(Variant v) => Convert.ToInt16(v.ToNumber());
 
-        public static explicit operator ushort(Variant v) => (ushort)v.ToNumber();
+        public static explicit operator ushort(Variant v) => Convert.ToUInt16(v.ToNumber());
 
-        public static explicit operator int(Variant v) => (int)v.ToNumber();
+        public static explicit operator int(Variant v) => Convert.ToInt32(v.ToNumber());
 
-        public static explicit operator uint(Variant v) => (uint)v.ToNumber();
+        public static explicit operator uint(Variant v) => Convert.ToUInt32(v.ToNumber());
 
-        public static explicit operator long(Variant v) => (long)v.ToNumber();
+        public static explicit operator long(Variant v) => Convert.ToInt64(v.ToNumber());
 
-        public static explicit operator ulong(Variant v) => (ulong)v.ToNumber();
+        public static explicit operator ulong(Variant v) => Convert.ToUInt64(v.ToNumber());
 
-        public static explicit operator float(Variant v) => (float)v.ToNumber();
+        public static explicit operator float(Variant v) => Convert.ToSingle(v.ToNumber());
 
-        public static explicit operator double(Variant v) => (double)v.ToNumber();
+        public static explicit operator double(Variant v) => Convert.ToDouble(v.ToNumber());
 
         public static explicit operator decimal(Variant v) => v.ToNumber();
 
