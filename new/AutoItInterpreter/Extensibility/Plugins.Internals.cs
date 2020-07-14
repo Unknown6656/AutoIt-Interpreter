@@ -30,7 +30,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Internals
             Variant source = args[1];
 
             if (args[1].IsIndexable)
-                _iterators.TryAdd(args[0].ToString(), (source.ToOrderedMap(), 0));
+                _iterators.TryAdd(args[0].ToString(), (source.ToOrderedMap(frame.Interpreter), 0));
 
             return Variant.Null;
         }

@@ -6,6 +6,7 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
+using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -102,6 +103,18 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             foreach (AU3Thread thread in Threads)
                 thread.Stop(exitcode);
+        }
+
+        public void AddFolderToEnvPath(string dir)
+        {
+            char separator = NativeInterop.DoPlatformDependent(';', ':');
+            List<string> path = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)?
+                                           .Split(separator, StringSplitOptions.RemoveEmptyEntries)
+                                           .ToList() ?? new();
+
+            path.Add(dir);
+
+            Environment.SetEnvironmentVariable("PATH", string.Join(separator, path.Distinct()), EnvironmentVariableTarget.Process);
         }
 
         public AU3Thread CreateNewThread() => new AU3Thread(this);

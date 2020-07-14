@@ -301,6 +301,25 @@ namespace Unknown6656.AutoIt3.Runtime
             return info is string;
         }
 
+        public (uint id, string type, string clsid, Variant value)[] GetAllCOMObjectInfos()
+        {
+            _writer.WriteNative(COMInteropCommand.GetAllInfos);
+            _writer.Flush();
+            _client.Flush();
+
+            (uint, string, string, Variant)[] objects = new (uint, string, string, Variant)[_reader.ReadInt32()];
+
+            for (int i = 0; i < objects.Length; ++i)
+                objects[i] = (
+                    _reader.ReadUInt32(),
+                    _reader.ReadString(),
+                    _reader.ReadString(),
+                    Convert(_reader.ReadCOM())
+                );
+
+            return objects;
+        }
+
         public bool TryResolveCOMObject(uint id, out Variant com_object)
         {
             com_object = Variant.FromCOMObject(id);

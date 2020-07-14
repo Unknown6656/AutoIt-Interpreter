@@ -33,6 +33,7 @@ namespace Unknown6656.AutoIt3.COM
         SetMember = 8,
         Invoke = 9,
         GetInfo = 10,
+        GetAllInfos = 11,
 
         Quit = 255,
     }

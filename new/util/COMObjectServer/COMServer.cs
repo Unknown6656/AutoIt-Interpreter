@@ -196,6 +196,35 @@ namespace Unknown6656.AutoIt3.COM.Server
                                     writer.WriteNullable(info);
                                 }
                                 goto default;
+                            case COMInteropCommand.GetAllInfos:
+                                {
+                                    (uint, string, string, COMData)[] objects = Server.IDsInUse
+                                                                                      .Select<uint, (uint, string, string, COMData)?>(id =>
+                                                                                      {
+                                                                                          if (Server.TryResolveCOMObject(id, out COMWrapper com))
+                                                                                          {
+                                                                                              com.TryGetInfo(COMObjectInfoMode.OBJ_CLSID, out string? clsid);
+
+                                                                                              return (id, com.ObjectType.FullName, clsid ?? "<void*>", COMData.FromCOMObjectID(id));
+                                                                                          }
+
+                                                                                          return null;
+                                                                                      })
+                                                                                      .Where(n => n.HasValue)
+                                                                                      .Select(n => n!.Value)
+                                                                                      .ToArray();
+
+                                    writer.Write(objects.Length);
+
+                                    foreach ((uint id, string type, string clsid, COMData com) in objects)
+                                    {
+                                        writer.Write(id);
+                                        writer.Write(type);
+                                        writer.Write(clsid);
+                                        writer.WriteCOM(com);
+                                    }
+                                }
+                                goto default;
                             case COMInteropCommand command:
                                 DebugPrint($"Recieving '{command}'.");
 
@@ -259,6 +288,8 @@ namespace Unknown6656.AutoIt3.COM.Server
         private readonly ConcurrentDictionary<uint, COMWrapper> _com_objects = new();
         private readonly object _mutex = new object();
         private volatile uint _nextid = 0;
+
+        public uint[] IDsInUse => _com_objects.Keys.ToArray();
 
 
         public COMServer() => COMData.RegisterCOMResolver(this);

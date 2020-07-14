@@ -860,7 +860,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         {
                             Union<InterpreterError, Variant> size = ProcessExpression(index);
 
-                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray((int)size_value, out Variant? new_arr) && new_arr is Variant arr)
+                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray(Interpreter, (int)size_value, out Variant? new_arr) && new_arr is Variant arr)
                             {
                                 variable.Value = arr;
 
@@ -1437,7 +1437,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 };
 
                 if (value.Is(out Variant v))
-                    Autoit3.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString()}");
+                    Autoit3.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString(Interpreter)}");
 
                 return value;
             });

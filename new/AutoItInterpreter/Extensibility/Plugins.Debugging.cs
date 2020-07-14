@@ -22,6 +22,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
                 ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
                 ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
+                ProvidedNativeFunction.Create(nameof(DebugAllCOM), 0, DebugAllCOM),
                 ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
                 ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
                 ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
@@ -188,11 +189,112 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                      .ToString();
         }
 
-        private Variant SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
+        private FunctionReturnValue SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
         {
             frame.Print(SerializeDictionary(dic, title is string s ? s : title?.ToString() ?? ""));
 
-            return Variant.Zero;
+            return FunctionReturnValue.Success(Variant.Zero);
+        }
+
+        private string GenerateTable((string header, bool align_right, string?[] cells)[] columns, int max_width, Predicate<int>? select = null)
+        {
+            StringBuilder sb = new StringBuilder();
+            string?[,] data = new string?[columns.Length, columns.Max(col => col.cells.Length)];
+            int[] widths = columns.ToArray(col => col.header.Length);
+
+            for (int i = 0; i < widths.Length; i++)
+            {
+                string?[] cells = columns[i].cells;
+
+                for (int j = 0; j < cells.Length; ++j)
+                {
+                    data[i, j] = cells[j];
+                    widths[i] = Math.Max(widths[i], cells[j]?.Length ?? 0);
+                }
+            }
+
+            max_width -= 1 + widths.Length;
+
+            int r = 0;
+
+            while (true)
+            {
+                int c_width = widths.Sum();
+                int diff = c_width - max_width;
+
+                if (diff > 0 || r >= widths.Length)
+                {
+                    (int w, int i) = widths.WithIndex().OrderByDescending(Generics.fst).FirstOrDefault();
+
+                    widths[i] = Math.Max(w - diff, w / 2) + 3;
+                    ++r;
+                }
+                else
+                    break;
+            }
+
+            sb.AppendLine($"{data.GetLength(1)} rows:")
+              .Append('┌');
+
+            for (int i = 0, l = widths.Length; i < l; i++)
+                sb.Append(new string('─', widths[i]))
+                  .Append(i < l - 1 ? '┬' : '┐');
+
+            sb.AppendLine()
+              .Append('│');
+
+            for (int i = 0; i < widths.Length; i++)
+                if (columns[i].header.Length > widths[i])
+                    sb.Append(columns[i].header[..(widths[i] - 3)])
+                      .Append("...");
+                else
+                    sb.Append(columns[i].align_right ? columns[i].header.PadLeft(widths[i]) : columns[i].header.PadRight(widths[i]))
+                      .Append('│');
+
+            sb.AppendLine().Append('├');
+
+            for (int i = 0, l = widths.Length; i < l; i++)
+                sb.Append(new string('─', widths[i]))
+                  .Append(i < l - 1 ? '┼' : '┤');
+
+            sb.AppendLine();
+
+            for (int j = 0, l = data.GetLength(1); j < l; ++j)
+            {
+                bool sel = select?.Invoke(j) ?? false;
+
+                if (sel)
+                    sb.Append("\x1b[7m");
+
+                for (int i = 0; i < widths.Length; i++)
+                {
+                    sb.Append('│');
+
+                    string val = data[i, j] ?? "";
+
+                    if (val.Length > widths[i])
+                        sb.Append(val[..(widths[i] - 3)])
+                          .Append("...");
+                    else
+                        sb.Append(columns[i].align_right ? val.PadLeft(widths[i]) : val.PadRight(widths[i]));
+                }
+
+                sb.Append('│');
+
+                if (sel)
+                    sb.Append("\x1b[27m");
+
+                sb.AppendLine();
+            }
+
+            sb.Append('└');
+
+            for (int i = 0, l = widths.Length; i < l; i++)
+                sb.Append(new string('─', widths[i]))
+                  .Append(i < l - 1 ? '┴' : '┘');
+
+            return sb.AppendLine()
+                     .ToString();
         }
 
         public FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
@@ -251,13 +353,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                                 )).Concat(iterators)
                                                                                   .Concat(global_objs)
                                                                                   .ToArray();
-            int w_name = variables.Select(t => t.name.Length).Append(4).Max();
-            int w_loc = variables.Select(t => t.loc.Length).Append(8).Max();
-            int w_type = variables.Select(t => t.type.Length).Append(4).Max();
-            int w_value = variables.Select(t => t.value.Length).Append(5).Max();
-
-            w_value = Math.Min(w_value + 3, Math.Min(Console.BufferWidth, Console.WindowWidth) - 6 - w_loc - w_type - w_name);
-
             Array.Sort(variables, (x, y) =>
             {
                 string[] pathx = x.name.Split('/');
@@ -275,22 +370,41 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return string.Compare(x.name, y.name);
             });
 
-            sb.Append($@"{variables.Length} Variables:
-┌{new string('─', w_name)}┬{new string('─', w_loc)}┬{new string('─', w_type)}┬{new string('─', w_value)}┐
-│{"Name".PadRight(w_name)}│{"Location".PadRight(w_loc)}│{"Type".PadRight(w_type)}│{"Value".PadRight(w_value)}│
-├{new string('─', w_name)}┼{new string('─', w_loc)}┼{new string('─', w_type)}┼{new string('─', w_value)}┤
-");
+            string table = GenerateTable(variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value })
+                                                  .Transpose()
+                                                  .Zip(new[] {
+                                                      ("Name", false),
+                                                      ("Location", false),
+                                                      ("Type", false),
+                                                      ("Value", true),
+                                                  })
+                                                  .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth));
 
-            foreach ((string name, string loc, string type, string value) in variables)
+            frame.Print(table);
+
+            return Variant.Zero;
+        }
+
+        public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
+        {
+            if (frame.Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
             {
-                string val = value.Length > w_value ? value[..(w_value - 3)] + "..."  : value.PadLeft(w_value);
+                var values = objects.Select(t => new string?[]
+                {
+                    $"/com/{t.id:x8}",
+                    t.type,
+                    t.clsid,
+                    t.value.ToDebugString(frame.Interpreter),
+                }).Transpose().Zip(new []
+                {
+                    ("Object", false),
+                    ("Type", false),
+                    ("CLSID", false),
+                    ("Value", true),
+                }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
 
-                sb.AppendLine($"│{name.PadRight(w_name)}│{loc.PadRight(w_loc)}│{type.PadRight(w_type)}│{val}│");
+                frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth)));
             }
-
-            sb.AppendLine($"└{new string('─', w_name)}┴{new string('─', w_loc)}┴{new string('─', w_type)}┴{new string('─', w_value)}┘");
-
-            frame.Print(sb.ToString());
 
             return Variant.Zero;
         }
@@ -301,40 +415,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             {
                 StringBuilder sb = new StringBuilder();
                 (SourceLocation loc, string txt)[] lines = au3frame.CurrentLineCache;
-                int w_num = (int)Math.Max(4, Math.Log10(lines.Length) + 1);
-                int w_loc = lines.Select(l => l.loc.ToString().Length).Append(8).Max();
-                int w_txt = lines.Select(l => l.txt.ToString().Length).Append(7).Max();
-                int cwidth = Math.Min(Console.BufferWidth, Console.WindowWidth);
                 int eip = au3frame.CurrentInstructionPointer;
 
-                sb.Append($@"{lines.Length} Lines:
-┌{new string('─', w_num)}┬{new string('─', w_loc)}┬{new string('─', w_txt)}┐
-│{"Line".PadRight(w_num)}│{"Location".PadRight(w_loc)}│{"Content".PadRight(w_txt)}│
-├{new string('─', w_num)}┼{new string('─', w_loc)}┼{new string('─', w_txt)}┤
-");
-
-                if (w_num + w_loc + w_txt + 4 > cwidth)
-                    w_txt = cwidth - 4 - w_num - w_loc;
-
-                for (int i = 0; i < lines.Length; i++)
+                string table = GenerateTable(new[]
                 {
-                    (SourceLocation loc, string txt) = lines[i];
-                    void append(object o) => sb.Append(eip == i ? $"\x1b[7m{o}\x1b[27m" : o);
+                    ("Line", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
+                    ("Location", false, lines.ToArray(t => t.loc.ToString())),
+                    ("Content", false, lines.ToArray(Generics.snd)),
+                }, Math.Min(Console.BufferWidth, Console.WindowWidth), i => i == eip);
 
-                    txt = txt.Length > w_txt ? txt[..(w_txt - 3)] + "..." : txt.PadRight(w_txt);
-
-                    sb.Append('│');
-                    append(i.ToString().PadLeft(w_num));
-                    sb.Append('│');
-                    append(loc.ToString().PadRight(w_loc));
-                    sb.Append('│');
-                    append(txt);
-                    sb.AppendLine("│");
-                }
-
-                sb.AppendLine($"└{new string('─', w_num)}┴{new string('─', w_loc)}┴{new string('─', w_txt)}┘");
-
-                frame.Print(sb.ToString());
+                frame.Print(table);
             }
 
             return Variant.Zero;

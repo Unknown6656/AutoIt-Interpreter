@@ -11,6 +11,7 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.AutoIt3.Runtime.Native;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -289,6 +290,9 @@ namespace Unknown6656.AutoIt3.Runtime
                         return InterpreterError.WellKnown(new SourceLocation(file, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
 
                     _cached_scripts.TryAdd(key, script);
+
+                    if (file.Directory is { Exists: true, FullName: string dir })
+                        Interpreter.AddFolderToEnvPath(dir);
                 }
 
                 return script;

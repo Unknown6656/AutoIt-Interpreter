@@ -446,13 +446,8 @@ namespace Unknown6656.AutoIt3.Runtime
             return new_array is { };
         }
 
-        public readonly bool TryResolveHandle(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out object? value)
-        {
-            int key = (int)this;
-            value = null;
-
-            return interpreter.GlobalObjectStorage.TryGet(key, out value);
-        }
+        public readonly bool TryResolveHandle(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out object? value) =>
+            interpreter.GlobalObjectStorage.TryGet((int)this, out value);
 
         public readonly bool TryResolveHandle<T>(Interpreter interpreter, [MaybeNullWhen(false), NotNullWhen(true)] out T? value) where T : class
         {
