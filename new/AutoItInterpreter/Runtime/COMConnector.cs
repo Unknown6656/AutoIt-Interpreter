@@ -328,7 +328,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return COMData.FromDouble((double)d);
             }),
             VariantType.String => COMData.FromString(com_data.ToString()),
-            VariantType.Array => COMData.FromArray(com_data.ToArray().Select(Convert)),
+            VariantType.Array => COMData.FromArray(com_data.ToArray(Interpreter).Select(Convert)),
             VariantType.COMObject => COMData.FromCOMObjectID((uint)com_data.RawData!),
 
             // TODO
@@ -356,7 +356,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (com_data.IsCOM(out Variant com))
                 return com;
             else if (com_data.IsArray(out COMData[]? array))
-                return array?.ToArray(Convert);
+                return Variant.FromArray(Interpreter, array?.ToArray(Convert));
             else if (com_data.IsNull)
                 return Variant.Null;
             else

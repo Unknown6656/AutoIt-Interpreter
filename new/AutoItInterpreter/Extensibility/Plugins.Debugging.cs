@@ -12,31 +12,29 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
     public sealed class DebuggingFunctionProvider
         : AbstractFunctionProvider
     {
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
-        {
-            ProvidedNativeFunction.Create(nameof(DebugVar), 1, DebugVar),
-            ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
-            ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
-            ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
-            ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
-            ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
-            ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
-        };
+        public override ProvidedNativeFunction[] ProvidedFunctions { get; }
 
 
         public DebuggingFunctionProvider(Interpreter interpreter)
-            : base(interpreter)
-        {
-        }
+            : base(interpreter) => ProvidedFunctions = new[]
+            {
+                ProvidedNativeFunction.Create(nameof(DebugVar), 1, DebugVar),
+                ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
+                ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
+                ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
+                ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
+                ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
+                ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
+            };
 
-        private static IDictionary<string, object?> GetVariantInfo(Variant value)
+        private IDictionary<string, object?> GetVariantInfo(Variant value)
         {
             string s = value.RawData?.ToString()?.Trim() ?? "";
             string ts = value.RawData?.GetType().ToString() ?? "<void>";
 
             IDictionary<string, object?> dic = new Dictionary<string, object?>
             {
-                ["value"] = value.ToDebugString(),
+                ["value"] = value.ToDebugString(Interpreter),
                 ["type"] = value.Type,
                 ["raw"] = s != ts ? $"\"{s}\" ({ts})" : ts
             };
@@ -50,7 +48,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return dic;
         }
 
-        private static IDictionary<string, object?> GetVariableInfo(Variable? variable) => new Dictionary<string, object?>
+        private IDictionary<string, object?> GetVariableInfo(Variable? variable) => new Dictionary<string, object?>
         {
             ["name"] = variable,
             ["constant"] = variable.IsConst,
@@ -60,7 +58,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             ["value"] = GetVariantInfo(variable.Value)
         };
 
-        private static IDictionary<string, object?> GetCallFrameInfo(CallFrame? frame)
+        private IDictionary<string, object?> GetCallFrameInfo(CallFrame? frame)
         {
             IDictionary<string, object?> dic = new Dictionary<string, object?>();
 
@@ -85,7 +83,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return dic;
         }
 
-        private static IDictionary<string, object?> GetThreadInfo(AU3Thread thread) => new Dictionary<string, object?>
+        private IDictionary<string, object?> GetThreadInfo(AU3Thread thread) => new Dictionary<string, object?>
         {
             ["id"] = thread.ThreadID,
             ["disposed"] = thread.IsDisposed,
@@ -94,7 +92,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             ["callstack"] = thread.CallStack.ToArray(GetCallFrameInfo)
         };
 
-        private static IDictionary<string, object?> GetAllVariables(Interpreter interpreter)
+        private IDictionary<string, object?> GetAllVariables(Interpreter interpreter)
         {
             IDictionary<string, object?> dic = new Dictionary<string, object?>();
             List<VariableScope> scopes = new List<VariableScope> { interpreter.VariableResolver };
@@ -126,7 +124,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return dic;
         }
 
-        private static string SerializeDictionary(IDictionary<string, object?> dic, string title)
+        private string SerializeDictionary(IDictionary<string, object?> dic, string title)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -190,22 +188,22 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                      .ToString();
         }
 
-        private static Variant SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
+        private Variant SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
         {
             frame.Print(SerializeDictionary(dic, title is string s ? s : title?.ToString() ?? ""));
 
             return Variant.Zero;
         }
 
-        private static FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
+        public FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
 
-        private static FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] args) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
+        public FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] args) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
 
-        private static FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
+        public FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
 
-        private static FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
+        public FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
 
-        private static FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
             int count;
@@ -231,7 +229,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                           $"/iter/{kvp.Key}",
                                                                           Autoit3.ASM.Name,
                                                                           "Iterator",
-                                                                          $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString()}, Value:{tuple.value.ToDebugString()}"
+                                                                          $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString(Interpreter)}, Value:{tuple.value.ToDebugString(Interpreter)}"
                                                                       );
             IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.Keys
                                                                         where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
@@ -249,7 +247,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                                     name,
                                                                                     variable.DeclaredLocation.ToString(),
                                                                                     variable.Value.Type.ToString(),
-                                                                                    variable.Value.ToDebugString()
+                                                                                    variable.Value.ToDebugString(Interpreter)
                                                                                 )).Concat(iterators)
                                                                                   .Concat(global_objs)
                                                                                   .ToArray();
@@ -297,7 +295,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private static FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
         {
             if (frame.CurrentThread.CallStack.OfType<AU3CallFrame>().FirstOrDefault() is AU3CallFrame au3frame)
             {
@@ -342,7 +340,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private static FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
             // TODO
 

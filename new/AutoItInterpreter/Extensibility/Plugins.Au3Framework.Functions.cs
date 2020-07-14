@@ -115,13 +115,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FileWrite), 2, FileWrite),
             ProvidedNativeFunction.Create(nameof(FileWriteLine), 2, FileWriteLine),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
-            ProvidedNativeFunction.Create(nameof(IniDelete), , IniDelete),
-            ProvidedNativeFunction.Create(nameof(IniRead), , IniRead),
-            ProvidedNativeFunction.Create(nameof(IniReadSection), , IniReadSection),
-            ProvidedNativeFunction.Create(nameof(IniReadSectionNames), , IniReadSectionNames),
-            ProvidedNativeFunction.Create(nameof(IniRenameSection), , IniRenameSection),
-            ProvidedNativeFunction.Create(nameof(IniWrite), , IniWrite),
-            ProvidedNativeFunction.Create(nameof(IniWriteSection), , IniWriteSection),
+            ProvidedNativeFunction.Create(nameof(IniDelete), 2, 3, IniDelete, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(IniRead), 3, 4, IniRead, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(IniReadSection), 2, IniReadSection),
+            ProvidedNativeFunction.Create(nameof(IniReadSectionNames), 1, IniReadSectionNames),
+            ProvidedNativeFunction.Create(nameof(IniRenameSection), 3, 4, IniRenameSection, Variant.False),
+            ProvidedNativeFunction.Create(nameof(IniWrite), 4, IniWrite),
+            ProvidedNativeFunction.Create(nameof(IniWriteSection), 3, 4, IniWriteSection, 1),
             ProvidedNativeFunction.Create(nameof(IsAdmin), 0, IsAdmin),
             ProvidedNativeFunction.Create(nameof(IsArray), 1, IsArray),
             ProvidedNativeFunction.Create(nameof(IsBinary), 1, IsBinary),
@@ -339,7 +339,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             Variant[] call_args = frame.PassedArguments.Length == 2 &&
                                   args[1] is { Type: VariantType.Array } arr &&
                                   arr.TryGetIndexed(frame.Interpreter, 0, out Variant caa) &&
-                                  caa.ToString().Equals("CallArgArray", StringComparison.InvariantCultureIgnoreCase) ? arr.ToArray() : args;
+                                  caa.ToString().Equals("CallArgArray", StringComparison.InvariantCultureIgnoreCase) ? arr.ToArray(frame.Interpreter) : args;
 
             call_args = call_args[1..];
 
@@ -610,7 +610,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 if (type is DriveType dt)
                     drives = drives.Where(d => d.DriveType == dt).ToArray();
 
-                return Variant.FromArray(drives.Select(d => d.Name.TrimEnd('/', '\\')).Prepend(drives.Length.ToString()).ToArray(Variant.FromString));
+                return Variant.FromArray(frame.Interpreter, drives.Select(d => d.Name.TrimEnd('/', '\\')).Prepend(drives.Length.ToString()).ToArray(Variant.FromString));
             }
             catch
             {
@@ -1137,7 +1137,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 error = true;
             }
 
-            return FunctionReturnValue.Error(Variant.FromArray(lines.Select(Variant.FromString)), error ? 1 : lines.Length == 0 ? 2 : 0, lines.Length);
+            return FunctionReturnValue.Error(Variant.FromArray(frame.Interpreter, lines.Select(Variant.FromString)), error ? 1 : lines.Length == 0 ? 2 : 0, lines.Length);
         }
 
         public static FunctionReturnValue FileRecycle(CallFrame frame, Variant[] args)
@@ -1423,37 +1423,169 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue IniDelete(CallFrame frame, Variant[] args)
         {
+            string path = args[0].ToString();
+            string section = args[1].ToString();
+            string key = args[2].ToString();
 
+            try
+            {
+                IDictionary<string, IDictionary<string, string>> ini = From.File(path).To.INI();
+
+                if (ini.TryGetValue(section, out IDictionary<string, string>? sec))
+                    if (args[2].IsDefault)
+                        ini.Remove(section);
+                    else
+                        sec.Remove(key);
+
+                From.INI(ini).To.File(path);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
         }
 
         public static FunctionReturnValue IniRead(CallFrame frame, Variant[] args)
         {
+            string path = args[0].ToString();
+            string section = args[1].ToString();
+            string key = args[2].ToString();
 
+            try
+            {
+                return (Variant)From.File(path).To.INI()[section][key];
+            }
+            catch
+            {
+                return args[3];
+            }
         }
 
         public static FunctionReturnValue IniReadSection(CallFrame frame, Variant[] args)
         {
+            string path = args[0].ToString();
+            string section = args[1].ToString();
 
+            try
+            {
+                return Variant.FromArray(frame.Interpreter, From.File(path).To.INI()[section].Select(sec => Variant.FromArray(frame.Interpreter, sec.Key, sec.Value)));
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
         }
 
         public static FunctionReturnValue IniReadSectionNames(CallFrame frame, Variant[] args)
         {
+            string path = args[0].ToString();
 
+            try
+            {
+                return Variant.FromArray(frame.Interpreter, From.File(path).To.INI().Keys.Select(Variant.FromString));
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
         }
 
         public static FunctionReturnValue IniRenameSection(CallFrame frame, Variant[] args)
         {
+            string path = args[0].ToString();
+            string old_sec = args[1].ToString();
+            string new_sec = args[2].ToString();
+            bool overwrite = args[3].ToBoolean();
 
+            try
+            {
+                IDictionary<string, IDictionary<string, string>> ini = From.File(path).To.INI();
+
+                if (old_sec != new_sec)
+                    if (ini.TryGetValue(old_sec, out IDictionary<string, string>? section))
+                        return Variant.False;
+                    else if (ini.ContainsKey(new_sec) && !overwrite)
+                        return FunctionReturnValue.Error(Variant.False, 1, Variant.Zero);
+                    else
+                    {
+                        ini[new_sec] = section ?? new Dictionary<string, string>();
+                        ini.Remove(old_sec);
+
+                        From.INI(ini).To.File(path);
+                    }
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
         }
 
         public static FunctionReturnValue IniWrite(CallFrame frame, Variant[] args)
         {
+            string section = args[1].ToString();
+            string key = args[2].ToString();
+            string value = args[3].ToString();
 
+            try
+            {
+                FileInfo ini_file = new FileInfo(args[0].ToString());
+                IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
+
+                if (ini_file.Exists)
+                    From.File(ini_file).To.INI();
+
+                if (!ini.ContainsKey(section))
+                    ini[section] = new Dictionary<string, string>();
+
+                ini[section][key] = value;
+
+                From.INI(ini).To.File(ini_file);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
         }
 
         public static FunctionReturnValue IniWriteSection(CallFrame frame, Variant[] args)
         {
+            string section = args[1].ToString();
+            Variant data = args[2];
+            int index = (int)args[3];
 
+            try
+            {
+                FileInfo ini_file = new FileInfo(args[0].ToString());
+                IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
+
+                if (ini_file.Exists)
+                    From.File(ini_file).To.INI();
+
+                IEnumerable<string> lines;
+
+                if (args[2] is { Type: VariantType.Array } arr)
+                    lines = arr.ToArray(frame.Interpreter).Select(e => e.ToArray(frame.Interpreter)).Select(a => $"{a[0]}={a[1]}").Prepend($"[{section}]");
+                else if (args[2] is { Type: VariantType.Map } map)
+                    lines = args[2].ToMap(frame.Interpreter).Select(kvp => $"{kvp.Key}={kvp.Value}").Prepend($"[{section}]");
+                else
+                    lines = args[2].ToString().SplitIntoLines();
+
+                ini = ini.Merge(From.Lines(lines).To.INI());
+
+                From.INI(ini).To.File(ini_file);
+
+                return Variant.True;
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(Variant.False, 1, Variant.Zero);
+            }
         }
 
         public static FunctionReturnValue IsDeclared(CallFrame frame, Variant[] args) =>
@@ -1576,7 +1708,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                Variant[] data = args[0].ToArray();
+                Variant[] data = args[0].ToArray(frame.Interpreter);
                 int start = (int)args[1];
                 int end = (int)args[2];
                 int enc = (int)args[3];
@@ -1693,7 +1825,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 if (flag is 1 or 3 && groups.Length > 1)
                     groups = groups[1..];
 
-                return Variant.FromArray(groups);
+                return Variant.FromArray(frame.Interpreter, groups);
             }
 
             if (flag is 1 or 2)
@@ -1705,7 +1837,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
             else if (flag is 3 or 4)
             {
-                Variant result = Variant.FromArray(regex.Matches(input).Select(to_array));
+                Variant result = Variant.FromArray(frame.Interpreter, regex.Matches(input).Select(to_array));
 
                 if (result.Length > 0)
                     return result;
@@ -1855,7 +1987,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                     arr = str.Select(c => Variant.FromNumber(enc == 1 ? (byte)c : (int)c));
 
-                return Variant.FromArray(arr);
+                return Variant.FromArray(frame.Interpreter, arr);
             }
 
             return Variant.EmptyString;

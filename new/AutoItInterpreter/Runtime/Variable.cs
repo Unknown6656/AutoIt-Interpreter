@@ -182,7 +182,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool Equals(Variant other) => Type.Equals(other.Type) && Equals(RawData, other.RawData);
 
-        public readonly override bool Equals(object? obj) => Equals(FromObject(obj));
+        public readonly override bool Equals(object? obj) => obj is Variant variant && Equals(variant);
 
         public readonly override int GetHashCode() => HashCode.Combine(Type, RawData);
 
@@ -195,7 +195,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => "",
         };
 
-        public readonly string ToDebugString()
+        public readonly string ToDebugString(Interpreter interpreter)
         {
             static string sanitize(char c) => c switch
             {
@@ -214,19 +214,26 @@ namespace Unknown6656.AutoIt3.Runtime
             if (IsNull || IsDefault)
                 return Type.ToString();
             else if (RawData is Variant[] arr)
-                return $"[{string.Join(", ", arr.Select(e => e.ToDebugString()))}]";
+                return $"[{string.Join(", ", arr.Select(e => e.ToDebugString(interpreter)))}]";
             else if (Type is VariantType.Map)
-                return $"[{string.Join(", ", ToMap().Select(kvp => $"{kvp.Key.ToDebugString()}={kvp.Value.ToDebugString()}"))}]";
+                return $"[{string.Join(", ", ToMap(interpreter).Select(kvp => $"{kvp.Key.ToDebugString(interpreter)}={kvp.Value.ToDebugString(interpreter)}"))}]";
             else if (RawData is string or StringBuilder)
                 return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
             else if (RawData is Variable v)
-                return $"${v.Name}:{v.Value.ToDebugString()}";
+                return $"${v.Name}:{v.Value.ToDebugString(interpreter)}";
             else if (RawData is ScriptFunction func)
                 return $"<{func.Location.FileName}>{func.Name}{func.ParameterCount}";
-            else if (Type is VariantType.Handle && RawData is int i)
-                return $"hnd:0x{i:x8}";
+            else if (Type is VariantType.Handle && RawData is int id)
+            {
+                string data = "invalid";
+
+                if (interpreter.GlobalObjectStorage.TryGet(id, out object? obj))
+                    data = obj?.GetType().FullName ?? "null";
+
+                return $"hnd:0x{id:x8} ({data})";
+            }
             else if (Type is VariantType.COMObject && RawData is uint com)
-                return $"COM:0x{com:x8}";
+                return $"COM:0x{com:x8}"; // todo : type ?
             else
                 return ToString();
         }
@@ -269,12 +276,12 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => System.Array.Empty<byte>(),
         };
 
-        public readonly Variant[] ToArray()
+        public readonly Variant[] ToArray(Interpreter interpreter)
         {
             if (RawData is Array arr)
-                return arr.Cast<object>().ToArray(FromObject);
+                return arr.Cast<object>().ToArray(o => FromObject(interpreter, o));
             else if (RawData is string s)
-                return s.Cast<object>().ToArray(FromObject);
+                return s.Cast<char>().ToArray(c => FromObject(interpreter, c));
 
             // TODO : COM objects
             // TODO : NET objects
@@ -284,19 +291,19 @@ namespace Unknown6656.AutoIt3.Runtime
                 return Array.Empty<Variant>();
         }
 
-        public readonly (Variant key, Variant value)[] ToOrderedMap()
+        public readonly (Variant key, Variant value)[] ToOrderedMap(Interpreter interpreter)
         {
             List<(Variant, Variant)> output = new();
 
             if (RawData is Array arr)
                 for (int i = 0; i < arr.Length; ++i)
-                    output.Add((i, FromObject(arr.GetValue(i))));
+                    output.Add((i, FromObject(interpreter, arr.GetValue(i))));
             else if (RawData is IDictionary<Variant, Variant> dic)
                 foreach (Variant key in dic.Keys)
                     output.Add((key, dic[key]));
             else if (RawData is string s)
                 for (int i = 0; i < s.Length; ++i)
-                    output.Add((i, FromObject(s[i])));
+                    output.Add((i, FromObject(interpreter, s[i])));
             else
 
                 // TODO : COM objects
@@ -307,7 +314,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return output.ToArray();
         }
 
-        public readonly IDictionary<Variant, Variant> ToMap() => ToOrderedMap().ToDictionary();
+        public readonly IDictionary<Variant, Variant> ToMap(Interpreter interpreter) => ToOrderedMap(interpreter).ToDictionary();
 
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
@@ -370,7 +377,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return false;
                 else
                 {
-                    value = FromObject(arr.GetValue(idx));
+                    value = FromObject(interpreter, arr.GetValue(idx));
 
                     return true;
                 }
@@ -419,7 +426,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return false;
         }
 
-        public readonly bool ResizeArray(int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
+        public readonly bool ResizeArray(Interpreter interpreter, int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
         {
             if (RawData is byte[] bytes)
             {
@@ -431,7 +438,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 Array.Resize(ref arr, new_size);
 
-                new_array = FromArray(arr);
+                new_array = FromArray(interpreter, arr);
             }
             else
                 new_array = null;
@@ -476,7 +483,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant NewArray(int length) => new Variant(VariantType.Array, new Variant[length], null);
 
-        public static Variant FromObject(object? obj) => obj switch
+        public static Variant FromObject(Interpreter interpreter, object? obj) => obj switch
         {
             null or LITERAL => FromLiteral(obj as LITERAL),
             Variable v => FromReference(v),
@@ -497,8 +504,8 @@ namespace Unknown6656.AutoIt3.Runtime
             string str => FromString(str),
             StringBuilder strb => FromString(strb.ToString()),
             IEnumerable<byte> bytes => FromBinary(bytes),
-            IEnumerable<Variant> arr => FromArray(arr),
-            // IDictionary<Variant, Variant> dic => FromMap(interpreter, dic),
+            IEnumerable<Variant> arr => FromArray(interpreter, arr),
+            IDictionary<Variant, Variant> dic => FromMap(interpreter, dic),
             ScriptFunction func => FromFunction(func),
 
             _ => throw new NotImplementedException(obj.ToString()),
@@ -522,7 +529,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return v;
         }
 
-        public static Variant FromArray(IEnumerable<Variant>? collection) => FromArray(collection?.ToArray());
+        public static Variant FromArray(Interpreter interpreter, IEnumerable<Variant>? collection) => FromArray(interpreter, collection?.ToArray());
 
         public static Variant FromArray(Interpreter interpreter, params Variant[]? array)
         {
@@ -531,7 +538,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             foreach (object? element in array ?? Array.Empty<Variant>())
             {
-                v.TrySetIndexed(interpreter, i, FromObject(element));
+                v.TrySetIndexed(interpreter, i, FromObject(interpreter, element));
                 ++v;
             }
 
@@ -628,7 +635,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Variant operator >>(Variant v, int offs) => offs < 0 ? v << -offs : (int)v << offs;
 
         /// <summary>This is <b>not</b> XOR - this is the mathematical power operator!</summary>
-        public static Variant operator ^(Variant v1, Variant v2) => FromObject(Math.Pow((double)v1.ToNumber(), (double)v2.ToNumber()));
+        public static Variant operator ^(Variant v1, Variant v2) => FromNumber((decimal)Math.Pow((double)v1.ToNumber(), (double)v2.ToNumber()));
 
         /// <summary>This is <b>not</b> AND - this is string concat!</summary>
         public static Variant operator &(Variant v1, Variant v2) => FromString(v1.ToString() + v2.ToString());
@@ -666,19 +673,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant(ulong n) => FromNumber(n);
 
-        public static implicit operator Variant(float n) => FromObject(n);
+        public static implicit operator Variant(float n) => FromNumber((decimal)n);
 
-        public static implicit operator Variant(double n) => FromObject(n);
+        public static implicit operator Variant(double n) => FromNumber((decimal)n);
 
         public static implicit operator Variant(decimal n) => FromNumber(n);
 
-        public static implicit operator Variant(char n) => FromObject(n);
+        public static implicit operator Variant(char n) => FromString(n.ToString());
 
-        public static implicit operator Variant(string? n) => n is null ? FromObject(null) : FromString(n);
+        public static implicit operator Variant(string? str) => FromString(str);
 
-        public static implicit operator Variant(StringBuilder? n) => FromObject(n);
+        public static implicit operator Variant(StringBuilder? sb) => FromString(sb?.ToString());
 
-        public static implicit operator Variant(Variant[]? n) => FromArray(n);
+        // public static implicit operator Variant(Variant[]? n) => FromArray(n);
 
         public static implicit operator Variant(byte[] n) => FromBinary(n);
 
@@ -760,7 +767,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Value = Variant.Null;
         }
 
-        public override string ToString() => $"${Name}: {Value.ToDebugString()}";
+        public override string ToString() => $"${Name}: {Value.ToDebugString(DeclaredScope.Interpreter)}";
 
         public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
 
