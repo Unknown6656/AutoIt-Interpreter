@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -10,8 +11,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Text.RegularExpressions;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -133,16 +132,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
-            // ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), , StringFromASCIIArray),
-            // ProvidedNativeFunction.Create(nameof(StringInStr), , StringInStr),
+            ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), 1, 4, StringFromASCIIArray, Variant.Zero, -1, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(StringInStr), 2, 6, StringInStr, Variant.Zero, 1, 1, Variant.Default),
             ProvidedNativeFunction.Create(nameof(StringLeft), 2, StringLeft),
             ProvidedNativeFunction.Create(nameof(StringLen), 1, StringLen),
             ProvidedNativeFunction.Create(nameof(StringLower), 1, StringLower),
             ProvidedNativeFunction.Create(nameof(StringMid), 2, 3, StringMid, -1),
-            // ProvidedNativeFunction.Create(nameof(StringRegExp), , StringRegExp),
-            // ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), , StringRegExpReplace ),
-            // ProvidedNativeFunction.Create(nameof(StringReplace), , StringReplace),
-            // ProvidedNativeFunction.Create(nameof(StringReverse), , StringReverse),
+            ProvidedNativeFunction.Create(nameof(StringRegExp), 2, 4, StringRegExp, Variant.Zero, 1),
+            ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), 3, 4, StringRegExpReplace, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(StringReplace), 3, 5, StringReplace, Variant.Zero, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(StringReverse), 1, 2, StringReverse, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringRight), 2, StringRight),
             // ProvidedNativeFunction.Create(nameof(StringSplit), , StringSplit),
             ProvidedNativeFunction.Create(nameof(StringStripCR), 1, StringStripCR),
@@ -187,7 +186,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             else
                 return InterpreterError.WellKnown(null, "error.au3_caller_only", funcname);
         }
-
 
         public static FunctionReturnValue AutoItWinGetTitle(CallFrame frame, Variant[] args) => (Variant)Console.Title;
 
@@ -1506,15 +1504,80 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args) => (Variant)StringFormatter.FormatString(args[0].ToString(), args[1..]);
 
-        // public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
+        {
+            if (args[0].Type is not VariantType.Array)
+                return FunctionReturnValue.Error(1, 0, Variant.EmptyString);
+
+            try
+            {
+                Variant[] data = args[0].ToArray();
+                int start = (int)args[1];
+                int end = (int)args[2];
+                int enc = (int)args[3];
+
+                if (end < 0)
+                    end = int.MaxValue;
+
+                IEnumerable<char>? chars = data[start..Math.Min(end, data.Length)].Select(v => unchecked((char)(int)v));
+
+                return Variant.FromString(enc switch
+                {
+                    2 => Encoding.UTF8.GetString(chars.ToArray(c => (byte)c)),
+                    1 => new string(chars.ToArray(c => (char)(byte)c)),
+                    _ => new string(chars.ToArray()),
+                });
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(2, 0, Variant.EmptyString);
+            }
+        }
+
+        public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
+        {
+            string input = args[0].ToString();
+            string substr = args[1].ToString();
+            StringComparison mode = ((int)args[2]) switch
+            {
+                1 => StringComparison.InvariantCulture,
+                2 => StringComparison.InvariantCultureIgnoreCase,
+                _ => StringComparison.CurrentCultureIgnoreCase,
+            };
+            int occurence = (int)args[3];
+            int start = (int)args[4] - 1;
+            int count = (int)args[5];
+
+            if (count < 0)
+                count = int.MaxValue;
+
+            if (start >= 0 && start < input.Length)
+                try
+                {
+                    count = Math.Min(count, input.Length - start);
+
+                    int sindex = start + (occurence < 0 ? count : 0);
+
+                    while (occurence != 0)
+                    {
+                        int match = occurence < 0 ? input.LastIndexOf(substr, sindex, count - sindex + start, mode) : input.IndexOf(substr, sindex, count - sindex + start, mode);
+
+                        if (match < 0)
+                            break;
+                        else if ((occurence += occurence < 0 ? 1 : -1) == 0)
+                            return Variant.FromNumber(match + 1);
+                        else
+                            sindex = match;
+                    }
+
+                    return Variant.Zero;
+                }
+                catch
+                {
+                }
+
+            return FunctionReturnValue.Error(1);
+        }
 
         public static FunctionReturnValue StringLeft(CallFrame frame, Variant[] args)
         {
@@ -1542,25 +1605,131 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)(len < 0 ? "" : str.Substring(start, len));
         }
 
-        // public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
+        {
+            Regex regex;
+            string input = args[0].ToString();
+            int flag = (int)args[2];
+            int offset = (int)args[3];
+
+            try
+            {
+                regex = new Regex(args[1].ToString());
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(2, 0);
+            }
+
+            Variant to_array(Match match)
+            {
+                Variant[] groups = match.Groups.Cast<Group>().ToArray(g => (Variant)g.Value);
+
+                if (flag is 1 or 3 && groups.Length > 1)
+                    groups = groups[1..];
+
+                return Variant.FromArray(groups);
+            }
+
+            if (flag is 1 or 2)
+            {
+                if (input.Match(regex, out Match m))
+                    return to_array(m);
+                else
+                    return FunctionReturnValue.Error(1);
+            }
+            else if (flag is 3 or 4)
+            {
+                Variant result = Variant.FromArray(regex.Matches(input).Select(to_array));
+
+                if (result.Length > 0)
+                    return result;
+                else
+                    return FunctionReturnValue.Error(1);
+            }
+            else
+                return (Variant)regex.IsMatch(input);
+        }
+
+        public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
+        {
+            Regex regex;
+            string input = args[0].ToString();
+            string replacement = args[2].ToString();
+            int count = (int)args[3];
+            bool all = count == 0;
+            int i = 0;
+
+            try
+            {
+                regex = new Regex(args[1].ToString());
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(2, 0);
+            }
+
+            while (i < count || all)
+                if (input.Match(regex, out Match m))
+                {
+                    input = input[..m.Index] + replacement + input[(m.Index + m.Length)..];
+                    ++i;
+                }
+                else
+                    break;
+
+            if (i == 0)
+                return FunctionReturnValue.Error(input, 1, i);
+            else
+                return FunctionReturnValue.Success(input, i);
+        }
+
+        public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
+        {
+            string input = args[0].ToString();
+            string search = args[1].ToString();
+            string replace = args[2].ToString();
+            int occurence = (int)args[3];
+            StringComparison mode = ((int)args[4]) switch
+            {
+                1 => StringComparison.InvariantCulture,
+                2 => StringComparison.InvariantCultureIgnoreCase,
+                _ => StringComparison.CurrentCultureIgnoreCase,
+            };
+            int count = 0;
+            int sindex = 0;
+
+            if (occurence == 0)
+                occurence = int.MaxValue;
+            else if (occurence < 0)
+                sindex = input.Length;
+
+            while (occurence != 0)
+            {
+                int index = occurence > 0 ? input.IndexOf(search, sindex, mode) : input.LastIndexOf(search, sindex, mode);
+
+                if (index == -1)
+                    break;
+
+                if (occurence < 0)
+                {
+                    ++occurence;
+                    sindex = index;
+                }
+                else
+                {
+                    --occurence;
+                    sindex = index + replace.Length;
+                }
+
+                input = input[..index] + replace + input[(index + search.Length)..];
+                ++count;
+            }
+
+            return FunctionReturnValue.Success(input, count);
+        }
+
+        public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args) => (Variant)new string(args[0].ToString().Reverse().ToArray());
 
         public static FunctionReturnValue StringRight(CallFrame frame, Variant[] args)
         {
