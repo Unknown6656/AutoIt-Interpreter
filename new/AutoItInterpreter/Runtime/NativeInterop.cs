@@ -4,12 +4,21 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime.Native
 {
     public static class NativeInterop
     {
+        public const uint TOKEN_READ = 0x00020008;
+
         public const int MAX_PATH = 255;
+        private const string KERNEL32 = "kernel32.dll";
+        private const string SHELL32 = "shell32.dll";
+        private const string OLE32 = "ole32.dll";
+        private const string USER32 = "user32.dll";
+        private const string LIBC = "libc.so";
+        private const string COREDLL = "coredll.dll";
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {
@@ -19,44 +28,61 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         };
 
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-        public static extern ushort GetUserDefaultUILanguage();
+        [DllImport(LIBC)]
+        public static unsafe extern uint geteuid();
 
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
-
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        public static unsafe extern uint SHEmptyRecycleBin(void* hwnd, [MarshalAs(UnmanagedType.LPWStr)] string? pszRootPath, RecycleFlags dwFlags);
-
-        [DllImport("coredll.dll", SetLastError = true)]
-        public static unsafe extern bool DeviceIoControl(void* hDevice, int dwIoControlCode, byte* lpInBuffer, int nInBufferSize, byte* lpOutBuffer, int nOutBufferSize, int* lpBytesReturned, void* lpOverlapped);
-
-        [DllImport("coredll", SetLastError = true)]
-        public static unsafe extern void* CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, void* lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, void* hTemplateFile);
-
-        [DllImport("user32.dll")]
-        public static extern bool BlockInput(bool fBlockIt);
-
-        [DllImport("libc.so")]
+        [DllImport(LIBC)]
         public static unsafe extern int ioctl(int fd, int arg1, int arg2);
 
-        [DllImport("libc.so", CharSet = CharSet.Ansi)]
+        [DllImport(LIBC, CharSet = CharSet.Ansi)]
         public static unsafe extern int open([MarshalAs(UnmanagedType.LPStr)] string path, int flags);
 
-        [DllImport("user32.dll")]
-        public static extern int ShowWindow(int hwnd, int nCmdShow);
-
-        [DllImport("ole32.dll")]
-        public static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
-
-        [DllImport("ole32.dll")]
-        public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(USER32, SetLastError = true)]
         public static unsafe extern bool SetForegroundWindow(nint hWnd);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(USER32, CharSet = CharSet.Auto, SetLastError = true)]
         public static unsafe extern void* SetFocus(void* hWnd);
+
+        [DllImport(SHELL32, CharSet = CharSet.Unicode)]
+        public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
+
+        [DllImport(SHELL32, CharSet = CharSet.Unicode)]
+        public static unsafe extern uint SHEmptyRecycleBin(void* hwnd, [MarshalAs(UnmanagedType.LPWStr)] string? pszRootPath, RecycleFlags dwFlags);
+
+        [DllImport(KERNEL32, CharSet = CharSet.Auto)]
+        public static extern ushort GetUserDefaultUILanguage();
+
+        [DllImport(KERNEL32, SetLastError = true)]
+        public static extern unsafe void* GetCurrentProcess();
+
+        [DllImport(KERNEL32)]
+        public static extern unsafe nint LocalFree(void* hMem);
+
+        [DllImport(COREDLL, SetLastError = true)]
+        public static unsafe extern bool DeviceIoControl(void* hDevice, int dwIoControlCode, byte* lpInBuffer, int nInBufferSize, byte* lpOutBuffer, int nOutBufferSize, int* lpBytesReturned, void* lpOverlapped);
+
+        [DllImport(COREDLL, CharSet = CharSet.Auto, SetLastError = true)]
+        public static unsafe extern void* CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, void* lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, void* hTemplateFile);
+
+        [DllImport(USER32)]
+        public static extern bool BlockInput(bool fBlockIt);
+
+        [DllImport(USER32)]
+        public static extern int ShowWindow(int hwnd, int nCmdShow);
+
+        [DllImport(OLE32)]
+        public static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
+
+        [DllImport(OLE32)]
+        public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern unsafe bool GetTokenInformation(void* TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, void* TokenInformation, uint TokenInformationLength, out uint ReturnLength);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern unsafe bool OpenProcessToken(void* ProcessHandle, uint DesiredAccess, void** TokenHandle);
 
 
         public static (string stdout, int code) Bash(string command) => DoPlatformDependent(
@@ -235,5 +261,58 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         Windows,
         Unix,
         MacOS
+    }
+
+    public enum TOKEN_INFORMATION_CLASS
+    {
+        TokenUser,
+        TokenGroups,
+        TokenPrivileges,
+        TokenOwner,
+        TokenPrimaryGroup,
+        TokenDefaultDacl,
+        TokenSource,
+        TokenType,
+        TokenImpersonationLevel,
+        TokenStatistics,
+        TokenRestrictedSids,
+        TokenSessionId,
+        TokenGroupsAndPrivileges,
+        TokenSessionReference,
+        TokenSandBoxInert,
+        TokenAuditPolicy,
+        TokenOrigin,
+        TokenElevationType,
+        TokenLinkedToken,
+        TokenElevation,
+        TokenHasRestrictions,
+        TokenAccessInformation,
+        TokenVirtualizationAllowed,
+        TokenVirtualizationEnabled,
+        TokenIntegrityLevel,
+        TokenUIAccess,
+        TokenMandatoryPolicy,
+        TokenLogonSid,
+        TokenIsAppContainer,
+        TokenCapabilities,
+        TokenAppContainerSid,
+        TokenAppContainerNumber,
+        TokenUserClaimAttributes,
+        TokenDeviceClaimAttributes,
+        TokenRestrictedUserClaimAttributes,
+        TokenRestrictedDeviceClaimAttributes,
+        TokenDeviceGroups,
+        TokenRestrictedDeviceGroups,
+        TokenSecurityAttributes,
+        TokenIsRestricted,
+        TokenProcessTrustLevel,
+        TokenPrivateNameSpace,
+        TokenSingletonAttributes,
+        TokenBnoIsolation,
+        TokenChildProcessFlags,
+        TokenIsLessPrivilegedAppContainer,
+        TokenIsSandboxed,
+        TokenOriginatingProcessTrustLevel,
+        MaxTokenInfoClass
     }
 }

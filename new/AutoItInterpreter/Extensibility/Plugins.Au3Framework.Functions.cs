@@ -11,6 +11,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -114,6 +115,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FileWrite), 2, FileWrite),
             ProvidedNativeFunction.Create(nameof(FileWriteLine), 2, FileWriteLine),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
+            ProvidedNativeFunction.Create(nameof(IniDelete), , IniDelete),
+            ProvidedNativeFunction.Create(nameof(IniRead), , IniRead),
+            ProvidedNativeFunction.Create(nameof(IniReadSection), , IniReadSection),
+            ProvidedNativeFunction.Create(nameof(IniReadSectionNames), , IniReadSectionNames),
+            ProvidedNativeFunction.Create(nameof(IniRenameSection), , IniRenameSection),
+            ProvidedNativeFunction.Create(nameof(IniWrite), , IniWrite),
+            ProvidedNativeFunction.Create(nameof(IniWriteSection), , IniWriteSection),
+            ProvidedNativeFunction.Create(nameof(IsAdmin), 0, IsAdmin),
             ProvidedNativeFunction.Create(nameof(IsArray), 1, IsArray),
             ProvidedNativeFunction.Create(nameof(IsBinary), 1, IsBinary),
             ProvidedNativeFunction.Create(nameof(IsBool), 1, IsBool),
@@ -1412,6 +1421,41 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return Variant.True;
             });
 
+        public static FunctionReturnValue IniDelete(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniRead(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniReadSection(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniReadSectionNames(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniRenameSection(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniWrite(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue IniWriteSection(CallFrame frame, Variant[] args)
+        {
+
+        }
+
         public static FunctionReturnValue IsDeclared(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
@@ -1420,6 +1464,27 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                     return Variant.Zero;
             });
+
+        public static unsafe FunctionReturnValue IsAdmin(CallFrame frame, Variant[] args) => (Variant)NativeInterop.DoPlatformDependent<bool>(delegate
+        {
+            void* processHandle = NativeInterop.GetCurrentProcess();
+            void* token;
+
+            if (NativeInterop.OpenProcessToken(processHandle, NativeInterop.TOKEN_READ, &token))
+                try
+                {
+                    int elevation;
+
+                    if (NativeInterop.GetTokenInformation(token, TOKEN_INFORMATION_CLASS.TokenElevation, &elevation, sizeof(int), out _))
+                        return elevation != 0;
+                }
+                finally
+                {
+                    NativeInterop.LocalFree(token);
+                }
+
+            return false;
+        }, () => NativeInterop.geteuid() == 0);
 
         public static FunctionReturnValue IsArray(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Array);
 
