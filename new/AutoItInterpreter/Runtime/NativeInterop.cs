@@ -19,6 +19,8 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         private const string USER32 = "user32.dll";
         private const string LIBC = "libc.so";
         private const string COREDLL = "coredll.dll";
+        private const string NTDLL = "ntdll.dll";
+        private const string ADVAPI32 = "advapi32.dll";
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {
@@ -58,6 +60,12 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(KERNEL32)]
         public static extern unsafe nint LocalFree(void* hMem);
 
+        [DllImport(NTDLL)]
+        public static extern int RtlAdjustPrivilege(int Privilege, bool bEnablePrivilege, bool IsThreadPrivilege, out bool _);
+
+        [DllImport(NTDLL)]
+        public static unsafe extern int NtRaiseHardError(uint ErrorStatus, uint NumberOfParameters, uint UnicodeStringParameterMask, void* Parameters, uint ValidResponseOption, out uint _);
+
         [DllImport(COREDLL, SetLastError = true)]
         public static unsafe extern bool DeviceIoControl(void* hDevice, int dwIoControlCode, byte* lpInBuffer, int nInBufferSize, byte* lpOutBuffer, int nOutBufferSize, int* lpBytesReturned, void* lpOverlapped);
 
@@ -76,11 +84,11 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(OLE32)]
         public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
+        [DllImport(ADVAPI32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool GetTokenInformation(void* TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, void* TokenInformation, uint TokenInformationLength, out uint ReturnLength);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
+        [DllImport(ADVAPI32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool OpenProcessToken(void* ProcessHandle, uint DesiredAccess, void** TokenHandle);
 

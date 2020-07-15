@@ -11,7 +11,6 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using Unknown6656.AutoIt3.Runtime.Native;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

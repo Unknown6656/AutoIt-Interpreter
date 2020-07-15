@@ -1,17 +1,16 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Reflection;
 using System.IO.Pipes;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System;
-using System.Text.RegularExpressions;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.COM.Server
 {

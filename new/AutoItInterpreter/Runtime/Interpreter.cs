@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System;
 
@@ -6,7 +7,6 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
-using System.Collections.Generic;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

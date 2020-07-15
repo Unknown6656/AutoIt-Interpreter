@@ -564,6 +564,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromReference(Variable variable) => new Variant(VariantType.Reference, variable, null);
 
+        public static Variant FromHandle(uint handle) => new Variant(VariantType.Handle, handle, null);
+
         // public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
         public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d, null);
@@ -750,6 +752,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        public Interpreter Interpreter => DeclaredScope.Interpreter;
+
         public bool IsGlobal => DeclaredScope.IsGlobalScope;
 
 
@@ -762,7 +766,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Value = Variant.Null;
         }
 
-        public override string ToString() => $"${Name}: {Value.ToDebugString(DeclaredScope.Interpreter)}";
+        public override string ToString() => $"${Name}: {Value.ToDebugString(Interpreter)}";
 
         public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
 
@@ -896,12 +900,12 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class GlobalObjectStorage
         : IDisposable
     {
-        private readonly ConcurrentDictionary<int, object> _objects = new ConcurrentDictionary<int, object>();
+        private readonly ConcurrentDictionary<uint, object> _objects = new ConcurrentDictionary<uint, object>();
 
 
         public Interpreter Interpreter { get; }
 
-        public int[] Keys => _objects.Keys.ToArray();
+        public Variant[] HandlesInUse => _objects.Keys.Select(Variant.FromHandle).ToArray();
 
         public int ObjectCount => _objects.Count;
 
@@ -911,50 +915,75 @@ namespace Unknown6656.AutoIt3.Runtime
             Interpreter = interpreter;
         }
 
-        private int GetFreeId()
+        private Variant GetFreeId()
         {
-            int id = 1;
+            uint id = 1;
 
-            foreach (int key in _objects.Keys.OrderBy(Generics.id))
+            foreach (uint key in _objects.Keys.OrderBy(Generics.id))
                 if (key == id)
                     ++id;
                 else
                     break;
 
-            return id;
+            while (_objects.Keys.Contains(id))
+                ++id;
+
+            return Variant.FromHandle(id);
         }
 
-        public int Store<T>(T item) where T : class
+        public Variant Store<T>(T item) where T : class
         {
-            int id = GetFreeId();
+            Variant handle = GetFreeId();
 
-            Update(id, item);
+            TryUpdate(handle, item);
 
-            return id;
+            return handle;
         }
 
-        public bool TryGet(int id, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue(id, out item);
-
-        public bool TryGet<T>(int id, out T? item) where T : class
+        public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item)
         {
-            bool res = TryGet(id, out object? value);
+            item = null;
+
+            return handle.Type is VariantType.Handle && _objects.TryGetValue((uint)handle, out item);
+        }
+
+        public bool TryGet<T>(Variant handle, out T? item) where T : class
+        {
+            bool res = TryGet(handle, out object? value);
 
             item = value as T;
 
             return res;
         }
 
-        public void Update<T>(int id, T item) where T : class => _objects[id] = item;
+        public bool TryUpdate<T>(Variant handle, T item)
+            where T : class
+        {
+            bool success;
+
+            if (success = (handle.Type is VariantType.Handle))
+                _objects[(uint)handle] = item;
+
+            return success;
+        }
 
         public void Dispose()
         {
-            _objects.Values.OfType<IDisposable>().AsParallel().Do(d => d.Dispose());
-            _objects.Clear();
+            foreach (Variant handle in HandlesInUse)
+                Delete(handle);
         }
 
-        public bool Delete(Variant handle) => handle.Type is VariantType.Handle && Delete((int)handle);
+        public bool Delete(Variant handle) => handle.Type is VariantType.Handle && Delete((uint)handle);
 
-        public bool Delete(int id) => _objects.TryRemove(id, out _);
+        private bool Delete(uint id)
+        {
+            bool success = _objects.TryRemove(id, out object? obj);
+
+            if (success && obj is IDisposable disp)
+                disp.Dispose();
+
+            return success;
+        }
     }
 
     public enum VariableSearchScope

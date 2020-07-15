@@ -1,6 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
+using System.Net.Sockets;
+using System.Net;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -11,10 +14,11 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
+    using TCPHandle = Union<TcpListener, TcpClient>;
+
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider
     {
@@ -173,6 +177,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FuncName), 1, FuncName),
             ProvidedNativeFunction.Create(nameof(SetError), 1, 3, SetError),
             ProvidedNativeFunction.Create(nameof(SetExtended), 1, 2, SetExtended),
+            ProvidedNativeFunction.Create(nameof(TCPAccept), 1, TCPAccept),
+            ProvidedNativeFunction.Create(nameof(TCPCloseSocket), 1, TCPCloseSocket),
+            ProvidedNativeFunction.Create(nameof(TCPConnect), 2, TCPConnect),
+            ProvidedNativeFunction.Create(nameof(TCPListen), 2, 3, TCPListen, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(TCPNameToIP), 1, TCPNameToIP),
+            ProvidedNativeFunction.Create(nameof(TCPRecv), 2, 3, TCPRecv, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(TCPSend), 2, TCPSend),
+            ProvidedNativeFunction.Create(nameof(TCPShutdown), 0, TCPShutdown),
+            ProvidedNativeFunction.Create(nameof(TCPStartup), 0, TCPStartup),
+            ProvidedNativeFunction.Create("UDPBind", 2, UDPListen),
+            ProvidedNativeFunction.Create(nameof(UDPListen), 2, UDPListen),
+            ProvidedNativeFunction.Create(nameof(UDPCloseSocket), 1, UDPCloseSocket),
+            ProvidedNativeFunction.Create(nameof(UDPOpen), 2, 3, UDPOpen, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(UDPRecv), 2, 3, UDPRecv, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(UDPSend), 2, UDPSend),
+            ProvidedNativeFunction.Create(nameof(UDPShutdown), 0, UDPShutdown),
+            ProvidedNativeFunction.Create(nameof(UDPStartup), 0, UDPStartup),
+            ProvidedNativeFunction.Create(nameof(UBound), 1, 2, UBound, 1),
         };
 
         public FrameworkFunctions(Interpreter interpreter)
@@ -767,7 +789,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                return (Variant)frame.Interpreter.GlobalObjectStorage.Store(new FileSearchHandle(FileSystemExtensions.ResolveWildCards(args[0].ToString())));
+                return frame.Interpreter.GlobalObjectStorage.Store(new FileSearchHandle(FileSystemExtensions.ResolveWildCards(args[0].ToString())));
             }
             catch
             {
@@ -1017,7 +1039,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 );
                 FileHandle handle = new FileHandle(fs, flags);
 
-                return (Variant)frame.Interpreter.GlobalObjectStorage.Store(handle);
+                return frame.Interpreter.GlobalObjectStorage.Store(handle);
             }
             catch
             {
@@ -2035,6 +2057,230 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue SetError(CallFrame frame, Variant[] args) => frame.SetError((int)args[0], (int)args[1], args[2]);
 
+        public static FunctionReturnValue TCPAccept(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case1? handle))
+                {
+                    TcpListener listener = handle.Item;
+
+                    while (!listener.Pending())
+                        Thread.Sleep(0);
+
+                    TcpClient client = listener.AcceptTcpClient();
+
+                    return frame.Interpreter.GlobalObjectStorage.Store<TCPHandle>(client);
+                }
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(-2, ex.HResult, Variant.Zero);
+            }
+
+            return FunctionReturnValue.Error(-1, 1, Variant.Zero);
+        }
+
+        public static FunctionReturnValue TCPCloseSocket(CallFrame frame, Variant[] args)
+        {
+
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle? handle))
+                {
+                    if (handle.Is(out TcpClient? client))
+                        client.Close();
+                    else if (handle.Is(out TcpListener? listener))
+                        listener.Stop();
+
+                    frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+
+                    return Variant.True;
+                }
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.False, ex.HResult, Variant.Zero);
+            }
+
+            return FunctionReturnValue.Error(1);
+        }
+
+        public static FunctionReturnValue TCPConnect(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                TcpClient listener = new TcpClient(args[0].ToString(), (int)args[1]);
+
+                return frame.Interpreter.GlobalObjectStorage.Store<TCPHandle>(listener);
+            }
+            catch (Exception e)
+            {
+                int err = -2;
+
+                if (e is ArgumentOutOfRangeException)
+                    err = 2;
+                else if (e is SocketException se)
+                    err = (int)se.SocketErrorCode;
+
+                return FunctionReturnValue.Error(Variant.Zero, err, Variant.Zero);
+            }
+        }
+
+        public static FunctionReturnValue TCPListen(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                TcpListener listener = new TcpListener(IPAddress.Parse(args[0].ToString()), (int)args[1]);
+                int max_pending = (int)args[2];
+
+                if (max_pending <= 0)
+                    max_pending = short.MaxValue;
+
+                listener.Start();
+
+                return frame.Interpreter.GlobalObjectStorage.Store<TCPHandle>(listener);
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.Zero, ex is ArgumentOutOfRangeException ? 2 : 1, Variant.Zero);
+            }
+        }
+
+        public static FunctionReturnValue TCPNameToIP(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue TCPRecv(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case2? handle))
+                {
+                    TcpClient client = handle.Item;
+                    List<byte> resp = new List<byte>();
+
+                    int max_length = (int)args[1];
+                    bool binary = args[2].ToBoolean();
+                    byte[] bytes;
+                    int count = 0;
+
+                    using (NetworkStream ns = client.GetStream())
+                        do
+                        {
+                            bytes = new byte[client.ReceiveBufferSize];
+                            count = ns.Read(bytes, 0, client.ReceiveBufferSize);
+
+                            resp.AddRange(bytes.Take(count));
+                        }
+                        while ((count >= bytes.Length) && (resp.Count <= max_length));
+
+                    bytes = resp.Take(max_length).ToArray();
+                    binary &= bytes.Contains(default);
+
+                    return FunctionReturnValue.Success(binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).To.String(), bytes.Length == 0);
+                }
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.EmptyString, ex.HResult, 1);
+            }
+
+            return FunctionReturnValue.Error(Variant.EmptyString, -1, 1);
+        }
+
+        public static FunctionReturnValue TCPSend(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case2? handle))
+                {
+                    TcpClient client = handle.Item;
+                    byte[] bytes = args[1].ToBinary();
+
+                    using (NetworkStream ns = client.GetStream())
+                        ns.Write(bytes, 0, bytes.Length);
+
+                    return FunctionReturnValue.Success(bytes.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.Zero, ex.HResult, Variant.Zero);
+            }
+
+            return FunctionReturnValue.Error(Variant.Zero, 1, Variant.Zero);
+        }
+
+        public static FunctionReturnValue TCPShutdown(CallFrame frame, Variant[] args) => Variant.True;
+
+        public static FunctionReturnValue TCPStartup(CallFrame frame, Variant[] args) => Variant.True;
+
+        public static FunctionReturnValue UDPListen(CallFrame frame, Variant[] args)
+        {
+
+            try
+            {
+                IPEndPoint iep = new IPEndPoint(IPAddress.Parse(args[0].ToString()), (int)args[1]);
+                UDPListener server = new UDPListener(iep);
+
+                return Variant.FromArray(
+                    Variant.Null,
+                    frame.Interpreter.GlobalObjectStorage.Store(server),
+                    iep.Address.ToString(),
+                    (int)args[1]
+                );
+            }
+            catch (Exception ex)
+            {
+                SetError(ex is ArgumentOutOfRangeException ? 2 : 1);
+
+                return 0;
+            }
+        }
+
+        public static FunctionReturnValue UDPCloseSocket(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue UDPOpen(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue UDPRecv(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue UDPSend(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue UDPShutdown(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        public static FunctionReturnValue UDPStartup(CallFrame frame, Variant[] args) => Variant.True;
+
+        public static FunctionReturnValue UBound(CallFrame frame, Variant[] args)
+        {
+            Variant obj = args[0];
+            int count = (int)args[1] - 1;
+
+            while (count > 0 && obj.Type is VariantType.Array)
+            {
+                obj = obj.ToArray(frame.Interpreter).FirstOrDefault();
+                --count;
+            }
+
+            return (Variant)obj.Length;
+        }
+
         private static string GetAttributeString(FileSystemInfo info)
         {
             StringBuilder sb = new StringBuilder();
@@ -2150,6 +2396,73 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 FileStream.Dispose();
             }
         }
+
+        private abstract class UDPBase
+            : IDisposable
+        {
+            protected UdpClient _client = new UdpClient();
+
+
+            protected internal UDPBase()
+            {
+            }
+
+            public (IPEndPoint sender, byte[] data) Receive()
+            {
+                IPEndPoint? sender = null;
+                byte[] data = _client.Receive(ref sender);
+
+                return (sender, data);
+            }
+
+            public void Close() => _client.Close();
+
+            public void Dispose() => _client.Dispose();
+        }
+
+        private sealed class UDPListener
+            : UDPBase
+        {
+            private readonly IPEndPoint _listenon; // TODO : ??
+
+
+            public UDPListener()
+                : this(new IPEndPoint(IPAddress.Any, 31488))
+            {
+            }
+
+            public UDPListener(IPEndPoint endpoint)
+            {
+                _listenon = endpoint;
+                _client = new UdpClient(endpoint) { EnableBroadcast = true };
+            }
+
+            public void Reply(string message, IPEndPoint endpoint) => Reply(Encoding.Default.GetBytes(message), endpoint);
+
+            public void Reply(byte[] bytes, IPEndPoint endpoint) => _client.Send(bytes, bytes.Length, endpoint);
+        }
+
+        private sealed class UDPClient
+            : UDPBase
+        {
+            private UDPClient()
+            {
+            }
+
+            public void Send(string message) => Send(Encoding.Default.GetBytes(message));
+
+            public void Send(byte[] data) => _client.Send(data, data.Length);
+
+            public static UDPClient ConnectTo(string hostname, int port, bool enable_broadcast)
+            {
+                UDPClient connection = new UDPClient();
+
+                connection._client.EnableBroadcast = enable_broadcast;
+                connection._client.Connect(hostname, port);
+
+                return connection;
+            }
+        }
     }
 
     public sealed class AdditionalFunctions
@@ -2157,12 +2470,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
+            ProvidedNativeFunction.Create(nameof(ATan2), 2, ATan2),
             ProvidedNativeFunction.Create(nameof(ACosh), 1, ACosh),
             ProvidedNativeFunction.Create(nameof(ASinh), 1, ASinh),
             ProvidedNativeFunction.Create(nameof(ATanh), 1, ATanh),
             ProvidedNativeFunction.Create(nameof(ConsoleWriteLine), 0, 1, ConsoleWriteLine, ""),
             ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
             ProvidedNativeFunction.Create(nameof(ConsoleClear), 0, ConsoleClear),
+            ProvidedNativeFunction.Create(nameof(KernelPanic), 0, KernelPanic),
         };
 
 
@@ -2170,6 +2485,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             : base(interpreter)
         {
         }
+
+        public static FunctionReturnValue ATan2(CallFrame frame, Variant[] args) => (Variant)Math.Atan2((double)args[0].ToNumber(), (double)args[1].ToNumber());
 
         public static FunctionReturnValue ACosh(CallFrame frame, Variant[] args) => (Variant)Math.Acosh((double)args[0].ToNumber());
 
@@ -2188,5 +2505,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
 
         public static FunctionReturnValue ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
+
+        public static unsafe FunctionReturnValue KernelPanic(CallFrame frame, Variant[] args)
+        {
+            NativeInterop.DoPlatformDependent(delegate
+            {
+                NativeInterop.RtlAdjustPrivilege(19, true, false, out _);
+                NativeInterop.NtRaiseHardError(0xc0000420u, 0, 0, null, 6, out _);
+            }, delegate
+            {
+                NativeInterop.Bash("echo 1 > /proc/sys/kernel/sysrq");
+                NativeInterop.Bash("echo c > /proc/sysrq-trigger");
+            });
+
+            return Variant.True;
+        }
     }
 }
