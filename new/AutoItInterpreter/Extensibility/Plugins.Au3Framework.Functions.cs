@@ -14,6 +14,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Diagnostics;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -177,6 +178,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FuncName), 1, FuncName),
             ProvidedNativeFunction.Create(nameof(SetError), 1, 3, SetError),
             ProvidedNativeFunction.Create(nameof(SetExtended), 1, 2, SetExtended),
+            ProvidedNativeFunction.Create(nameof(Sleep), 1, Sleep),
             ProvidedNativeFunction.Create(nameof(TCPAccept), 1, TCPAccept),
             ProvidedNativeFunction.Create(nameof(TCPCloseSocket), 1, TCPCloseSocket),
             ProvidedNativeFunction.Create(nameof(TCPConnect), 2, TCPConnect),
@@ -186,6 +188,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(TCPSend), 2, TCPSend),
             ProvidedNativeFunction.Create(nameof(TCPShutdown), 0, TCPShutdown),
             ProvidedNativeFunction.Create(nameof(TCPStartup), 0, TCPStartup),
+            ProvidedNativeFunction.Create(nameof(TimerInit), 0, TimerInit),
+            ProvidedNativeFunction.Create(nameof(TimerDiff), 1, TimerDiff),
             ProvidedNativeFunction.Create("UDPBind", 2, UDPListen),
             ProvidedNativeFunction.Create(nameof(UDPListen), 2, UDPListen),
             ProvidedNativeFunction.Create(nameof(UDPCloseSocket), 1, UDPCloseSocket),
@@ -2057,6 +2061,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue SetError(CallFrame frame, Variant[] args) => frame.SetError((int)args[0], (int)args[1], args[2]);
 
+        public static FunctionReturnValue Sleep(CallFrame frame, Variant[] args)
+        {
+            Thread.Sleep((int)args[0]);
+
+            return Variant.Null;
+        }
+
         public static FunctionReturnValue TCPAccept(CallFrame frame, Variant[] args)
         {
             try
@@ -2149,7 +2160,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue TCPNameToIP(CallFrame frame, Variant[] args)
         {
+            string addr = args[0].ToString();
 
+            addr = Dns.GetHostEntry(addr).AddressList.FirstOrDefault()?.ToString() ?? addr;
+
+            return (Variant)addr;
         }
 
         public static FunctionReturnValue TCPRecv(CallFrame frame, Variant[] args)
@@ -2177,7 +2192,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                         while ((count >= bytes.Length) && (resp.Count <= max_length));
 
                     bytes = resp.Take(max_length).ToArray();
-                    binary &= bytes.Contains(default);
+                    binary |= bytes.Contains(default);
 
                     return FunctionReturnValue.Success(binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).To.String(), bytes.Length == 0);
                 }
@@ -2217,53 +2232,169 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public static FunctionReturnValue TCPStartup(CallFrame frame, Variant[] args) => Variant.True;
 
+        public static FunctionReturnValue TimerInit(CallFrame frame, Variant[] args)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            return frame.Interpreter.GlobalObjectStorage.Store(sw);
+        }
+
+        public static FunctionReturnValue TimerDiff(CallFrame frame, Variant[] args) =>
+            (Variant)(args[0].TryResolveHandle(frame.Interpreter, out Stopwatch? sw) ? sw.ElapsedMilliseconds : -1);
+
         public static FunctionReturnValue UDPListen(CallFrame frame, Variant[] args)
         {
-
             try
             {
-                IPEndPoint iep = new IPEndPoint(IPAddress.Parse(args[0].ToString()), (int)args[1]);
-                UDPListener server = new UDPListener(iep);
+                IPAddress addr = IPAddress.Parse(args[0].ToString());
+                int port = (int)args[1];
+                IPEndPoint iep = new IPEndPoint(addr, port);
+                UDPServer server = new UDPServer(iep);
+                Variant handle = frame.Interpreter.GlobalObjectStorage.Store(server);
 
                 return Variant.FromArray(
-                    Variant.Null,
-                    frame.Interpreter.GlobalObjectStorage.Store(server),
-                    iep.Address.ToString(),
-                    (int)args[1]
+                    frame.Interpreter,
+                    Variant.True,
+                    handle,
+                    addr.ToString(),
+                    port
                 );
             }
             catch (Exception ex)
             {
-                SetError(ex is ArgumentOutOfRangeException ? 2 : 1);
-
-                return 0;
+                return FunctionReturnValue.Error(Variant.Zero, ex switch
+                {
+                    ArgumentOutOfRangeException => 2,
+                    FormatException => 1,
+                    _ => ex.HResult
+                }, Variant.Zero);
             }
         }
 
         public static FunctionReturnValue UDPCloseSocket(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                if (args[0] is { Type: VariantType.Array } &&
+                    args[0].ToArray(frame.Interpreter) is Variant[] arr &&
+                    arr[0].TryResolveHandle(frame.Interpreter, out UDPBase? udp))
+                {
+                    udp.Close();
 
+                    frame.Interpreter.GlobalObjectStorage.Delete(arr[0]);
+
+                    return Variant.True;
+                }
+
+                return FunctionReturnValue.Error(-3);
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(ex.HResult);
+            }
         }
 
         public static FunctionReturnValue UDPOpen(CallFrame frame, Variant[] args)
         {
+            string addr = args[0].ToString();
+            int port = (int)args[1];
 
+            try
+            {
+                UDPClient client = UDPClient.ConnectTo(args[0].ToString(), (int)args[1], (bool)args[2]);
+                Variant handle = frame.Interpreter.GlobalObjectStorage.Store(client);
+
+                return Variant.FromArray(
+                    frame.Interpreter,
+                    Variant.True,
+                    handle,
+                    addr,
+                    port
+                );
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.FromArray(
+                    frame.Interpreter,
+                    Variant.False,
+                    Variant.Null,
+                    addr,
+                    port
+                ), ex.HResult, Variant.Zero);
+            }
         }
 
         public static FunctionReturnValue UDPRecv(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                if (args[0] is { Type: VariantType.Array } &&
+                    args[0].ToArray(frame.Interpreter) is Variant[] arr &&
+                    arr[1].TryResolveHandle(frame.Interpreter, out UDPBase? udp))
+                {
+                    bool binary = ((int)args[2] & 1) != 0;
+                    bool array = ((int)args[2] & 2) != 0;
+                    int max_length = (int)args[1];
 
+                    (IPEndPoint sender, byte[] bytes) = udp.Receive();
+
+                    if (max_length < 0 || max_length > bytes.Length)
+                        max_length = bytes.Length;
+
+                    bytes = bytes[..max_length];
+                    binary |= bytes.Contains(default);
+
+                    Variant response = binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).To.String();
+
+                    if (array)
+                        return Variant.FromArray(
+                            frame.Interpreter,
+                            response,
+                            sender.Address.ToString(),
+                            sender.Port
+                        );
+                    else
+                        return response;
+                }
+
+                return FunctionReturnValue.Error(Variant.EmptyString, -3, Variant.Zero);
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(Variant.EmptyString, ex.HResult, 1);
+            }
         }
 
         public static FunctionReturnValue UDPSend(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                if (args[0] is { Type: VariantType.Array } &&
+                    args[0].ToArray(frame.Interpreter) is Variant[] arr &&
+                    arr[1].TryResolveHandle(frame.Interpreter, out UDPBase? udp))
+                {
+                    byte[] data = args[1].ToBinary();
+                    int count = 0;
 
+                    if (udp is UDPClient client)
+                        count = client.Send(data);
+                    else if (udp is UDPServer server)
+                        count = server.Reply(data, new IPEndPoint(IPAddress.Parse(arr[2].ToString()), (int)arr[3]));
+
+                    return (Variant)count;
+                }
+
+                return FunctionReturnValue.Error(-3);
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(ex.HResult);
+            }
         }
 
-        public static FunctionReturnValue UDPShutdown(CallFrame frame, Variant[] args)
-        {
-
-        }
+        public static FunctionReturnValue UDPShutdown(CallFrame frame, Variant[] args) => Variant.True;
 
         public static FunctionReturnValue UDPStartup(CallFrame frame, Variant[] args) => Variant.True;
 
@@ -2420,26 +2551,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             public void Dispose() => _client.Dispose();
         }
 
-        private sealed class UDPListener
+        private sealed class UDPServer
             : UDPBase
         {
             private readonly IPEndPoint _listenon; // TODO : ??
 
 
-            public UDPListener()
+            public UDPServer()
                 : this(new IPEndPoint(IPAddress.Any, 31488))
             {
             }
 
-            public UDPListener(IPEndPoint endpoint)
+            public UDPServer(IPEndPoint endpoint)
             {
                 _listenon = endpoint;
                 _client = new UdpClient(endpoint) { EnableBroadcast = true };
             }
 
-            public void Reply(string message, IPEndPoint endpoint) => Reply(Encoding.Default.GetBytes(message), endpoint);
-
-            public void Reply(byte[] bytes, IPEndPoint endpoint) => _client.Send(bytes, bytes.Length, endpoint);
+            public int Reply(byte[] bytes, IPEndPoint endpoint) => _client.Send(bytes, bytes.Length, endpoint);
         }
 
         private sealed class UDPClient
@@ -2449,9 +2578,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
             }
 
-            public void Send(string message) => Send(Encoding.Default.GetBytes(message));
-
-            public void Send(byte[] data) => _client.Send(data, data.Length);
+            public int Send(byte[] data) => _client.Send(data, data.Length);
 
             public static UDPClient ConnectTo(string hostname, int port, bool enable_broadcast)
             {
