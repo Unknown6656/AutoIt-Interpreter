@@ -333,7 +333,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                           "Iterator",
                                                                           $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString(Interpreter)}, Value:{tuple.value.ToDebugString(Interpreter)}"
                                                                       );
-            IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.Keys
+            IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
                                                                         where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
                                                                         select (
                                                                             $"/objs/{id:x8}",

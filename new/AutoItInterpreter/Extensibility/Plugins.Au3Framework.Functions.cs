@@ -143,6 +143,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
+            ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
@@ -254,7 +255,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                     return args[1].ToString().ToLower() switch
                     {
-                        "open" or "closed" => NativeInterop.ioctl(cdrom, 0x5309, 0), // TODO ?
+                        "open" or "closed" => NativeInterop.ioctl(cdrom, 0x5309, __arglist()), // TODO ?
                         _ => false
                     };
                 });
@@ -1716,6 +1717,69 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Null);
         }
 
+        public static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                ShutdownMode mode = (ShutdownMode)(int)args[0]
+                bool success = NativeInterop.DoPlatformDependent(delegate
+                {
+                    uint? flags = null;
+
+                    if (mode.HasFlag(ShutdownMode.SD_REBOOT))
+                        flags = ;
+                    else if (mode.HasFlag(ShutdownMode.SD_POWERDOWN))
+                        flags = ;
+                    else if (mode.HasFlag(ShutdownMode.SD_SHUTDOWN))
+                        flags = ;
+                    else if (mode is ShutdownMode.SD_STANDBY or ShutdownMode.SD_HIBERNATE)
+                        flags = ;
+
+                    if (flags is uint f)
+                    {
+                        void* token;
+                        void* processHandle = NativeInterop.GetCurrentProcess();
+                        NativeInterop.OpenProcessToken(processHandle, NativeInterop.TOKEN_ADJUST_PRIVILEGES | NativeInterop.TOKEN_QUERY, &token);
+
+                        TOKEN_PRIVILEGES tk = new()
+                        {
+                            PrivilegeCount = 1,
+                            Privileges = new[]
+                            {
+                            new LUID_AND_ATTRIBUTES { Attributes = 0x00000002 }
+                        }
+                        };
+                        NativeInterop.LookupPrivilegeValue(null, "SeShutdownPrivilege", ref tk.Privileges[0].Luid);
+                        NativeInterop.AdjustTokenPrivileges(token, false, ref tk, 0, null, null);
+
+                        return NativeInterop.InitiateShutdown(null, null, 0, f, 0x80000000) == 0;
+                    }
+
+                    return false;
+                }, delegate
+                {
+                    uint? code = null;
+
+                    if (mode.HasFlag(ShutdownMode.SD_REBOOT))
+                        code = 0x01234567;
+                    else if (mode.HasFlag(ShutdownMode.SD_POWERDOWN))
+                        code = 0x4321FEDC;
+                    else if (mode.HasFlag(ShutdownMode.SD_SHUTDOWN))
+                        code = 0xCDEF0123;
+                    else if (mode is ShutdownMode.SD_STANDBY or ShutdownMode.SD_HIBERNATE)
+                        code = 0xD000FCE2;
+
+                    return code is uint msg && NativeInterop.reboot(0xfee1dead, 0x28121969, msg, null) == 0;
+                });
+
+                return Variant.FromBoolean(success);
+            }
+            catch (Exception ex)
+            {
+                return FunctionReturnValue.Error(ex.HResult);
+            }
+        }
+
         public static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n");
 
         public static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant) string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
@@ -2440,6 +2504,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     sb.Append(dic[key]);
 
             return sb.ToString();
+        }
+
+        [Flags]
+        public enum ShutdownMode
+        {
+            SD_LOGOFF =0,
+            SD_SHUTDOWN=1,
+            SD_REBOOT = 2,
+            SD_FORCE = 4,
+            SD_POWERDOWN = 8,
+            SD_FORCEHUNG = 16,
+            SD_STANDBY = 32,
+            SD_HIBERNATE = 64,
         }
 
         [Flags]
