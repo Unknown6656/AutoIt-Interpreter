@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime.Native
 {
@@ -23,6 +22,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         private const string COREDLL = "coredll.dll";
         private const string NTDLL = "ntdll.dll";
         private const string ADVAPI32 = "advapi32.dll";
+        private const string POWRPROF = "powrprof.dll";
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {
@@ -98,15 +98,18 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         public static extern unsafe bool OpenProcessToken(void* ProcessHandle, uint DesiredAccess, void** TokenHandle);
 
         [DllImport(ADVAPI32, CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern unsafe int InitiateShutdown([MarshalAs(UnmanagedType.LPWStr)] string lpMachineName, [MarshalAs(UnmanagedType.LPWStr)] string lpMessage, uint dwTimeout, uint flags, uint dwReason);
+        public static extern unsafe int InitiateShutdown([MarshalAs(UnmanagedType.LPWStr)] string? lpMachineName, [MarshalAs(UnmanagedType.LPWStr)] string? lpMessage, uint dwTimeout, uint flags, uint dwReason);
 
         [DllImport(ADVAPI32, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool LookupPrivilegeValue([MarshalAs(UnmanagedType.LPWStr)] string lpSystemName, [MarshalAs(UnmanagedType.LPWStr)] string lpName, ref (uint low, int high) lpLuid);
+        public static extern bool LookupPrivilegeValue([MarshalAs(UnmanagedType.LPWStr)] string? lpSystemName, [MarshalAs(UnmanagedType.LPWStr)] string? lpName, ref (uint low, int high) lpLuid);
 
         [DllImport(ADVAPI32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool AdjustTokenPrivileges(void* TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, int BufferLengthInBytes, void* PreviousState, int* ReturnLengthInBytes);
+
+        [DllImport(POWRPROF, CharSet = CharSet.Auto, ExactSpelling = true)]
+        public static extern bool SetSuspendState(bool hiberate, bool forceCritical, bool disableWakeEvent);
 
 
         public static (string stdout, int code) Bash(string command) => DoPlatformDependent(

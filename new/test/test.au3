@@ -1,5 +1,5 @@
 
-
+ConsoleWrite(DriveGetSerial("c:"))
 
 Exit
 

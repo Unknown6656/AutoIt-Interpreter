@@ -6,10 +6,13 @@ using System;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
+    using Random = Unknown6656.Mathematics.Numerics.Random;
+
     using static Autoit3;
     using static AST;
 
@@ -21,6 +24,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly object _main_thread_mutex = new object();
         private volatile int _error;
 
+
+        public Random Random { get; private set; }
 
         public AU3Thread? MainThread { get; private set; }
 
@@ -85,6 +90,17 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
                 COMConnector = new COMConnector(this);
+
+            Random = new BuiltinRandom();
+            ResetRandom();
+        }
+
+        public void ResetRandom() => ResetRandom(Guid.NewGuid().GetHashCode());
+
+        public void ResetRandom(int seed)
+        {
+            lock (_main_thread_mutex)
+                Random = new XorShift(seed); // BuiltinRandom
         }
 
         public void Dispose()

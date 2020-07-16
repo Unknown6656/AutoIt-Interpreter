@@ -1,7 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Diagnostics;
 using System.Threading;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net;
 using System.Linq;
@@ -14,7 +16,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Diagnostics;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -77,6 +78,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
+            ProvidedNativeFunction.Create(nameof(DriveGetFileSystem), 1, DriveGetFileSystem),
+            ProvidedNativeFunction.Create(nameof(DriveGetLabel), 1, DriveGetLabel),
+            //ProvidedNativeFunction.Create(nameof(DriveGetSerial), 1, DriveGetSerial),
+            ProvidedNativeFunction.Create(nameof(DriveGetType), 1, 2, DriveGetType, 1),
+            ProvidedNativeFunction.Create(nameof(DriveSpaceFree), 1, DriveSpaceFree),
+            ProvidedNativeFunction.Create(nameof(DriveSpaceTotal), 1, DriveSpaceTotal),
+            ProvidedNativeFunction.Create(nameof(DriveStatus), 1, DriveStatus),
             ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
             ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
             ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
@@ -143,7 +151,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
+            ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
+            ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
+            ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
@@ -201,6 +212,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(UDPStartup), 0, UDPStartup),
             ProvidedNativeFunction.Create(nameof(UBound), 1, 2, UBound, 1),
         };
+
 
         public FrameworkFunctions(Interpreter interpreter)
             : base(interpreter)
@@ -618,6 +630,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
+        private static DriveInfo? GetDriveByPath(string path)
+        {
+            try
+            {
+                string dir = Path.GetFullPath(path);
+
+                return DriveInfo.GetDrives().FirstOrDefault(d => Path.GetFullPath(d.RootDirectory.FullName).Equals(dir));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public static FunctionReturnValue DriveGetDrive(CallFrame frame, Variant[] args)
         {
             try
@@ -641,10 +667,69 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
             catch
             {
-                return FunctionReturnValue.Error(1);
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
             }
         }
 
+        public static FunctionReturnValue DriveGetFileSystem(CallFrame frame, Variant[] args)
+        {
+            if (GetDriveByPath(args[0].ToString())?.DriveFormat is string format)
+                return Variant.FromString(format);
+            else
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
+        }
+
+        public static FunctionReturnValue DriveGetLabel(CallFrame frame, Variant[] args)
+        {
+            if (GetDriveByPath(args[0].ToString())?.VolumeLabel is string label)
+                return Variant.FromString(label);
+            else
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
+        }
+
+        // public static FunctionReturnValue DriveGetSerial(CallFrame frame, Variant[] args)
+        // {
+        //     // WMI
+        // }
+
+        public static FunctionReturnValue DriveGetType(CallFrame frame, Variant[] args)
+        {
+            int mode = (int)args[1];
+
+            if (mode == 1 && GetDriveByPath(args[0].ToString())?.DriveType is DriveType type)
+                return Variant.FromString(type switch {
+                    DriveType.Removable or DriveType.Fixed or DriveType.Network => type.ToString(),
+                    DriveType.CDRom => "CDROM",
+                    DriveType.Ram => "RAMDisk",
+                    _ => "Unknown",
+                });
+            else
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
+        }
+
+        public static FunctionReturnValue DriveSpaceFree(CallFrame frame, Variant[] args)
+        {
+            if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
+                return Variant.FromNumber(drive.TotalFreeSpace / 1048576m);
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        public static FunctionReturnValue DriveSpaceTotal(CallFrame frame, Variant[] args)
+        {
+            if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
+                return Variant.FromNumber(drive.TotalSize / 1048576m);
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        public static FunctionReturnValue DriveStatus(CallFrame frame, Variant[] args)
+        {
+            if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
+                return Variant.FromString(drive.IsReady ? "READY" : "NOTREADY");
+
+            return Variant.FromString("INVALID");
+        }
 
         public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {
@@ -1717,25 +1802,76 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Null);
         }
 
+        public static unsafe FunctionReturnValue Ping(CallFrame frame, Variant[] args)
+        {
+            int err = 4;
+
+            try
+            {
+                using Ping ping = new Ping();
+
+                PingReply reply = ping.Send(args[0].ToString(), (int)args[1]);
+
+                if (reply.Status == IPStatus.Success)
+                    return (Variant)Math.Min(1, reply.RoundtripTime);
+                else if (reply.Status is IPStatus.DestinationUnreachable or IPStatus.DestinationNetworkUnreachable or IPStatus.DestinationHostUnreachable
+                                      or IPStatus.DestinationProhibited or IPStatus.DestinationProtocolUnreachable or IPStatus.DestinationPortUnreachable)
+                    err = 2;
+                else if (reply.Status is IPStatus.BadDestination)
+                    err = 3;
+                else if (reply.Status is IPStatus.TimedOut or IPStatus.TtlExpired or IPStatus.TtlReassemblyTimeExceeded or IPStatus.TimeExceeded)
+                    err = 1;
+            }
+            catch
+            {
+            }
+
+            return FunctionReturnValue.Error(err);
+        }
+
+        public static unsafe FunctionReturnValue Random(CallFrame frame, Variant[] args)
+        {
+            decimal min = (decimal)args[0];
+            decimal max = (decimal)args[1];
+
+            if (frame.PassedArguments.Length == 1)
+                (min, max) = (0, (decimal)args[0]);
+
+            decimal val = frame.Interpreter.Random.NextDecimal();
+
+            val *= max - min;
+            val += min;
+
+            if (args[2].ToBoolean())
+                val = Math.Round(val);
+
+            return Variant.FromNumber(val);
+        }
+
         public static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
         {
             try
             {
-                ShutdownMode mode = (ShutdownMode)(int)args[0]
-                bool success = NativeInterop.DoPlatformDependent(delegate
+                ShutdownMode mode = (ShutdownMode)(int)args[0];
+                bool success = NativeInterop.DoPlatformDependent<bool>(delegate
                 {
-                    uint? flags = null;
+                    uint flags = 0;
 
                     if (mode.HasFlag(ShutdownMode.SD_REBOOT))
-                        flags = ;
+                        flags = 0x00000004;
                     else if (mode.HasFlag(ShutdownMode.SD_POWERDOWN))
-                        flags = ;
+                        flags = 0x00000008;
                     else if (mode.HasFlag(ShutdownMode.SD_SHUTDOWN))
-                        flags = ;
-                    else if (mode is ShutdownMode.SD_STANDBY or ShutdownMode.SD_HIBERNATE)
-                        flags = ;
+                        flags = 0x00000010;
+                    else if (mode is ShutdownMode.SD_HIBERNATE)
+                        return NativeInterop.SetSuspendState(true, true, true);
+                    else if (mode is ShutdownMode.SD_STANDBY)
+                        return NativeInterop.SetSuspendState(false, true, true);
 
-                    if (flags is uint f)
+                    if (mode.HasFlag(ShutdownMode.SD_FORCE))
+                        flags |= 0x00000023;
+
+                    if (flags != 0)
                     {
                         void* token;
                         void* processHandle = NativeInterop.GetCurrentProcess();
@@ -1752,7 +1888,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                         NativeInterop.LookupPrivilegeValue(null, "SeShutdownPrivilege", ref tk.Privileges[0].Luid);
                         NativeInterop.AdjustTokenPrivileges(token, false, ref tk, 0, null, null);
 
-                        return NativeInterop.InitiateShutdown(null, null, 0, f, 0x80000000) == 0;
+                        return NativeInterop.InitiateShutdown(null, null, 0, flags, 0x80000000) == 0;
                     }
 
                     return false;
@@ -1780,7 +1916,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n");
+        public static unsafe FunctionReturnValue SRandom(CallFrame frame, Variant[] args)
+        {
+            frame.Interpreter.ResetRandom((int)args[0]);
+
+            return Variant.Null;
+        }
+
+        public static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n", StringComparison.InvariantCultureIgnoreCase);
 
         public static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant) string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
         {

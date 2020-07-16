@@ -270,7 +270,7 @@ type PARSABLE_EXPRESSION =
             | MultiDeclarationExpression decls ->
                 decls
                 |> List.collect (snd >> function
-                                        | Map
+                                        | Map _
                                         | Scalar None -> []
                                         | Array (_, es) -> es
                                         | Scalar (Some e) -> [e])
