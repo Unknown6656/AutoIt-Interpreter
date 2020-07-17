@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "COMObjectServer": {
+      "commandName": "Project",
+      "commandLineArgs": "succ_my_pipe"
+    }
+  }
+}

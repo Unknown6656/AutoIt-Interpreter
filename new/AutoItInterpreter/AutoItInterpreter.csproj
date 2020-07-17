@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <!--<StartupObject>$Program.$Main</StartupObject>-->
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <LangVersion>preview</LangVersion>
+        <Deterministic>false</Deterministic>
+        <PublishTrimmed>true</PublishTrimmed>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+        <Authors>Unknown6656</Authors>
+        <Company>Unknown6656</Company>
+        <Copyright>Copyright © 2020, Unknown6656</Copyright>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Product>Unknown6656 AutoIt3 Interpreter</Product>
+        <PackageId>Unknown6656.AutoIt3</PackageId>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
+        <AssemblyName>autoit3</AssemblyName>
+    </PropertyGroup>
+    <PropertyGroup>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Remove="Localization\lang-en.json" />
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="Piglet">
+            <HintPath>..\lib\Piglet.dll</HintPath>
+        </Reference>
+        <Reference Include="Piglet.FSharp">
+            <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="unknown6656.core">
+            <HintPath>..\lib\unknown6656.core.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="Localization\lang-en.json" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="..\..\LICENSE.md">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CommandLineParser" Version="2.8.0" />
+        <PackageReference Include="EnvDTE" Version="8.0.2" />
+        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+        <ProjectReference Include="..\util\COMInterop\COMInterop.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Update="Properties\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Update="Properties\Resources.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+        <Folder Include="include\" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="include\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <Exec Command="dotnet &quot;$(OutDir)../bin-util/incr.dll&quot; &quot;$(ProjectPath)&quot;" />
+    </Target>
+</Project>

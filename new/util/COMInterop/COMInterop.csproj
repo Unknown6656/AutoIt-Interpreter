@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+        <AssemblyName>autoit3.com</AssemblyName>
+        <RootNamespace>Unknown6656.AutoIt3.COM</RootNamespace>
+        <OutputType>Library</OutputType>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+</Project>

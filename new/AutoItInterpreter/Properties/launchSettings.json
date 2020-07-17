@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AutoItInterpreter": {
+      "commandName": "Project",
+      "commandLineArgs": "-vv -t ../test/unittest-vartypes"
+    }
+  }
+}

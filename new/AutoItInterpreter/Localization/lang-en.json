@@ -1,0 +1,98 @@
+{
+    "meta": {
+        "code": "en",
+        "name": "english",
+        "beta": true
+    },
+    "strings": {
+        "banner": {
+            "written_by": "Written by {0}, {1}",
+            "version": "Version"
+        },
+        "general": {
+            "line": "line",
+            "lines": "lines",
+            "unknown": "unknown",
+            "langpack_found": "{0} language pack(s) found.",
+            "loaded_langpack": "Loaded language pack: {0}",
+            "no_plugins_loaded": "No plugin files have been loaded.",
+            "plugins_loaded": "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
+        },
+        "warning": {
+            "warning_in": "WARNING in {0}",
+            "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "com_unavailable": "Interactions with the COM (Component Object Model) framework are not possible on this plattform. Currently, COM is only available to Windows-like platforms."
+        },
+        "error": {
+            "error_in": "ERROR in {0}",
+            "not_yet_implemented": "The functionality '{0}' has not yet been implemented. We're sorry :/",
+
+            "au3_caller_only": "The execution of the function '{0}' requires an Au3 (non-native) call frame.",
+            "byref_default": "The ByRef-parameter '{0}' cannot have a default value.",
+            "cannot_make_constant": "The already existing '{0}' (declared at {1}) cannot be made constant by a re-definition.",
+            "circular_include": "Including the script '{0}' would result in a circular dependency.",
+            "constant_assignment": "The variable '{0}' (declared at {1}) has been defined as constant and can therefore not have a new value re-assigned to it.",
+            "constant_passed_as_ref": "The constant variable '{0}' cannot be passed as 'ByRef'-argument (argument no. {1}).",
+            "duplicate_function": "Duplicate function declaration '{0}'. This function has already been declared on in {1}.",
+            "duplicate_jumplabel": "A jump label called '{0}' has already been defined for this method in {1}.",
+            "duplicate_modifier": "Duplicate declaration modifier '{0}'.",
+            "duplicate_param": "Duplicate function parameter name '{0}'.",
+            "incomplatible_modifiers": "The declaration modifiers '{0}' and '{1}' are not compatible with each other.",
+            "invalid_array_size": "Array declaration '{0}' has an invalid array size {0}: The array size must be a positive integer.",
+            "invalid_assignment_target": "The assignment target '{0}' is invalid. Make sure that the target is a referencable variable.",
+            "invalid_discard_access": "The discard variable '{0}' is a write-only variable designed for internal purposes only. Use the macro '@{1}' to get the last (non-deterministic) processed expression value.",
+            "invalid_case_expr": "The 'Case'-expression '{0}' is invalid. Only non-assignment expressions, 'To'-expression ranges, and a simple 'Else'-expression are allowed.",
+            "invalid_case_range": "The 'Case'-expression '{0}' is invalid in the current context. 'Case'-expressions containing a 'To'-expression range may only be used in a 'Switch' statement block.",
+            "invalid_forin_source": "Invalid iteration source '{0}': Iterations may only be performed over indexable values, such as arrays, maps, objects, or strings.",
+            "invalid_index": "The index '{0}' is invalid for the current collection/object. Please check that the index is either inside the array range, or that a value is associated with it.",
+            "invalid_index_assg": "Invalid index assignment of '{0}' with the index '{1}'. Please check that the target variable is indexable, and that the provided index is not outside the index range.",
+            "invalid_multi_decl": "Invalid (multi-)declaration statement '{0}'",
+            "invalid_redim_expression": "Invalid 'ReDim'-expression '{0}'. Only an array variable followed by indexing brackets is permitted.",
+            "invalid_redim_size": "Invalid array size expression '{0}'. Please make sure that the size is (castable to) a non-negative integer.",
+            "invalid_redim_target": "Invalid 'ReDim'-target '{0}'. The target variable must be an one-dimensional non-constant array.",
+            "invalid_return": "The 'Return'-statement is not supported in the global scope. If you wish to terminate the program, use the 'Exit'-statement instead.",
+            "invalid_step": "Invalid 'Step'-expression '{0}'. Possible expressions are 'n', '+n', '-n', or '*n', where <n> is a positive non-zero integer.",
+            "invalid_with_access": "The implicit member access '{0}' can only be used inside a 'With'-block.",
+            "invalid_with_target": "The expression following a 'With'-statement must be a non-constant variable expression.",
+            "malformed_for_expr": "Malformed variable declaration '{0}' statement inside 'For'-Block.",
+            "mismatched_quotes": "Mismatched include quotes {0} and {1}.",
+            "missing_argument": "No value has been passed for the argument no. {0} ('{1}').",
+            "missing_default": "The parameter no. {0} ('{1}') is missing its default value. Any parameter following an optional parameter must also have a default value.",
+            "missing_if": "'Else'- or 'ElseIf'-statements can only be used after an opening 'If ... Then'-statement.",
+            "no_matching_close": "The '{0}'-statement opened in {1} does not have a corresponding closing statement.",
+            "not_enough_args": "The function '{0}' expects at least {1} arguments, however, only {2} arguments were given.",
+            "redefining_constant": "The variable '{0}' has been previously defined as constant (at {1}) and can therefore not be re-defined.",
+            "register_func_argcount": "Functions registered with '#OnAutoItStartRegister' or '#OnAutoItExitRegister' must not have any mandatory parameter, meaning that they must be either parameterless, or only accept parameters declared with default values.",
+            "reserved_name": "The name '{0}' is a reserved keyword and cannot be used as identifier.",
+            "thread_already_running": "The thread 0x{0:x4} is already executing a function.",
+            "too_many_args": "The function '{0}' expects at a maximum of {1} arguments, however, {2} arguments were given.",
+            "too_many_array_items": "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization.",
+            "undeclared_variable": "The variable '{0}' has not been declared previously to this line and can therefore not be used in this expression.",
+            "unexpected_case": "Unexpected 'Case'-statement outside a 'Switch'- or 'Select'-block.",
+            "unexpected_close": "Unexpected statement '{0}': A '{1}'-statement must be opened before it can be closed.",
+            "unexpected_continuecase": "Unexpected 'ContinueCase'-statement outside a 'Switch'- or 'Select'-block.",
+            "unexpected_contexitloop": "Unexpected statement '{0}'. '{0}' may only be used inside 'For'-, 'Do'-, or 'While'-loops.",
+            "unexpected_endfunc": "Unexpected 'EndFunc'-statement. Did you mean to declare a function?",
+            "unexpected_eof": "Unexpected end of file.",
+            "unexpected_func": "Unexpected 'Func'-declaration. Did you mean 'EndFunc' to close the function '{0}'?",
+            "unexpected_line_cont": "Unexpected line continuation.",
+            "unexpected_step": "Unexpected 'Step'-modifier on declaration. 'Step' may only be used in combination with 'Enum'.",
+            "unhandled_pragma_key": "The pragma key '{0}' could not be handled for the option '{1}'.",
+            "unhandled_pragma_option": "The pragma option '{0}' could not be handled. If you have a plugin for that pragma option, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "uninitialized_constant": "The variable '{0}' has been declared as 'Const' and must therefore has a value assigned to it.",
+            "unknown_jumplabel": "The jump label '{0}' could not be found.",
+            "unknown_macro": "The macro '@{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable and posesses the member/index in question.",
+            "unparsable_iteration_variable": "The expression '{0}' could not be parsed as a valid iteration variable for a 'For ... In'-loop.",
+            "unparsable_line": "The line or expression '{0}' could not be parsed due to the following syntax error: \"{1}\". The syntax is either (currently) unsupported, or no parser plugin has been registered for this kind of statement/expression.",
+            "unresolved_func": "Unresolved function name '{0}'.",
+            "unresolved_script": "The script or include file '{0}' could not be resolved. Verify whether the path is correct and that the file is accessible. If you have an include resolver plugin, verify whether the .dll can be correctly loaded from the plugin-folder.",
+            "unsupported_operator": "The operator '{0}' is not supported.",
+
+            "experimental": {
+                "one_liner": "One-liner functions can only be used if the interpreter is started without the '--strict' option.",
+                "goto_instructions": "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."
+            }
+        }
+    }
+}

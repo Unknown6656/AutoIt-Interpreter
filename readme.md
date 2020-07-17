@@ -1,66 +1,61 @@
-# _Note: I am currently working on a new (and more stable) version - check out the ['.NET5'-branch](https://github.com/Unknown6656/AutoIt-Interpreter/tree/net5)! The version below is deprecated._
+![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
+![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
+![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
+![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
 
-![Banner image](Artwork/banner.png)
+![Banner image](new/artwork/banner.png)
 
-# Preamble
+# Platform-Independent AutoIt3 Intepreter
 
-One should call this project _"AutoIt++ **Interpiler**"_, as it is an interpreter from a C#'s point of view - but works more like a compiler when viewing it from AutoIt's side....
+AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
+The aim of this repository is to provide an AutoIt3 interpteter for other platforms, such as Linux/Unix and MacOS.
 
-It kind of interprets everything and transforms it into C# code, which then gets compiled. My component is therefore an interpreter - but the whole project is technically a compiler.
+This repository contains _two_ AutoIt-Interpreters:
 
-So we call it an **Interpiler** for now...
+ 1. [The newer (.NET5-based) **extensible AutoIt3 Interpreter**.](new/readme.md)
+    <br/>
+    This Interpreter is based purly on .NET5-conform C#/F# code and primarily supports the AutoIt3-spcification.
+    The Interpreter does support a plugin-based extension system in order to provide a custom syntax or framework functionality to the interpreter.
 
-# The AutoIt++ ~Interpreter~ Interpiler
+ 1. [The "old" **AutoIt++ Interpiler** written in 2018 (discontinued).](old/readme.md)
+    <br/>
+    This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be exceuted on any platform supporting .NET.
+    <br/>
+    Truth be told, the interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
 
-This project is an interpiler written to target a custom flavour of the _AutoIt3_ scripting language called _"AutoIt++"_ (even though it has nothing to do with C++).
 
-The most important aspect of this project is the fact, that the interpiler is not only platform-independent, but can also cross-platform and cross-architecture target applications.
+#### Comparison:
 
-The interpiler can currently target the following systems (can be specified via the flag `-t`):
- - `win7`, `win8`, `win81`, `win10`
- - `centos`, `fedora`, `gentoo`, `opensuse`
- - `debian`, `ubuntu`, `linuxmint`
- - `osx`
- - `android` _comming soon_
- - and much more...
- 
-The following architectures are currently supported:
- - `x86`, `x64` (The 32Bit- and 64Bit-compatible systems from Intel or AMD)
- - `arm`, `arm64` (ARM's equivalent)
+Category | [new AutoIt3 Interpreter](new/readme.md) | [old AutoIt++ Interpiler](old/readme.md)
+---------|---------------------|--------------------
+Supported Language| Strict AutoIt 3<br/>with extension support | AutoIt 3<br/>AutoIt++ 
+Works as an ... | Interpreter | Interpiler/Transpiler:<br/>60% compiler, 30% interpreter, 10% magic 
+Written in | C#, F# | C#, F#
+Target Framework | .NET 5 and newer | .NET Core 2.1
+Works on Windows | Hell yeah | Yup
+Works on Linux | Yes, but not tested thoroughly | Kinda
+Works on MacOs | Yes, but not tested thoroughly | Kinda
+Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
 
-For more information about the usage of the interpiler, refer to the [usage page](doc/usage.md).
 
 ## Links
 
- - [Usage page](doc/usage.md)
- - [AutoIt++ Language reference](doc/language.md)
- - [AutoIt++ Syntax reference](doc/syntax.md)
- - [AutoIt++ Runtime behaviour](doc/runtime.md)
- - [AutoIt++ Syntax tree reference](doc/syntax-tree.md)
+ - [Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
+ - [Code Overview](./new)
+ - [.NET 5 developement progress](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1)
+ - [Issues](https://github.com/Unknown6656/AutoIt-Interpreter/issues)
  - [Official AutoIt3 documentation](https://www.autoitscript.com/autoit3/docs/)
- - [The TODO list](todo.txt)
 
-## Credits
+### Old Links
 
-This AutoIt++-interpiler is written in C# and F# targeting the .NET-Core Framework in order to provide full platform independency.
-
-A big shoutout to the [Roslyn Dev Team](https://github.com/dotnet/roslyn) and the [.NET Core Dev Team](https://github.com/dotnet/coreclr) for making such an awesome framework possible!
-
-It uses a modified version of the [_Piglet_-Library](https://github.com/Dervall/Piglet) written by [@Dervall](https://github.com/Dervall) in order to improve expression parsing.
-All credits go to him for the wonderful LR-Parser-Library!!
+ - [**Old** Code Overview](./old)
+ - [**Old** Usage page](old/doc/usage.md)
+ - [AutoIt++ Language reference](old/doc/language.md)
+ - [AutoIt++ Syntax reference](old/doc/syntax.md)
+ - [AutoIt++ Runtime behaviour](old/doc/runtime.md)
+ - [AutoIt++ Syntax tree reference](old/doc/syntax-tree.md)
 
 ## Maintainer(s)
 
  - [@Unknown6656](https://github.com/Unknown6656)
  - ([@Zedly](https://github.com/Zedly) in assistive and advisory function)
-
------------------
-
-_An historic image:_<br/>
-![Exception Screenshot](doc/images/wtf-1.png)
-
-_A not-so-historic image:_<br/>
-![Exception Screenshot](doc/images/wtf-2.png)
-
-_Don't change the code of anonymous, dynamic types during runtime debugging:_<br/>
-![Exception Screenshot](doc/images/wtf-3.png)
