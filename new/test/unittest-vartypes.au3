@@ -2,13 +2,13 @@ Local $aArray[2] = [1, "Example"]
 Local $mMap[]
 Local $dBinary = Binary("0x00204060")
 Local $bBoolean = False
-Local $pPtr = Ptr(-1)
-Local $hWnd = WinGetHandle(AutoItWinGetTitle())
+Local $pPtr = -1;  Ptr(-1)
+Local $hWnd = 0; WinGetHandle(AutoItWinGetTitle())
 Local $iInt = 1
 Local $fFloat = 2.0
 Local $oObject = ObjCreate("Scripting.Dictionary")
 Local $sString = "Some text"
-Local $tStruct = DllStructCreate("wchar[256]")
+Local $tStruct = 0; DllStructCreate("wchar[256]")
 Local $vKeyword = Default
 Local $vNull = Null
 Local $fuFunc = ConsoleWrite
@@ -35,3 +35,4 @@ ConsoleWrite( _
         "$fuUserFunc: " & VarGetType($fuUserFunc) & " variable type.")
 Func Test()
 EndFunc
+DebugAll();

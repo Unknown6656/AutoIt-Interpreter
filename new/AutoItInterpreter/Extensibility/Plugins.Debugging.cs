@@ -26,6 +26,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
                 ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
                 ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
+                ProvidedNativeFunction.Create(nameof(DebugInterpreter), 0, DebugInterpreter),
+                ProvidedNativeFunction.Create(nameof(DebugAll), 0, DebugAll),
             };
 
         private IDictionary<string, object?> GetVariantInfo(Variant value)
@@ -196,7 +198,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return FunctionReturnValue.Success(Variant.Zero);
         }
 
-        private string GenerateTable((string header, bool align_right, string?[] cells)[] columns, int max_width, Predicate<int>? select = null)
+        private string GenerateTable((string header, bool align_right, string?[] cells)[] columns, int max_width, bool print_row_count, Predicate<int>? select = null)
         {
             StringBuilder sb = new StringBuilder();
             string?[,] data = new string?[columns.Length, columns.Max(col => col.cells.Length)];
@@ -233,8 +235,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                     break;
             }
 
-            sb.AppendLine($"{data.GetLength(1)} rows:")
-              .Append('┌');
+            if (print_row_count)
+                sb.AppendLine($"{data.GetLength(1)} rows:");
+
+            sb.Append('┌');
 
             for (int i = 0, l = widths.Length; i < l; i++)
                 sb.Append(new string('─', widths[i]))
@@ -299,7 +303,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
 
-        public FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] args) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
+        public FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] _) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
 
         public FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
 
@@ -378,7 +382,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                       ("Type", false),
                                                       ("Value", true),
                                                   })
-                                                  .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth));
+                                                  .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth), true);
 
             frame.Print(table);
 
@@ -403,7 +407,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                     ("Value", true),
                 }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
 
-                frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth)));
+                frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth), true));
             }
 
             return Variant.Zero;
@@ -422,7 +426,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                     ("Line", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
                     ("Location", false, lines.ToArray(t => t.loc.ToString())),
                     ("Content", false, lines.ToArray(Generics.snd)),
-                }, Math.Min(Console.BufferWidth, Console.WindowWidth), i => i == eip);
+                }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
 
                 frame.Print(table);
             }
@@ -433,6 +437,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
             // TODO
+
+            return Variant.Zero;
+        }
+
+        public FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
+        {
+            // TODO
+
+            return Variant.Zero;
+        }
+
+        public FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
+        {
+            DebugCodeLines(frame, args);
+            DebugCallFrame(frame, args);
+            DebugAllVarsCompact(frame, args);
+            DebugAllCOM(frame, args);
+            DebugAllThreads(frame, args);
+            DebugInterpreter(frame, args);
 
             return Variant.Zero;
         }

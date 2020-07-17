@@ -154,6 +154,12 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             OperatingSystem.MacOS => on_macos,
         };
 
+        public static void DoPlatformDependent(Action action, params OperatingSystem[] os)
+        {
+            if (os.Contains(OperatingSystem))
+                action();
+        }
+
         public static void DoPlatformDependent(Action on_windows, Action on_unix) => DoPlatformDependent(on_windows, on_unix, on_unix);
 
         public static void DoPlatformDependent(Action on_windows, Action on_linux, Action on_macos) =>

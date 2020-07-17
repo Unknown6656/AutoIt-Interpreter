@@ -14,11 +14,15 @@ using CommandLine;
 
 using Newtonsoft.Json;
 
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
+using Unknown6656.AutoIt3;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+
+using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
 
 [assembly: AssemblyUsage(@"
 Run the interpreter quitely (only print the script's output):
@@ -44,24 +48,46 @@ Use an other display language than English for the interpreter:
 COMMAND LINE OPTIONS:")]
 
 
+//////////////////////// CODE WRAPPER IF ANYTHING GOES SERIOUSLY WRONG ////////////////////////
+try
+{
+    return MainProgram.Start(args);
+}
+catch (Exception? ex)
+{
+    StringBuilder sb = new StringBuilder();
+    int code = ex.HResult;
+
+    while (ex is { })
+    {
+        sb.Insert(0, $"[{ex.GetType()}] ({ex.HResult:x8}h) {ex.Message}:\n{ex.StackTrace}\n");
+        ex = ex.InnerException;
+    }
+
+    Console.Error.WriteLine(sb);
+
+    return code;
+}
+
+
 namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
         [Option('B', "nobanner", Default = false, HelpText = "Suppress the banner.")]
-        public bool HideBanner { set; get; }
+        public bool HideBanner { set; get; } = false;
 
         [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins.")]
-        public bool DontLoadPlugins { set; get; }
+        public bool DontLoadPlugins { set; get; } = false;
 
         [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
-        public bool StrictMode { set; get; }
+        public bool StrictMode { set; get; } = false;
 
         [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
-        public bool IgnoreErrors { set; get; }
+        public bool IgnoreErrors { set; get; } = false;
 
         [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.")]
-        public bool PrintTelemetry { set; get; }
+        public bool PrintTelemetry { set; get; } = false;
 
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
         public Verbosity Verbosity { set; get; } = Verbosity.n;
@@ -70,7 +96,7 @@ namespace Unknown6656.AutoIt3
         public string Language { set; get; } = "en";
 
         [Value(0, HelpText = "The file path to the AutoIt-3 srcript.", Required = true)]
-        public string? FilePath { set; get; }
+        public string? FilePath { set; get; } = null;
     }
 
     public static class MainProgram
@@ -87,7 +113,7 @@ namespace Unknown6656.AutoIt3
         private static volatile bool _isrunning = true;
         private static volatile bool _finished = false;
 #nullable disable
-        public static CommandLineOptions CommandLineOptions { get; private set; }
+        public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
         public static LanguagePack CurrentLanguage { get; private set; }
 #nullable enable
         public static Telemetry Telemetry { get; } = new Telemetry();
@@ -102,16 +128,21 @@ namespace Unknown6656.AutoIt3
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
             using Task printer_task = Task.Factory.StartNew(PrinterTask);
             using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitorAsync);
+            bool help_requested = false;
             int code = 0;
 
             Telemetry.Measure(TelemetryCategory.ProgramRuntime, delegate
             {
                 try
                 {
-                    Console.WindowWidth = Math.Max(Console.WindowWidth, 100);
-                    Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                    Console.OutputEncoding = Encoding.Unicode;
-                    Console.InputEncoding = Encoding.Unicode;
+                    NativeInterop.DoPlatformDependent(delegate
+                    {
+                        Console.WindowWidth = Math.Max(Console.WindowWidth, 100);
+                        Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                    }, OperatingSystem.Windows);
+
+                    // Console.OutputEncoding = Encoding.Unicode;
+                    // Console.InputEncoding = Encoding.Unicode;
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     // Console.BackgroundColor = ConsoleColor.Black;
                     // Console.Clear();
@@ -139,16 +170,21 @@ namespace Unknown6656.AutoIt3
                                 return HelpText.DefaultParsingErrorsHandler(result, h);
                             }, e => e);
 
-                            if (err.FirstOrDefault() is UnknownOptionError { StopsProcessing: false, Token: "version" })
+                            if (err.FirstOrDefault() is VersionRequestedError or UnknownOptionError { StopsProcessing: false, Token: "version" })
                             {
                                 Console.WriteLine(help.Heading);
                                 Console.WriteLine(help.Copyright);
+
+                                help_requested = true;
                             }
                             else
                             {
                                 Console.WriteLine(help);
 
-                                code = -1;
+                                if (err.FirstOrDefault() is HelpRequestedError or HelpVerbRequestedError)
+                                    help_requested = true;
+                                else
+                                    code = -1;
                             }
                         });
 
@@ -209,7 +245,8 @@ namespace Unknown6656.AutoIt3
             Telemetry.StopPerformanceMonitor();
             telemetry_task.Wait();
 
-            PrintReturnCodeAndTelemetry(code, Telemetry);
+            if (!help_requested)
+                PrintReturnCodeAndTelemetry(code, Telemetry);
 
             _isrunning = false;
 
@@ -388,12 +425,15 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             {
                 const int MIN_WIDTH = 180;
 
-                Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
-                Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                NativeInterop.DoPlatformDependent(delegate
+                {
+                    Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
+                    Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                }, OperatingSystem.Windows);
 
                 width = Math.Min(Console.WindowWidth, Console.BufferWidth);
 
-                if (width < MIN_WIDTH)
+                if (NativeInterop.OperatingSystem == OperatingSystem.Windows && width < MIN_WIDTH)
                 {
                     PrintError($"Unable to print the telemetry report. The minimum console window width must be {MIN_WIDTH} chars.");
 
