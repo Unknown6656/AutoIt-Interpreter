@@ -33,18 +33,22 @@ Works as an ... | Interpreter | Interpiler/Transpiler:<br/>60% compiler, 30% int
 Written in | C#, F# | C#, F#
 Target Framework | .NET 5 and newer | .NET Core 2.1
 Works on Windows | Hell yeah | Yup
-Works on Linux | Not yet tested | Kinda
-Works on MacOs | Not yet tested | Kinda
-Status | In development | Discontinued, Beta-ish
+Works on Linux | Yes, but not tested thoroughly | Kinda
+Works on MacOs | Yes, but not tested thoroughly | Kinda
+Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
 
 
 ## Links
 
- - [TODO]
+ - [Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
+ - [Code Overview](./new)
+ - [.NET 5 developement progress](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1)
+ - [Issues](https://github.com/Unknown6656/AutoIt-Interpreter/issues)
  - [Official AutoIt3 documentation](https://www.autoitscript.com/autoit3/docs/)
 
 ### Old Links
 
+ - [**Old** Code Overview](./old)
  - [**Old** Usage page](old/doc/usage.md)
  - [AutoIt++ Language reference](old/doc/language.md)
  - [AutoIt++ Syntax reference](old/doc/syntax.md)

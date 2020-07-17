@@ -1,5 +1,11 @@
 ![Banner image](artwork/banner.png)
 
+# [You can now find the documentation inside the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
+
+
+
+<!--
+
 # AutoIt3 Interpreter
 This directory contains the "new" .NET5-based AutoIt3 Interpreter.
 [TODO : elaborate]
@@ -43,3 +49,5 @@ A list of all required strings for a complete JSON language pack can be found in
 
 #### 3) Include resovlers
 [TODO]
+
+-->
