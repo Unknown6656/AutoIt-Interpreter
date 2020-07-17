@@ -1,4 +1,4 @@
-﻿![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
+![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
 ![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
 ![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
