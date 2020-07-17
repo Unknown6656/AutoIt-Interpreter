@@ -14,12 +14,12 @@ This repository contains _two_ AutoIt-Interpreters:
 
  1. [The newer (.NET5-based) **extensible AutoIt3 Interpreter**.](new/readme.md)
     <br/>
-    This Interpreter is based purly on .NET5-conform C#/F# code and primarily supports the AutoIt3-spcification.
+    This Interpreter is based purely on .NET5-conform C#/F# code and primarily supports the AutoIt3-specification.
     The Interpreter does support a plugin-based extension system in order to provide a custom syntax or framework functionality to the interpreter.
 
  1. [The "old" **AutoIt++ Interpiler** written in 2018 (discontinued).](old/readme.md)
     <br/>
-    This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be exceuted on any platform supporting .NET.
+    This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be executed on any platform supporting .NET.
     <br/>
     Truth be told, the interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
 
