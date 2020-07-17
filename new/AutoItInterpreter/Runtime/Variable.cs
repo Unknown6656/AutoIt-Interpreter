@@ -222,7 +222,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is Variable v)
                 return $"${v.Name}:{v.Value.ToDebugString(interpreter)}";
             else if (RawData is ScriptFunction func)
-                return $"<{func.Location.FileName}>{func.Name}{func.ParameterCount}";
+                return $"<{func.Location.FullFileName}>{func.Name}{func.ParameterCount}";
             else if (Type is VariantType.Handle && RawData is int id)
             {
                 string data = "invalid";
@@ -261,6 +261,8 @@ namespace Unknown6656.AutoIt3.Runtime
             string s => decimal.TryParse(s, out decimal d) ? d : 0m,
             VariantType.Null or _ => 0m,
         };
+
+        private readonly decimal ToNumber(decimal min, decimal max) => Math.Max(min, Math.Min(ToNumber(), max));
 
         public readonly byte[] ToBinary() => RawData switch
         {
@@ -688,21 +690,21 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static explicit operator bool(Variant v) => v.ToBoolean();
 
-        public static explicit operator sbyte(Variant v) => Convert.ToSByte(v.ToNumber());
+        public static explicit operator sbyte(Variant v) => Convert.ToSByte(v.ToNumber(sbyte.MinValue, sbyte.MaxValue));
 
-        public static explicit operator byte(Variant v) => Convert.ToByte(v.ToNumber());
+        public static explicit operator byte(Variant v) => Convert.ToByte(v.ToNumber(byte.MinValue, byte.MaxValue));
 
-        public static explicit operator short(Variant v) => Convert.ToInt16(v.ToNumber());
+        public static explicit operator short(Variant v) => Convert.ToInt16(v.ToNumber(short.MinValue, short.MaxValue));
 
-        public static explicit operator ushort(Variant v) => Convert.ToUInt16(v.ToNumber());
+        public static explicit operator ushort(Variant v) => Convert.ToUInt16(v.ToNumber(ushort.MinValue, ushort.MaxValue));
 
-        public static explicit operator int(Variant v) => Convert.ToInt32(v.ToNumber());
+        public static explicit operator int(Variant v) => Convert.ToInt32(v.ToNumber(int.MinValue, int.MaxValue));
 
-        public static explicit operator uint(Variant v) => Convert.ToUInt32(v.ToNumber());
+        public static explicit operator uint(Variant v) => Convert.ToUInt32(v.ToNumber(uint.MinValue, uint.MaxValue));
 
-        public static explicit operator long(Variant v) => Convert.ToInt64(v.ToNumber());
+        public static explicit operator long(Variant v) => Convert.ToInt64(v.ToNumber(long.MinValue, long.MaxValue));
 
-        public static explicit operator ulong(Variant v) => Convert.ToUInt64(v.ToNumber());
+        public static explicit operator ulong(Variant v) => Convert.ToUInt64(v.ToNumber(ulong.MinValue, ulong.MaxValue));
 
         public static explicit operator float(Variant v) => Convert.ToSingle(v.ToNumber());
 
@@ -808,7 +810,7 @@ namespace Unknown6656.AutoIt3.Runtime
             CallFrame = frame;
             Interpreter = interpreter;
             GlobalRoot = parent?.GlobalRoot ?? this;
-            InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction.Name.ToLowerInvariant() ?? "::"}-{parent._children.Count}";
+            InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction.Name ?? "::"}-{parent._children.Count}";
         }
 
         public void Dispose()
@@ -906,6 +908,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public Interpreter Interpreter { get; }
 
         public Variant[] HandlesInUse => _objects.Keys.Select(Variant.FromHandle).ToArray();
+
+        internal IEnumerable<object> Objects => _objects.Values;
 
         public int ObjectCount => _objects.Count;
 

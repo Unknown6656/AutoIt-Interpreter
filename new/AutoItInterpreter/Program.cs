@@ -5,7 +5,7 @@ using Unknown6656.AutoIt3;
 
 try
 {
-    return Autoit3.Start(args);
+    return MainProgram.Start(args);
 }
 catch (Exception? ex)
 {

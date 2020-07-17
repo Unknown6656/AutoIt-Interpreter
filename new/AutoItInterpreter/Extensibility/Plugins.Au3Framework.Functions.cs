@@ -16,6 +16,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -124,10 +125,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(FileSetAttrib), 2, 3 , FileSetAttrib, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(FileSetEnd), 1, FileSetEnd),
             ProvidedNativeFunction.Create(nameof(FileSetPos), 3, FileSetPos),
-            ProvidedNativeFunction.Create(nameof(FileSetTime), 4, 2, FileSetTime, Variant.Zero, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(FileSetTime), 2, 4, FileSetTime, Variant.Zero, Variant.False),
             ProvidedNativeFunction.Create(nameof(FileWrite), 2, FileWrite),
             ProvidedNativeFunction.Create(nameof(FileWriteLine), 2, FileWriteLine),
             ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
+            ProvidedNativeFunction.Create(nameof(InetClose), 1, InetClose),
+            ProvidedNativeFunction.Create(nameof(InetGet), 2, 4, InetGet, Variant.Zero, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(InetGetInfo), 0, 2, InetGetInfo, Variant.Null, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(InetGetSize), 1, 2, InetGetSize, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(InetRead), 1, 2, InetRead, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(IniDelete), 2, 3, IniDelete, Variant.Default),
             ProvidedNativeFunction.Create(nameof(IniRead), 3, 4, IniRead, Variant.Default),
             ProvidedNativeFunction.Create(nameof(IniReadSection), 2, IniReadSection),
@@ -147,12 +153,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             //ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
             ProvidedNativeFunction.Create(nameof(IsString), 1, IsString),
             ProvidedNativeFunction.Create(nameof(ObjCreate), 1, 4, ObjCreate, Variant.Default, Variant.Default, Variant.Default),
-            // ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
-            // ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
+            //ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
+            //ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
             ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
+            //ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete),
+            //ProvidedNativeFunction.Create(nameof(RegEnumKey), , RegEnumKey),
+            //ProvidedNativeFunction.Create(nameof(RegEnumVal), , RegEnumVal),
+            //ProvidedNativeFunction.Create(nameof(RegRead), , RegRead),
+            //ProvidedNativeFunction.Create(nameof(RegWrite), , RegWrite),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -169,7 +180,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(StringReplace), 3, 5, StringReplace, Variant.Zero, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringReverse), 1, 2, StringReverse, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringRight), 2, StringRight),
-            // ProvidedNativeFunction.Create(nameof(StringSplit), , StringSplit),
+            ProvidedNativeFunction.Create(nameof(StringSplit), 2, 3, StringSplit, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringStripCR), 1, StringStripCR),
             ProvidedNativeFunction.Create(nameof(StringStripWS), 2, StringStripWS),
             ProvidedNativeFunction.Create(nameof(StringToASCIIArray), 1, 4, StringToASCIIArray, Variant.Zero, Variant.Default, Variant.Zero),
@@ -211,6 +222,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(UDPShutdown), 0, UDPShutdown),
             ProvidedNativeFunction.Create(nameof(UDPStartup), 0, UDPStartup),
             ProvidedNativeFunction.Create(nameof(UBound), 1, 2, UBound, 1),
+            ProvidedNativeFunction.Create(nameof(VarGetType), 1, VarGetType),
         };
 
 
@@ -873,7 +885,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileExists(CallFrame frame, Variant[] args) => Variant.FromBoolean(File.Exists(args[0].ToString()) || Directory.Exists(args[0].ToString()));
+        public static FunctionReturnValue FileExists(CallFrame frame, Variant[] args) =>
+            Variant.FromBoolean(File.Exists(args[0].ToString()) || Directory.Exists(args[0].ToString()));
 
         public static FunctionReturnValue FileFindFirstFile(CallFrame frame, Variant[] args)
         {
@@ -992,7 +1005,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 try
                 {
-                    return (Variant)FileSystemExtensions.GetShortPath(args[1] == 1 ? args[0].ToString() : FileSystemExtensions.GetSystemInfo(args[0].ToString()).FullName);
+                    return (Variant)FileSystemExtensions.GetShortPath(args[1] == 1 ? args[0].ToString() : Path.GetFullPath(args[0].ToString()));
                 }
                 catch
                 {
@@ -1025,7 +1038,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 try
                 {
-                    return (Variant)FileSystemExtensions.GetSystemInfo(args[0].ToString()).FullName;
+                    return (Variant)Path.GetFullPath(args[0].ToString());
                 }
                 catch
                 {
@@ -1533,6 +1546,117 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return Variant.True;
             });
 
+        public static FunctionReturnValue InetClose(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out InetHandle? inet))
+                {
+                    if (inet.Running)
+                        inet.Cancel();
+
+                    inet.Dispose();
+
+                    return Variant.True;
+                }
+            }
+            catch
+            {
+            }
+
+            return Variant.False;
+        }
+
+        public static FunctionReturnValue InetGet(CallFrame frame, Variant[] args)
+        {
+            string uri = args[0].ToString();
+            string filename = args[1].ToString();
+            int options = (int)args[2];
+            bool background = (bool)args[3];
+
+            if (!background)
+                try
+                {
+                    From source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? From.FTP(uri) : From.HTTP(uri);
+
+                    source.To.File(filename);
+
+                    return (Variant)source.ByteCount;
+                }
+                catch
+                {
+                    return FunctionReturnValue.Error(1);
+                }
+
+            InetHandle inet = new InetHandle(uri, filename, options);
+            Variant handle = frame.Interpreter.GlobalObjectStorage.Store(inet);
+
+            inet.Start();
+
+            return handle;
+        }
+
+        public static FunctionReturnValue InetGetInfo(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (args[0].TryResolveHandle(frame.Interpreter, out InetHandle? inet))
+                {
+                    int index = (int)args[1];
+                    Variant[] array =
+                    {
+                        0, // TODO : currently downloaded
+                        0,
+                        inet.Complete,
+                        inet.Complete && !inet.Error,
+                        inet.Error,
+                        args[0]
+                    };
+
+                    return index >= 0 && index < array.Length ? array[index] : Variant.FromArray(frame.Interpreter, array);
+                }
+                else if (args[0].IsNull)
+                    return (Variant)frame.Interpreter.GlobalObjectStorage.Objects.Count(o => o is InetHandle);
+            }
+            catch
+            {
+            }
+
+            return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
+        }
+
+        public static FunctionReturnValue InetGetSize(CallFrame frame, Variant[] args)
+        {
+            string uri = args[0].ToString();
+
+            try
+            {
+                From source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? From.FTP(uri) : From.HTTP(uri);
+
+                return (Variant)source.ByteCount;
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
+        }
+
+        public static FunctionReturnValue InetRead(CallFrame frame, Variant[] args)
+        {
+            string uri = args[0].ToString();
+
+            try
+            {
+                From source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? From.FTP(uri) : From.HTTP(uri);
+
+                return FunctionReturnValue.Success(Variant.FromBinary(source.To.Bytes), source.ByteCount);
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
+            }
+        }
+
         public static FunctionReturnValue IniDelete(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
@@ -1847,6 +1971,33 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             return Variant.FromNumber(val);
         }
+
+        // public static unsafe FunctionReturnValue RegDelete(CallFrame frame, Variant[] args)
+        // {
+        //     string key = args[0].ToString();
+        //     string val = args[1].ToString();
+        // 
+        // }
+        // 
+        // public static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // public static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         public static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
         {
@@ -2173,12 +2324,26 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             });
         }
 
-        // public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
+        {
+            string input = args[0].ToString();
+            string delim = args[1].ToString();
+            int flags = (int)args[2];
 
-        public static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "");
+            string[] fragments = (flags & 1) != 0 ? input.Split(delim) : input.Split(delim.ToCharArray());
+
+            if (string.IsNullOrEmpty(delim))
+                fragments = input.ToArray(c => c.ToString());
+
+            IEnumerable<Variant> array = fragments.Select(Variant.FromString);
+
+            if ((flags & 2) != 0)
+                array = array.Prepend(fragments.Length);
+
+            return Variant.FromArray(frame.Interpreter, array);
+        }
+
+        public static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "", StringComparison.InvariantCulture);
 
         public static FunctionReturnValue StringStripWS(CallFrame frame, Variant[] args)
         {
@@ -2619,6 +2784,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)obj.Length;
         }
 
+        public static FunctionReturnValue VarGetType(CallFrame frame, Variant[] args)
+        {
+            string gettype(Variant var) => var.Type switch
+            {
+                VariantType.Boolean => "Bool",
+                VariantType.Null or VariantType.Default => "Keyword",
+                VariantType.String or VariantType.Binary or VariantType.Array or VariantType.Map or VariantType.Function => var.Type.ToString(),
+                VariantType.Reference => gettype(var.ReferencedVariable!.Value),
+                VariantType.COMObject => "Object", // NETObject
+                VariantType.Number when (int)var == (decimal)var => "Int32",
+                VariantType.Number => "Double",
+                VariantType.Handle => "Ptr",
+                // TODO : ??
+            };
+
+            return (Variant)gettype(args[0]);
+        }
+
         private static string GetAttributeString(FileSystemInfo info)
         {
             StringBuilder sb = new StringBuilder();
@@ -2746,6 +2929,86 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 FileStream.Close();
                 FileStream.Dispose();
             }
+        }
+
+        private sealed class InetHandle
+            : IDisposable
+        {
+            private readonly CancellationTokenSource _cts;
+            private readonly WebClient _wc;
+            private readonly string _file;
+            private readonly string _uri;
+            private volatile bool _complete = false;
+            private volatile bool _running = false;
+            private volatile bool _error = false;
+            private Task<byte[]>? _task;
+
+
+            public bool Complete => _complete;
+
+            public bool Running => _running;
+
+            public bool Error => _error;
+
+
+            // TODO : options, download monitor
+
+
+            public InetHandle(string uri, string filename, int options)
+            {
+                _cts = new CancellationTokenSource();
+                _wc = new WebClient();
+                _file = filename;
+                _uri = uri;
+
+                // todo : options
+            }
+
+            public void Dispose()
+            {
+                Cancel();
+
+                _wc.Dispose();
+                _cts.Dispose();
+                _task?.Dispose();
+            }
+
+            public void Cancel()
+            {
+                if (_running)
+                {
+                    _running = false;
+                    _complete = false;
+                    _error = true;
+                    _cts.Cancel();
+                }
+            }
+
+            public void Start() => _task = Task.Factory.StartNew(delegate
+            {
+                byte[] data = Array.Empty<byte>();
+
+                try
+                {
+                    _error = false;
+                    _complete = false;
+                    _running = true;
+                    data = _wc.DownloadData(_uri);
+                    _complete = true;
+
+                    From.Bytes(data).To.File(_file);
+                }
+                catch
+                {
+                    _error = true;
+                }
+                finally
+                {
+                    _running = false;
+                }
+
+                return data;
+            }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         private abstract class UDPBase

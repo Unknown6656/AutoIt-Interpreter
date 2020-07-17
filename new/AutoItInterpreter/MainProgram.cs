@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.IO;
@@ -72,10 +73,11 @@ namespace Unknown6656.AutoIt3
         public string? FilePath { set; get; }
     }
 
-    public static class Autoit3
+    public static class MainProgram
     {
-        public static readonly FileInfo ASM = new FileInfo(typeof(Autoit3).Assembly.Location);
-        public static readonly DirectoryInfo ASM_DIR = ASM.Directory!;
+        public static readonly Assembly ASM = typeof(MainProgram).Assembly;
+        public static readonly FileInfo ASM_FILE = new FileInfo(ASM.Location);
+        public static readonly DirectoryInfo ASM_DIR = ASM_FILE.Directory!;
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
         public static readonly DirectoryInfo INCLUDE_DIR = ASM_DIR.CreateSubdirectory("include/");
@@ -279,12 +281,12 @@ namespace Unknown6656.AutoIt3
 
         internal static void PrintCOMMessage(string message) => SubmitPrint(Verbosity.v, "COM-Server", message, false);
 
-        public static void PrintScriptMessage(FileInfo? script, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
+        public static void PrintScriptMessage(string? file, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, script?.Name ?? "<unknown>", message.Trim(), true);
+                SubmitPrint(Verbosity.n, file ?? "<unknown>", message.Trim(), true);
         });
 
         public static void PrintException(this Exception? ex)

@@ -3,14 +3,16 @@ using System;
 
 namespace Unknown6656.AutoIt3
 {
-    using static Autoit3;
+    using static MainProgram;
 
 
     public readonly struct SourceLocation
         : IEquatable<SourceLocation>
         , IComparable<SourceLocation>
     {
-        public static SourceLocation Unknown { get; } = new SourceLocation(new FileInfo($"<{CurrentLanguage["general.unknown"]}>"), -1);
+        public static SourceLocation Unknown { get; } = new SourceLocation($"<{CurrentLanguage["general.unknown"]}>", -1);
+
+        private readonly FileInfo _file;
 
         /// <summary>
         /// The zero-based start line number.
@@ -23,37 +25,39 @@ namespace Unknown6656.AutoIt3
         /// <summary>
         /// The source file path.
         /// </summary>
-        public readonly FileInfo FileName { get; }
+        // public readonly FileInfo FileName { get; }
+
+        public readonly string FullFileName => Path.GetFullPath(_file.FullName);
 
         public bool IsUnknown => Equals(Unknown);
 
         public bool IsSingleLine => EndLineNumber == StartLineNumber;
 
 
-        public SourceLocation(FileInfo file, int line)
+        public SourceLocation(string file, int line)
             : this(file, line, line)
         {
         }
 
-        public SourceLocation(FileInfo file, int start, int end)
+        public SourceLocation(string file, int start, int end)
         {
             if (start > end)
                 throw new ArgumentException("The end line number must not be smaller than the start line number", nameof(end));
 
-            FileName = file;
+            _file = new FileInfo(file);
             StartLineNumber = start;
             EndLineNumber = end;
         }
 
-        public bool Equals(SourceLocation other) => Equals(StartLineNumber, other.StartLineNumber) && Equals(EndLineNumber, other.EndLineNumber) && Equals(FileName?.FullName, other.FileName?.FullName);
+        public bool Equals(SourceLocation other) => Equals(StartLineNumber, other.StartLineNumber) && Equals(EndLineNumber, other.EndLineNumber) && Equals(FullFileName, other.FullFileName);
 
         public override bool Equals(object? obj) => obj is SourceLocation loc && Equals(loc);
 
-        public override int GetHashCode() => HashCode.Combine(StartLineNumber, EndLineNumber, FileName?.FullName);
+        public override int GetHashCode() => HashCode.Combine(StartLineNumber, EndLineNumber, FullFileName);
 
         public override string ToString()
         {
-            string s = $"\"{FileName}\", ";
+            string s = $"\"{FullFileName}\", ";
 
             if (IsSingleLine)
                 return $"{s}{CurrentLanguage["general.line"]} {StartLineNumber + 1}";
@@ -62,7 +66,7 @@ namespace Unknown6656.AutoIt3
         }
 
         public int CompareTo(SourceLocation other) =>
-            FileName?.FullName != other.FileName?.FullName ? -1 :
+            FullFileName != FullFileName ? -1 :
             Equals(other) ? 0 :
             EndLineNumber <= other.StartLineNumber ? -1 :
             StartLineNumber >= other.EndLineNumber ? 1 :

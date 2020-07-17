@@ -24,7 +24,7 @@ namespace VersionIncrementer
                 v1 = new Version(0, 0, 0, 0);
 
             DateTime now = DateTime.Now;
-            Version v2 = new Version(v1.Major, v1.Minor, v1.Build + 1, int.Parse($"{now:yy}{now.DayOfYear:D3}"));
+            Version v2 = new Version(v1.Major, v1.Minor, v1.Build + 1, (now.Year - 2000) * 356 + now.DayOfYear);
 
             try
             {

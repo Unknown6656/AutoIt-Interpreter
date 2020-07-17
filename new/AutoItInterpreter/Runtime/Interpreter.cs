@@ -11,9 +11,9 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using Random = Unknown6656.Mathematics.Numerics.Random;
+    using Random = Mathematics.Numerics.Random;
 
-    using static Autoit3;
+    using static MainProgram;
     using static AST;
 
 
@@ -141,7 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Print(CallFrame current_frame, Variant value) => Print(current_frame, value as object);
 
-        public void Print(CallFrame current_frame, object? value) => PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FileName, value?.ToString() ?? "");
+        public void Print(CallFrame current_frame, object? value) => PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
 
         public InterpreterResult Run(ScriptFunction entry_point, Variant[] args)
         {
@@ -206,7 +206,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, Autoit3.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.CurrentLanguage[key, args]);
     }
 }
 

@@ -329,7 +329,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                       let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
                                                                       select (
                                                                           $"/iter/{kvp.Key}",
-                                                                          Autoit3.ASM.Name,
+                                                                          MainProgram.ASM_FILE.Name,
                                                                           "Iterator",
                                                                           $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString(Interpreter)}, Value:{tuple.value.ToDebugString(Interpreter)}"
                                                                       );
@@ -337,7 +337,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                                                         where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
                                                                         select (
                                                                             $"/objs/{id:x8}",
-                                                                            Autoit3.ASM.Name,
+                                                                            MainProgram.ASM_FILE.Name,
                                                                             ".NET Object",
                                                                             netobj?.ToString() ?? "<null>"
                                                                         );

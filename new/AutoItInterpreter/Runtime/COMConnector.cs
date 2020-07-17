@@ -37,7 +37,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal COMConnector(Interpreter interpreter)
         {
-            Autoit3.PrintDebugMessage("Starting COM connector service ...");
+            MainProgram.PrintDebugMessage("Starting COM connector service ...");
 
             COMData.RegisterCOMResolver(this);
 
@@ -48,7 +48,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 StartInfo = new ProcessStartInfo
                 {
                     Arguments = $"{PipeName} {PipeName}D",
-                    FileName = Autoit3.COM_CONNECTOR.FullName,
+                    FileName = Path.GetFullPath(MainProgram.COM_CONNECTOR.FullName),
                 }
             };
             ServerProcess.Start();
@@ -58,7 +58,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _reader = new BinaryReader(_client);
             _writer = new BinaryWriter(_client);
 
-            Autoit3.PrintDebugMessage($"COM connector service '{PipeName}' started.");
+            MainProgram.PrintDebugMessage($"COM connector service '{PipeName}' started.");
 
 #if DEBUG
             if (System.Diagnostics.Debugger.IsAttached)
@@ -76,14 +76,14 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
 
-                        Autoit3.PrintDebugMessage("Visual Studio debugger attached to COM server.");
+                        MainProgram.PrintDebugMessage("Visual Studio debugger attached to COM server.");
 
                         return;
                     }
             }
             catch
             {
-                Autoit3.PrintWarning(SourceLocation.Unknown, "Unable to attach Visual Studio debugger to COM server.");
+                MainProgram.PrintWarning(SourceLocation.Unknown, "Unable to attach Visual Studio debugger to COM server.");
             }
 #endif
         }
@@ -97,7 +97,7 @@ namespace Unknown6656.AutoIt3.Runtime
             using BinaryReader _debug_reader = new BinaryReader(_debug_server);
 
             while (!ServerProcess.HasExited)
-                Autoit3.PrintCOMMessage(Interpreter.Telemetry.Measure(TelemetryCategory.COMConnection, _debug_reader.ReadString));
+                MainProgram.PrintCOMMessage(Interpreter.Telemetry.Measure(TelemetryCategory.COMConnection, _debug_reader.ReadString));
         }
 
         public void Stop(bool force)
@@ -135,7 +135,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose()
         {
-            Autoit3.PrintDebugMessage($"Disposing COM connector service '{PipeName}' ...");
+            MainProgram.PrintDebugMessage($"Disposing COM connector service '{PipeName}' ...");
 
             Stop(false);
 
@@ -388,10 +388,10 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         public static string? GetSolutionForVisualStudio(Process vs_process)
         {
-            if (TryGetVsInstance(vs_process.Id, out _DTE? isntance))
+            if (TryGetVsInstance(vs_process.Id, out _DTE? instance))
                 try
                 {
-                    return isntance.Solution.FullName;
+                    return instance.Solution.FullName;
                 }
                 catch
                 {

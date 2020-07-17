@@ -11,6 +11,7 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Collections;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -59,7 +60,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public ScriptScanner(Interpreter interpreter)
         {
             Interpreter = interpreter;
-            _system_script = new ScannedScript(Autoit3.ASM);
+            _system_script = new ScannedScript(MainProgram.ASM_FILE);
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
@@ -69,12 +70,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute));
 
             foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
-                _cached_functions.TryAdd(func.Key.ToLower(), func.Value);
+                _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
         });
 
         public ScriptFunction? TryResolveFunction(string name)
         {
-            _cached_functions.TryGetValue(name.ToLowerInvariant(), out ScriptFunction? func);
+            _cached_functions.TryGetValue(name.ToUpperInvariant(), out ScriptFunction? func);
 
             return func;
         }
@@ -83,7 +84,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             (FileInfo physical, string content)? file = Interpreter.Telemetry.Measure<(FileInfo, string)?>(TelemetryCategory.ResolveScript, delegate
             {
-                if (Autoit3.CommandLineOptions.StrictMode)
+                if (MainProgram.CommandLineOptions.StrictMode)
                     try
                     {
                         if (ResolveUNC(path) is { } res)
@@ -117,7 +118,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (file is { })
                 return file;
 
-            string combined = Path.Combine(Autoit3.INCLUDE_DIR.FullName, path);
+            string combined = Path.Combine(MainProgram.INCLUDE_DIR.FullName, path);
 
             if (!relative && combined != path && ResolveScriptFile(include_loc, combined, false).Is(out file) && file is { })
                 return file;
@@ -131,7 +132,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, ScannedScript>>(TelemetryCategory.ScanScript, delegate
             {
-                string key = file.FullName;
+                string key = Path.GetFullPath(file.FullName);
 
                 if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
                 {
@@ -141,7 +142,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     List<(string line, SourceLocation loc)> lines = From.String(content)
                                                                         .To
                                                                         .Lines()
-                                                                        .Select((l, i) => (l, new SourceLocation(file, i)))
+                                                                        .Select((l, i) => (l, new SourceLocation(key, i)))
                                                                         .ToList();
                     int comment_lvl = 0;
                     Match m;
@@ -178,11 +179,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             if (@params.IndexOf(',') is int idx && idx > 0)
                             {
-                                @params = @params[..idx].ToLower().Trim();
+                                @params = @params[..idx].ToUpperInvariant().Trim();
                                 value = @params[(idx + 1)..].Trim();
                             }
 
-                            if (ProcessPragma(loc, option.ToLower(), @params, value) is InterpreterError err)
+                            if (ProcessPragma(loc, option.ToUpperInvariant(), @params, value) is InterpreterError err)
                                 return err;
                             else
                                 continue;
@@ -194,7 +195,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             else
                             {
                                 line = line[..m.Index] + ' ' + TrimComment(lines[i].line.TrimStart());
-                                loc = new SourceLocation(loc.FileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
+                                loc = new SourceLocation(loc.FullFileName, loc.StartLineNumber, lines[i].loc.StartLineNumber);
                             }
 
                         if (line.Match(REGEX_1L_IF, out m))
@@ -206,7 +207,7 @@ namespace Unknown6656.AutoIt3.Runtime
                             });
                         else if (line.Match(REGEX_1L_FUNC, out m))
                         {
-                            if (Autoit3.CommandLineOptions.StrictMode)
+                            if (MainProgram.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.one_liner");
 
                             lines.InsertRange(i + 1, new[]
@@ -222,11 +223,11 @@ namespace Unknown6656.AutoIt3.Runtime
                             string args = m.Groups["args"].Value;
                             bool @volatile = m.Groups["volatile"].Length > 0;
 
-                            if (ScriptFunction.RESERVED_NAMES.Contains(name.ToLower()))
+                            if (ScriptFunction.RESERVED_NAMES.Contains(name.ToUpperInvariant()))
                                 return InterpreterError.WellKnown(loc, "error.reserved_name", name);
                             else if (!curr_func.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.unexpected_func", curr_func.Name);
-                            else if (_cached_functions.TryGetValue(name.ToLower(), out ScriptFunction? existing) && !existing.IsMainFunction)
+                            else if (_cached_functions.TryGetValue(name.ToUpperInvariant(), out ScriptFunction? existing) && !existing.IsMainFunction)
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
                             IEnumerable<PARAMETER_DECLARATION> @params;
@@ -257,9 +258,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
                             curr_func = script.GetOrCreateAU3Function(name, @params);
                             curr_func.IsVolatile = @volatile;
-                            _cached_functions.TryAdd(name.ToLower(), curr_func);
+                            _cached_functions.TryAdd(name.ToUpperInvariant(), curr_func);
 
-                            Autoit3.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
+                            MainProgram.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
                         }
                         else if (line.Match(REGEX_ENDFUNC, out Match _))
                         {
@@ -270,7 +271,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         }
                         else if (line.Match(REGEX_LABEL, out m))
                         {
-                            if (Autoit3.CommandLineOptions.StrictMode)
+                            if (MainProgram.CommandLineOptions.StrictMode)
                                 return InterpreterError.WellKnown(loc, "error.experimental.goto_instructions");
 
                             string name = m.Groups["name"].Value;
@@ -286,12 +287,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     }
 
                     if (!curr_func.IsMainFunction)
-                        return InterpreterError.WellKnown(new SourceLocation(file, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
+                        return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
 
                     _cached_scripts.TryAdd(key, script);
 
                     if (file.Directory is { Exists: true, FullName: string dir })
-                        Interpreter.AddFolderToEnvPath(dir);
+                        Interpreter.AddFolderToEnvPath(Path.GetFullPath(dir));
                 }
 
                 return script;
@@ -299,30 +300,30 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private InterpreterError? ProcessPragma(SourceLocation loc, string option, string key, string? value)
         {
-            if (option == "compile")
+            if (option == "COMPILE")
             {
                 switch (key)
                 {
-                    case "out": break;
-                    case "icon": break;
-                    case "execlevel": break;
-                    case "upx": break;
-                    case "autoitexecuteallowed": break;
-                    case "console": break;
-                    case "compression": break;
-                    case "compatibility": break;
-                    case "x64": break;
-                    case "inputboxres": break;
-                    case "comments": break;
-                    case "companyname": break;
-                    case "filedescription": break;
-                    case "fileversion": break;
-                    case "internalname": break;
-                    case "legalcopyright": break;
-                    case "legaltrademarks": break;
-                    case "originalfilename": break;
-                    case "productname": break;
-                    case "productversion": break;
+                    case "OUT": break;
+                    case "ICON": break;
+                    case "EXECLEVEL": break;
+                    case "UPX": break;
+                    case "AUTOITEXECUTEALLOWED": break;
+                    case "CONSOLE": break;
+                    case "COMPRESSION": break;
+                    case "COMPATIBILITY": break;
+                    case "X64": break;
+                    case "INPUTBOXRES": break;
+                    case "COMMENTS": break;
+                    case "COMPANYNAME": break;
+                    case "FILEDESCRIPTION": break;
+                    case "FILEVERSION": break;
+                    case "INTERNALNAME": break;
+                    case "LEGALCOPYRIGHT": break;
+                    case "LEGALTRADEMARKS": break;
+                    case "ORIGINALFILENAME": break;
+                    case "PRODUCTNAME": break;
+                    case "PRODUCTVERSION": break;
                     default:
                         return InterpreterError.WellKnown(loc, "error.unhandled_pragma_key", key, option);
                 }
@@ -388,7 +389,7 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class ScannedScript
         : IEquatable<ScannedScript>
     {
-        private readonly Dictionary<string, ScriptFunction> _functions = new Dictionary<string, ScriptFunction>();
+        private readonly Dictionary<string, ScriptFunction> _functions = new(new CustomEqualityComparer<string>((s1, s2) => s1.Equals(s2, StringComparison.InvariantCultureIgnoreCase)));
         private readonly List<(string func, SourceLocation decl)> _startup = new List<(string, SourceLocation)>();
         private readonly List<(string func, SourceLocation decl)> _exit = new List<(string, SourceLocation)>();
 
@@ -410,21 +411,21 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
         {
-            _functions.TryGetValue(name.ToLower(), out ScriptFunction? func);
+            _functions.TryGetValue(name.ToUpperInvariant(), out ScriptFunction? func);
 
             return func as AU3Function ?? AddFunction(new AU3Function(this, name, @params));
         }
 
         internal T AddFunction<T>(T function) where T : ScriptFunction
         {
-            _functions[function.Name.ToLower()] = function;
+            _functions[function.Name.ToUpperInvariant()] = function;
 
             return function;
         }
 
-        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToLower(), decl));
+        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToUpperInvariant(), decl));
 
-        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToLower(), decl));
+        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToUpperInvariant(), decl));
 
         public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
 
@@ -451,7 +452,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        public override int GetHashCode() => Location.FullName.GetHashCode();
+        public override int GetHashCode() => Path.GetFullPath(Location.FullName).GetHashCode(StringComparison.CurrentCulture);
 
         public override bool Equals(object? obj) => Equals(obj as ScannedScript);
 
@@ -459,7 +460,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool Equals(ScannedScript? other) => other is ScannedScript script && GetHashCode() == script.GetHashCode();
 
-        public bool HasFunction(string name) => _functions.ContainsKey(name.ToLower());
+        public bool HasFunction(string name) => _functions.ContainsKey(name.ToUpperInvariant());
 
 
         public static bool operator ==(ScannedScript? s1, ScannedScript? s2) => s1?.Equals(s2) ?? s2 is null;
@@ -474,9 +475,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static string[] RESERVED_NAMES =
         {
-            "_", "$_", VARIABLE.Discard.Name, "$global", "global", "static", "dim", "redim", "enum", "step", "local", "for", "in", "next", "default", "null",
-            "func", "endfunc", "do", "until", "while", "wend", "if", "then", "else", "endif", "elseif", "select", "endselect", "case", "switch", "endswitch",
-            "with", "endwith", "continuecase", "continueloop", "exit", "exitloop", "return", "volatile"
+            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN", "NEXT", "DEFAULT", "NULL",
+            "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT", "CASE", "SWITCH", "ENDSWITCH",
+            "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE"
         };
 
 
@@ -498,7 +499,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Script.AddFunction(this);
         }
 
-        public override int GetHashCode() => HashCode.Combine(Name.ToLower(), Script);
+        public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
 
         public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
 
@@ -555,7 +556,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 SourceLocation[] lines = _lines.Keys.OrderBy(Generics.id).ToArray();
 
-                return new SourceLocation(lines[0].FileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
+                return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
             }
         }
 
@@ -578,12 +579,12 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Parameters = @params?.ToArray() ?? Array.Empty<PARAMETER_DECLARATION>();
             ParameterCount = (Parameters.Count(p => !p.IsOptional), Parameters.Length);
-            JumpLabels = new ReadOnlyIndexer<string, JumpLabel?>(name => _jumplabels.TryGetValue(name.ToLower(), out JumpLabel? label) ? label : null);
+            JumpLabels = new ReadOnlyIndexer<string, JumpLabel?>(name => _jumplabels.TryGetValue(name.ToUpperInvariant(), out JumpLabel? label) ? label : null);
         }
 
         public JumpLabel AddJumpLabel(SourceLocation location, string name)
         {
-            name = name.Trim().ToLowerInvariant();
+            name = name.Trim().ToUpperInvariant();
 
             JumpLabel label = new JumpLabel(this, location, name);
 

@@ -13,13 +13,14 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
-    using static Autoit3;
+    using static MainProgram;
     using static AST;
 
     public sealed class FrameworkMacros
         : AbstractMacroProvider
     {
         internal const string MACRO_DISCARD = "DISCARD";
+        private static readonly Regex REGEX_IPADDRESS = new Regex(@"ipaddress(?<num>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 
         public FrameworkMacros(Interpreter interpreter)
@@ -31,96 +32,96 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             SourceLocation location = frame.CurrentThread.CurrentLocation ?? Interpreter.MainThread?.CurrentLocation ?? SourceLocation.Unknown;
 
-            value = name.ToLowerInvariant() switch
+            value = name.ToUpperInvariant() switch
             {
-                "appdatacommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "appdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "autoitexe" => ASM.FullName,
-                "autoitpid" => Process.GetCurrentProcess().Id,
-                "autoitversion" => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0",
-                "autoitx64" => sizeof(void*) > 4,
-                "commonfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
-                "compiled" => false,
-                "computername" => Environment.MachineName,
-                "comspec" => Environment.GetEnvironmentVariable(NativeInterop.DoPlatformDependent("comspec", "SHELL")),
-                "cr" => "\r",
-                "crlf" => Environment.NewLine,
-                "cpuarch" or "osarch" => Environment.Is64BitOperatingSystem ? "X64" : "X86",
-                "desktopcommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-                "desktopdir" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                "documentscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
-                "exitcode" => Interpreter.ExitCode,
-                "error" => Interpreter.ErrorCode,
-                "extended" => Interpreter.ExtendedValue,
-                "favoritescommondir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
-                "favoritesdir" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
-                "homedrive" => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,
-                "homepath" or "userprofiledir" => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "hour" => DateTime.Now.ToString("HH"),
-                "localappdatadir" => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "logondomain" => Environment.UserDomainName,
-                "logonserver" => @"\\" + Environment.UserDomainName,
-                "mday" => DateTime.Now.ToString("dd"),
-                "min" => DateTime.Now.ToString("mm"),
-                "mon" => DateTime.Now.ToString("MM"),
-                "msec" => DateTime.Now.ToString("fff"),
-                "mydocumentsdir" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "numparams" => (frame as AU3CallFrame)?.PassedArguments.Length ?? 0,
-                "muilang" or "oslang" => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default),
-                "tab" => "\t",
-                "sw_disable" => 65,
-                "sw_enable" => 64,
-                "sw_hide" => 0,
-                "sw_lock" => 66,
-                "sw_maximize" => 3,
-                "sw_minimize" => 6,
-                "sw_restore" => 9,
-                "sw_show" => 5,
-                "sw_showdefault" => 10,
-                "sw_showmaximized" => 3,
-                "sw_showminimized" => 2,
-                "sw_showminnoactive" => 7,
-                "sw_showna" => 8,
-                "sw_shownoactivate" => 4,
-                "sw_shownormal" => 1,
-                "sw_unlock" => 67,
-                "tempdir" => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"),
+                "APPDATACOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "APPDATADIR" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "AUTOITEXE" => ASM_FILE.FullName,
+                "AUTOITPID" => Process.GetCurrentProcess().Id,
+                "AUTOITVERSION" => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0",
+                "AUTOITX64" => sizeof(void*) > 4,
+                "COMMONFILESDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+                "COMPILED" => false,
+                "COMPUTERNAME" => Environment.MachineName,
+                "COMSPEC" => Environment.GetEnvironmentVariable(NativeInterop.DoPlatformDependent("comspec", "SHELL")),
+                "CR" => "\r",
+                "CRLF" => Environment.NewLine,
+                "CPUARCH" or "osarch" => Environment.Is64BitOperatingSystem ? "X64" : "X86",
+                "DESKTOPCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                "DESKTOPDIR" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                "DOCUMENTSCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
+                "EXITCODE" => Interpreter.ExitCode,
+                "ERROR" => Interpreter.ErrorCode,
+                "EXTENDED" => Interpreter.ExtendedValue,
+                "FAVORITESCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
+                "FAVORITESDIR" => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
+                "HOMEDRIVE" => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,
+                "HOMEPATH" or "userprofiledir" => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "HOUR" => DateTime.Now.ToString("HH", null),
+                "LOCALAPPDATADIR" => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LOGONDOMAIN" => Environment.UserDomainName,
+                "LOGONSERVER" => @"\\" + Environment.UserDomainName,
+                "MDAY" => DateTime.Now.ToString("dd", null),
+                "MIN" => DateTime.Now.ToString("mm", null),
+                "MON" => DateTime.Now.ToString("MM", null),
+                "MSEC" => DateTime.Now.ToString("fff", null),
+                "MYDOCUMENTSDIR" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "NUMPARAMS" => (frame as AU3CallFrame)?.PassedArguments.Length ?? 0,
+                "MUILANG" or "oslang" => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default),
+                "TAB" => "\t",
+                "SW_DISABLE" => 65,
+                "SW_ENABLE" => 64,
+                "SW_HIDE" => 0,
+                "SW_LOCK" => 66,
+                "SW_MAXIMIZE" => 3,
+                "SW_MINIMIZE" => 6,
+                "SW_RESTORE" => 9,
+                "SW_SHOW" => 5,
+                "SW_SHOWDEFAULT" => 10,
+                "SW_SHOWMAXIMIZED" => 3,
+                "SW_SHOWMINIMIZED" => 2,
+                "SW_SHOWMINNOACTIVE" => 7,
+                "SW_SHOWNA" => 8,
+                "SW_SHOWNOACTIVATE" => 4,
+                "SW_SHOWNORMAL" => 1,
+                "SW_UNLOCK" => 67,
+                "TEMPDIR" => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"),
 
-                "osbuild" => Environment.OSVersion.Version.Build,
-                "ostype" => NativeInterop.DoPlatformDependent("WIN32_NT", "UNIX", "MACOS_X"),
+                "OSBUILD" => Environment.OSVersion.Version.Build,
+                "OSTYPE" => NativeInterop.DoPlatformDependent("WIN32_NT", "UNIX", "MACOS_X"),
 
-                "programfilesdir" => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "programscommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
-                "programsdir" => Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                "scriptdir" => location.FileName.Directory?.FullName,
-                "scriptfullpath" => location.FileName.FullName,
-                "scriptlinenumber" => location.StartLineNumber,
-                "scriptname" => location.FileName.Name,
-                "startmenucommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
-                "startmenudir" => Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-                "startupcommondir" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup),
-                "startupdir" => Environment.GetFolderPath(Environment.SpecialFolder.Startup),
-                "systemdir" => Environment.GetFolderPath(Environment.SpecialFolder.SystemX86),
-                "windowsdir" => Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-                "sec" => DateTime.Now.ToString("ss"),
-                "username" => Environment.UserName,
-                "yday" => DateTime.Now.DayOfYear.ToString("D3"),
-                "year" => DateTime.Now.ToString("yyyy"),
-                "wday" => (int)DateTime.Now.DayOfWeek + 1,
-                "workingdir" => Directory.GetCurrentDirectory(),
+                "PROGRAMFILESDIR" => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "PROGRAMSCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+                "PROGRAMSDIR" => Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+                "SCRIPTDIR" => Path.GetDirectoryName(location.FullFileName),
+                "SCRIPTFULLPATH" => location.FullFileName,
+                "SCRIPTLINENUMBER" => location.StartLineNumber,
+                "SCRIPTNAME" => Path.GetFileName(location.FullFileName),
+                "STARTMENUCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                "STARTMENUDIR" => Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                "STARTUPCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup),
+                "STARTUPDIR" => Environment.GetFolderPath(Environment.SpecialFolder.Startup),
+                "SYSTEMDIR" => Environment.GetFolderPath(Environment.SpecialFolder.SystemX86),
+                "WINDOWSDIR" => Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "SEC" => DateTime.Now.ToString("ss", null),
+                "USERNAME" => Environment.UserName,
+                "YDAY" => DateTime.Now.DayOfYear.ToString("D3", null),
+                "YEAR" => DateTime.Now.ToString("yyyy", null),
+                "WDAY" => (int)DateTime.Now.DayOfWeek + 1,
+                "WORKINGDIR" => Directory.GetCurrentDirectory(),
 
-                "lf" => "\n",
+                "LF" => "\n",
 
                 _ when name.Equals(MACRO_DISCARD, StringComparison.InvariantCultureIgnoreCase) =>
                     frame.VariableResolver.TryGetVariable(VARIABLE.Discard, VariableSearchScope.Global, out Variable? discard) ? discard.Value : Variant.Null,
                 _ => (Variant?)null,
             };
 
-            if (value is null && name.Match(@"ipaddress(?<num>\d+)", out Match m))
+            if (value is null && name.Match(REGEX_IPADDRESS, out ReadOnlyIndexer<string, string>? g))
             {
                 IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
                 List<string> ips = new List<string>();
-                int idx = (int)decimal.Parse(m.Groups["num"].Value);
+                int idx = (int)decimal.Parse(g["num"], null);
 
                 foreach (IPAddress ip in host.AddressList)
                     if (ip.AddressFamily is AddressFamily.InterNetwork)
@@ -141,18 +142,18 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
         }
 
-        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value) => (value = name.ToLowerInvariant() switch
+        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value) => (value = name.ToUpperInvariant() switch
         {
-            "esc" => "\x1b",
-            "vtab" => "\v",
-            "nul" => "\0",
-            "date" => DateTime.Now.ToString("yyyy-MM-dd"),
-            "date_time" => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff"),
-            "e" => Math.E,
-            "nl" => Environment.NewLine,
-            "phi" => 1.618033988749894848204586834m,
-            "pi" => Math.PI,
-            "tau" => Math.PI * 2,
+            "ESC" => "\x1b",
+            "VTAB" => "\v",
+            "NUL" => "\0",
+            "DATE" => DateTime.Now.ToString("yyyy-MM-dd", null),
+            "DATE_TIME" => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff", null),
+            "E" => Math.E,
+            "NL" => Environment.NewLine,
+            "PHI" => 1.618033988749894848204586834m,
+            "PI" => Math.PI,
+            "TAU" => Math.PI * 2,
             _ => (Variant?)null,
         }) is Variant;
     }

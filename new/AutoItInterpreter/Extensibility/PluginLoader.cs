@@ -62,7 +62,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                 dir.Create();
         }
 
-        public override string ToString() => $"{_plugin_files.Count} plugin files found in \"{PluginDirectory.FullName}\" ({PluginModuleCount} modules)";
+        public override string ToString() => $"{_plugin_files.Count} plugin files found in \"{Path.GetFullPath(PluginDirectory.FullName)}\" ({PluginModuleCount} modules)";
 
         public void ClearLoadedPlugins()
         {
@@ -78,9 +78,9 @@ namespace Unknown6656.AutoIt3.Extensibility
             ClearLoadedPlugins();
 
             List<Type> types = new List<Type>();
-            IEnumerable<FileInfo> assemblies = Autoit3.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
+            IEnumerable<FileInfo> assemblies = MainProgram.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
 
-            foreach (FileInfo file in assemblies.Append(Autoit3.ASM))
+            foreach (FileInfo file in assemblies.Append(MainProgram.ASM_FILE))
                 try
                 {
                     Interpreter.Telemetry.Measure(TelemetryCategory.LoadPluginFile, delegate

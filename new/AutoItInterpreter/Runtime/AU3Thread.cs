@@ -55,7 +55,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Interpreter = interpreter;
             Interpreter.AddThread(this);
 
-            Autoit3.PrintDebugMessage($"Created thread {this}");
+            MainProgram.PrintDebugMessage($"Created thread {this}");
         }
 
         public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args) =>
@@ -137,7 +137,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Interpreter.RemoveThread(this);
             _callstack.TryPop(out _);
 
-            Autoit3.PrintDebugMessage($"Disposed thread {this}");
+            MainProgram.PrintDebugMessage($"Disposed thread {this}");
 
             if (!_callstack.IsEmpty)
                 throw new InvalidOperationException("The execution stack is not empty.");
@@ -203,7 +203,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (result.Is<Variant>())
                 if (CurrentThread.IsRunning)
                 {
-                    Autoit3.PrintDebugMessage($"Executing {CurrentFunction} ...");
+                    MainProgram.PrintDebugMessage($"Executing {CurrentFunction} ...");
 
                     result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
                 }
@@ -242,7 +242,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
 
-        internal void IssueWarning(string key, params object?[] args) => Autoit3.PrintWarning(CurrentLocation, Autoit3.CurrentLanguage[key, args]);
+        internal void IssueWarning(string key, params object?[] args) => MainProgram.PrintWarning(CurrentLocation, MainProgram.CurrentLanguage[key, args]);
     }
 #pragma warning restore CA1063
 
@@ -512,9 +512,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
             line = line.Trim();
 
-            Autoit3.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
-            Autoit3.PrintDebugMessage($"Location:      {loc}");
-            Autoit3.PrintDebugMessage($"Line Content:  {line}");
+            MainProgram.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
+            MainProgram.PrintDebugMessage($"Location:      {loc}");
+            MainProgram.PrintDebugMessage($"Line Content:  {line}");
 
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return InterpreterResult.OK;
@@ -529,7 +529,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (Interpreter.CommandLineOptions.IgnoreErrors && result?.OptionalError?.Message is string msg)
             {
-                Autoit3.PrintWarning(CurrentLocation, msg);
+                MainProgram.PrintWarning(CurrentLocation, msg);
 
                 result = null;
             }
@@ -1140,7 +1140,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
-                Autoit3.PrintDebugMessage($"Expr.statemt.: {expression}");
+                MainProgram.PrintDebugMessage($"Expr.statemt.: {expression}");
 
                 if (declaration_type == DeclarationType.None)
                     return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
@@ -1154,7 +1154,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate
                 {
                     if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
-                        return new InterpreterError(CurrentLocation, $"{Autoit3.CurrentLanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                        return new InterpreterError(CurrentLocation, $"{MainProgram.CurrentLanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
                     else
                         return WellKnownError("error.unparsable_line", line, ex.Message);
                 });
@@ -1169,7 +1169,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = Interpreter.ParserProvider.ExpressionParser;
                     PARSABLE_EXPRESSION parsed = provider.Parse(expression).ParsedValue;
 
-                    Autoit3.PrintDebugMessage($"Raw expr:      {parsed}");
+                    MainProgram.PrintDebugMessage($"Raw expr:      {parsed}");
 
                     return parsed;
                 }
@@ -1266,7 +1266,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
                                 if (result.Is(out Variant value))
-                                    Autoit3.PrintDebugMessage($"{variable_ast} = {value}");
+                                    MainProgram.PrintDebugMessage($"{variable_ast} = {value}");
                                 else
                                     error ??= (InterpreterError)result;
                             }
@@ -1437,7 +1437,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 };
 
                 if (value.Is(out Variant v))
-                    Autoit3.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString(Interpreter)}");
+                    MainProgram.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString(Interpreter)}");
 
                 return value;
             });
