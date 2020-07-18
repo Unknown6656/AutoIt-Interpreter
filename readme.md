@@ -5,6 +5,8 @@
 
 ![Banner image](new/artwork/banner.png)
 
+_NOTICE: To avoid any association with slavery, the `master`-branch has been renamed to `daddy` ;)_
+
 # Platform-Independent AutoIt3 Intepreter
 
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
