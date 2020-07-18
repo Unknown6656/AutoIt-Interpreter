@@ -2,8 +2,32 @@
 
 ## Our Standards
 
-We have none. Be as spicy as you want to be.
+We have none. Be as spicy as you want to be.<br/>
 Like I'd give a f█ck.
+
+## Our Code Standards
+
+ - Allman style.
+ - You can remove `{` and `}` around single-lined blocks, e.g.:
+    ```csharp
+    if (true)
+        func();
+
+    do
+        func();
+    while (true);
+    ```
+    But do **not** write any of this crap:
+    ```csharp
+    if (true) func();
+    
+    do func(); while (true);
+    ```
+ - `PascalCase` for types, methods, properties, public identifiers, etc.
+ - `underscore_lower_case` for method parameters and local variables
+ - `_underscore_lower_case` for private fields
+ - `CAPS_LOCK_CASE` for constants
+
 
 ## Our Responsibilities
 
