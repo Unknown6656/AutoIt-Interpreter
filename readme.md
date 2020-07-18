@@ -7,10 +7,10 @@
 
 _NOTICE: To avoid any association with slavery, the `master`-branch has been renamed to `daddy` ;)_
 
-# Platform-Independent AutoIt3 Intepreter
+# Platform-Independent AutoIt3 Interpreter
 
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
-The aim of this repository is to provide an AutoIt3 interpteter for other platforms, such as Linux/Unix and MacOS.
+The aim of this repository is to provide an AutoIt3 Interpreter for other platforms, such as Linux/Unix and MacOS.
 
 This repository contains _two_ AutoIt-Interpreters:
 
@@ -21,9 +21,9 @@ This repository contains _two_ AutoIt-Interpreters:
 
  1. [The "old" **AutoIt++ Interpiler** written in 2018 (discontinued).](old/readme.md)
     <br/>
-    This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be executed on any platform supporting .NET.
+    This Interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be executed on any platform supporting .NET.
     <br/>
-    Truth be told, the interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
+    Truth be told, the Interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
 
 
 #### Comparison:
