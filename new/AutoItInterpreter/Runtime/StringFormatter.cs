@@ -8,15 +8,29 @@ using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    // https://www.autoitscript.com/autoit3/docs/functions/StringFormat.htm
+    /// <summary>
+    /// Contains a string formatting engine compatible with the specification <see href="https://www.autoitscript.com/autoit3/docs/functions/StringFormat.htm"/>.
+    /// </summary>
     public static class StringFormatter
     {
         private static readonly Regex REGEX_FROMAT = new Regex(@"^%(?<flags>[+\-0#]*)(?<width>\d+)?(\.(?<precision>\d+))?(?<type>[diouxXeEfgGs])", RegexOptions.Compiled);
         private static readonly Regex REGEX_ESCAPE = new Regex(@"^\\[rnt\\]", RegexOptions.Compiled);
 
 
+        /// <summary>
+        /// Formats the given string using the given arguments according to the AutoIt-specification.
+        /// </summary>
+        /// <param name="format">Format string.</param>
+        /// <param name="args">Format string arguments.</param>
+        /// <returns>Formatted string.</returns>
         public static string FormatString(string format, IEnumerable<Variant> args) => FormatString(format, args.ToArray());
 
+        /// <summary>
+        /// Formats the given string using the given arguments according to the AutoIt-specification.
+        /// </summary>
+        /// <param name="format">Format string.</param>
+        /// <param name="args">Format string arguments.</param>
+        /// <returns>Formatted string.</returns>
         public static string FormatString(string format, params Variant[] args)
         {
             StringBuilder output = new StringBuilder();

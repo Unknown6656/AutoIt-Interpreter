@@ -78,7 +78,7 @@ namespace Unknown6656.AutoIt3
         [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
         public bool HideBanner { set; get; } = false;
 
-        [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins.")]
+        [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins/extensions.")]
         public bool DontLoadPlugins { set; get; } = false;
 
         [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
@@ -96,7 +96,7 @@ namespace Unknown6656.AutoIt3
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
         public string Language { set; get; } = "en";
 
-        [Value(0, HelpText = "The file path to the AutoIt-3 srcript.", Required = true)]
+        [Value(0, HelpText = "The file path to the AutoIt-3 script.", Required = true)]
         public string? FilePath { set; get; } = null;
     }
 

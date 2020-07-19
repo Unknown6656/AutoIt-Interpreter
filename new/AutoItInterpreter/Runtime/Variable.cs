@@ -61,7 +61,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         COMObject,
 
-        //NETObject,
+        //TODO : NETObject,
 
         /// <summary>
         /// Represents an <see cref="uint"/>-handle pointing towards a managed object instance.
@@ -210,6 +210,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <description><see cref="uint"/></description>
         ///     </item>
         /// </list>
+        /// The application's behavior is undefined should the value does not match the criteria above.
         /// </summary>
         internal readonly object? RawData { get; }
 
@@ -276,6 +277,11 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
         #region INSTANCE METHODS
 
+        /// <summary>
+        /// Returns whether the current instance is a pointer to a native or user-defined function.
+        /// </summary>
+        /// <param name="function">Sets this value with the internally stored function reference if the return value is <see cref="true"/>. Otherwise sets it to <see langword="null"/>.</param>
+        /// <returns>Indicator whether the current instance represents a pointer to a function.</returns>
         public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
         /// <inheritdoc/>
@@ -412,9 +418,14 @@ namespace Unknown6656.AutoIt3.Runtime
             decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
             string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => From.Hex(s[2..]),
             string s => From.String(s, BytewiseEncoding.Instance),
-            _ => System.Array.Empty<byte>(),
+            _ => Array.Empty<byte>(),
         };
 
+        /// <summary>
+        /// Returns the <see cref="Variant"/>-array stored inside current instance (or an empty array if this instance could not be converted).
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance, with which the array is associated.</param>
+        /// <returns>The array.</returns>
         public readonly Variant[] ToArray(Interpreter interpreter)
         {
             if (RawData is Array arr)
@@ -430,6 +441,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 return Array.Empty<Variant>();
         }
 
+        /// <summary>
+        /// Returns an ordered map of key-value-pairs stored inside current instance (or an empty map if this instance could not be converted).
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance, with which the map is associated.</param>
+        /// <returns>The ordered map.</returns>
         public readonly (Variant key, Variant value)[] ToOrderedMap(Interpreter interpreter)
         {
             List<(Variant, Variant)> output = new();
@@ -453,8 +469,22 @@ namespace Unknown6656.AutoIt3.Runtime
             return output.ToArray();
         }
 
+        /// <summary>
+        /// Returns a map of key-value-pairs stored inside current instance (or an map array if this instance could not be converted).
+        /// <para/>
+        /// Note: This map might not be ordered. Use <see cref="ToOrderedMap(Interpreter)"/> if you need its ordered variant.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance, with which the map is associated.</param>
+        /// <returns>The map.</returns>
         public readonly IDictionary<Variant, Variant> ToMap(Interpreter interpreter) => ToOrderedMap(interpreter).ToDictionary();
 
+        /// <summary>
+        /// Assigns a copy of the current instance to the given variable and returns the associated copy.
+        /// <para/>
+        /// The value of this instance's property "<see cref="AssignedTo"/>" will <i>not</i> be changed.
+        /// </summary>
+        /// <param name="parent">Variable to which a copy of this value will be assigned. A value of <see langword="null"/> removes any previous assignment.</param>
+        /// <returns>Copy of the current instance with the given variable assigned to it.</returns>
         public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
 
         public readonly bool TrySetIndexed(Interpreter interpreter, Variant index, Variant value)
@@ -613,10 +643,28 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => new Variant(type, null, null),
         };
 
+        /// <summary>
+        /// Creates a new (empty) map.
+        /// </summary>
+        /// <returns>Instance containing the newly created map.</returns>
         public static Variant NewMap() => new Variant(VariantType.Map, new Dictionary<Variant, Variant>(), null);
 
+        /// <summary>
+        /// Creates a new array with the given length.
+        /// </summary>
+        /// <param name="length">Length of the array. Must be non-negative.</param>
+        /// <returns>Instance containing the newly created array.</returns>
         public static Variant NewArray(int length) => new Variant(VariantType.Array, new Variant[length], null);
 
+        /// <summary>
+        /// Converts the given object into an appropriate instance of <see cref="Variant"/>.
+        /// <para/>
+        /// This method does not create a handle from a given .NET Object. Use <see cref="GlobalObjectStorage.Store{T}(T)"/> for that functionality.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance used to convert the given object.</param>
+        /// <param name="obj">Object to be converted.</param>
+        /// <exception cref="NotImplementedException"/>
+        /// <returns>Converted object.</returns>
         public static Variant FromObject(Interpreter interpreter, object? obj) => obj switch
         {
             null or LITERAL => FromLiteral(obj as LITERAL),
@@ -646,8 +694,20 @@ namespace Unknown6656.AutoIt3.Runtime
             //_ => FromNETObject(obj),
         };
 
+        /// <summary>
+        /// Creates a new map from the given key-value-pairs.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance used for the map creation.</param>
+        /// <param name="pairs">Collection of key-value-pairs.</param>
+        /// <returns>The newly created map.</returns>
         public static Variant FromMap(Interpreter interpreter, params (Variant key, Variant value)[] pairs) => FromMap(interpreter, pairs.ToDictionary());
 
+        /// <summary>
+        /// Creates a new map from the given key-value-pairs.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance used for the map creation.</param>
+        /// <param name="dic">Collection of key-value-pairs.</param>
+        /// <returns>The newly created map.</returns>
         public static Variant FromMap(Interpreter interpreter, IDictionary<Variant, Variant> dic)
         {
             Variant v = NewMap();
@@ -663,8 +723,20 @@ namespace Unknown6656.AutoIt3.Runtime
             return v;
         }
 
+        /// <summary>
+        /// Creates a new array from the given value collection.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance used to create the array.</param>
+        /// <param name="collection">(Ordered) collection of values.</param>
+        /// <returns>THe newly created array.</returns>
         public static Variant FromArray(Interpreter interpreter, IEnumerable<Variant>? collection) => FromArray(interpreter, collection?.ToArray());
 
+        /// <summary>
+        /// Creates a new array from the given value collection.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance used to create the array.</param>
+        /// <param name="array">(Ordered) collection of values.</param>
+        /// <returns>THe newly created array.</returns>
         public static Variant FromArray(Interpreter interpreter, params Variant[]? array)
         {
             Variant v = NewArray(array?.Length ?? 0);
@@ -679,8 +751,18 @@ namespace Unknown6656.AutoIt3.Runtime
             return v;
         }
 
+        /// <summary>
+        /// Creates a new binary string from the given bytes.
+        /// </summary>
+        /// <param name="bytes">(Ordered) collection of bytes.</param>
+        /// <returns>Newly created binary string.</returns>
         public static Variant FromBinary(IEnumerable<byte> bytes) => FromBinary(bytes.ToArray());
 
+        /// <summary>
+        /// Creates a new binary string from the given bytes.
+        /// </summary>
+        /// <param name="bytes">(Ordered) collection of bytes.</param>
+        /// <returns>Newly created binary string.</returns>
         public static Variant FromBinary(byte[] bytes) => new Variant(VariantType.Binary, bytes, null);
 
         public static Variant FromLiteral(LITERAL? literal)
@@ -739,6 +821,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant BitwiseXor(Variant v1, Variant v2) => (int)v1 ^ (int)v2;
 
+        /// <summary>
+        /// Inverts the given 32bit value bitwise.
+        /// </summary>
+        /// <param name="v">Value to be bitwise inverted.</param>
+        /// <returns>Bitwise inverted value.</returns>
         public static Variant BitwiseNot(Variant v) => ~(int)v;
 
         #endregion
@@ -750,6 +837,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant operator +(Variant v) => v;
 
+        /// <inheritdoc cref="BitwiseNot"/>
         public static Variant operator ~(Variant v) => BitwiseNot(v);
 
         public static Variant operator !(Variant v) => FromBoolean(!v.ToBoolean());
@@ -860,25 +948,48 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
     }
 
+    /// <summary>
+    /// Represents a variable capable of holding a value of the type <see cref="Variant"/>.
+    /// </summary>
     public sealed class Variable
         : IEquatable<Variable>
     {
         private readonly object _mutex = new object();
         private Variant _value;
 
-
+        /// <summary>
+        /// The variable's lower-case name without the '$'-prefix.
+        /// </summary>
         public string Name { get; }
 
+        /// <summary>
+        /// Indicates whether the variable has been declared or marked as <see langword="Const"/>.
+        /// </summary>
         public bool IsConst { get; }
 
+        /// <summary>
+        /// Indicates whether the variable is a <see langword="ByRef"/>-reference pointing to an other variable.
+        /// </summary>
         public bool IsReference => _value.IsReference;
 
+        /// <summary>
+        /// Returns the variable (if any) to which the current instance is pointing to (Only relevant for <see langword="ByRef"/>-variables).
+        /// </summary>
         public Variable? ReferencedVariable => _value.ReferencedVariable;
 
+        /// <summary>
+        /// The scope in which the current variable has been declared.
+        /// </summary>
         public VariableScope DeclaredScope { get; }
 
+        /// <summary>
+        /// The source location at which the current variable has been declared.
+        /// </summary>
         public SourceLocation DeclaredLocation { get; }
 
+        /// <summary>
+        /// Sets or gets the value stored inside the current variable.
+        /// </summary>
         public Variant Value
         {
             get => ReferencedVariable?._value ?? _value;
@@ -891,8 +1002,14 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        /// <summary>
+        /// The interpreter instance with which the current variable is associated.
+        /// </summary>
         public Interpreter Interpreter => DeclaredScope.Interpreter;
 
+        /// <summary>
+        /// Indicates whether the variable has been declared <see langword="Global"/> or resides inside the global scope.
+        /// </summary>
         public bool IsGlobal => DeclaredScope.IsGlobalScope;
 
 
@@ -905,13 +1022,17 @@ namespace Unknown6656.AutoIt3.Runtime
             Value = Variant.Null;
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"${Name}: {Value.ToDebugString(Interpreter)}";
 
+        /// <inheritdoc/>
         public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => (obj is Variable v && Equals(v))
                                                  || (obj is string s && Name.Equals(s, StringComparison.InvariantCultureIgnoreCase));
 
+        /// <inheritdoc/>
         public bool Equals(Variable? other) => Name.Equals(other?.Name, StringComparison.InvariantCultureIgnoreCase);
     }
 
@@ -924,20 +1045,44 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public VariableScope[] ChildScopes => _children.Keys.ToArray();
 
+        /// <summary>
+        /// Returns all variables declared in this scope. This value is sequentially equal to <see cref="GlobalVariables"/> if the current scope is the global variable scope.
+        /// </summary>
         public Variable[] LocalVariables => _variables.Keys.ToArray();
 
+        /// <summary>
+        /// Returns all variables declared in the global scope associated with the current interpreter instance.
+        /// </summary>
         public Variable[] GlobalVariables => GlobalRoot.LocalVariables;
 
+        /// <summary>
+        /// Indicates whether the current variable scope is equal to the global variable scope of the interpreter which is associated with the current instance.
+        /// </summary>
         public bool IsGlobalScope => Parent is null;
 
+        /// <summary>
+        /// The current scope's internal name. This is mainly used for debugging purposes and can be subject to change.
+        /// </summary>
         public string InternalName { get; }
 
+        /// <summary>
+        /// Returns the optional call frame with which the current scope is being associated.
+        /// </summary>
         public CallFrame? CallFrame { get; }
 
+        /// <summary>
+        /// The interpreter instance associated with the current variable scope.
+        /// </summary>
         public Interpreter Interpreter { get; }
 
+        /// <summary>
+        /// The optional parent variable scope. A value of <see langword="null"/> indicates that the current instance represents the global variable scope.
+        /// </summary>
         public VariableScope? Parent { get; }
 
+        /// <summary>
+        /// The global root variable scope of the interpreter with which this scope is associated.
+        /// </summary>
         public VariableScope GlobalRoot { get; }
 
 
@@ -950,6 +1095,7 @@ namespace Unknown6656.AutoIt3.Runtime
             InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction.Name ?? "::"}-{parent._children.Count}";
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             if (Parent is { _children: { } chd })
@@ -959,6 +1105,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"\"{InternalName}\"{(IsGlobalScope ? " (global)" : "")}: {_variables.Count} Variables, {_children.Count} Child scopes";
 
         public Variable CreateTemporaryVariable() => CreateVariable((CallFrame as AU3CallFrame)?.CurrentLocation ?? SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
@@ -1108,6 +1255,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return success;
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             foreach (Variant handle in HandlesInUse)
@@ -1127,9 +1275,18 @@ namespace Unknown6656.AutoIt3.Runtime
         }
     }
 
+    /// <summary>
+    /// Represents an enumeration containing possible variable search scopes.
+    /// </summary>
     public enum VariableSearchScope
     {
+        /// <summary>
+        /// Represents a local search scope.
+        /// </summary>
         Local,
+        /// <summary>
+        /// Represents a global search scope.
+        /// </summary>
         Global
     }
 }

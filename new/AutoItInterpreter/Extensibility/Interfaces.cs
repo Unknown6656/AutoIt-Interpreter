@@ -102,6 +102,9 @@ namespace Unknown6656.AutoIt3.Extensibility
             : base(interpreter)
         {
         }
+
+        public FunctionReturnValue? TryExecute(string name, NativeCallFrame frame, Variant[] args) =>
+            ProvidedFunctions?.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.InvariantCultureIgnoreCase))?.Execute(frame, args);
     }
 
     public abstract class ProvidedNativeFunction
