@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
@@ -25,23 +26,23 @@ using Unknown6656.Common;
 using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
 
 [assembly: AssemblyUsage(@"
-Run the interpreter quitely (only print the script's output):
-    autoit3 -vq ~/Documents/my_script.au3
-    autoit3 -vq C:\User\Public\Script              (you can also omit the file extension)
-
-Run the interpreter in telemetry/full debugging mode:
-    autoit3 -t ~/Documents/my_script.au3
-    autoit3 -vv ~/Documents/my_script.au3
-
-Run a script which is not on the local machine:
-    autoit3 ""\\192.168.0.1\Public Documents\My Script.au3""
-    autoit3 https://example.com/my-script.au3
-    autoit3 ftp://username:password@example.com/path/to/script.au3
-    autoit3 ssh://username:password@example.com/~/Documents/my_script.au3
-    autoit3 scp://username:password@192.168.0.100:22/script.au3
-
-Use an other display language than English for the interpreter:
-    autoit3 -l fr C:\User\Public\Script.au3
+  Run the interpreter quietly (only print the script's output):
+      autoit3 -vq ~/Documents/my_script.au3
+      autoit3 -vq C:\User\Public\Script              (you can also omit the file extension)
+  
+  Run the interpreter in telemetry/full debugging mode:
+      autoit3 -t ~/Documents/my_script.au3
+      autoit3 -vv ~/Documents/my_script.au3
+  
+  Run a script which is not on the local machine:
+      autoit3 ""\\192.168.0.1\Public Documents\My Script.au3""
+      autoit3 https://example.com/my-script.au3
+      autoit3 ftp://username:password@example.com/path/to/script.au3
+      autoit3 ssh://username:password@example.com/~/Documents/my_script.au3
+      autoit3 scp://username:password@192.168.0.100:22/script.au3
+  
+  Use an other display language than English for the interpreter:
+      autoit3 -l fr C:\User\Public\Script.au3
 
 -------------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
-        [Option('B', "nobanner", Default = false, HelpText = "Suppress the banner.")]
+        [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
         public bool HideBanner { set; get; } = false;
 
         [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins.")]
@@ -86,7 +87,7 @@ namespace Unknown6656.AutoIt3
         [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
         public bool IgnoreErrors { set; get; } = false;
 
-        [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.")]
+        [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.  NOTE: All telemetry data \x1b[4mstays\x1b[24m on this machine contrary to what this option might suggest. \x1b[4mNo part\x1b[24m of the telemetry will be uploaded to an external (web)server.")]
         public bool PrintTelemetry { set; get; } = false;
 
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
@@ -241,7 +242,7 @@ namespace Unknown6656.AutoIt3
                 Thread.Sleep(100);
 
             sw.Stop();
-            Telemetry.SubmitTimings(TelemetryCategory.ProgramRuntimeAndPrinting, sw.ElapsedTicks);
+            Telemetry.SubmitTimings(TelemetryCategory.ProgramRuntimeAndPrinting, sw.Elapsed);
             Telemetry.StopPerformanceMonitor();
             telemetry_task.Wait();
 
@@ -446,7 +447,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', width - 1));
             ConsoleExtensions.RGBForegroundColor = retcode == 0 ? RGBAColor.SpringGreen : RGBAColor.Salmon;
-            Console.WriteLine($"Exit code: {retcode}     Time: {root.Total}");
+            Console.WriteLine($"Exit code: {retcode}     Time: {root.Total} (Total), {telemetry.TotalTime[TelemetryCategory.InterpreterRuntime]} (Script)");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
             if (!print_telemetry)
@@ -462,45 +463,65 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             RGBAColor col_backg = RGBAColor.DarkSlateGray;
             RGBAColor col_hotpath = RGBAColor.Salmon;
 
+            Regex regex_trimstart = new Regex(@"^(?<space>\s*)0(?<rest>\d[:\.].+)$", RegexOptions.Compiled);
+
             string[] headers = {
-                "Timings category",
+                " Semantic timings category",
                 "Count",
-                "Total Time (h:m:s)",
-                "Avg. Time (h:m:s)",
-                "Min. Time (h:m:s)",
-                "Max. Time (h:m:s)",
-                "%Time (Parent)",
-                "%Time (Total)",
+                "   Total Time",
+                "   Avg. Time",
+                "   Min. Time",
+                "   Max. Time",
+                "Time (% Parent)",
+                "Time (% Total)",
             };
             List<(string[] cells, TelemetryTimingsNode node)> rows = new();
-            static string ReplaceStart(string input, string search, string replace)
+            static string ReplaceStart(string input, params (string search, string replace)[] substitutions)
             {
                 int idx = 0;
+                bool match;
 
-                while (input[idx..].StartsWith(search))
+                do
                 {
-                    input = input[..idx] + replace + input[(idx + search.Length)..];
-                    idx += replace.Length;
+                    match = false;
+
+                    foreach ((string search, string replace) in substitutions)
+                        if (input[idx..].StartsWith(search))
+                        {
+                            input = input[..idx] + replace + input[(idx + search.Length)..];
+                            idx += replace.Length;
+                            match = true;
+
+                            break;
+                        }
                 }
+                while (match);
 
                 return input;
             }
-            static string PrintTime(TimeSpan time)
+            string PrintTime(TimeSpan time)
             {
                 string s = time.ToString(time.TotalSeconds switch
                 {
-                    < 1 => "hh\\:mm\\:ss\\.fffffff",
-                    < 10 => "hh\\:mm\\:ss\\.fffff",
-                    < 60 => "hh\\:mm\\:ss\\.fff",
-                    _ => "hh\\:mm\\:ss\\.f",
+                    // < 1 => "h\\:mm\\:ss\\.fffffff",
+                    < 10 => "h\\:mm\\:ss\\.ffffff",
+                    < 60 => "h\\:mm\\:ss\\.fff",
+                    _ => "h\\:mm\\:ss\\.f",
                 });
 
-                s = ReplaceStart(s, "00:", "   ").Replace("00.", " 0.").TrimEnd('0');
+                s = ReplaceStart(s,
+                    ("00:", "   "),
+                    ("0:", "  "),
+                    ("00.", " 0.")
+                ).TrimEnd('0');
+
+                if (s.Match(regex_trimstart, out ReadOnlyIndexer<string, string>? groups))
+                    s = groups["space"] + ' ' + groups["rest"];
 
                 if (s.EndsWith("0."))
                     s = s[..^1];
-                else if (s.IndexOf('.') == 2)
-                    s = s[1..];
+                else if (s.EndsWith('.'))
+                    s += '0';
 
                 return s;
             }
@@ -534,11 +555,11 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             traverse(root);
 
-            int[] widths = headers.ToArray(h => h.Length + 2);
+            int[] widths = headers.ToArray(h => h.Length);
 
             foreach (string[] cells in rows.Select(r => r.cells))
                 for (int i = 0; i < widths.Length; i++)
-                    widths[i] = Math.Max(widths[i], cells[i].Length + 2);
+                    widths[i] = Math.Max(widths[i], cells[i].Length);
 
             #endregion
             #region TIMINGS : PRINT HEADER
@@ -558,7 +579,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
                 Console.Write(new string('─', widths[i]));
                 ConsoleExtensions.RGBForegroundColor = col_text;
-                ConsoleExtensions.Write($" {headers[i].PadRight(widths[i] - 2)} ", (xoffs, yoffs + 1));
+                ConsoleExtensions.Write(headers[i].PadRight(widths[i]), (xoffs, yoffs + 1));
                 ConsoleExtensions.RGBForegroundColor = col_table;
                 ConsoleExtensions.Write(new string('─', widths[i]), (xoffs, yoffs + 2));
                 ConsoleExtensions.WriteVertical(i == l - 1 ? "┐│┤" : "┬│┼", (xoffs + widths[i], yoffs));
@@ -589,9 +610,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
                     if (i == 0)
                     {
-                        Console.Write(' ' + cell);
+                        Console.Write(cell);
                         ConsoleExtensions.RGBForegroundColor = col_backg;
-                        Console.Write(new string('─', widths[i] - cell.Length - 1));
+                        Console.Write(new string('─', widths[i] - cell.Length));
                     }
                     else
                     {
@@ -602,7 +623,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                         ConsoleExtensions.RGBForegroundColor = node.IsHot ? col_hotpath : col_text;
                         Console.CursorLeft = xoffs + 1;
 
-                        for (int j = 0, k = Math.Min(widths[i] - 2, cell.Length); j < k; ++j)
+                        for (int j = 0, k = Math.Min(widths[i], cell.Length); j < k; ++j)
                             if (char.IsWhiteSpace(cell[j]))
                                 ++Console.CursorLeft;
                             else
@@ -633,120 +654,135 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             }
 
             Console.WriteLine();
+            Console.WriteLine("All absolute timings are printed in the format '[[hh:]mm:]ss.ffffff' with the unit being seconds.");
+            Console.WriteLine("Timings are sorted into \x1b[4msemantic\x1b[24m categories, not quantitative ones. This may result in overlapping or 'weird' percentage values in the 'Time (% Parent)' column.");
+            Console.WriteLine("Lines colored in red indicate so-called 'hot paths'. These are the computationally most expensive tasks relative to their semantic parent.");
 
             #endregion
-            #region PERFORMANCE : FETCH DATA
 
-            const int PADDING = 22;
-            List<(DateTime, double total, double user, double kernel, long ram)> performance_data = new();
-            int width_perf = width - 2 - PADDING;
-            const int height_perf_cpu = 15;
-
-            performance_data.AddRange(telemetry.PerformanceMeasurements);
-
-            if (performance_data.Count > width_perf)
+            if (NativeInterop.OperatingSystem == OperatingSystem.Windows)
             {
-                int step = performance_data.Count / (performance_data.Count - width_perf);
-                int index = performance_data.Count - 1;
+                #region PERFORMANCE : FETCH DATA
 
-                while (index > 0 && performance_data.Count > width_perf)
+                const int PADDING = 22;
+                List<(DateTime, double total, double user, double kernel, long ram)> performance_data = new();
+                int width_perf = width - 2 - PADDING;
+                const int height_perf_cpu = 15;
+
+                performance_data.AddRange(telemetry.PerformanceMeasurements);
+
+                if (performance_data.Count > width_perf)
                 {
-                    performance_data.RemoveAt(index);
-                    index -= step;
+                    int step = performance_data.Count / (performance_data.Count - width_perf);
+                    int index = performance_data.Count - 1;
+
+                    while (index > 0 && performance_data.Count > width_perf)
+                    {
+                        performance_data.RemoveAt(index);
+                        index -= step;
+                    }
                 }
-            }
 
-            width_perf = performance_data.Count + PADDING;
+                width_perf = performance_data.Count + PADDING;
 
-            #endregion
-            #region PERFORMANCE : PRINT FRAME
+                #endregion
+                #region PERFORMANCE : PRINT FRAME
 
-            int ypos = Console.CursorTop;
-            RGBAColor col_cpu_user = RGBAColor.Chartreuse;
-            RGBAColor col_cpu_kernel = RGBAColor.LimeGreen;
-            RGBAColor col_ram = RGBAColor.CornflowerBlue;
+                RGBAColor col_cpu_user = RGBAColor.Chartreuse;
+                RGBAColor col_cpu_kernel = RGBAColor.LimeGreen;
+                RGBAColor col_ram = RGBAColor.CornflowerBlue;
 
-            ConsoleExtensions.RGBForegroundColor = col_table;
-            Console.WriteLine('┌' + new string('─', width_perf) + '┐');
-            ConsoleExtensions.WriteVertical(new string('│', height_perf_cpu));
-            ConsoleExtensions.WriteVertical(new string('│', height_perf_cpu), (width_perf + 1, ypos + 1));
-            Console.WriteLine();
-            Console.WriteLine('└' + new string('─', width_perf) + '┘');
+                ConsoleExtensions.RGBForegroundColor = col_table;
+                Console.WriteLine('┌' + new string('─', width_perf) + '┐');
 
-            Console.SetCursorPosition(2, ypos + 1);
-            ConsoleExtensions.RGBForegroundColor = col_text;
-            ConsoleExtensions.WriteUnderlined("CPU Load");
-            Console.SetCursorPosition(2, ypos + 3);
-            ConsoleExtensions.RGBForegroundColor = col_cpu_user;
-            Console.Write("███ ");
-            ConsoleExtensions.RGBForegroundColor = col_text;
-            Console.Write("User");
-            Console.SetCursorPosition(2, ypos + 4);
-            ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
-            Console.Write("███ ");
-            ConsoleExtensions.RGBForegroundColor = col_text;
-            Console.Write("Kernel");
+                int ypos = Console.CursorTop;
 
-            for (int j = 0; j < height_perf_cpu; ++j)
-            {
+                for (int i = 0; i < height_perf_cpu; ++i)
+                {
+                    Console.CursorLeft = 0;
+                    Console.Write('│');
+                    Console.CursorLeft = width_perf + 1;
+                    Console.Write('│');
+                    Console.CursorTop++;
+                }
+
+                Console.CursorLeft = 0;
+                Console.WriteLine('└' + new string('─', width_perf) + '┘');
+
+                Console.SetCursorPosition(2, ypos);
                 ConsoleExtensions.RGBForegroundColor = col_text;
-                Console.SetCursorPosition(PADDING - 7, ypos + height_perf_cpu - j);
-                Console.Write($"{100 * j / (height_perf_cpu - 1d),3:F0} %");
-                ConsoleExtensions.RGBForegroundColor = col_backg;
-                Console.Write(new string('─', performance_data.Count + 2));
-            }
-
-            #endregion
-            #region PERFORMANCE : PRINT DATA
-
-            string bars = "_‗▄░▒▓█";
-
-            for (int i = 0; i < performance_data.Count; i++)
-            {
-                (_, double cpu, _, double kernel, _) = performance_data[i];
+                ConsoleExtensions.WriteUnderlined("CPU Load");
+                Console.SetCursorPosition(2, ypos);
+                ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+                Console.Write("███ ");
+                ConsoleExtensions.RGBForegroundColor = col_text;
+                Console.Write("User");
+                Console.SetCursorPosition(2, ypos);
+                ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+                Console.Write("███ ");
+                ConsoleExtensions.RGBForegroundColor = col_text;
+                Console.Write("Kernel");
 
                 for (int j = 0; j < height_perf_cpu; ++j)
                 {
-                    Console.SetCursorPosition(PADDING + i, ypos + height_perf_cpu - j);
+                    ConsoleExtensions.RGBForegroundColor = col_text;
+                    Console.SetCursorPosition(PADDING - 7, ypos + height_perf_cpu - j - 1);
+                    Console.Write($"{100 * j / (height_perf_cpu - 1d),3:F0} %");
+                    ConsoleExtensions.RGBForegroundColor = col_backg;
+                    Console.Write(new string('─', performance_data.Count + 2));
+                }
 
-                    double lo = j / (height_perf_cpu - 1d);
-                    double hi = (j + 1) / (height_perf_cpu - 1d);
+                #endregion
+                #region PERFORMANCE : PRINT DATA
 
-                    if (cpu < lo)
-                        break;
-                    else if (cpu < hi)
+                string bars = "_‗▄░▒▓█";
+
+                for (int i = 0; i < performance_data.Count; i++)
+                {
+                    (_, double cpu, _, double kernel, _) = performance_data[i];
+
+                    for (int j = 0; j < height_perf_cpu; ++j)
                     {
-                        ConsoleExtensions.RGBForegroundColor = col_cpu_user;
-                        ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - cpu) / (hi - lo)) * bars.Length)].ToString());
-                    }
-                    else if (kernel < lo)
-                    {
-                        ConsoleExtensions.RGBForegroundColor = col_cpu_user;
-                        Console.Write(bars[^1]);
-                    }
-                    else if (kernel < hi)
-                    {
-                        ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
-                        ConsoleExtensions.RGBBackgroundColor = col_cpu_user;
-                        ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - kernel) / (hi - lo)) * bars.Length)].ToString());
-                        Console.Write("\x1b[0m");
-                    }
-                    else
-                    {
-                        ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
-                        Console.Write(bars[^1]);
+                        Console.SetCursorPosition(PADDING + i, ypos + height_perf_cpu - j - 1);
+
+                        double lo = j / (height_perf_cpu - 1d);
+                        double hi = (j + 1) / (height_perf_cpu - 1d);
+
+                        if (cpu < lo)
+                            break;
+                        else if (cpu < hi)
+                        {
+                            ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+                            ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - cpu) / (hi - lo)) * bars.Length)].ToString());
+                        }
+                        else if (kernel < lo)
+                        {
+                            ConsoleExtensions.RGBForegroundColor = col_cpu_user;
+                            Console.Write(bars[^1]);
+                        }
+                        else if (kernel < hi)
+                        {
+                            ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+                            ConsoleExtensions.RGBBackgroundColor = col_cpu_user;
+                            ConsoleExtensions.WriteUnderlined(bars[(int)(Math.Min(.99, (hi - kernel) / (hi - lo)) * bars.Length)].ToString());
+                            Console.Write("\x1b[0m");
+                        }
+                        else
+                        {
+                            ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
+                            Console.Write(bars[^1]);
+                        }
                     }
                 }
-            }
 
-            IEnumerable<double> c_total = performance_data.Select(p => p.total * 100);
-            IEnumerable<double> c_user = performance_data.Select(p => p.user * 100);
-            IEnumerable<double> c_kernel = performance_data.Select(p => p.kernel * 100);
-            IEnumerable<double> c_ram = performance_data.Select(p => p.ram / 1024d / 1024d);
+                IEnumerable<double> c_total = performance_data.Select(p => p.total * 100);
+                IEnumerable<double> c_user = performance_data.Select(p => p.user * 100);
+                IEnumerable<double> c_kernel = performance_data.Select(p => p.kernel * 100);
+                IEnumerable<double> c_ram = performance_data.Select(p => p.ram / 1024d / 1024d);
 
-            Console.SetCursorPosition(0, ypos + height_perf_cpu);
-            ConsoleExtensions.RGBForegroundColor = col_table;
-            Console.WriteLine($@"
+                Console.SetCursorPosition(0, ypos + height_perf_cpu - 1);
+                ConsoleExtensions.RGBForegroundColor = col_table;
+                Console.WriteLine($@"
 ├────────────┬──────────────┬──────────────┬
 │ Category   │ Maximum Load │ Average Load │
 ├────────────┼──────────────┼──────────────┤
@@ -757,7 +793,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 └────────────┴──────────────┴──────────────┘
 ");
 
-            #endregion
+                #endregion
+            }
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', width - 1));

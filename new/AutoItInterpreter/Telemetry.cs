@@ -76,7 +76,7 @@ namespace Unknown6656.AutoIt3
 
         // TODO : other stuff, such as exceptions, mem usage, cpu usage, etc.
 
-        public void SubmitTimings(TelemetryCategory category, long ticks) => _recorded_timings.Add((category, new TimeSpan(ticks)));
+        public void SubmitTimings(TelemetryCategory category, in TimeSpan span) => _recorded_timings.Add((category, span));
 
         public void Measure(TelemetryCategory category, Action function) => Measure<__empty>(category, delegate
         {
@@ -94,7 +94,7 @@ namespace Unknown6656.AutoIt3
             result = function();
             sw.Stop();
 
-            SubmitTimings(category, sw.ElapsedTicks);
+            SubmitTimings(category, sw.Elapsed);
 
             return result;
         }
@@ -238,12 +238,12 @@ namespace Unknown6656.AutoIt3
 
             nd_runtime.AddChild("Script Resolution", get_timings(TelemetryCategory.ResolveScript));
             nd_runtime.AddChild("Script Scan", get_timings(TelemetryCategory.ScanScript));
+            nd_runtime.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
             nd_codeexec = nd_runtime.AddChild("Script Execution", get_timings(TelemetryCategory.ScriptExecution));
 
             nd_thread = nd_codeexec.AddChild("Run/Start Thread", get_timings(TelemetryCategory.ThreadRun));
             nd_codeexec.AddChild("On Start", get_timings(TelemetryCategory.OnAutoItStart));
             nd_codeexec.AddChild("On Exit", get_timings(TelemetryCategory.OnAutoItExit));
-            nd_codeexec.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
 
             nd_au3 = nd_thread.AddChild("Au3", get_timings(TelemetryCategory.Au3ScriptExecution));
             nd_native = nd_thread.AddChild("Native", get_timings(TelemetryCategory.NativeScriptExecution));

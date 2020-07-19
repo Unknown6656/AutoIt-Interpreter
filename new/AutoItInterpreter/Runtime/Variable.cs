@@ -18,24 +18,71 @@ namespace Unknown6656.AutoIt3.Runtime
     using static AST;
 
 
+    /// <summary>
+    /// An enum containing all possible data types that an instance of <see cref="Variant"/> can represent.
+    /// </summary>
     public enum VariantType
         : int
     {
+        /// <summary>
+        /// The constant Null-value (typically only used using the static member <see cref="Variant.Null"/>.
+        /// </summary>
         Null = 0,
+        /// <summary>
+        /// Represents a boolean data value.
+        /// </summary>
         Boolean,
+        /// <summary>
+        /// Represents a numerical data value.
+        /// </summary>
         Number,
+        /// <summary>
+        /// Represents a data value of the type <see cref="string"/>.
+        /// </summary>
         String,
+        /// <summary>
+        /// Represents a binary data value.
+        /// </summary>
         Binary,
+        /// <summary>
+        /// Represents an array of zero or more elements.
+        /// </summary>
         Array,
+        /// <summary>
+        /// Represents an injective map.
+        /// </summary>
         Map,
+        /// <summary>
+        /// Represents a pointer to a native or user function.
+        /// </summary>
         Function,
-        //NETObject,
+        /// <summary>
+        /// Represents an <see cref="uint"/>-handle pointing towards a COM object instance.
+        /// </summary>
         COMObject,
+
+        //NETObject,
+
+        /// <summary>
+        /// Represents an <see cref="uint"/>-handle pointing towards a managed object instance.
+        /// </summary>
         Handle,
+        /// <summary>
+        /// Represents a reference to an instance of <see cref="Variable"/> (This is only used in <see langword="ByRef"/>-parameters).
+        /// </summary>
         Reference,
+        /// <summary>
+        /// The constant Default-value (typically only used using the static member <see cref="Variant.Default"/>.
+        /// </summary>
         Default = -1,
     }
 
+    /// <summary>
+    /// Represents the <see cref="Variant"/> data type which is the fundamental data type for all AutoIt <see cref="Variable"/>s.
+    /// The default value of this type resolves to <see cref="Null"/>.
+    /// <para/>
+    /// Data is internally stored using a <see cref="VariantType"/> (to resolve the semantic type), a <see cref="object"/> containing the actual data, and an optional <see cref="Variable"/> reference.
+    /// </summary>
     [DebuggerDisplay("{" + nameof(ToDebugString) + "(),nq}")]
     public readonly struct Variant
         : IEquatable<Variant>
@@ -43,23 +90,61 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         #region STATIC PROPERTIES
 
+        /// <summary>
+        /// Represents the constant <see cref="Null"/>-value which is accessible using the AutoIt keyword '<see langword="Null"/>'.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Null"/>, <see langword="null"/>).
+        /// </summary>
         public static Variant Null { get; } = GetTypeDefault(VariantType.Null);
 
+        /// <summary>
+        /// Represents the constant <see cref="Default"/>-value which is accessible using the AutoIt keyword '<see langword="Default"/>'.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Default"/>, <see langword="null"/>).
+        /// </summary>
         public static Variant Default { get; } = GetTypeDefault(VariantType.Default);
 
-        public static Variant EmptyString { get; } = FromString("");
+        /// <summary>
+        /// Represents an empty string.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.String"/>, <see cref="string.Empty"/>).
+        /// </summary>
+        public static Variant EmptyString { get; } = FromString(string.Empty);
 
+        /// <summary>
+        /// Represents an empty binary string / empty byte array.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Binary"/>, <see langword="new byte"/>[<see cref="0"/>]).
+        /// </summary>
         public static Variant EmptyBinary { get; } = FromBinary(Array.Empty<byte>());
 
+        /// <summary>
+        /// Represents the constant boolean <see cref="True"/>-value which is accessible using the AutoIt keyword '<see langword="True"/>'.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Boolean"/>, <see langword="true"/>).
+        /// </summary>
         public static Variant True { get; } = FromBoolean(true);
 
+        /// <summary>
+        /// Represents the constant boolean <see cref="False"/>-value which is accessible using the AutoIt keyword '<see langword="False"/>'.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Boolean"/>, <see langword="true"/>).
+        /// </summary>
         public static Variant False { get; } = FromBoolean(false);
 
+        /// <summary>
+        /// Represents the constant numeric <see cref="Zero"/>-value.
+        /// <para/>
+        /// The internally stored data is (<see cref="VariantType.Number"/>, <see cref="0m"/>).
+        /// </summary>
         public static Variant Zero { get; } = FromNumber(0m);
 
         #endregion
         #region INSTANCE PROPERTIES
 
+        /// <summary>
+        /// Returns the semantic data type represent this instance.
+        /// </summary>
         public readonly VariantType Type { get; }
 
         /// <summary>
@@ -128,24 +213,54 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         internal readonly object? RawData { get; }
 
+        /// <summary>
+        /// Returns the optional <see cref="Variable"/> to which this value has been assigned.
+        /// </summary>
         public readonly Variable? AssignedTo { get; }
 
+        /// <summary>
+        /// Indicates whether this value is indexable.
+        /// </summary>
         public readonly bool IsIndexable => RawData is IEnumerable || IsObject;
 
+        /// <summary>
+        /// Indicates whether this value is a reference to an instance of <see cref="Variable"/> (This is only used in <see langword="ByRef"/>-parameters).
+        /// </summary>
         public readonly bool IsReference => Type is VariantType.Reference;
 
+        /// <summary>
+        /// Returns the referenced <see cref="Variable"/> if the current <see cref="Type"/> has the value "<see cref="VariantType.Reference"/>" - otherwise returns <see langword="null"/>.
+        /// </summary>
         public readonly Variable? ReferencedVariable => IsReference ? RawData as Variable : null;
 
+        /// <summary>
+        /// Indicates whether the current instance is equal to <see cref="Null"/>.
+        /// </summary>
         public readonly bool IsNull => Type is VariantType.Null;
 
+        /// <summary>
+        /// Indicates whether the current instance is equal to <see cref="Default"/>.
+        /// </summary>
         public readonly bool IsDefault => Type is VariantType.Default;
 
+        /// <summary>
+        /// Indicates whether the current instance contains an handle to an (internally managed) object. This is not to be confused with an handle of the type "<see cref="VariantType.COMObject"/>" or "<see cref="VariantType.NETObject"/>".
+        /// </summary>
         public readonly bool IsHandle => Type is VariantType.Handle;
 
+        /// <summary>
+        /// Returns the semantic length of this value (e.g. elements in an array/map, length of a regular or binary string, etc.)
+        /// </summary>
         public readonly int Length => (RawData as IEnumerable)?.Count() ?? 0; // TODO : com object
 
+        /// <summary>
+        /// Indicates whether this value represents a binary string.
+        /// </summary>
         public readonly bool IsBinary => Type is VariantType.Binary;
 
+        /// <summary>
+        /// Indicates whether the current instance represents an object (namely "<see cref="VariantType.COMObject"/>" or "<see cref="VariantType.NETObject"/>"). This is not to be confused with <see cref="IsHandle"/>.
+        /// </summary>
         public readonly bool IsObject => Type is VariantType.COMObject; // TODO : or .netobject
 
         #endregion
@@ -163,6 +278,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
+        /// <inheritdoc/>
         public readonly int CompareTo(Variant other) =>
             RawData is string s1 && other.RawData is string s2 ? string.Compare(s1, s2, StringComparison.InvariantCultureIgnoreCase) : ToNumber().CompareTo(other.ToNumber());
 
@@ -180,12 +296,21 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool EqualsCaseSensitive(Variant other) => Equals(other); // TODO : unit tests
 
+        /// <inheritdoc/>
         public readonly bool Equals(Variant other) => Type.Equals(other.Type) && Equals(RawData, other.RawData);
 
+        /// <inheritdoc/>
         public readonly override bool Equals(object? obj) => obj is Variant variant && Equals(variant);
 
+        /// <inheritdoc/>
         public readonly override int GetHashCode() => HashCode.Combine(Type, RawData);
 
+        /// <summary>
+        /// Returns the string representation of the current instance in accordance with the official AutoIt specification.
+        /// Use <see cref="ToDebugString(Interpreter)"/> for a more detailed string representation.
+        /// </summary>
+        /// <inheritdoc/>
+        /// <returns>String representation</returns>
         public readonly override string ToString() => Type switch
         {
             VariantType.Default => "Default",
@@ -216,7 +341,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is Variant[] arr)
                 return $"[{string.Join(", ", arr.Select(e => e.ToDebugString(interpreter)))}]";
             else if (Type is VariantType.Map)
-                return $"[{string.Join(", ", ToMap(interpreter).Select(kvp => $"{kvp.Key.ToDebugString(interpreter)}={kvp.Value.ToDebugString(interpreter)}"))}]";
+                return $"[{string.Join(", ", ToMap(interpreter).Select(pair => $"{pair.Key.ToDebugString(interpreter)}={pair.Value.ToDebugString(interpreter)}"))}]";
             else if (RawData is string or StringBuilder)
                 return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
             else if (RawData is Variable v)
@@ -238,6 +363,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 return ToString();
         }
 
+        /// <summary>
+        /// Returns the boolean representation of the current instance in accordance with the official AutoIt specification.
+        /// </summary>
+        /// <returns>Boolean representation</returns>
         public readonly bool ToBoolean() => RawData switch
         {
             _ when Type is VariantType.Null or VariantType.Default => false,
@@ -250,6 +379,10 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => true,
         };
 
+        /// <summary>
+        /// Returns the numerical representation of the current instance in accordance with the official AutoIt specification.
+        /// </summary>
+        /// <returns>Numerical representation</returns>
         public readonly decimal ToNumber() => RawData switch
         {
             _ when Type is VariantType.Default => -1m,
@@ -264,6 +397,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private readonly decimal ToNumber(decimal min, decimal max) => Math.Max(min, Math.Min(ToNumber(), max));
 
+        /// <summary>
+        /// Returns the binary representation of the current instance in accordance with the official AutoIt specification.
+        /// </summary>
+        /// <returns>Binary representation</returns>
         public readonly byte[] ToBinary() => RawData switch
         {
             bool b => new[] { (byte)(b ? 1 : 0) },

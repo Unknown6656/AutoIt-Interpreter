@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-vv -t ../test/unittest-vartypes"
+      "commandLineArgs": "-vq -t ../test/test --help"
     }
   }
 }

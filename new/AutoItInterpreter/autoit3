@@ -1,0 +1,2 @@
+﻿#!/bin/sh
+dotnet autoit3.dll "$@"
