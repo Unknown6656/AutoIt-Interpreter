@@ -1134,7 +1134,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public bool TryGetVariable(string name, VariableSearchScope scope, [MaybeNullWhen(false), NotNullWhen(true)] out Variable? variable)
         {
             Variable? v = null;
-            bool resolved = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolution, delegate
+            bool resolved = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolving, delegate
             {
                 foreach (Variable var in _variables.Keys)
                     if (var.Equals(name))

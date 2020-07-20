@@ -4,6 +4,7 @@ using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
+using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 
@@ -236,7 +237,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             }
 
             if (print_row_count)
-                sb.AppendLine(MainProgram.CurrentLanguage["debug.rows", data.GetLength(1)]);
+                sb.AppendLine(Interpreter.CurrentUILanguage["debug.rows", data.GetLength(1)]);
 
             sb.Append('┌');
 
@@ -312,6 +313,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            LanguagePack lang = Interpreter.CurrentUILanguage;
             int count;
 
             do
@@ -334,15 +336,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                             select (
                                 $"/iter/{kvp.Key}",
                                 MainProgram.ASM_FILE.Name,
-                                MainProgram.CurrentLanguage["debug.iterator"],
-                                $"{MainProgram.CurrentLanguage["debug.index"]}:{index}, {MainProgram.CurrentLanguage["debug.length"]}:{kvp.Value.collection.Length}, {MainProgram.CurrentLanguage["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {MainProgram.CurrentLanguage["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}"
+                                lang["debug.iterator"],
+                                $"{lang["debug.index"]}:{index}, {lang["debug.length"]}:{kvp.Value.collection.Length}, {lang["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {lang["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}"
                             );
             var global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
                               where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
                               select (
                                   $"/obj/{id:x8}",
                                   MainProgram.ASM_FILE.Name,
-                                  MainProgram.CurrentLanguage["debug.netobj"],
+                                  lang["debug.netobj"],
                                   netobj?.ToString() ?? "<null>"
                               );
             (string name, string loc, string type, string value)[] variables = (from scope in scopes
@@ -377,10 +379,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             string table = GenerateTable(variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value })
                                                   .Transpose()
                                                   .Zip(new[] {
-                                                      (MainProgram.CurrentLanguage["debug.name"], false),
-                                                      (MainProgram.CurrentLanguage["debug.location"], false),
-                                                      (MainProgram.CurrentLanguage["debug.type"], false),
-                                                      (MainProgram.CurrentLanguage["debug.value"], true),
+                                                      (lang["debug.name"], false),
+                                                      (lang["debug.location"], false),
+                                                      (lang["debug.type"], false),
+                                                      (lang["debug.value"], true),
                                                   })
                                                   .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth), true);
 
@@ -391,20 +393,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
         {
-            if (frame.Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
+            if (Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
             {
                 var values = objects.Select(t => new string?[]
                 {
                     $"/com/{t.id:x8}",
                     t.type,
                     t.clsid,
-                    t.value.ToDebugString(frame.Interpreter),
+                    t.value.ToDebugString(Interpreter),
                 }).Transpose().Zip(new[]
                 {
-                    (MainProgram.CurrentLanguage["debug.object"], false),
-                    (MainProgram.CurrentLanguage["debug.type"], false),
+                    (Interpreter.CurrentUILanguage["debug.object"], false),
+                    (Interpreter.CurrentUILanguage["debug.type"], false),
                     ("CLSID", false),
-                    (MainProgram.CurrentLanguage["debug.value"], true),
+                    (Interpreter.CurrentUILanguage["debug.value"], true),
                 }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
 
                 frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth), true));
@@ -424,8 +426,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 string table = GenerateTable(new[]
                 {
                     ("", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
-                    (MainProgram.CurrentLanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
-                    (MainProgram.CurrentLanguage["debug.content"], false, lines.ToArray(Generics.snd)),
+                    (Interpreter.CurrentUILanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
+                    (Interpreter.CurrentUILanguage["debug.content"], false, lines.ToArray(Generics.snd)),
                 }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
 
                 frame.Print(table);

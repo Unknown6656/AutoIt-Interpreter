@@ -1,16 +1,16 @@
 ﻿using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.Localization;
+
 namespace Unknown6656.AutoIt3
 {
-    using static MainProgram;
-
-
     public readonly struct SourceLocation
         : IEquatable<SourceLocation>
         , IComparable<SourceLocation>
     {
-        public static SourceLocation Unknown { get; } = new SourceLocation($"<{CurrentLanguage["general.unknown"]}>", -1);
+        private static LanguagePack UILanguage => MainProgram.LanguageLoader.CurrentLanguage!;
+        public static SourceLocation Unknown { get; } = new SourceLocation($"<{UILanguage["general.unknown"]}>", -1);
 
         private readonly FileInfo _file;
 
@@ -60,9 +60,9 @@ namespace Unknown6656.AutoIt3
             string s = $"\"{FullFileName}\", ";
 
             if (IsSingleLine)
-                return $"{s}{CurrentLanguage["general.line"]} {StartLineNumber + 1}";
+                return $"{s}{UILanguage["general.line"]} {StartLineNumber + 1}";
             else
-                return $"{s}{CurrentLanguage["general.lines"]} {StartLineNumber + 1}..{EndLineNumber + 1}";
+                return $"{s}{UILanguage["general.lines"]} {StartLineNumber + 1}..{EndLineNumber + 1}";
         }
 
         public int CompareTo(SourceLocation other) =>

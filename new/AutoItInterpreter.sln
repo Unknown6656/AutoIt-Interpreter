@@ -27,19 +27,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{FF40DCDE-4
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VersionIncrementer", "util\VersionIncrementer\VersionIncrementer.csproj", "{BB97AD38-978A-437C-AAFB-47CC9DD16FED}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{621B4FD7-F769-44C2-916C-A4939A583E5E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "~", "~", "{621B4FD7-F769-44C2-916C-A4939A583E5E}"
 	ProjectSection(SolutionItems) = preProject
 		readme.md = readme.md
-		todo.txt = todo.txt
 	EndProjectSection
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItExpressionParser", "AutoItExpressionParser\AutoItExpressionParser.fsproj", "{6350112E-9412-4078-9F2D-D453D871D7AB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "COMObjectServer", "util\COMObjectServer\COMObjectServer.csproj", "{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.COM.Server", "util\AutoIt3.COM.Server\AutoIt3.COM.Server.csproj", "{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "COMInterop", "util\COMInterop\COMInterop.csproj", "{A1D77A01-D0B6-4CD5-A099-072618517C2B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{CCA3DC14-871A-47E6-ABB1-E0F008B361C9}"
+	ProjectSection(SolutionItems) = preProject
+		lib\Piglet.deps.json = lib\Piglet.deps.json
+		lib\Piglet.dll = lib\Piglet.dll
+		lib\Piglet.FSharp.deps.json = lib\Piglet.FSharp.deps.json
+		lib\Piglet.FSharp.dll = lib\Piglet.FSharp.dll
+		lib\Piglet.FSharp.pdb = lib\Piglet.FSharp.pdb
+		lib\Piglet.pdb = lib\Piglet.pdb
+		lib\Piglet.xml = lib\Piglet.xml
+		lib\unknown6656.core.deps.json = lib\unknown6656.core.deps.json
+		lib\unknown6656.core.dll = lib\unknown6656.core.dll
+		lib\unknown6656.core.pdb = lib\unknown6656.core.pdb
+	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{CCA3DC14-871A-47E6-ABB1-E0F008B361C9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Common", "util\AutoIt3.Common\AutoIt3.Common.csproj", "{84894845-C1AF-4A45-9026-C5C30E31E43D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,10 +74,10 @@ Global
 		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1D77A01-D0B6-4CD5-A099-072618517C2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,7 +85,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{BB97AD38-978A-437C-AAFB-47CC9DD16FED} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
-		{A1D77A01-D0B6-4CD5-A099-072618517C2B} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
+		{84894845-C1AF-4A45-9026-C5C30E31E43D} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC63CA64-CCD2-471E-8DB3-72D91D747EA9}

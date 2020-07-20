@@ -6,6 +6,7 @@ using System;
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 
@@ -49,6 +50,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Telemetry Telemetry { get; }
 
+        public LanguageLoader LanguageLoader { get; }
+
+        public LanguagePack CurrentUILanguage => LanguageLoader.CurrentLanguage!;
+
         public int ExitCode { get; private set; } = 0;
 
         public int ErrorCode
@@ -60,25 +65,26 @@ namespace Unknown6656.AutoIt3.Runtime
         public Variant ExtendedValue { get; set; }
 
 
-        public Interpreter(CommandLineOptions opt)
-            : this(opt, new Telemetry())
+        public Interpreter(CommandLineOptions opt, LanguageLoader lang_loader)
+            : this(opt, new Telemetry(), lang_loader)
         {
         }
 
-        public Interpreter(CommandLineOptions opt, Telemetry telemetry)
+        public Interpreter(CommandLineOptions opt, Telemetry telemetry, LanguageLoader lang_loader)
         {
             CommandLineOptions = opt;
             Telemetry = telemetry;
+            LanguageLoader = lang_loader;
             ScriptScanner = new ScriptScanner(this);
             PluginLoader = new PluginLoader(this, PLUGIN_DIR);
 
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
 
-            PrintInterpreterMessage(PluginLoader.LoadedPlugins.Count switch {
-                0 => CurrentLanguage["general.no_plugins_loaded"],
-                int i => CurrentLanguage["general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount],
-            });
+            if (PluginLoader.LoadedPlugins.Count is int i and > 0)
+                PrintInterpreterMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
+            else
+                PrintInterpreterMessage("general.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
 
@@ -206,7 +212,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.CurrentLanguage[key, args]);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, LanguageLoader.CurrentLanguage?[key, args] ?? key);
     }
 }
 

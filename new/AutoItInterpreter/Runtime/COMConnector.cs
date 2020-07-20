@@ -37,7 +37,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal COMConnector(Interpreter interpreter)
         {
-            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_starting"]);
+            MainProgram.PrintfDebugMessage("debug.com.starting");
 
             COMData.RegisterCOMResolver(this);
 
@@ -58,7 +58,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _reader = new BinaryReader(_client);
             _writer = new BinaryWriter(_client);
 
-            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_started", PipeName]);
+            MainProgram.PrintfDebugMessage("debug.com.started", PipeName);
 #if DEBUG
             if (System.Diagnostics.Debugger.IsAttached)
                 AttachDebuggerToCOMServer();
@@ -75,14 +75,14 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
 
-                        MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_vsdbg_attached"]);
+                        MainProgram.PrintfDebugMessage("debug.com.vsdbg_attached");
 
                         return;
                     }
             }
             catch
             {
-                MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_vsdbg_error"]);
+                MainProgram.PrintfDebugMessage("debug.com.vsdbg_error");
             }
 #endif
         }
@@ -134,7 +134,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose()
         {
-            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_disposed", PipeName]);
+            MainProgram.PrintfDebugMessage("debug.com.disposed", PipeName);
 
             Stop(false);
 

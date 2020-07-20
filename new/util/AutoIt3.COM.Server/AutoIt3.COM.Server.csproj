@@ -12,6 +12,6 @@
         <AssemblyName>autoit3.comserver</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
-      <ProjectReference Include="..\COMInterop\COMInterop.csproj" />
+      <ProjectReference Include="..\AutoIt3.Common\AutoIt3.Common.csproj" />
     </ItemGroup>
 </Project>

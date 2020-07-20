@@ -63,7 +63,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         }
 
         /// <inheritdoc/>
-        public override string ToString() => MainProgram.CurrentLanguage["debug.plugins_loaded", _plugin_files.Count, Path.GetFullPath(PluginDirectory.FullName), PluginModuleCount];
+        public override string ToString() => Interpreter.CurrentUILanguage["debug.plugins_loaded", _plugin_files.Count, Path.GetFullPath(PluginDirectory.FullName), PluginModuleCount];
 
         public void ClearLoadedPlugins()
         {

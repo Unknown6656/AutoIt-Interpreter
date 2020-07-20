@@ -28,7 +28,7 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="Localization\lang-en.json" />
+        <None Remove="lang\lang-en.json" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Piglet">
@@ -42,7 +42,9 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Include="Localization\lang-en.json" />
+        <EmbeddedResource Include="lang\lang-en.json">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\LICENSE.md">
@@ -61,20 +63,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
-        <ProjectReference Include="..\util\COMInterop\COMInterop.csproj" />
-    </ItemGroup>
-    <ItemGroup>
-        <Compile Update="Properties\Resources.Designer.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Resources.resx</DependentUpon>
-        </Compile>
-    </ItemGroup>
-    <ItemGroup>
-        <EmbeddedResource Update="Properties\Resources.resx">
-            <Generator>ResXFileCodeGenerator</Generator>
-            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-        </EmbeddedResource>
+        <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Folder Include="include\" />

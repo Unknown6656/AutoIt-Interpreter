@@ -1,66 +1,91 @@
-﻿using System;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Linq;
+using System.IO;
+using System;
 
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
-using Unknown6656.Common;
+using Newtonsoft.Json;
 
 namespace Unknown6656.AutoIt3.Localization
 {
-    using static MainProgram;
-
     public sealed class LanguageLoader
     {
-        public static ImmutableDictionary<string, LanguagePack> LanguagePacks { get; }
+        private readonly Dictionary<string, LanguagePack> _packs = new();
+
+        public string[] LoadedLanguageCodes => _packs.Keys.ToArray();
+
+        public LanguagePack? CurrentLanguage { get; private set; }
+
+        public LanguagePack? this[string code] => TryGetLanguagePack(code, out LanguagePack? pack) ? pack : null;
 
 
-        static LanguageLoader()
+        public void LoadLanguagePackFromAssembly(Assembly assembly, string @namespace, bool overwrite_existing = true)
         {
-            const string @namespace = nameof(Localization);
-            Assembly asm = typeof(LanguageLoader).Assembly;
-            Dictionary<string, LanguagePack> langs = new Dictionary<string, LanguagePack>();
             Regex regex_json = new Regex($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-            Match? match = null;
 
-            foreach ((string? code, string name) in from r in asm.GetManifestResourceNames()
-                                                   where r.Match(regex_json, out match)
-                                                   select (match?.Groups["code"].Value.ToLowerInvariant(), r))
+            foreach ((string? code, string name) in from res in assembly.GetManifestResourceNames()
+                                                    let match = regex_json.Match(res)
+                                                    where match.Success
+                                                    select (match.Groups["code"].Value.ToLowerInvariant(), res))
                 try
                 {
-                    using Stream? resource = asm.GetManifestResourceStream(name);
+                    using Stream? resource = assembly.GetManifestResourceStream(name);
 
                     if (resource is { })
                         using (StreamReader? rd = new StreamReader(resource))
-                            langs[code] = JsonConvert.DeserializeObject<LanguagePack>(rd.ReadToEnd());
+                            LoadLanguagePackFromJSON(assembly.Location, rd.ReadToEnd(), overwrite_existing);
                 }
                 catch
                 {
-                    Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                 }
+        }
 
-            foreach (FileInfo nfo in LANG_DIR.EnumerateFiles("./*.json"))
-                try
-                {
-                    dynamic lang = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(nfo.FullName));
-                    string code = lang.meta.code.ToLower();
+        public void LoadLanguagePackFromJSONFile(FileInfo file, bool overwrite_existing = true)
+        {
+            string path = Path.GetFullPath(file.FullName);
 
-                    if (!langs.ContainsKey(code))
-                        langs[code] = lang;
-                }
-                catch
-                {
-                    Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
-                }
+            LoadLanguagePackFromJSON(path, File.ReadAllText(path), overwrite_existing);
+        }
 
-            LanguagePacks = langs.ToImmutableDictionary();
+        private void LoadLanguagePackFromJSON(string path, string json, bool overwrite_existing = true)
+        {
+            try
+            {
+                LanguagePack lang = JsonConvert.DeserializeObject<LanguagePack>(json);
+                string code = lang.LanguageCode.ToLowerInvariant();
+
+                lang.FilePath = path;
+
+                if (overwrite_existing || !_packs.ContainsKey(code))
+                    _packs[code] = lang;
+            }
+            catch
+            {
+            }
+        }
+
+        public void HasLanguagePack(string code) => _packs.ContainsKey(code.ToLowerInvariant());
+
+        public bool TryGetLanguagePack(string code, out LanguagePack? pack) => _packs.TryGetValue(code.ToLowerInvariant(), out pack);
+
+        public bool TrySetCurrentLanguagePack(string code)
+        {
+            bool res = TryGetLanguagePack(code, out LanguagePack? pack);
+
+            if (res)
+                CurrentLanguage = pack;
+
+            return res;
+        }
+
+        public void LoadLanguagePacksFromDirectory(DirectoryInfo directory, bool overwrite_existing = true)
+        {
+            foreach (FileInfo file in directory.EnumerateFiles())
+                LoadLanguagePackFromJSONFile(file, overwrite_existing);
         }
     }
 
@@ -77,7 +102,11 @@ namespace Unknown6656.AutoIt3.Localization
             get
             {
                 string fmt_str = _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpperInvariant()}]";
-                int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}").Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0).Append(0).Max();
+                int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}")
+                                .Cast<Match>()
+                                .Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0)
+                                .Append(0)
+                                .Max();
 
                 if (args.Length < argc)
                     Array.Resize(ref args, argc);
@@ -86,14 +115,19 @@ namespace Unknown6656.AutoIt3.Localization
             }
         }
 
+        internal string FilePath { get; set; } = "";
+
         [JsonProperty("meta.code")]
         public string LanguageCode { get; private set; } = "";
+
         [JsonProperty("meta.name")]
         public string LanguageName { get; private set; } = "";
+
         [JsonProperty("meta.beta")]
         public bool IsBeta { get; private set; } = false;
+
         [JsonProperty("strings"), DebuggerBrowsable(DebuggerBrowsableState.Never), EditorBrowsable(EditorBrowsableState.Never), DebuggerHidden]
-        public dynamic? __DO_NOT_USE__strings
+        public object? __DO_NOT_USE__strings
         {
             get => _strings;
             private set
@@ -112,7 +146,7 @@ namespace Unknown6656.AutoIt3.Localization
                         if (kvp.Value is JObject jo)
                             traverse(path, jo);
                         else
-                            _strings[path[1..]] = kvp.Value?.ToString() ?? $"[{path[1..].ToUpperInvariant()}]";
+                            _strings[path.Substring(1)] = kvp.Value?.ToString() ?? $"[{path.Substring(1).ToUpperInvariant()}]";
                     }
                 }
             }

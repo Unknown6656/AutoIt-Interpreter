@@ -115,8 +115,8 @@ namespace Unknown6656.AutoIt3
         private static volatile bool _finished = false;
 #nullable disable
         public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
-        public static LanguagePack CurrentLanguage { get; private set; }
 #nullable enable
+        public static LanguageLoader LanguageLoader { get; } = new LanguageLoader();
         public static Telemetry Telemetry { get; } = new Telemetry();
 
 
@@ -196,32 +196,34 @@ namespace Unknown6656.AutoIt3
 
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
                         {
-                            if (LanguageLoader.LanguagePacks.TryGetValue(opt.Language.ToLowerInvariant(), out LanguagePack? lang))
-                                CurrentLanguage = lang;
+                            LanguageLoader.LoadLanguagePacksFromDirectory(LANG_DIR);
+                            LanguageLoader.TrySetCurrentLanguagePack(opt.Language);
                         });
 
-                        if (CurrentLanguage is null)
+                        var lang = LanguageLoader.CurrentLanguage;
+
+                        if (lang is null)
                         {
                             code = -1;
-                            PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LanguagePacks.Values.Select(p => p.LanguageCode))}'");
+                            PrintError($"Unknown language pack '{opt.Language}'. Available languages: '{string.Join("', '", LanguageLoader.LoadedLanguageCodes)}'");
 
                             return;
                         }
 
                         PrintBanner();
                         PrintDebugMessage(JsonConvert.SerializeObject(opt));
-                        PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
-                        PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
-                        PrintDebugMessage(CurrentLanguage["debug.interpreter_loading"]);
+                        PrintInterpreterMessage("general.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
+                        PrintInterpreterMessage("general.loaded_langpack", lang);
+                        PrintfDebugMessage("debug.interpreter_loading");
 
-                        using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry));
+                        using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
 
-                        PrintDebugMessage(CurrentLanguage["debug.interpreter_loaded", opt.FilePath]);
+                        PrintfDebugMessage("debug.interpreter_loaded", opt.FilePath);
 
                         InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
 
                         if (result.OptionalError is InterpreterError err)
-                            PrintError($"{CurrentLanguage["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
+                            PrintError($"{lang["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
 
                         code = result.ProgramExitCode;
                     });
@@ -313,9 +315,11 @@ namespace Unknown6656.AutoIt3
             });
         }
 
-        public static void PrintInterpreterMessage(string message) => SubmitPrint(Verbosity.n, "Interpreter", message, false);
+        public static void PrintInterpreterMessage(string key, params object?[] args) => SubmitPrint(Verbosity.n, "Interpreter", LanguageLoader.CurrentLanguage?[key, args] ?? key, false);
 
         public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Debug", message, false);
+
+        public static void PrintfDebugMessage(string key, params object?[] args) => PrintDebugMessage(LanguageLoader.CurrentLanguage?[key, args] ?? key);
 
         internal static void PrintCOMMessage(string message) => SubmitPrint(Verbosity.v, "COM-Server", message, false);
 
@@ -324,7 +328,7 @@ namespace Unknown6656.AutoIt3
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, file ?? '<' + CurrentLanguage["general.unknown"] + '>', message.Trim(), true);
+                SubmitPrint(Verbosity.n, file ?? '<' + LanguageLoader.CurrentLanguage?["general.unknown"] + '>', message.Trim(), true);
         });
 
         public static void PrintException(this Exception? ex)
@@ -394,7 +398,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.WriteLine();
 
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
-                Console.WriteLine(CurrentLanguage["warning.warning_in", location] + ":\n    " + msg.Trim());
+                Console.WriteLine(LanguageLoader.CurrentLanguage?["warning.warning_in", location] + ":\n    " + msg.Trim());
             }
             else
             {
@@ -416,7 +420,11 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
         public static void PrintReturnCodeAndTelemetry(int retcode, Telemetry telemetry) => _print_queue.Enqueue(delegate
         {
-            if (Console.CursorLeft > 0)
+            LanguagePack? lang = LanguageLoader.CurrentLanguage;
+
+            if (lang is null)
+                return;
+            else if (Console.CursorLeft > 0)
                 Console.WriteLine();
 
             bool print_telemetry = CommandLineOptions is { Verbosity: > Verbosity.q } or { PrintTelemetry: true };
@@ -436,7 +444,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
                 if (NativeInterop.OperatingSystem == OperatingSystem.Windows && width < MIN_WIDTH)
                 {
-                    PrintError($"Unable to print the telemetry report. The minimum console window width must be {MIN_WIDTH} chars.");
+                    PrintError(lang["debug.telemetry.print_error", MIN_WIDTH]);
 
                     return;
                 }
@@ -447,14 +455,14 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             Console.WriteLine(new string('_', width - 1));
             ConsoleExtensions.RGBForegroundColor = retcode == 0 ? RGBAColor.SpringGreen : RGBAColor.Salmon;
-            Console.WriteLine($"Exit code: {retcode}     Time: {root.Total} (Total), {telemetry.TotalTime[TelemetryCategory.InterpreterRuntime]} (Script)");
+            Console.WriteLine(lang["debug.telemetry.exit_code", retcode, root.Total, telemetry.TotalTime[TelemetryCategory.InterpreterRuntime]]);
             ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
 
             if (!print_telemetry)
                 return;
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Yellow;
-            Console.WriteLine("\n\t\tTELEMETRY REPORT");
+            Console.WriteLine("\n\t\t" + lang["debug.telemetry.header"]);
 
             #region TIMTINGS : FETCH DATA, INIT
 
@@ -464,16 +472,15 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             RGBAColor col_hotpath = RGBAColor.Salmon;
 
             Regex regex_trimstart = new Regex(@"^(?<space>\s*)0(?<rest>\d[:\.].+)$", RegexOptions.Compiled);
-
             string[] headers = {
-                " Semantic timings category",
-                "Count",
-                "   Total Time",
-                "   Avg. Time",
-                "   Min. Time",
-                "   Max. Time",
-                "Time (% Parent)",
-                "Time (% Total)",
+                lang["debug.telemetry.columns.category"],
+                lang["debug.telemetry.columns.count"],
+                lang["debug.telemetry.columns.total"],
+                lang["debug.telemetry.columns.avg"],
+                lang["debug.telemetry.columns.min"],
+                lang["debug.telemetry.columns.max"],
+                lang["debug.telemetry.columns.parent"],
+                lang["debug.telemetry.columns.relative"],
             };
             List<(string[] cells, TelemetryTimingsNode node)> rows = new();
             static string ReplaceStart(string input, params (string search, string replace)[] substitutions)
@@ -653,10 +660,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.Write(i == l - 1 ? '┘' : '┴');
             }
 
+
             Console.WriteLine();
-            Console.WriteLine("All absolute timings are printed in the format '[[hh:]mm:]ss.ffffff' with the unit being seconds.");
-            Console.WriteLine("Timings are sorted into \x1b[4msemantic\x1b[24m categories, not quantitative ones. This may result in overlapping or 'weird' percentage values in the 'Time (% Parent)' column.");
-            Console.WriteLine("Lines colored in red indicate so-called 'hot paths'. These are the computationally most expensive tasks relative to their semantic parent.");
+            Console.WriteLine(lang["debug.telemetry.explanation"]);
 
             #endregion
 
@@ -712,12 +718,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.SetCursorPosition(2, ypos);
                 ConsoleExtensions.RGBForegroundColor = col_text;
                 ConsoleExtensions.WriteUnderlined("CPU Load");
-                Console.SetCursorPosition(2, ypos);
+                Console.SetCursorPosition(2, ypos + 1);
                 ConsoleExtensions.RGBForegroundColor = col_cpu_user;
                 Console.Write("███ ");
                 ConsoleExtensions.RGBForegroundColor = col_text;
                 Console.Write("User");
-                Console.SetCursorPosition(2, ypos);
+                Console.SetCursorPosition(2, ypos + 2);
                 ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
                 Console.Write("███ ");
                 ConsoleExtensions.RGBForegroundColor = col_text;
@@ -807,6 +813,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             else
                 _print_queue.Enqueue(delegate
                 {
+                    LanguagePack? lang = LanguageLoader.CurrentLanguage;
+
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     Console.WriteLine($@"
                         _       _____ _   ____
@@ -822,8 +830,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
   _| |_| | | | ||  __/ |  | |_) | | |  __/ ||  __/ |
  |_____|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|
                           | |
-                          |_|  {CurrentLanguage["banner.written_by", __module__.Author, __module__.Year]}
-{CurrentLanguage["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
+                          |_|  {lang?["banner.written_by", __module__.Author, __module__.Year]}
+{lang?["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
 ");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
                     Console.Write("    ");
