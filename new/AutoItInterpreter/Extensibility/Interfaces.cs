@@ -12,17 +12,30 @@ using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Extensibility
 {
-    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false, Inherited = true)]
+    /// <summary>
+    /// This attribute is used on an assembly to notify the <see cref="PluginLoader"/> that the marked assembly may contain classes deriving from <see cref="AbstractInterpreterPlugin"/>.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true, Inherited = true)]
     public sealed class AutoIt3PluginAttribute
         : Attribute
     {
     }
 
+    /// <summary>
+    /// The base class for all interpreter plugins.
+    /// </summary>
     public abstract class AbstractInterpreterPlugin
     {
+        /// <summary>
+        /// The interpreter which has loaded the current plugin instance.
+        /// </summary>
         public Interpreter Interpreter { get; }
 
 
+        /// <summary>
+        /// Creates a new instance.
+        /// </summary>
+        /// <param name="interpreter">The interpreter which has loaded the current plugin instance.</param>
         protected AbstractInterpreterPlugin(Interpreter interpreter) => Interpreter = interpreter;
     }
 

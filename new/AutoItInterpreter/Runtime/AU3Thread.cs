@@ -55,7 +55,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Interpreter = interpreter;
             Interpreter.AddThread(this);
 
-            MainProgram.PrintDebugMessage($"Created thread {this}");
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.created", this]);
         }
 
         public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args) =>
@@ -137,7 +137,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Interpreter.RemoveThread(this);
             _callstack.TryPop(out _);
 
-            MainProgram.PrintDebugMessage($"Disposed thread {this}");
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.disposed", this]);
 
             if (!_callstack.IsEmpty)
                 throw new InvalidOperationException("The execution stack is not empty.");
@@ -203,7 +203,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (result.Is<Variant>())
                 if (CurrentThread.IsRunning)
                 {
-                    MainProgram.PrintDebugMessage($"Executing {CurrentFunction} ...");
+                    MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.executing", CurrentFunction]);
 
                     result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
                 }
@@ -322,7 +322,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
-        public string CurrentLineContent => _instruction_pointer < 0 ? "<unknown>" : _line_cache[_instruction_pointer].LineContent;
+        public string CurrentLineContent => _instruction_pointer < 0 ? '<' + MainProgram.CurrentLanguage["general.unknown"] + '>' : _line_cache[_instruction_pointer].LineContent;
 
         public Dictionary<string, int> InternalJumpLabels => _line_cache.WithIndex().Where(l => REGEX_INTERNAL_LABEL.IsMatch(l.Item.LineContent)).ToDictionary(l => l.Item.LineContent, l => l.Index);
 
@@ -513,8 +513,8 @@ namespace Unknown6656.AutoIt3.Runtime
             line = line.Trim();
 
             MainProgram.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
-            MainProgram.PrintDebugMessage($"Location:      {loc}");
-            MainProgram.PrintDebugMessage($"Line Content:  {line}");
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.location", loc]);
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.content", line]);
 
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return InterpreterResult.OK;
@@ -1140,7 +1140,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
-                MainProgram.PrintDebugMessage($"Expr.statemt.: {expression}");
+                MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.expr_statement", expression]);
 
                 if (declaration_type == DeclarationType.None)
                     return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
@@ -1169,7 +1169,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = Interpreter.ParserProvider.ExpressionParser;
                     PARSABLE_EXPRESSION parsed = provider.Parse(expression).ParsedValue;
 
-                    MainProgram.PrintDebugMessage($"Raw expr:      {parsed}");
+                    MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.raw_expr", parsed]);
 
                     return parsed;
                 }
@@ -1437,7 +1437,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 };
 
                 if (value.Is(out Variant v))
-                    MainProgram.PrintDebugMessage($"Expression:    {expression} --> {v.ToDebugString(Interpreter)}");
+                    MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.au3thread.expression", expression, v.ToDebugString(Interpreter)]);
 
                 return value;
             });

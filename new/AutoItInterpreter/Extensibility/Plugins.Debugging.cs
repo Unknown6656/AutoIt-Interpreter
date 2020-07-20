@@ -180,7 +180,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                             break;
                     }
 
-                    if (!sb.ToString().EndsWith(Environment.NewLine))
+                    if (!sb.ToString().EndsWith(Environment.NewLine, StringComparison.InvariantCultureIgnoreCase))
                         sb.AppendLine();
                 }
             }
@@ -236,7 +236,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             }
 
             if (print_row_count)
-                sb.AppendLine($"{data.GetLength(1)} rows:");
+                sb.AppendLine(MainProgram.CurrentLanguage["debug.rows", data.GetLength(1)]);
 
             sb.Append('┌');
 
@@ -328,23 +328,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             object? netobj = null;
             StringBuilder sb = new StringBuilder();
-            IEnumerable<(string, string, string, string)> iterators = from kvp in InternalsFunctionProvider._iterators
-                                                                      let index = kvp.Value.index
-                                                                      let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
-                                                                      select (
-                                                                          $"/iter/{kvp.Key}",
-                                                                          MainProgram.ASM_FILE.Name,
-                                                                          "Iterator",
-                                                                          $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString(Interpreter)}, Value:{tuple.value.ToDebugString(Interpreter)}"
-                                                                      );
-            IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
-                                                                        where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
-                                                                        select (
-                                                                            $"/objs/{id:x8}",
-                                                                            MainProgram.ASM_FILE.Name,
-                                                                            ".NET Object",
-                                                                            netobj?.ToString() ?? "<null>"
-                                                                        );
+            var iterators = from kvp in InternalsFunctionProvider._iterators
+                            let index = kvp.Value.index
+                            let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
+                            select (
+                                $"/iter/{kvp.Key}",
+                                MainProgram.ASM_FILE.Name,
+                                MainProgram.CurrentLanguage["debug.iterator"],
+                                $"{MainProgram.CurrentLanguage["debug.index"]}:{index}, {MainProgram.CurrentLanguage["debug.length"]}:{kvp.Value.collection.Length}, {MainProgram.CurrentLanguage["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {MainProgram.CurrentLanguage["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}"
+                            );
+            var global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
+                              where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
+                              select (
+                                  $"/obj/{id:x8}",
+                                  MainProgram.ASM_FILE.Name,
+                                  MainProgram.CurrentLanguage["debug.netobj"],
+                                  netobj?.ToString() ?? "<null>"
+                              );
             (string name, string loc, string type, string value)[] variables = (from scope in scopes
                                                                                 from variable in scope.LocalVariables
                                                                                 let name = scope.InternalName + '$' + variable.Name
@@ -364,23 +364,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 for (int i = 0, l = Math.Min(pathx.Length, pathy.Length); i < l; ++i)
                 {
-                    bool varx = pathx[i].StartsWith("$");
-                    int cmp = varx ^ pathy[i].StartsWith("$") ? varx ? -1 : 1 : pathx[i].CompareTo(pathy[i]);
+                    bool varx = pathx[i].StartsWith('$');
+                    int cmp = varx ^ pathy[i].StartsWith('$') ? varx ? -1 : 1 : string.Compare(pathx[i], pathy[i], StringComparison.InvariantCultureIgnoreCase);
 
                     if (cmp != 0)
                         return cmp;
                 }
 
-                return string.Compare(x.name, y.name);
+                return string.Compare(x.name, y.name, StringComparison.InvariantCultureIgnoreCase);
             });
 
             string table = GenerateTable(variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value })
                                                   .Transpose()
                                                   .Zip(new[] {
-                                                      ("Name", false),
-                                                      ("Location", false),
-                                                      ("Type", false),
-                                                      ("Value", true),
+                                                      (MainProgram.CurrentLanguage["debug.name"], false),
+                                                      (MainProgram.CurrentLanguage["debug.location"], false),
+                                                      (MainProgram.CurrentLanguage["debug.type"], false),
+                                                      (MainProgram.CurrentLanguage["debug.value"], true),
                                                   })
                                                   .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth), true);
 
@@ -399,12 +399,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                     t.type,
                     t.clsid,
                     t.value.ToDebugString(frame.Interpreter),
-                }).Transpose().Zip(new []
+                }).Transpose().Zip(new[]
                 {
-                    ("Object", false),
-                    ("Type", false),
+                    (MainProgram.CurrentLanguage["debug.object"], false),
+                    (MainProgram.CurrentLanguage["debug.type"], false),
                     ("CLSID", false),
-                    ("Value", true),
+                    (MainProgram.CurrentLanguage["debug.value"], true),
                 }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
 
                 frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth), true));
@@ -423,9 +423,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 string table = GenerateTable(new[]
                 {
-                    ("Line", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
-                    ("Location", false, lines.ToArray(t => t.loc.ToString())),
-                    ("Content", false, lines.ToArray(Generics.snd)),
+                    ("", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
+                    (MainProgram.CurrentLanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
+                    (MainProgram.CurrentLanguage["debug.content"], false, lines.ToArray(Generics.snd)),
                 }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
 
                 frame.Print(table);

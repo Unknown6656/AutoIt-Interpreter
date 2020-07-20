@@ -212,11 +212,11 @@ namespace Unknown6656.AutoIt3
                         PrintDebugMessage(JsonConvert.SerializeObject(opt));
                         PrintInterpreterMessage(CurrentLanguage["general.langpack_found", LanguageLoader.LanguagePacks.Count]);
                         PrintInterpreterMessage(CurrentLanguage["general.loaded_langpack", CurrentLanguage]);
-                        PrintDebugMessage("Loading interpreter ...");
+                        PrintDebugMessage(CurrentLanguage["debug.interpreter_loading"]);
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry));
 
-                        PrintDebugMessage($"Interpreter loaded. Running script '{opt.FilePath}' ...");
+                        PrintDebugMessage(CurrentLanguage["debug.interpreter_loaded", opt.FilePath]);
 
                         InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
 
@@ -324,7 +324,7 @@ namespace Unknown6656.AutoIt3
             if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, file ?? "<unknown>", message.Trim(), true);
+                SubmitPrint(Verbosity.n, file ?? '<' + CurrentLanguage["general.unknown"] + '>', message.Trim(), true);
         });
 
         public static void PrintException(this Exception? ex)
@@ -401,7 +401,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write('[');
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
-                Console.Write(DateTime.Now.ToString("HH:mm:ss.fff"));
+                Console.Write(DateTime.Now.ToString("HH:mm:ss.fff", null));
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("][");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;

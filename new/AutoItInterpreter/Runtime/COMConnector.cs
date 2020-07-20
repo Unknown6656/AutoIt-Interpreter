@@ -37,7 +37,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal COMConnector(Interpreter interpreter)
         {
-            MainProgram.PrintDebugMessage("Starting COM connector service ...");
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_starting"]);
 
             COMData.RegisterCOMResolver(this);
 
@@ -58,8 +58,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _reader = new BinaryReader(_client);
             _writer = new BinaryWriter(_client);
 
-            MainProgram.PrintDebugMessage($"COM connector service '{PipeName}' started.");
-
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_started", PipeName]);
 #if DEBUG
             if (System.Diagnostics.Debugger.IsAttached)
                 AttachDebuggerToCOMServer();
@@ -76,14 +75,14 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
 
-                        MainProgram.PrintDebugMessage("Visual Studio debugger attached to COM server.");
+                        MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_vsdbg_attached"]);
 
                         return;
                     }
             }
             catch
             {
-                MainProgram.PrintWarning(SourceLocation.Unknown, "Unable to attach Visual Studio debugger to COM server.");
+                MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_vsdbg_error"]);
             }
 #endif
         }
@@ -135,7 +134,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose()
         {
-            MainProgram.PrintDebugMessage($"Disposing COM connector service '{PipeName}' ...");
+            MainProgram.PrintDebugMessage(MainProgram.CurrentLanguage["debug.com_disposed", PipeName]);
 
             Stop(false);
 

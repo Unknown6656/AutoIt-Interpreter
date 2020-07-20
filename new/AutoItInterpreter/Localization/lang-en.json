@@ -1,7 +1,7 @@
 {
     "meta": {
         "code": "en",
-        "name": "english",
+        "name": "English",
         "beta": true
     },
     "strings": {
@@ -18,10 +18,42 @@
             "no_plugins_loaded": "No plugin files have been loaded.",
             "plugins_loaded": "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
         },
+        "debug": {
+            "name": "Name",
+            "index": "Index",
+            "length": "Length",
+            "key": "Key",
+            "value": "Value",
+            "type": "Type",
+            "location": "Location",
+            "rows": "{0} row(s):",
+            "object": "Object",
+            "content": "Line content",
+            "iterator": "Iterator",
+            "netobj": ".NET Object",
+            "interpreter_loading": "Loading interpreter ...",
+            "interpreter_loaded": "Interpreter loaded. Running script '{0}' ...",
+            "plugins_loaded": "{0} plugin files found in \"{1}\" ({2} modules)",
+            "com_starting": "Starting COM connector service ...",
+            "com_started": "COM connector service '{0}' started.",
+            "com_disposed": "Disposing COM connector service '{0}' ...",
+            "com_vsdbg_attached": "Visual Studio debugger attached to COM server.",
+            "com_vsdbg_error": "Unable to attach Visual Studio debugger to COM server.",
+            "au3thread": {
+                "created": "Created thread {0}.",
+                "disposed": "Disposed thread {0}.",
+                "executing": "Executing {0} ...",
+                "location": "Location:             {0}",
+                "content": "Line content:         {0}",
+                "expr_statement": "Expression statement: {0}",
+                "expression": "Expression:           {0} --> {1}",
+                "raw_expr": "Raw expression:       {0}"
+            }
+        },
         "warning": {
             "warning_in": "WARNING in {0}",
             "unparsable_dirctive": "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder.",
-            "com_unavailable": "Interactions with the COM (Component Object Model) framework are not possible on this plattform. Currently, COM is only available to Windows-like platforms."
+            "com_unavailable": "Interactions with the COM (Component Object Model) framework are not possible on this platform. Currently, COM is only available to Windows-like platforms."
         },
         "error": {
             "error_in": "ERROR in {0}",
@@ -48,7 +80,7 @@
             "invalid_index_assg": "Invalid index assignment of '{0}' with the index '{1}'. Please check that the target variable is indexable, and that the provided index is not outside the index range.",
             "invalid_multi_decl": "Invalid (multi-)declaration statement '{0}'",
             "invalid_redim_expression": "Invalid 'ReDim'-expression '{0}'. Only an array variable followed by indexing brackets is permitted.",
-            "invalid_redim_size": "Invalid array size expression '{0}'. Please make sure that the size is (castable to) a non-negative integer.",
+            "invalid_redim_size": "Invalid array size expression '{0}'. Please make sure that the size is (convertible to) a non-negative integer.",
             "invalid_redim_target": "Invalid 'ReDim'-target '{0}'. The target variable must be an one-dimensional non-constant array.",
             "invalid_return": "The 'Return'-statement is not supported in the global scope. If you wish to terminate the program, use the 'Exit'-statement instead.",
             "invalid_step": "Invalid 'Step'-expression '{0}'. Possible expressions are 'n', '+n', '-n', or '*n', where <n> is a positive non-zero integer.",
@@ -82,7 +114,7 @@
             "uninitialized_constant": "The variable '{0}' has been declared as 'Const' and must therefore has a value assigned to it.",
             "unknown_jumplabel": "The jump label '{0}' could not be found.",
             "unknown_macro": "The macro '@{0}' is unknown or could not be resolved. If you have a plugin acting as a macro resolver, verify whether the .dll can be correctly loaded from the plugin-folder.",
-            "unknown_member": "Unknown member or index '{0}'. Please verify that the the object in question is indexable and posesses the member/index in question.",
+            "unknown_member": "Unknown member or index '{0}'. Please verify that the object in question is indexable and possesses the member/index in question.",
             "unparsable_iteration_variable": "The expression '{0}' could not be parsed as a valid iteration variable for a 'For ... In'-loop.",
             "unparsable_line": "The line or expression '{0}' could not be parsed due to the following syntax error: \"{1}\". The syntax is either (currently) unsupported, or no parser plugin has been registered for this kind of statement/expression.",
             "unresolved_func": "Unresolved function name '{0}'.",

@@ -62,7 +62,8 @@ namespace Unknown6656.AutoIt3.Extensibility
                 dir.Create();
         }
 
-        public override string ToString() => $"{_plugin_files.Count} plugin files found in \"{Path.GetFullPath(PluginDirectory.FullName)}\" ({PluginModuleCount} modules)";
+        /// <inheritdoc/>
+        public override string ToString() => MainProgram.CurrentLanguage["debug.plugins_loaded", _plugin_files.Count, Path.GetFullPath(PluginDirectory.FullName), PluginModuleCount];
 
         public void ClearLoadedPlugins()
         {
