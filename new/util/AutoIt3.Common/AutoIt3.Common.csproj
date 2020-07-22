@@ -11,6 +11,5 @@
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="EnvDTE" Version="8.0.2" />
-      <PackageReference Include="YamlDotNet" Version="8.1.2" />
     </ItemGroup>
 </Project>

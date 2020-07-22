@@ -1,10 +1,4 @@
-﻿using System.Runtime.InteropServices.ComTypes;
-using System.Diagnostics.CodeAnalysis;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.IO.Pipes;
-using System.IO;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System;
 
@@ -12,11 +6,6 @@ using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Common;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
-
-using EnvDTE;
-
-using DTEProcess = EnvDTE.Process;
-using Process = System.Diagnostics.Process;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

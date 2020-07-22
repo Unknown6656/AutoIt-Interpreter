@@ -1,7 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 using System.Linq;
+using System.Text;
 using System.IO;
 using System;
 
@@ -89,28 +91,14 @@ namespace Unknown6656.AutoIt3.Localization
 
     public sealed class LanguagePack
     {
-        private static readonly Regex REGEX_YAML = new Regex(@"^(?<indent> *)(?<quote>""|)(?<key>[^"":]+)\k<quote> *:( *""(?<value>.*)"")? *(#.*)?$", RegexOptions.Compiled);
+        private static readonly Regex REGEX_YAML = new Regex(@"^(?<indent> *)(?<quote>""|)(?<key>[^"":]+)\k<quote> *: *(?<value>""(?<string>.*)""|true|false|[+\-]\d+|[+\-]0x[0-9a-f]+|null)? *(#.*)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex REGEX_ESCAPE = new Regex(@"\\(?<esc>[rntv0baf\\]|[xu][0-9a-fA-F]{1,4})", RegexOptions.Compiled);
+        private static readonly Regex REGEX_QUOTE = new Regex(@"""""", RegexOptions.Compiled);
 
         private readonly IDictionary<string, string> _strings;
 
 
-        public string this[string key, params object?[] args]
-        {
-            get
-            {
-                string fmt_str = _strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value ?? $"[{key.ToUpperInvariant()}]";
-                int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}")
-                                .Cast<Match>()
-                                .Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0)
-                                .Append(0)
-                                .Max();
-
-                if (args.Length < argc)
-                    Array.Resize(ref args, argc);
-
-                return string.Format(fmt_str, args);
-            }
-        }
+        public string this[string key, params object?[] args] => TryGetString(key, args, out string? s) ? s! : $"[{key.ToUpperInvariant()}]";
 
         internal string FilePath { get; set; } = "";
 
@@ -125,9 +113,33 @@ namespace Unknown6656.AutoIt3.Localization
 
         private LanguagePack(IDictionary<string, string> strings) => _strings = strings;
 
-        public override string ToString() => $"{LanguageCode} - {LanguageName}";
+        private bool TryGetString(string key, object?[] args, out string? formatted)
+        {
+            formatted = null;
+            key = "strings." + key;
 
-        internal static LanguagePack FromYAML(string yaml)
+            if (_strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value is string fmt_str)
+            {
+                int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}")
+                                .Cast<Match>()
+                                .Select(m => byte.TryParse(m.Groups["num"].Value, out byte b) ? b + 1 : 0)
+                                .Append(0)
+                                .Max();
+
+                if (args.Length < argc)
+                    Array.Resize(ref args, argc);
+
+                formatted = string.Format(fmt_str, args);
+
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public override string ToString() => $"\"{LanguageCode} - {LanguageName}\" by {Author}{(IsBeta ? " (beta)" : "")}";
+
+        public static LanguagePack FromYAML(string yaml)
         {
             string[] lines = yaml.Replace("\t", "    ")
                                  .Replace("\r\n", "\n")
@@ -152,15 +164,61 @@ namespace Unknown6656.AutoIt3.Localization
 
                     if (groups["value"].Success)
                     {
-                        string value = groups["value"].Value;
+                        string value = groups["string"].Success ? ParseString(groups["string"].Value) : groups["value"].Value;
 
-                        dict[string.Join(".", scope.Select(s => s.path).Append(key))] = value;
+                        key = string.Join(".", scope.Select(s => s.path).Append(key));
+                        dict[key] = value;
                     }
                     else
                         scope.Add((indent, key));
                 }
 
             return new LanguagePack(dict);
+        }
+
+        private static string ParseString(string value)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            while (value.Length > 0)
+                if (REGEX_ESCAPE.Match(value) is { Success: true } m_esc)
+                {
+                    int i = m_esc.Index;
+                    string esc = m_esc.Groups["esc"].Value;
+
+                    sb.Append(value.Remove(i));
+                    sb.Append(esc[0] switch
+                    {
+                        'x' or 'u' when short.TryParse(esc.Substring(1), NumberStyles.HexNumber, null, out short s) => (char)s,
+                        'r' => '\r',
+                        'n' => '\n',
+                        't' => '\t',
+                        'v' => '\v',
+                        '0' => '\0',
+                        'b' => '\b',
+                        'a' => '\a',
+                        'f' => '\f',
+                        '\\' => '\\',
+                        _ => m_esc.ToString()
+                    });
+
+                    value = value.Substring(i + m_esc.Length);
+                }
+                else if (REGEX_QUOTE.Match(value) is { Success: true } m_quote)
+                {
+                    int i = m_quote.Index;
+
+                    sb.Append(value.Remove(i));
+                    value = value.Substring(i + 2);
+                }
+                else
+                {
+                    sb.Append(value);
+
+                    break;
+                }
+
+            return sb.ToString();
         }
     }
 }
