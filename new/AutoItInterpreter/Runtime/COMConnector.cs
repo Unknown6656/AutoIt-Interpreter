@@ -19,7 +19,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
 
         internal COMConnector(Interpreter interpreter)
-            : base(MainProgram.COM_CONNECTOR, interpreter, interpreter.CurrentUILanguage) => Interpreter = interpreter;
+            : base(MainProgram.COM_CONNECTOR, false, interpreter, interpreter.CurrentUILanguage) => Interpreter = interpreter;
 
         protected override void BeforeShutdown()
         {

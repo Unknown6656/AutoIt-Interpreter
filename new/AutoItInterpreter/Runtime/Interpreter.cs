@@ -42,6 +42,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public COMConnector? COMConnector { get; }
 
+        public GUIConnector GUIConnector { get; }
+
         public bool IsCOMAvailable => COMConnector is { };
 
         public ScriptScanner ScriptScanner { get; }
@@ -95,6 +97,8 @@ namespace Unknown6656.AutoIt3.Runtime
             GlobalObjectStorage = new GlobalObjectStorage(this);
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
+
+            GUIConnector = new GUIConnector(this);
 
             if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
                 COMConnector = new COMConnector(this);

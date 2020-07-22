@@ -302,15 +302,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                      .ToString();
         }
 
-        public FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
+        private FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
 
-        public FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] _) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
+        private FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] _) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
 
-        public FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
+        private FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
 
-        public FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
+        private FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
 
-        public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
+        private FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
             LanguagePack lang = Interpreter.CurrentUILanguage;
@@ -391,7 +391,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
+        private FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
         {
             if (Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
             {
@@ -415,7 +415,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        public FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
+        private FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
         {
             if (frame.CurrentThread.CallStack.OfType<AU3CallFrame>().FirstOrDefault() is AU3CallFrame au3frame)
             {
@@ -436,21 +436,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
+        private FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
             // TODO
 
             return Variant.Zero;
         }
 
-        public FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
+        private FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
         {
             // TODO
 
             return Variant.Zero;
         }
 
-        public FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
+        private FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
         {
             DebugCodeLines(frame, args);
             DebugCallFrame(frame, args);

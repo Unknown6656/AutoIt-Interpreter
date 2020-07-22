@@ -35,8 +35,6 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
 #pragma warning restore CS8618
         public LanguagePack? UILanguage { get; init; }
 
-        public abstract string ChannelName { get; }
-
 
         protected abstract void OnStartup(string[] argv);
 
@@ -152,8 +150,15 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 {
                 }
 
-            provider._debug_writer?.Flush();
-            provider._debug_writer?.Close();
+            try
+            {
+                provider._debug_writer?.Flush();
+                provider._debug_writer?.Close();
+            }
+            catch
+            {
+            }
+
             provider._debug_writer?.Dispose();
             provider._debug_writer = null;
 
@@ -170,8 +175,9 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         : IDisposable
         where @this : ExternalServiceConnector<@this>
     {
-        private readonly NamedPipeClientStream _client;
-        private readonly Task _debug_monitor;
+        private readonly NamedPipeClientStream? _client;
+        private readonly Task _process_monitor;
+        private readonly Task? _debug_monitor;
 
         protected BinaryReader DataReader { get; }
 
@@ -183,12 +189,12 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
 
         protected LanguagePack UILanguage { get; }
 
-        public Process ServerProcess { get; }
+        public Process? ServerProcess { get; }
 
         public string PipeName { get; }
 
 
-        protected ExternalServiceConnector(FileInfo server, IDebugPrintingService printer, LanguagePack ui_language)
+        protected ExternalServiceConnector(FileInfo server, bool use_dotnet, IDebugPrintingService printer, LanguagePack ui_language)
         {
             Printer = printer;
             UILanguage = ui_language;
@@ -196,27 +202,34 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             DebugPrint("debug.external.starting");
 
             PipeName = $"__autoit3__{Guid.NewGuid():N}";
-            ServerProcess = new Process
+
+            try
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    Arguments = $"{PipeName} {PipeName}D \"{ui_language.FilePath}\"",
-                    FileName = Path.GetFullPath(server.FullName),
-                }
-            };
-            ServerProcess.Start();
-            _debug_monitor = Task.Factory.StartNew(async () => await DebugMonitorTask(PipeName + 'D'));
-            _client = new NamedPipeClientStream(PipeName);
-            _client.Connect();
-            DataReader = new BinaryReader(_client);
-            DataWriter = new BinaryWriter(_client);
+                string args = $"{PipeName} {PipeName}D \"{ui_language.FilePath}\"";
+                string server_path = Path.GetFullPath(server.FullName);
+                ProcessStartInfo psi = use_dotnet ? new ProcessStartInfo("dotnet", $"\"{server_path}\" {args}") : new ProcessStartInfo(server_path, args);
 
-            DebugPrint("debug.external.started", PipeName, ServerProcess.Id);
+                ServerProcess = Process.Start(psi);
+
+                _process_monitor = Task.Factory.StartNew(ProcessMonitorTask);
+                _debug_monitor = Task.Factory.StartNew(async () => await DebugMonitorTask(PipeName + 'D'));
+                _client = new NamedPipeClientStream(PipeName);
+                _client.Connect(5_000);
+                DataReader = new BinaryReader(_client);
+                DataWriter = new BinaryWriter(_client);
+
+                DebugPrint("debug.external.started", PipeName, ServerProcess.Id);
 #if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached && Environment.OSVersion.Platform is PlatformID.Win32NT)
-                AttachVSDebugger();
+                if (System.Diagnostics.Debugger.IsAttached && Environment.OSVersion.Platform is PlatformID.Win32NT)
+                    AttachVSDebugger();
+#endif
+            }
+            catch (Exception ex)
+            {
+                Stop(true);
+            }
         }
-
+#if DEBUG
         private void AttachVSDebugger()
         {
             using Process vs_current = Process.GetCurrentProcess();
@@ -226,7 +239,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 if (VisualStudioAttacher.GetAttachedVisualStudio(vs_current) is (Process vs_proc, _DTE vs_inst))
                     using (vs_proc)
                     {
-                        VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess);
+                        VisualStudioAttacher.AttachVisualStudioToProcess(vs_inst, ServerProcess!);
 
                         DebugPrint("debug.external.vsdbg_attached");
 
@@ -237,9 +250,8 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             {
                 DebugPrint("debug.external.vsdbg_error");
             }
-#endif
         }
-
+#endif
         private async Task DebugMonitorTask(string debug_channel_name)
         {
             using NamedPipeServerStream _debug_server = new NamedPipeServerStream(debug_channel_name);
@@ -248,8 +260,16 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
 
             using BinaryReader _debug_reader = new BinaryReader(_debug_server);
 
-            while (!ServerProcess.HasExited)
+            while (ServerProcess?.HasExited is false)
                 Printer.Print(ChannelName + "-Provider", _debug_reader.ReadString());
+        }
+
+        private async Task ProcessMonitorTask()
+        {
+            while (ServerProcess?.HasExited is false)
+                await Task.Delay(100);
+
+            Stop(true);
         }
 
         public void DebugPrint(string key, params object?[] args) => Printer.Print(ChannelName + "-Connector", UILanguage[key, args]);
@@ -260,7 +280,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         {
             try
             {
-                if (!ServerProcess.HasExited)
+                if (ServerProcess?.HasExited is true)
                 {
                     try
                     {
@@ -270,22 +290,29 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                     {
                     }
 
-                    DataWriter.Flush();
-                    _client.Flush();
+                    DataWriter?.Flush();
+                    _client?.Flush();
+
+                    try
+                    {
+                        if (force)
+                            ServerProcess?.WaitForExit(1000);
+                        else
+                            ServerProcess?.WaitForExit();
+                    }
+                    catch
+                    {
+                    }
+
+                    DataWriter?.Close();
+                    DataReader?.Close();
+                    _client?.Close();
 
                     if (force)
-                        ServerProcess.WaitForExit(1000);
-                    else
-                        ServerProcess.WaitForExit();
+                        ServerProcess?.Kill();
 
-                    DataWriter.Close();
-                    DataReader.Close();
-                    _client.Close();
-
-                    if (force)
-                        ServerProcess.Kill();
-
-                    _debug_monitor.Wait();
+                    _debug_monitor?.Wait();
+                    _process_monitor.Wait();
                 }
             }
             catch
@@ -295,15 +322,16 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
 
         public void Dispose()
         {
-            DebugPrint("debug.external.disposed", PipeName, ServerProcess.Id);
+            DebugPrint("debug.external.disposed", PipeName, ServerProcess?.Id);
 
             Stop(false);
 
-            ServerProcess.Dispose();
-            DataWriter.Dispose();
-            DataReader.Dispose();
-            _client.Dispose();
-            _debug_monitor.Dispose();
+            ServerProcess?.Dispose();
+            DataWriter?.Dispose();
+            DataReader?.Dispose();
+            _client?.Dispose();
+            _debug_monitor?.Dispose();
+            _process_monitor?.Dispose();
         }
     }
 

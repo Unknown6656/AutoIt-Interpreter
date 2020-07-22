@@ -52,7 +52,7 @@ strings:
             delete: "Deleting COM object '{0}'."
             delete_all: "Deleting all COM objects."
             get_info: "Fetching info '{0}' of COM object '{1}': {2}."
-            cmd_recv: "Recieving '{0}'."
+            cmd_recv: "Receiving '{0}'."
             wrapper:
                 created: "{0:x16}h ({1}) created."
                 disposed: "{0:x16}h ({1}) disposed."

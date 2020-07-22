@@ -106,7 +106,8 @@ namespace Unknown6656.AutoIt3
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
         public static readonly DirectoryInfo INCLUDE_DIR = ASM_DIR.CreateSubdirectory("include/");
-        public static readonly FileInfo COM_CONNECTOR = ASM_DIR.GetFiles("autoit3.comserver.exe")[0];
+        public static readonly FileInfo COM_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
+        public static readonly FileInfo GUI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
 
         private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;

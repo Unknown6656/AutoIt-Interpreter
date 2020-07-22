@@ -23,8 +23,6 @@ namespace Unknown6656.AutoIt3.COM.Server
 
         public uint[] IDsInUse => _com_objects.Keys.ToArray();
 
-        public override string ChannelName { get; } = "COM";
-
 
         public COMServer() => COMData.RegisterCOMResolver(this);
 
