@@ -7,6 +7,7 @@ namespace VersionIncrementer
     public static class Program
     {
         public const string AUTHOR = "Unknown6656";
+        public const string REPOSITORY = "https://github.com/" + AUTHOR + "AutoIt-Interpreter/issues";
         public const int START_YEAR = 2018;
 
 
@@ -100,6 +101,10 @@ public static class __module__
     /// The Git hash associated with the current build.
     /// </summary>
     public static string GitHash {{ get; }} = ""{githash}"";
+    /// <summary>
+    /// The URL of this project's Git(Hub) repository.
+    /// </summary>
+    public static string GetRepositoryURL {{ get; }} = ""{REPOSITORY}"";
 }}
 ");
         }

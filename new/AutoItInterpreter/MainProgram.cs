@@ -381,6 +381,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
+            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.GetRepositoryURL}/issues/\x1b[24m.");
 
             if (extensive)
             {
@@ -507,15 +508,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             }
             string PrintTime(TimeSpan time)
             {
-                string s = time.ToString(time.TotalSeconds switch
-                {
-                    // < 1 => "h\\:mm\\:ss\\.fffffff",
-                    < 10 => "h\\:mm\\:ss\\.ffffff",
-                    < 60 => "h\\:mm\\:ss\\.fff",
-                    _ => "h\\:mm\\:ss\\.f",
-                });
-
-                s = ReplaceStart(s,
+                string s = ReplaceStart(time.ToString("h\\:mm\\:ss\\.ffffff"),
                     ("00:", "   "),
                     ("0:", "  "),
                     ("00.", " 0.")
@@ -831,6 +824,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                           | |
                           |_|  {lang?["banner.written_by", __module__.Author, __module__.Year]}
 {lang?["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
+{'\x1b'}[4m{__module__.GetRepositoryURL}{'\x1b'}[24m
 ");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
                     Console.Write("    ");

@@ -5,5 +5,5 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Unknown6656.AutoIt3.GUI.MainWindow"
         Title="Unknown6656.AutoIt3.GUI">
-    Welcome to Avalonia!
+    AutoIt3 UI
 </Window>

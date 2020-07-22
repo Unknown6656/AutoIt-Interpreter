@@ -1,10 +1,4 @@
-
-ConsoleWrite("Hello World!" & @CRLF)
-PrintOS()
-
-Func PrintOS()
-   ConsoleWrite(@OSTYPE & " (Version " & @OSBUILD & ")" & @CRLF)
-EndFunc
+232r3;32ConsoleReadLine()
 
 
 

@@ -96,11 +96,10 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 provider.OnStartup(argv.Skip(3).ToArray());
 
                 bool external = true;
+                bool shutdown = false;
 
                 while (provider._running && pipe_in.IsConnected)
                 {
-                    bool shutdown = false;
-
                     provider.MainLoop(ref shutdown);
 
                     if (shutdown)

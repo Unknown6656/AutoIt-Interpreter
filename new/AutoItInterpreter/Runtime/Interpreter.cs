@@ -11,11 +11,10 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 
+using Random = Unknown6656.Mathematics.Numerics.Random;
+
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using Random = Mathematics.Numerics.Random;
-
-    // using static MainProgram;
     using static AST;
 
 
@@ -42,7 +41,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public COMConnector? COMConnector { get; }
 
-        public GUIConnector GUIConnector { get; }
+        //public GUIConnector GUIConnector { get; }
 
         public bool IsCOMAvailable => COMConnector is { };
 
@@ -98,7 +97,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
 
-            GUIConnector = new GUIConnector(this);
+            //GUIConnector = new GUIConnector(this);
 
             if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
                 COMConnector = new COMConnector(this);
