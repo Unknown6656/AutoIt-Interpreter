@@ -16,6 +16,9 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     using static AST;
 
+    /// <summary>
+    /// Represents an AutoIt3 script scanning module.
+    /// </summary>
     public sealed class ScriptScanner
     {
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
@@ -385,6 +388,9 @@ namespace Unknown6656.AutoIt3.Runtime
         private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).To.String());
     }
 
+    /// <summary>
+    /// Represents a scanned AutoIt3 script.
+    /// </summary>
     public sealed class ScannedScript
         : IEquatable<ScannedScript>
     {
@@ -422,9 +428,15 @@ namespace Unknown6656.AutoIt3.Runtime
             return function;
         }
 
-        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToUpperInvariant(), decl));
+        public void AddStartupFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
 
-        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToUpperInvariant(), decl));
+        public void AddExitFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
+
+        private void AddFunction(string name, SourceLocation decl, in List<(string, SourceLocation)> list)
+        {
+            if (!list.Any(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)))
+                list.Add((name.ToUpperInvariant(), decl));
+        }
 
         public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
 
@@ -451,10 +463,13 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode() => Path.GetFullPath(Location.FullName).GetHashCode(StringComparison.CurrentCulture);
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScannedScript);
 
+        /// <inheritdoc/>
         public override string ToString() => Location.ToString();
 
         public bool Equals(ScannedScript? other) => other is ScannedScript script && GetHashCode() == script.GetHashCode();
@@ -467,6 +482,9 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator !=(ScannedScript? s1, ScannedScript? s2) => !(s1 == s2);
     }
 
+    /// <summary>
+    /// Represents an abstract script function. This could be an AutoIt3 or a native function.
+    /// </summary>
     public abstract class ScriptFunction
         : IEquatable<ScriptFunction>
     {
@@ -498,12 +516,16 @@ namespace Unknown6656.AutoIt3.Runtime
             Script.AddFunction(this);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
 
+        /// <inheritdoc/>
         public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
 
+        /// <inheritdoc/>
         public override string ToString() => $"[{Script}] Func {Name}";
 
 
@@ -529,10 +551,13 @@ namespace Unknown6656.AutoIt3.Runtime
             Name = name;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as JumpLabel);
 
+        /// <inheritdoc/>
         public bool Equals(JumpLabel? other) => other != null && EqualityComparer<AU3Function>.Default.Equals(Function, other.Function) && Name == other.Name;
 
+        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Function, Name);
 
         public static bool operator ==(JumpLabel? left, JumpLabel? right) => EqualityComparer<JumpLabel>.Default.Equals(left, right);
@@ -599,6 +624,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return l;
         });
 
+        /// <inheritdoc/>
         public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
     }
 
@@ -621,6 +647,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
+        /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
     }
 

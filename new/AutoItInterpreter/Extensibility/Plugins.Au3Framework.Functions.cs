@@ -158,6 +158,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
             ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
+            ProvidedNativeFunction.Create(nameof(ProcessClose), 1, ProcessClose),
+            ProvidedNativeFunction.Create(nameof(ProcessExists), 1, ProcessExists),
+            ProvidedNativeFunction.Create(nameof(ProcessGetStats), 1, 2, ProcessGetStats, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(ProcessList), 0, 1, ProcessList, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(ProcessSetPriority), 2, ProcessSetPriority),
+            ProvidedNativeFunction.Create(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
             //ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete),
             //ProvidedNativeFunction.Create(nameof(RegEnumKey), , RegEnumKey),
@@ -1951,6 +1958,125 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
 
             return FunctionReturnValue.Error(err);
+        }
+
+        private static Process? GetProcess(Variant variant)
+        {
+            try
+            {
+                return Process.GetProcessById((int)variant);
+            }
+            catch
+            {
+                return Process.GetProcessesByName(variant.ToString()).OrderByDescending(p => p.Id)?.FirstOrDefault();
+            }
+        }
+
+        internal static FunctionReturnValue ProcessClose(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                try
+                {
+                    proc.Kill();
+
+                    return Variant.True;
+                }
+                catch
+                {
+                    return FunctionReturnValue.Error(3);
+                }
+            else
+                return FunctionReturnValue.Error(4);
+        }
+
+        internal static FunctionReturnValue ProcessExists(CallFrame frame, Variant[] args) => GetProcess(args[0]) is Process proc ? proc.Id : Variant.Zero;
+
+        internal static FunctionReturnValue ProcessGetStats(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                return (int)args[1] switch
+                {
+                    0 => Variant.FromArray(frame.Interpreter, proc.WorkingSet64, proc.PeakWorkingSet64),
+                    // TODO : 1 => Variant.FromArray(frame.Interpreter, ),
+                    _ => FunctionReturnValue.Error(1),
+                };
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        internal static FunctionReturnValue ProcessList(CallFrame frame, Variant[] args)
+        {
+            Variant[] items = Process.GetProcesses()
+                                     .Where(proc => args[0].IsDefault ? true : proc.ProcessName == args[0].ToString())
+                                     .ToArray(proc => Variant.FromArray(frame.Interpreter, proc.ProcessName, proc.Id));
+
+            return Variant.FromArray(frame.Interpreter, items.Prepend(Variant.FromArray(frame.Interpreter, items.Length)));
+        }
+
+        internal static FunctionReturnValue ProcessSetPriority(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                try
+                {
+                    proc.PriorityClass = (int)args[1] switch
+                    {
+                        0 => ProcessPriorityClass.Idle,
+                        1 => ProcessPriorityClass.BelowNormal,
+                        2 => ProcessPriorityClass.Normal,
+                        3 => ProcessPriorityClass.AboveNormal,
+                        4 => ProcessPriorityClass.High,
+                        5 => ProcessPriorityClass.RealTime,
+                        _ => (ProcessPriorityClass)(-1)
+                    };
+
+                    return Variant.True;
+                }
+                catch
+                {
+                    return FunctionReturnValue.Error(2);
+                }
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        internal static FunctionReturnValue ProcessWait(CallFrame frame, Variant[] args)
+        {
+            string procname = args[0].ToString();
+            long timeout = (long)args[1] * 1000;
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            while (timeout <= 0 || sw.ElapsedMilliseconds < timeout)
+            {
+                try
+                {
+                    if (Process.GetProcessesByName(procname).FirstOrDefault()?.Id is int pid)
+                        return (Variant)pid;
+                }
+                catch
+                {
+                }
+
+                Thread.Sleep(250);
+            }
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue ProcessWaitClose(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+            {
+                if ((int)args[1] <= 0)
+                    proc.WaitForExit();
+                else
+                    proc.WaitForExit((int)args[0]);
+
+                return (Variant)proc.HasExited;
+            }
+            else
+                return Variant.False;
         }
 
         internal static unsafe FunctionReturnValue Random(CallFrame frame, Variant[] args)
