@@ -28,7 +28,7 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="lang\lang-en.json" />
+        <None Remove="lang\lang-en.yml" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Piglet">
@@ -42,9 +42,9 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Include="lang\lang-en.json">
+        <Content Include="lang\lang-en.yml">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </EmbeddedResource>
+        </Content>
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\LICENSE.md">
@@ -59,7 +59,6 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />

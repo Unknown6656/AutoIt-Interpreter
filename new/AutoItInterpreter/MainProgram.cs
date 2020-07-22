@@ -13,8 +13,6 @@ using System;
 using CommandLine.Text;
 using CommandLine;
 
-using Newtonsoft.Json;
-
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.Localization;
@@ -211,7 +209,7 @@ namespace Unknown6656.AutoIt3
                         }
 
                         PrintBanner();
-                        PrintDebugMessage(JsonConvert.SerializeObject(opt));
+                        // PrintDebugMessage(JsonConvert.SerializeObject(opt)); // TODO
                         PrintInterpreterMessage("general.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
                         PrintInterpreterMessage("general.loaded_langpack", lang);
                         PrintfDebugMessage("debug.interpreter_loading");
@@ -317,11 +315,11 @@ namespace Unknown6656.AutoIt3
 
         public static void PrintInterpreterMessage(string key, params object?[] args) => SubmitPrint(Verbosity.n, "Interpreter", LanguageLoader.CurrentLanguage?[key, args] ?? key, false);
 
-        public static void PrintDebugMessage(string message) => SubmitPrint(Verbosity.v, "Debug", message, false);
+        public static void PrintDebugMessage(string message) => PrintChannelMessage("Debug", message);
 
         public static void PrintfDebugMessage(string key, params object?[] args) => PrintDebugMessage(LanguageLoader.CurrentLanguage?[key, args] ?? key);
 
-        internal static void PrintCOMMessage(string message) => SubmitPrint(Verbosity.v, "COM-Server", message, false);
+        internal static void PrintChannelMessage(string channel, string message) => SubmitPrint(Verbosity.v, channel, message, false);
 
         public static void PrintScriptMessage(string? file, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {

@@ -8,7 +8,7 @@
         <LangVersion>preview</LangVersion>
         <Nullable>enable</Nullable>
         <RootNamespace>Unknown6656.AutoIt3.COM.Server</RootNamespace>
-        <StartupObject>Unknown6656.AutoIt3.COM.Server.Program</StartupObject>
+        <StartupObject>Unknown6656.AutoIt3.COM.Server.COMServer</StartupObject>
         <AssemblyName>autoit3.comserver</AssemblyName>
     </PropertyGroup>
     <ItemGroup>

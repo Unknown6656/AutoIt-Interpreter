@@ -1,14 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
 using System.IO;
 using System;
-
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 
 namespace Unknown6656.AutoIt3.Localization
 {
@@ -37,28 +32,31 @@ namespace Unknown6656.AutoIt3.Localization
 
                     if (resource is { })
                         using (StreamReader? rd = new StreamReader(resource))
-                            LoadLanguagePackFromJSON(assembly.Location, rd.ReadToEnd(), overwrite_existing);
+                            LoadLanguagePackFromYAML(assembly.Location, rd.ReadToEnd(), overwrite_existing);
                 }
                 catch
                 {
                 }
         }
 
-        public void LoadLanguagePackFromJSONFile(FileInfo file, bool overwrite_existing = true)
+        public void LoadLanguagePackFromYAMLFile(FileInfo file, bool overwrite_existing = true)
         {
             string path = Path.GetFullPath(file.FullName);
 
-            LoadLanguagePackFromJSON(path, File.ReadAllText(path), overwrite_existing);
+            LoadLanguagePackFromYAML(path, File.ReadAllText(path), overwrite_existing);
         }
 
-        private void LoadLanguagePackFromJSON(string path, string json, bool overwrite_existing = true)
+        private void LoadLanguagePackFromYAML(string path, string yaml, bool overwrite_existing = true)
         {
             try
             {
-                LanguagePack lang = JsonConvert.DeserializeObject<LanguagePack>(json);
+                LanguagePack lang = LanguagePack.FromYAML(yaml);
                 string code = lang.LanguageCode.ToLowerInvariant();
 
                 lang.FilePath = path;
+
+                if (CurrentLanguage is null && _packs.Count == 0)
+                    CurrentLanguage = lang;
 
                 if (overwrite_existing || !_packs.ContainsKey(code))
                     _packs[code] = lang;
@@ -85,16 +83,15 @@ namespace Unknown6656.AutoIt3.Localization
         public void LoadLanguagePacksFromDirectory(DirectoryInfo directory, bool overwrite_existing = true)
         {
             foreach (FileInfo file in directory.EnumerateFiles())
-                LoadLanguagePackFromJSONFile(file, overwrite_existing);
+                LoadLanguagePackFromYAMLFile(file, overwrite_existing);
         }
     }
 
-    [JsonConverter(typeof(JsonPathConverter))]
     public sealed class LanguagePack
     {
-        public const string DELIMITER = ".";
+        private static readonly Regex REGEX_YAML = new Regex(@"^(?<indent> *)(?<quote>""|)(?<key>[^"":]+)\k<quote> *:( *""(?<value>.*)"")? *(#.*)?$", RegexOptions.Compiled);
 
-        private readonly Dictionary<string, string> _strings = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _strings;
 
 
         public string this[string key, params object?[] args]
@@ -117,75 +114,53 @@ namespace Unknown6656.AutoIt3.Localization
 
         internal string FilePath { get; set; } = "";
 
-        [JsonProperty("meta.code")]
-        public string LanguageCode { get; private set; } = "";
+        public string LanguageCode => _strings["meta.code"];
 
-        [JsonProperty("meta.name")]
-        public string LanguageName { get; private set; } = "";
+        public string LanguageName => _strings["meta.name"];
 
-        [JsonProperty("meta.beta")]
-        public bool IsBeta { get; private set; } = false;
+        public bool IsBeta => !bool.TryParse(_strings["meta.beta"], out bool beta) || beta;
 
-        [JsonProperty("strings"), DebuggerBrowsable(DebuggerBrowsableState.Never), EditorBrowsable(EditorBrowsableState.Never), DebuggerHidden]
-        public object? __DO_NOT_USE__strings
-        {
-            get => _strings;
-            private set
-            {
-                _strings.Clear();
+        public string Author => _strings.TryGetValue("meta.author", out string auth) ? auth : "unknown6656";
 
-                if ((JObject?)value is JObject dic)
-                    traverse("", dic);
 
-                void traverse(string prefix, JObject dic)
-                {
-                    foreach (KeyValuePair<string, JToken?> kvp in dic)
-                    {
-                        string path = prefix + DELIMITER + kvp.Key.ToLowerInvariant();
-
-                        if (kvp.Value is JObject jo)
-                            traverse(path, jo);
-                        else
-                            _strings[path.Substring(1)] = kvp.Value?.ToString() ?? $"[{path.Substring(1).ToUpperInvariant()}]";
-                    }
-                }
-            }
-        }
-
+        private LanguagePack(IDictionary<string, string> strings) => _strings = strings;
 
         public override string ToString() => $"{LanguageCode} - {LanguageName}";
-    }
 
-    internal sealed class JsonPathConverter
-        : JsonConverter
-    {
-        public override bool CanWrite => false;
-
-
-        public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+        internal static LanguagePack FromYAML(string yaml)
         {
-            JObject jobj = JObject.Load(reader);
-            object? target = Activator.CreateInstance(objectType);
+            string[] lines = yaml.Replace("\t", "    ")
+                                 .Replace("\r\n", "\n")
+                                 .Replace("\v", "")
+                                 .Replace("\0", "")
+                                 .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (PropertyInfo prop in objectType.GetProperties().Where(p => p.CanRead && p.CanWrite))
-            {
-                JsonPropertyAttribute? att = prop.GetCustomAttributes(true).OfType<JsonPropertyAttribute>().FirstOrDefault();
-                string jsonPath = att?.PropertyName ?? prop.Name;
+            List<(int level, string path)> scope = new();
+            Dictionary<string, string> dict = new();
 
-                if (jobj.SelectToken(jsonPath) is { } token && token.Type != JTokenType.Null)
+            foreach (string line in lines)
+                if (REGEX_YAML.Match(line) is { Success: true, Groups: GroupCollection groups })
                 {
-                    object? value = token.ToObject(prop.PropertyType, serializer);
+                    int indent = groups["indent"].Length;
+                    string key = groups["key"].Value;
 
-                    prop.SetValue(target, value, null);
+                    for (int i = scope.Count; i-- > 0;)
+                        if (indent > scope[i].level)
+                            break;
+                        else
+                            scope.RemoveAt(i);
+
+                    if (groups["value"].Success)
+                    {
+                        string value = groups["value"].Value;
+
+                        dict[string.Join(".", scope.Select(s => s.path).Append(key))] = value;
+                    }
+                    else
+                        scope.Add((indent, key));
                 }
-            }
 
-            return target;
+            return new LanguagePack(dict);
         }
-
-        // CanConvert is not called when [JsonConverter] attribute is used
-        public override bool CanConvert(Type objectType) => false;
-
-        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) => throw new NotImplementedException();
     }
 }

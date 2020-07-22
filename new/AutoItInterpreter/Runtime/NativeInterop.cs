@@ -14,15 +14,15 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         public const uint TOKEN_QUERY = 0x00000008;
 
         public const int MAX_PATH = 255;
-        private const string KERNEL32 = "kernel32.dll";
-        private const string SHELL32 = "shell32.dll";
-        private const string OLE32 = "ole32.dll";
-        private const string USER32 = "user32.dll";
-        private const string LIBC = "libc.so.6"; // libc.so
-        private const string COREDLL = "coredll.dll";
-        private const string NTDLL = "ntdll.dll";
-        private const string ADVAPI32 = "advapi32.dll";
-        private const string POWRPROF = "powrprof.dll";
+        public const string KERNEL32 = "kernel32.dll";
+        public const string SHELL32 = "shell32.dll";
+        public const string OLE32 = "ole32.dll";
+        public const string USER32 = "user32.dll";
+        public const string LIBC = "libc.so.6"; // libc.so
+        public const string COREDLL = "coredll.dll";
+        public const string NTDLL = "ntdll.dll";
+        public const string ADVAPI32 = "advapi32.dll";
+        public const string POWRPROF = "powrprof.dll";
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {

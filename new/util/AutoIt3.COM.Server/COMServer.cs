@@ -3,286 +3,19 @@ using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Reflection;
-using System.IO.Pipes;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System;
+
+using Unknown6656.AutoIt3.Runtime.ExternalServices;
+using Unknown6656.AutoIt3.Common;
 
 namespace Unknown6656.AutoIt3.COM.Server
 {
-    public static class Program
-    {
-        private static BinaryWriter? _debug_writer = null;
-        private static volatile bool _running = true;
-
-        public static COMServer Server { get; } = new COMServer();
-
-        /*
-            ARGUMENTS:
-                <data-pipe> <debugging-pipe> [...]
-         */
-        public static int Main(string[] argv)
-        {
-            int code = -1;
-
-            if (argv.Length > 1)
-                try
-                {
-                    using Task debug_task = Task.Factory.StartNew(async delegate
-                    {
-                        using NamedPipeClientStream debug = new NamedPipeClientStream(argv[1]);
-
-                        await debug.ConnectAsync();
-
-                        _debug_writer = new BinaryWriter(debug);
-
-                        while (_running)
-                            await Task.Delay(100);
-
-                        _debug_writer.Close();
-                        _debug_writer.Dispose();
-                        _debug_writer = null;
-                        debug.Close();
-                        debug.Dispose();
-                    });
-                    using NamedPipeServerStream server = new NamedPipeServerStream(argv[0]);
-
-                    server.WaitForConnection();
-
-                    using BinaryReader reader = new BinaryReader(server);
-                    using BinaryWriter writer = new BinaryWriter(server);
-
-                    DebugPrint("COM server is running.");
-
-                    while (_running && server.IsConnected)
-                        switch (reader.ReadNative<COMInteropCommand>())
-                        {
-                            case COMInteropCommand.Quit:
-                                DebugPrint("Shutting down COM server.");
-
-                                Server.DeleteAllCOMObjects();
-                                _running = false;
-
-                                break;
-                            case COMInteropCommand.Create:
-                                {
-                                    string classname = reader.ReadString();
-                                    string? servername = reader.ReadNullable();
-                                    string? username = reader.ReadNullable();
-                                    string? passwd = reader.ReadNullable();
-                                    uint? id = Server.CreateCOMObject(classname, servername, username, passwd);
-
-                                    DebugPrint($"Created COM object '{classname}' on '{username}'@'{servername}'. COM object ID: {id}");
-
-                                    writer.WriteNullable(id);
-                                }
-                                goto default;
-                            case COMInteropCommand.EnumerateMembers:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    string[] members = Server.GetMemberNames(id);
-
-                                    DebugPrint($"Enumerating members of COM object '{id}' ({members.Length} members).");
-
-                                    writer.Write(members.Length);
-
-                                    foreach (string member in members)
-                                        writer.Write(member);
-                                }
-                                goto default;
-                            case COMInteropCommand.GetIndex:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    COMData index = reader.ReadCOM();
-                                    COMData? value_o = null;
-                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
-
-                                    DebugPrint($"Fetching index '{index}' of COM object '{id}': {(success ? "success" : "fail")}.");
-
-                                    writer.Write(success);
-
-                                    if (success)
-                                        writer.WriteCOM(value_o!.Value);
-                                }
-                                goto default;
-                            case COMInteropCommand.SetIndex:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    COMData index = reader.ReadCOM();
-                                    COMData value = reader.ReadCOM();
-                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
-
-                                    DebugPrint($"Setting index '{index}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
-
-                                    writer.Write(success);
-                                }
-                                goto default;
-                            case COMInteropCommand.GetMember:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    string name = reader.ReadString();
-                                    COMData? value_o = null;
-                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
-
-                                    DebugPrint($"Fetching member '{name}' of COM object '{id}': {(success ? "success" : "fail")}.");
-
-                                    writer.Write(success);
-
-                                    if (success)
-                                        writer.WriteCOM(value_o!.Value);
-                                }
-                                goto default;
-                            case COMInteropCommand.SetMember:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    string name = reader.ReadString();
-                                    COMData value = reader.ReadCOM();
-                                    bool success = Server.TryResolveCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
-
-                                    DebugPrint($"Setting member '{name}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
-
-                                    writer.Write(success);
-                                }
-                                goto default;
-                            case COMInteropCommand.Invoke:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    string name = reader.ReadString();
-                                    COMData[] args = new COMData[reader.ReadInt32()];
-
-                                    for (int i = 0; i < args.Length; ++i)
-                                        args[i] = reader.ReadCOM();
-
-                                    if (Server.TryResolveCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
-                                    {
-                                        writer.Write(true);
-                                        writer.WriteCOM(value);
-                                    }
-                                    else
-                                        writer.Write(false);
-                                }
-                                goto default;
-                            case COMInteropCommand.Delete:
-                                {
-                                    uint id = reader.ReadUInt32();
-
-                                    DebugPrint($"Deleting COM object '{id}'.");
-
-                                    Server.DeleteCOMObject(id);
-                                }
-                                goto default;
-                            case COMInteropCommand.DeleteAll:
-                                DebugPrint($"Deleting all COM objects.");
-
-                                Server.DeleteAllCOMObjects();
-
-                                break;
-                            case COMInteropCommand.GetInfo:
-                                {
-                                    uint id = reader.ReadUInt32();
-                                    COMObjectInfoMode mode = reader.ReadNative<COMObjectInfoMode>();
-                                    string? info = null;
-                                    
-                                    if (Server.TryResolveCOMObject(id, out COMWrapper com))
-                                        com.TryGetInfo(mode, out info);
-
-                                    DebugPrint($"Fetching info '{mode}' of COM object '{id}': {(info is null ? "fail" : "success")}.");
-
-                                    writer.WriteNullable(info);
-                                }
-                                goto default;
-                            case COMInteropCommand.GetAllInfos:
-                                {
-                                    (uint, string, string, COMData)[] objects = Server.IDsInUse
-                                                                                      .Select<uint, (uint, string, string, COMData)?>(id =>
-                                                                                      {
-                                                                                          if (Server.TryResolveCOMObject(id, out COMWrapper com))
-                                                                                          {
-                                                                                              com.TryGetInfo(COMObjectInfoMode.OBJ_CLSID, out string? clsid);
-
-                                                                                              return (id, com.ObjectType.FullName, clsid ?? "<void*>", COMData.FromCOMObjectID(id));
-                                                                                          }
-
-                                                                                          return null;
-                                                                                      })
-                                                                                      .Where(n => n.HasValue)
-                                                                                      .Select(n => n!.Value)
-                                                                                      .ToArray();
-
-                                    writer.Write(objects.Length);
-
-                                    foreach ((uint id, string type, string clsid, COMData com) in objects)
-                                    {
-                                        writer.Write(id);
-                                        writer.Write(type);
-                                        writer.Write(clsid);
-                                        writer.WriteCOM(com);
-                                    }
-                                }
-                                goto default;
-                            case COMInteropCommand command:
-                                DebugPrint($"Recieving '{command}'.");
-
-                                break;
-                            default:
-                                writer.Flush();
-                                server.Flush();
-
-                                break;
-                        }
-
-                    code = 0;
-                }
-                catch (Exception ex)
-                {
-                    code = ex.HResult;
-
-                    StringBuilder sb = new StringBuilder();
-
-                    while (ex is { })
-                    {
-                        sb.Insert(0, $"[{ex.GetType()}] \"{ex.Message}\":\n{ex.StackTrace}\n");
-                        ex = ex.InnerException;
-                    }
-
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(sb.ToString());
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                }
-                finally
-                {
-                    Server.DeleteAllCOMObjects();
-                    _debug_writer?.Flush();
-                    _debug_writer?.Close();
-                    _debug_writer?.Dispose();
-                    _debug_writer = null;
-                }
-
-            return code;
-        }
-
-        public static void DebugPrint(string message)
-        {
-            if (_debug_writer is { } wr)
-                try
-                {
-                    message = message.Trim();
-
-                    wr.Write(message);
-                    wr.Flush();
-                }
-                catch
-                {
-                }
-        }
-    }
-
     public sealed class COMServer
-        : ICOMResolver<COMWrapper>
+        : ExternalServiceProvider<COMServer>
+        , ICOMResolver<COMWrapper>
     {
         private readonly ConcurrentDictionary<uint, COMWrapper> _com_objects = new();
         private readonly object _mutex = new object();
@@ -290,8 +23,194 @@ namespace Unknown6656.AutoIt3.COM.Server
 
         public uint[] IDsInUse => _com_objects.Keys.ToArray();
 
+        public override string ChannelName { get; } = "COM";
+
 
         public COMServer() => COMData.RegisterCOMResolver(this);
+
+        public static int Main(string[] args) => Run<COMServer>(args);
+
+        protected override void OnStartup(string[] argv)
+        {
+        }
+
+        protected override void OnShutdown(bool external_request) => DeleteAllCOMObjects();
+
+        protected override void MainLoop(ref bool shutdown)
+        {
+            switch (DataReader.ReadNative<COMInteropCommand>())
+            {
+                case COMInteropCommand.Quit:
+                    DebugPrint("Shutting down COM server.");
+
+                    shutdown = true;
+
+                    break;
+                case COMInteropCommand.Create:
+                    {
+                        string classname = DataReader.ReadString();
+                        string? servername = DataReader.ReadNullable();
+                        string? username = DataReader.ReadNullable();
+                        string? passwd = DataReader.ReadNullable();
+                        uint? id = CreateCOMObject(classname, servername, username, passwd);
+
+                        DebugPrint($"Created COM object '{classname}' on '{username}'@'{servername}'. COM object ID: {id}");
+
+                        DataWriter.WriteNullable(id);
+                    }
+                    goto default;
+                case COMInteropCommand.EnumerateMembers:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        string[] members = GetMemberNames(id);
+
+                        DebugPrint($"Enumerating members of COM object '{id}' ({members.Length} members).");
+
+                        DataWriter.Write(members.Length);
+
+                        foreach (string member in members)
+                            DataWriter.Write(member);
+                    }
+                    goto default;
+                case COMInteropCommand.GetIndex:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        COMData index = DataReader.ReadCOM();
+                        COMData? value_o = null;
+                        bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
+
+                        DebugPrint($"Fetching index '{index}' of COM object '{id}': {(success ? "success" : "fail")}.");
+
+                        DataWriter.Write(success);
+
+                        if (success)
+                            DataWriter.WriteCOM(value_o!.Value);
+                    }
+                    goto default;
+                case COMInteropCommand.SetIndex:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        COMData index = DataReader.ReadCOM();
+                        COMData value = DataReader.ReadCOM();
+                        bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
+
+                        DebugPrint($"Setting index '{index}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
+
+                        DataWriter.Write(success);
+                    }
+                    goto default;
+                case COMInteropCommand.GetMember:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        string name = DataReader.ReadString();
+                        COMData? value_o = null;
+                        bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
+
+                        DebugPrint($"Fetching member '{name}' of COM object '{id}': {(success ? "success" : "fail")}.");
+
+                        DataWriter.Write(success);
+
+                        if (success)
+                            DataWriter.WriteCOM(value_o!.Value);
+                    }
+                    goto default;
+                case COMInteropCommand.SetMember:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        string name = DataReader.ReadString();
+                        COMData value = DataReader.ReadCOM();
+                        bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
+
+                        DebugPrint($"Setting member '{name}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
+
+                        DataWriter.Write(success);
+                    }
+                    goto default;
+                case COMInteropCommand.Invoke:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        string name = DataReader.ReadString();
+                        COMData[] args = new COMData[DataReader.ReadInt32()];
+
+                        for (int i = 0; i < args.Length; ++i)
+                            args[i] = DataReader.ReadCOM();
+
+                        if (TryResolveCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
+                        {
+                            DataWriter.Write(true);
+                            DataWriter.WriteCOM(value);
+                        }
+                        else
+                            DataWriter.Write(false);
+                    }
+                    goto default;
+                case COMInteropCommand.Delete:
+                    {
+                        uint id = DataReader.ReadUInt32();
+
+                        DebugPrint($"Deleting COM object '{id}'.");
+
+                        DeleteCOMObject(id);
+                    }
+                    goto default;
+                case COMInteropCommand.DeleteAll:
+                    DebugPrint($"Deleting all COM objects.");
+
+                    DeleteAllCOMObjects();
+
+                    break;
+                case COMInteropCommand.GetInfo:
+                    {
+                        uint id = DataReader.ReadUInt32();
+                        COMObjectInfoMode mode = DataReader.ReadNative<COMObjectInfoMode>();
+                        string? info = null;
+
+                        if (TryResolveCOMObject(id, out COMWrapper com))
+                            com.TryGetInfo(mode, out info);
+
+                        DebugPrint($"Fetching info '{mode}' of COM object '{id}': {(info is null ? "fail" : "success")}.");
+
+                        DataWriter.WriteNullable(info);
+                    }
+                    goto default;
+                case COMInteropCommand.GetAllInfos:
+                    {
+                        (uint, string, string, COMData)[] objects = IDsInUse.Select<uint, (uint, string, string, COMData)?>(id =>
+                                                                             {
+                                                                                 if (TryResolveCOMObject(id, out COMWrapper com))
+                                                                                 {
+                                                                                     com.TryGetInfo(COMObjectInfoMode.OBJ_CLSID, out string? clsid);
+                                                                             
+                                                                                     return (id, com.ObjectType.FullName, clsid ?? "<void*>", COMData.FromCOMObjectID(id));
+                                                                                 }
+                                                                             
+                                                                                 return null;
+                                                                             })
+                                                                             .Where(n => n.HasValue)
+                                                                             .Select(n => n!.Value)
+                                                                             .ToArray();
+
+                        DataWriter.Write(objects.Length);
+
+                        foreach ((uint id, string type, string clsid, COMData com) in objects)
+                        {
+                            DataWriter.Write(id);
+                            DataWriter.Write(type);
+                            DataWriter.Write(clsid);
+                            DataWriter.WriteCOM(com);
+                        }
+                    }
+                    goto default;
+                case COMInteropCommand command:
+                    DebugPrint($"Recieving '{command}'.");
+
+                    break;
+                default:
+                    DataWriter.Flush();
+
+                    break;
+            }
+        }
 
         public uint AddCOMObject(object raw)
         {
@@ -299,7 +218,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                 if (ReferenceEquals(_com_objects[key], raw) || ReferenceEquals(_com_objects[key].COMObject, raw))
                     return key;
 
-            COMWrapper cw = raw as COMWrapper ?? new COMWrapper(raw);
+            COMWrapper cw = raw as COMWrapper ?? new COMWrapper(this, raw);
 
             lock(_mutex)
             {
@@ -320,7 +239,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                 object? raw = null;
 
                 if (Guid.TryParse(classname, out Guid uuid))
-                    raw = new COMWrapper(uuid);
+                    raw = new COMWrapper(this, uuid);
                 else if (Type.GetTypeFromProgID(classname, server, false) is Type t && Activator.CreateInstance(t) is { } com)
                     raw = com; // TODO : username | passwd
 
@@ -329,7 +248,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
             catch (Exception ex)
             {
-                Program.DebugPrint(ex.Message);
+                DebugPrint(ex.Message);
             }
 
             return null;
@@ -434,6 +353,8 @@ namespace Unknown6656.AutoIt3.COM.Server
 
         public Type ObjectType { get; }
 
+        public COMServer Server { get; }
+
         #endregion
         #region .CCTOR / .CTOR / .DTOR
 
@@ -448,18 +369,19 @@ namespace Unknown6656.AutoIt3.COM.Server
         }
 #pragma warning restore CA1810
 
-        internal COMWrapper(Guid guid)
-            : this(Activator.CreateInstance(Type.GetTypeFromCLSID(guid, true)!, true)!)
+        internal COMWrapper(COMServer server, Guid guid)
+            : this(server, Activator.CreateInstance(Type.GetTypeFromCLSID(guid, true)!, true)!)
         {
         }
 
-        internal COMWrapper(object com)
-            : this(com, com.GetType())
+        internal COMWrapper(COMServer server, object com)
+            : this(server, com, com.GetType())
         {
         }
 
-        internal COMWrapper(object com, Type type)
+        internal COMWrapper(COMServer server, object com, Type type)
         {
+            Server = server;
             COMObject = com;
             ObjectType = type;
             IUnknownPtr = Marshal.GetIUnknownForObject(com);
@@ -481,7 +403,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             _cached_members = members.ToArray();
 
-            Program.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) created.");
+            Server.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) created.");
         }
 
         ~COMWrapper() => Dispose(false);
@@ -542,7 +464,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                 IsDisposed = true;
 
-                Program.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) disposed.");
+                Server.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) disposed.");
             }
         }
 
@@ -744,7 +666,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         args ??= new object[parms.Length];
 
                         for (int i = 0; i < parms.Length; ++i)
-                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
+                            args[i] = Unbox(Server.Cast(args[i], parms[i].ParameterType));
 
                         type = method.ReturnType;
                         value = method.Invoke(method.IsStatic ? null : COMObject, args);
@@ -757,7 +679,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         args ??= new object[parms.Length];
 
                         for (int i = 0; i < parms.Length; ++i)
-                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
+                            args[i] = Unbox(Server.Cast(args[i], parms[i].ParameterType));
 
                         type = property.PropertyType;
 
@@ -781,7 +703,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 case FieldInfo field:
                     {
-                        value = Unbox(Program.Server.Cast(value, field.FieldType));
+                        value = Unbox(Server.Cast(value, field.FieldType));
 
                         field.SetValue(field.IsStatic ? null : COMObject, value);
                     }
@@ -797,9 +719,9 @@ namespace Unknown6656.AutoIt3.COM.Server
                         args ??= new object[parms.Length];
 
                         for (int i = 0; i < parms.Length; ++i)
-                            args[i] = Unbox(Program.Server.Cast(args[i], parms[i].ParameterType));
+                            args[i] = Unbox(Server.Cast(args[i], parms[i].ParameterType));
 
-                        value = Unbox(Program.Server.Cast(value, property.PropertyType));
+                        value = Unbox(Server.Cast(value, property.PropertyType));
 
                         if (args.Length == 0)
                             property.SetValue(COMObject, value);
@@ -849,7 +771,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                     // TODO : force typecast for [com]
 
-                    COMWrapper wrapper = new COMWrapper(com, type);
+                    COMWrapper wrapper = new COMWrapper(Server, com, type);
 
                     _objects.Add(wrapper);
 
@@ -873,7 +795,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
         }
 
-        public static COMWrapper FromGUID(Guid guid) => new COMWrapper(guid);
+        public static COMWrapper FromGUID(COMServer server, Guid guid) => new COMWrapper(server, guid);
 
         private static bool IsComObject(object o) => o.GetType().Name == "__ComObject";
 

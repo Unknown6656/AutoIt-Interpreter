@@ -5,6 +5,7 @@ using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.Mathematics.Numerics;
@@ -14,12 +15,13 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     using Random = Mathematics.Numerics.Random;
 
-    using static MainProgram;
+    // using static MainProgram;
     using static AST;
 
 
     public sealed class Interpreter
         : IDisposable
+        , IDebugPrintingService
     {
         private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
         private readonly object _main_thread_mutex = new object();
@@ -76,15 +78,15 @@ namespace Unknown6656.AutoIt3.Runtime
             Telemetry = telemetry;
             LanguageLoader = lang_loader;
             ScriptScanner = new ScriptScanner(this);
-            PluginLoader = new PluginLoader(this, PLUGIN_DIR);
+            PluginLoader = new PluginLoader(this, MainProgram.PLUGIN_DIR);
 
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
 
             if (PluginLoader.LoadedPlugins.Count is int i and > 0)
-                PrintInterpreterMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
+                MainProgram.PrintInterpreterMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
             else
-                PrintInterpreterMessage("general.no_plugins_loaded");
+                MainProgram.PrintInterpreterMessage("general.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
 
@@ -147,7 +149,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Print(CallFrame current_frame, Variant value) => Print(current_frame, value as object);
 
-        public void Print(CallFrame current_frame, object? value) => PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
+        public void Print(CallFrame current_frame, object? value) => MainProgram.PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
+
+        void IDebugPrintingService.Print(string channel, string message) => MainProgram.PrintChannelMessage(channel, message);
 
         public InterpreterResult Run(ScriptFunction entry_point, Variant[] args)
         {
@@ -212,7 +216,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, LanguageLoader.CurrentLanguage?[key, args] ?? key);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.LanguageLoader.CurrentLanguage?[key, args] ?? key);
     }
 }
 
