@@ -157,6 +157,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             //ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
+            ProvidedNativeFunction.Create(nameof(OnAutoItExitRegister), 1, OnAutoItExitRegister),
+            ProvidedNativeFunction.Create(nameof(OnAutoItExitUnRegister), 1, OnAutoItExitUnRegister),
             ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
             ProvidedNativeFunction.Create(nameof(ProcessClose), 1, ProcessClose),
             ProvidedNativeFunction.Create(nameof(ProcessExists), 1, ProcessExists),
@@ -1931,6 +1933,34 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
 
             return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Null);
+        }
+
+        internal static FunctionReturnValue OnAutoItExitRegister(CallFrame frame, Variant[] args)
+        {
+            Union<InterpreterError, AU3CallFrame> caller = GetAu3Caller(frame, nameof(OnAutoItExitRegister));
+
+            if (caller.Is(out AU3CallFrame? au3fame))
+            {
+                string func = args[0].IsFunction(out ScriptFunction? f) ? f.Name : args[0].ToString();
+
+                return (Variant)au3fame.CurrentFunction.Script.AddExitFunction(func, au3fame.CurrentLocation);
+            }
+            else
+                return Variant.False;
+        }
+
+        internal static FunctionReturnValue OnAutoItExitUnRegister(CallFrame frame, Variant[] args)
+        {
+            Union<InterpreterError, AU3CallFrame> caller = GetAu3Caller(frame, nameof(OnAutoItExitUnRegister));
+
+            if (caller.Is(out AU3CallFrame? au3fame))
+            {
+                string func = args[0].IsFunction(out ScriptFunction? f) ? f.Name : args[0].ToString();
+
+                return (Variant)au3fame.CurrentFunction.Script.RemoveExitFunction(func);
+            }
+            else
+                return Variant.False;
         }
 
         internal static unsafe FunctionReturnValue Ping(CallFrame frame, Variant[] args)

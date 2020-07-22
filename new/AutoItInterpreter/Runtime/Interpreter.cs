@@ -123,7 +123,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             GlobalObjectStorage.Dispose();
-            GUIConnector.Dispose();
+            // GUIConnector.Dispose();
             COMConnector?.Dispose();
         }
 

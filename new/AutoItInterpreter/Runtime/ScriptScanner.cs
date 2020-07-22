@@ -414,29 +414,42 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScannedScript(FileInfo location) => Location = location;
 
-        internal AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
+        public AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
         {
             _functions.TryGetValue(name.ToUpperInvariant(), out ScriptFunction? func);
 
             return func as AU3Function ?? AddFunction(new AU3Function(this, name, @params));
         }
 
-        internal T AddFunction<T>(T function) where T : ScriptFunction
+        public T AddFunction<T>(T function)
+            where T : ScriptFunction
         {
             _functions[function.Name.ToUpperInvariant()] = function;
 
             return function;
         }
 
-        public void AddStartupFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
+        public bool AddStartupFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
 
-        public void AddExitFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
+        public bool AddExitFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
 
-        private void AddFunction(string name, SourceLocation decl, in List<(string, SourceLocation)> list)
+        public bool RemoveStartupFunction(string name) => RemoveFunction(name, in _startup);
+
+        public bool RemoveExitFunction(string name) => RemoveFunction(name, in _startup);
+
+        private bool AddFunction(string name, SourceLocation decl, in List<(string, SourceLocation)> list)
         {
             if (!list.Any(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)))
+            {
                 list.Add((name.ToUpperInvariant(), decl));
+
+                return true;
+            }
+            else
+                return false;
         }
+
+        private bool RemoveFunction(string name, in List<(string, SourceLocation)> list) => list.RemoveAll(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)) != 0;
 
         public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
 

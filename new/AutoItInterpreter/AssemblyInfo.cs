@@ -1,15 +1,15 @@
 
 //////////////////////////////////////////////////////////////////////////
-// Auto-generated 2020-07-22 18:43:38.353                               //
+// Auto-generated 2020-07-22 19:11:54.040                               //
 // ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION         //
 //////////////////////////////////////////////////////////////////////////
 
 using System.Reflection;
 using System;
 
-[assembly: AssemblyVersion("0.6.1210.7324")]
-[assembly: AssemblyFileVersion("0.6.1210.7324")]
-[assembly: AssemblyInformationalVersion("81dea96d7ef5ab47e64484df7b78269616e64bf7")]
+[assembly: AssemblyVersion("0.6.1212.7324")]
+[assembly: AssemblyFileVersion("0.6.1212.7324")]
+[assembly: AssemblyInformationalVersion("ac2e92e91367c892f8971012422cc9691e1ebdcd")]
 [assembly: AssemblyCompany("Unknown6656")]
 [assembly: AssemblyCopyright("Copyright © 2018 - 2020, Unknown6656")]
 [assembly: AssemblyProduct("AutoIt3 Interpreter by Unknown6656")]
@@ -35,11 +35,11 @@ public static class __module__
     /// <summary>
     /// The interpreter's current version.
     /// </summary>
-    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1210.7324");
+    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1212.7324");
     /// <summary>
     /// The Git hash associated with the current build.
     /// </summary>
-    public static string GitHash { get; } = "81dea96d7ef5ab47e64484df7b78269616e64bf7";
+    public static string GitHash { get; } = "ac2e92e91367c892f8971012422cc9691e1ebdcd";
     /// <summary>
     /// The URL of this project's Git(Hub) repository.
     /// </summary>
