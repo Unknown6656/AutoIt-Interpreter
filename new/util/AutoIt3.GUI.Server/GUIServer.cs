@@ -16,7 +16,7 @@ namespace Unknown6656.AutoIt3.GUI
         {
             AppBuilder builder = BuildAvaloniaApp();
 
-            builder.StartWithClassicDesktopLifetime(args);
+            builder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnLastWindowClose);
         }
 
         protected override void MainLoop(ref bool shutdown)

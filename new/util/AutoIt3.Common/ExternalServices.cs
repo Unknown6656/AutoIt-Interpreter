@@ -22,10 +22,10 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         ARGUMENTS:
             <data-pipe> <debugging-pipe> <lang-path> [...]
      */
-    public abstract class ExternalServiceProvider <@this>
+    public abstract class ExternalServiceProvider<@this>
         where @this : ExternalServiceProvider<@this>, new()
     {
-        private BinaryWriter? _debug_writer = null;
+        private StreamWriter? _debug_writer = null;
         private volatile bool _running = true;
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized
@@ -63,12 +63,13 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             if (argv.Length < 3)
                 return -1;
 
-            string pipe_data = argv[0];
-            string pipe_debug = argv[1];
+            string pipe_idata = argv[0];
+            string pipe_odata = argv[1];
+            string pipe_debug = argv[2];
 
             LanguageLoader loader = new LanguageLoader();
 
-            loader.LoadLanguagePackFromYAMLFile(new FileInfo(argv[2]));
+            loader.LoadLanguagePackFromYAMLFile(new FileInfo(argv[3]));
 
             T provider = new T { UILanguage = loader.CurrentLanguage };
             int exitcode;
@@ -77,36 +78,26 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             {
                 using Task debug_task = Task.Factory.StartNew(async delegate
                 {
-                    using NamedPipeClientStream debug = new NamedPipeClientStream(argv[1]);
+                    using AnonymousPipeClientStream debug = new AnonymousPipeClientStream(PipeDirection.Out, pipe_debug);
 
-                    await debug.ConnectAsync();
-
-                    provider._debug_writer = new BinaryWriter(debug);
+                    provider._debug_writer = new StreamWriter(debug) { AutoFlush = true };
 
                     while (provider._running)
                         await Task.Delay(100);
-
-                    provider._debug_writer.Close();
-                    provider._debug_writer.Dispose();
-                    provider._debug_writer = null;
-                    debug.Close();
-                    debug.Dispose();
                 });
-                using NamedPipeServerStream server = new NamedPipeServerStream(argv[0]);
-
-                server.WaitForConnection();
-
-                using BinaryReader reader = new BinaryReader(server);
-                using BinaryWriter writer = new BinaryWriter(server);
+                using AnonymousPipeClientStream pipe_in = new AnonymousPipeClientStream(PipeDirection.In, pipe_idata);
+                using AnonymousPipeClientStream pipe_out = new AnonymousPipeClientStream(PipeDirection.Out, pipe_odata);
+                using BinaryReader reader = new BinaryReader(pipe_in);
+                using BinaryWriter writer = new BinaryWriter(pipe_out);
 
                 provider.DataWriter = writer;
                 provider.DataReader = reader;
-                provider.DebugPrint("debug.external.server.started");
+                provider.DebugPrint("debug.external.server.started", pipe_idata, pipe_odata, pipe_debug);
                 provider.OnStartup(argv.Skip(3).ToArray());
 
                 bool external = true;
 
-                while (provider._running && server.IsConnected)
+                while (provider._running && pipe_in.IsConnected)
                 {
                     bool shutdown = false;
 
@@ -119,7 +110,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                     }
                 }
 
-                provider.DebugPrint("debug.external.server.stopped");
+                provider.DebugPrint("debug.external.server.stopped", pipe_idata, pipe_odata, pipe_debug);
                 provider.OnShutdown(external);
 
                 exitcode = 0;
@@ -150,17 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 {
                 }
 
-            try
-            {
-                provider._debug_writer?.Flush();
-                provider._debug_writer?.Close();
-            }
-            catch
-            {
-            }
-
-            provider._debug_writer?.Dispose();
-            provider._debug_writer = null;
+            Environment.Exit(exitcode);
 
             return exitcode;
         }
@@ -175,8 +156,10 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         : IDisposable
         where @this : ExternalServiceConnector<@this>
     {
-        private readonly NamedPipeClientStream? _client;
-        private readonly Task _process_monitor;
+        private readonly AnonymousPipeServerStream _pipe_debug;
+        private readonly AnonymousPipeServerStream _pipe_idata;
+        private readonly AnonymousPipeServerStream _pipe_odata;
+        private readonly Task? _process_monitor;
         private readonly Task? _debug_monitor;
 
         protected BinaryReader DataReader { get; }
@@ -191,44 +174,61 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
 
         public Process? ServerProcess { get; }
 
-        public string PipeName { get; }
-
 
         protected ExternalServiceConnector(FileInfo server, bool use_dotnet, IDebugPrintingService printer, LanguagePack ui_language)
         {
             Printer = printer;
             UILanguage = ui_language;
 
-            DebugPrint("debug.external.starting");
+            DebugPrint("debug.external.starting", server.FullName);
 
-            PipeName = $"__autoit3__{Guid.NewGuid():N}";
+            _pipe_debug = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+            _pipe_idata = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+            _pipe_odata = new AnonymousPipeServerStream(PipeDirection.Out, HandleInheritability.Inheritable);
+
+            string name_debug = _pipe_debug.GetClientHandleAsString();
+            string name_idata = _pipe_idata.GetClientHandleAsString();
+            string name_odata = _pipe_odata.GetClientHandleAsString();
 
             try
             {
-                string args = $"{PipeName} {PipeName}D \"{ui_language.FilePath}\"";
+                string args = $"{name_odata} {name_idata} {name_debug} \"{ui_language.FilePath}\"";
                 string server_path = Path.GetFullPath(server.FullName);
                 ProcessStartInfo psi = use_dotnet ? new ProcessStartInfo("dotnet", $"\"{server_path}\" {args}") : new ProcessStartInfo(server_path, args);
 
                 ServerProcess = Process.Start(psi);
 
                 _process_monitor = Task.Factory.StartNew(ProcessMonitorTask);
-                _debug_monitor = Task.Factory.StartNew(async () => await DebugMonitorTask(PipeName + 'D'));
-                _client = new NamedPipeClientStream(PipeName);
-                _client.Connect(5_000);
-                DataReader = new BinaryReader(_client);
-                DataWriter = new BinaryWriter(_client);
+                _debug_monitor = Task.Factory.StartNew(delegate
+                {
+                    using StreamReader _debug_reader = new StreamReader(_pipe_debug);
 
-                DebugPrint("debug.external.started", PipeName, ServerProcess.Id);
+                    while (ServerProcess?.HasExited is false)
+                        Printer.Print(ChannelName + "-Provider", _debug_reader.ReadLine().Trim());
+
+                    _debug_reader.Close();
+                });
+
+                _pipe_debug.DisposeLocalCopyOfClientHandle();
+                _pipe_idata.DisposeLocalCopyOfClientHandle();
+                _pipe_odata.DisposeLocalCopyOfClientHandle();
+
+                DataReader = new BinaryReader(_pipe_idata);
+                DataWriter = new BinaryWriter(_pipe_odata);
+
+                DebugPrint("debug.external.started", server.FullName, name_odata, name_idata, name_debug, ServerProcess.Id);
 #if DEBUG
                 if (System.Diagnostics.Debugger.IsAttached && Environment.OSVersion.Platform is PlatformID.Win32NT)
                     AttachVSDebugger();
 #endif
             }
-            catch (Exception ex)
+            catch
             {
                 Stop(true);
             }
         }
+
+        ~ExternalServiceConnector() => Dispose(false);
 #if DEBUG
         private void AttachVSDebugger()
         {
@@ -252,18 +252,6 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             }
         }
 #endif
-        private async Task DebugMonitorTask(string debug_channel_name)
-        {
-            using NamedPipeServerStream _debug_server = new NamedPipeServerStream(debug_channel_name);
-
-            await _debug_server.WaitForConnectionAsync();
-
-            using BinaryReader _debug_reader = new BinaryReader(_debug_server);
-
-            while (ServerProcess?.HasExited is false)
-                Printer.Print(ChannelName + "-Provider", _debug_reader.ReadString());
-        }
-
         private async Task ProcessMonitorTask()
         {
             while (ServerProcess?.HasExited is false)
@@ -280,58 +268,90 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         {
             try
             {
-                if (ServerProcess?.HasExited is true)
+                if (force || !(ServerProcess?.HasExited is true))
                 {
-                    try
-                    {
-                        BeforeShutdown();
-                    }
-                    catch
-                    {
-                    }
+                    DebugPrint("debug.external.stopping", ServerProcess?.Id);
 
-                    DataWriter?.Flush();
-                    _client?.Flush();
-
-                    try
+                    Try(BeforeShutdown);
+                    Try(delegate
                     {
-                        if (force)
-                            ServerProcess?.WaitForExit(1000);
-                        else
-                            ServerProcess?.WaitForExit();
-                    }
-                    catch
+                        DataWriter?.Flush();
+                        _pipe_odata?.Flush();
+                    });
+                    Try(() => ServerProcess?.WaitForExit(1000));
+                    Try(delegate
                     {
-                    }
+                        DataWriter?.Close();
+                        DataReader?.Close();
+                    });
 
-                    DataWriter?.Close();
-                    DataReader?.Close();
-                    _client?.Close();
+                    if (_pipe_odata is { })
+                        Try(_pipe_odata.Close);
+
+                    if (_pipe_idata is { })
+                        Try(_pipe_idata.Close);
 
                     if (force)
-                        ServerProcess?.Kill();
+                    {
+                        Try(() => ServerProcess?.Kill());
+                        // Try(delegate
+                        // {
+                        //     _debug_monitor?.Wait();
+                        //     _process_monitor?.Wait();
+                        // });
+                    }
 
-                    _debug_monitor?.Wait();
-                    _process_monitor.Wait();
+                    DebugPrint("debug.external.stopped");
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine(ex);
             }
+        }
+
+        private void Dispose(bool disposing)
+        {
+            Stop(!disposing);
+
+            DebugPrint("debug.external.disposed");
+
+            Try(() => ServerProcess?.Kill());
+            Try(() => ServerProcess?.Dispose());
+            DataWriter?.Dispose();
+            DataReader?.Dispose();
+            _pipe_idata?.Dispose();
+            _pipe_odata?.Dispose();
+            _pipe_debug?.Dispose();
+
+            Try(delegate
+            {
+                _debug_monitor?.Wait();
+                _debug_monitor?.Dispose();
+            });
+            Try(delegate
+            {
+                _process_monitor?.Wait();
+                _process_monitor?.Dispose();
+            });
         }
 
         public void Dispose()
         {
-            DebugPrint("debug.external.disposed", PipeName, ServerProcess?.Id);
+            Dispose(true);
 
-            Stop(false);
+            GC.SuppressFinalize(this);
+        }
 
-            ServerProcess?.Dispose();
-            DataWriter?.Dispose();
-            DataReader?.Dispose();
-            _client?.Dispose();
-            _debug_monitor?.Dispose();
-            _process_monitor?.Dispose();
+        private static void Try(Action a)
+        {
+            try
+            {
+                a();
+            }
+            catch
+            {
+            }
         }
     }
 

@@ -33,14 +33,16 @@ strings:
         interpreter_loaded: "Interpreter loaded. Running script '{0}' ..."
         plugins_loaded: "{0} plugin files found in ""{1}"" ({2} modules)"
         external:
-            starting: "Starting external service connector ..."
-            started: "External service connector started (pipe name: '{0}', pid: {1:x8})."
-            disposed: "Disposing external service connector (pipe name: '{0}', pid: {1:x8}) ..."
+            starting: "Starting external service connector '{0}' ..."
+            started: "External service connector started (file: '{0}', odata: '{1}', idata: '{2}', debug: '{3}', pid: {4:x8})."
+            stopping: "Stopping external service connector (pid: {0:x8}) ..."
+            stopped: "External service connector stopped."
+            disposed: "External service connector disposed."
             vsdbg_attached: "Visual Studio debugger attached to the external service provider."
             vsdbg_error: "Unable to attach Visual Studio debugger to the external service provider."
             server:
-                started: "External service provider started."
-                stopped: "External service provider stopped."
+                started: "External service provider started (idata: '{0}', odata: '{1}', debug: '{2}', pid: {3:x8})."
+                stopped: "External service provider stopped (idata: '{0}', odata: '{1}', debug: '{2}', pid: {3:x8})."
         com:
             created: "Created COM object '{0}' on '{1}'@'{2}'. COM object ID: {3}"
             enum_members: "Enumerating members of COM object '{0}' ({1} members)."
