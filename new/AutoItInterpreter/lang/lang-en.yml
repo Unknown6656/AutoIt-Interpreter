@@ -4,6 +4,7 @@ meta:
     beta: true
     author: "unknown6656"
 strings:
+    __raw__: "{0}"
     banner:
         written_by: "Written by {0}, {1}"
         version: "Version"
@@ -41,6 +42,21 @@ strings:
                 started: "External service provider started."
                 stopped: "External service provider stopped."
         com:
+            created: "Created COM object '{0}' on '{1}'@'{2}'. COM object ID: {3}"
+            enum_members: "Enumerating members of COM object '{0}' ({1} members)."
+            get_index: "Fetching index '{0}' of COM object '{1}': {2}."
+            set_index: "Setting index '{0}' of COM object '{1}' to '{2}': {3}."
+            get_member: "Fetching member '{0}' of COM object '{1}': {2}."
+            set_member: "Setting member '{0}' of COM object '{1}' to '{2}': {3}."
+            invoke: "Invoking member '{0}' of COM object '{1}' with ({2}): {3}."
+            delete: "Deleting COM object '{0}'."
+            delete_all: "Deleting all COM objects."
+            get_info: "Fetching info '{0}' of COM object '{1}': {2}."
+            cmd_recv: "Recieving '{0}'."
+            wrapper:
+                created: "{0:x16}h ({1}) created."
+                disposed: "{0:x16}h ({1}) disposed."
+
             # TODO
         telemetry:
             exit_code: "Exit code: {0}     Time: {1} (Total), {2} (Script)"

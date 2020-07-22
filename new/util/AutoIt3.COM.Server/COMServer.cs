@@ -41,8 +41,6 @@ namespace Unknown6656.AutoIt3.COM.Server
             switch (DataReader.ReadNative<COMInteropCommand>())
             {
                 case COMInteropCommand.Quit:
-                    DebugPrint("Shutting down COM server.");
-
                     shutdown = true;
 
                     break;
@@ -54,7 +52,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         string? passwd = DataReader.ReadNullable();
                         uint? id = CreateCOMObject(classname, servername, username, passwd);
 
-                        DebugPrint($"Created COM object '{classname}' on '{username}'@'{servername}'. COM object ID: {id}");
+                        DebugPrint("debug.com.created", classname, username, servername, id);
 
                         DataWriter.WriteNullable(id);
                     }
@@ -64,7 +62,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         uint id = DataReader.ReadUInt32();
                         string[] members = GetMemberNames(id);
 
-                        DebugPrint($"Enumerating members of COM object '{id}' ({members.Length} members).");
+                        DebugPrint("debug.com.enum_members", id, members.Length);
 
                         DataWriter.Write(members.Length);
 
@@ -79,7 +77,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         COMData? value_o = null;
                         bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TryGetIndex(index, out value_o);
 
-                        DebugPrint($"Fetching index '{index}' of COM object '{id}': {(success ? "success" : "fail")}.");
+                        DebugPrint("debug.com.get_index", index, id, success ? "success" : "fail");
 
                         DataWriter.Write(success);
 
@@ -94,7 +92,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         COMData value = DataReader.ReadCOM();
                         bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TrySetIndex(index, value);
 
-                        DebugPrint($"Setting index '{index}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
+                        DebugPrint("debug.com.set_index", index, id, value, success ? "success" : "fail");
 
                         DataWriter.Write(success);
                     }
@@ -106,7 +104,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         COMData? value_o = null;
                         bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TryGetMember(name, out value_o);
 
-                        DebugPrint($"Fetching member '{name}' of COM object '{id}': {(success ? "success" : "fail")}.");
+                        DebugPrint("debug.com.get_member", name, id, success ? "success" : "fail");
 
                         DataWriter.Write(success);
 
@@ -121,7 +119,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         COMData value = DataReader.ReadCOM();
                         bool success = TryResolveCOMObject(id, out COMWrapper com) && com.TrySetMember(name, value);
 
-                        DebugPrint($"Setting member '{name}' of COM object '{id}' to '{value}': {(success ? "success" : "fail")}.");
+                        DebugPrint("debug.com.set_member", name, id, value, success ? "success" : "fail");
 
                         DataWriter.Write(success);
                     }
@@ -137,24 +135,30 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                         if (TryResolveCOMObject(id, out COMWrapper com) && com.TryInvoke(name, args, out COMData? value_o) && value_o is COMData value)
                         {
+                            DebugPrint("debug.com.invoke", name, id, string.Join(", ", args), "success");
+
                             DataWriter.Write(true);
                             DataWriter.WriteCOM(value);
                         }
                         else
+                        {
+                            DebugPrint("debug.com.invoke", name, id, string.Join(", ", args), "fail");
+
                             DataWriter.Write(false);
+                        }
                     }
                     goto default;
                 case COMInteropCommand.Delete:
                     {
                         uint id = DataReader.ReadUInt32();
 
-                        DebugPrint($"Deleting COM object '{id}'.");
+                        DebugPrint("debug.com.delete", id);
 
                         DeleteCOMObject(id);
                     }
                     goto default;
                 case COMInteropCommand.DeleteAll:
-                    DebugPrint($"Deleting all COM objects.");
+                    DebugPrint("debug.com.delete_all");
 
                     DeleteAllCOMObjects();
 
@@ -168,7 +172,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                         if (TryResolveCOMObject(id, out COMWrapper com))
                             com.TryGetInfo(mode, out info);
 
-                        DebugPrint($"Fetching info '{mode}' of COM object '{id}': {(info is null ? "fail" : "success")}.");
+                        DebugPrint("debug.com.get_info", mode, id, info is null ? "fail" : "success");
 
                         DataWriter.WriteNullable(info);
                     }
@@ -202,7 +206,7 @@ namespace Unknown6656.AutoIt3.COM.Server
                     }
                     goto default;
                 case COMInteropCommand command:
-                    DebugPrint($"Recieving '{command}'.");
+                    DebugPrint("debug.com.cmd_recv", command);
 
                     break;
                 default:
@@ -248,7 +252,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
             catch (Exception ex)
             {
-                DebugPrint(ex.Message);
+                DebugPrint("__raw__", ex.Message);
             }
 
             return null;
@@ -403,7 +407,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             _cached_members = members.ToArray();
 
-            Server.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) created.");
+            Server.DebugPrint("debug.com.wrapper.created", (long)IUnknownPtr, ObjectType);
         }
 
         ~COMWrapper() => Dispose(false);
@@ -415,7 +419,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             GC.SuppressFinalize(this);
         }
 
-        private void Dispose(bool disposing)
+        private void Dispose(bool _)
         {
             if (!IsDisposed)
             {
@@ -464,7 +468,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                 IsDisposed = true;
 
-                Server.DebugPrint($"{(long)IUnknownPtr:x16}h ({ObjectType}) disposed.");
+                Server.DebugPrint("debug.com.wrapper.disposed", (long)IUnknownPtr, ObjectType);
             }
         }
 
