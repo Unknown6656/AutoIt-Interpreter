@@ -199,7 +199,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.Handle"/></term>
-        ///         <description><see cref="int"/></description>
+        ///         <description><see cref="uint"/></description>
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.NETObject"/></term>
@@ -356,9 +356,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 return $"${v.Name}:{v.Value.ToDebugString(interpreter)}";
             else if (RawData is ScriptFunction func)
                 return $"<{func.Location.FullFileName}>{func.Name}{func.ParameterCount}";
-            else if (Type is VariantType.Handle && RawData is int id)
+            else if (Type is VariantType.Handle)
             {
                 string data = "invalid";
+                uint id = (uint)this;
 
                 if (interpreter.GlobalObjectStorage.TryGet(id, out object? obj))
                     data = obj?.GetType().FullName ?? "null";
@@ -382,6 +383,7 @@ namespace Unknown6656.AutoIt3.Runtime
             string s => s.Length > 0,
             decimal d => d != 0m,
             int l => l != 0,
+            uint l => l != 0,
             bool b => b,
             null => false,
             _ => true,
@@ -397,6 +399,7 @@ namespace Unknown6656.AutoIt3.Runtime
             true => 1m,
             false => 0m,
             int i => i,
+            uint i => i,
             decimal d => d,
             string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
             string s => decimal.TryParse(s, out decimal d) ? d : 0m,
@@ -1230,12 +1233,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return handle;
         }
 
-        public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item)
-        {
-            item = null;
-
-            return handle.Type is VariantType.Handle && _objects.TryGetValue((uint)handle, out item);
-        }
+        public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue((uint)handle, out item);
 
         public bool TryGet<T>(Variant handle, out T? item) where T : class
         {

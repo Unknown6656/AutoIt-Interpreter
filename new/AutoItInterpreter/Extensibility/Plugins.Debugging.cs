@@ -342,7 +342,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             var global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
                               where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
                               select (
-                                  $"/obj/{id:x8}",
+                                  $"/obj/{(uint)id:x8}",
                                   MainProgram.ASM_FILE.Name,
                                   lang["debug.netobj"],
                                   netobj?.ToString() ?? "<null>"

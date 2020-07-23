@@ -1,6 +1,20 @@
-#include <MsgBoxConstants.au3>
 
-MsgBox($MB_SYSTEMMODAL, "Title", "This message box will timeout after 10 seconds or select the OK button.", 10)
+Func myThread()
+   for $i = 100 to 95 step -1
+	  ConsoleWriteLine($i)
+   Next
+EndFunc
+Func mainThread()
+   for $i = 0 to 5 step 1
+	  ConsoleWriteLine($i)
+   Next
+EndFunc
+
+
+$t = ThreadStart(myThread)
+DebugAllVarsCompact()
+mainThread()
+ThreadWait($t)
 
 
 
