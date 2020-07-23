@@ -27,7 +27,8 @@ Like I'd give a f█ck.
  - `underscore_lower_case` for method parameters and local variables
  - `_underscore_lower_case` for private fields
  - `CAPS_LOCK_CASE` for constants
-
+ 
+**To avoid any association with slavery, the `master`-branch has been renamed to `daddy` :wink:.**
 
 ## Our Responsibilities
 
