@@ -129,6 +129,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Dispose()
         {
+            _running = false;
+
             if (IsDisposed)
                 return;
             else

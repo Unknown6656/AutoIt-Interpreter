@@ -86,7 +86,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DriveSpaceFree), 1, DriveSpaceFree),
             ProvidedNativeFunction.Create(nameof(DriveSpaceTotal), 1, DriveSpaceTotal),
             ProvidedNativeFunction.Create(nameof(DriveStatus), 1, DriveStatus),
-            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
+            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox, Variant.Zero, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
             ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
             ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
@@ -754,17 +754,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
         {
-            decimal flag = args[0].ToNumber();
+            uint flags = (uint)args[0];
             string title = args[1].ToString();
             string text = args[2].ToString();
             decimal timeout = args[3].ToNumber();
-            decimal hwnd = args[4].ToNumber();
+            int hwnd = (int)args[4];
 
-            // TODO
-            Console.ReadLine();
-            return Variant.Zero;
+            // TODO : timeout
+            // TODO : other platforms
 
-            throw new NotImplementedException();
+            return NativeInterop.DoPlatformDependent(delegate
+            {
+                return (Variant)NativeInterop.MessageBox(hwnd, text, title, flags);
+            }, () => throw new NotImplementedException());
         }
 
         internal static FunctionReturnValue FuncName(CallFrame frame, Variant[] args)

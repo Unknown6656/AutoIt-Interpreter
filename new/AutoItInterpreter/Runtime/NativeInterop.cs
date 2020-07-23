@@ -50,6 +50,9 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(USER32, CharSet = CharSet.Auto, SetLastError = true)]
         public static unsafe extern void* SetFocus(void* hWnd);
 
+        [DllImport(USER32, SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern int MessageBox(int hWnd, string text, string title, uint type);
+
         [DllImport(SHELL32, CharSet = CharSet.Unicode)]
         public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
 

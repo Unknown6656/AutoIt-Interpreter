@@ -7,7 +7,7 @@ namespace VersionIncrementer
     public static class Program
     {
         public const string AUTHOR = "Unknown6656";
-        public const string REPOSITORY = "https://github.com/" + AUTHOR + "AutoIt-Interpreter/issues";
+        public const string REPOSITORY = "https://github.com/" + AUTHOR + "/AutoIt-Interpreter";
         public const int START_YEAR = 2018;
 
 
@@ -84,15 +84,15 @@ public static class __module__
     /// <summary>
     /// The interpreter's author.
     /// </summary>
-    public static string Author {{ get; }} = ""{AUTHOR}"";
+    public const string Author = ""{AUTHOR}"";
     /// <summary>
     /// Development year(s).
     /// </summary>
-    public static string Year {{ get; }} = ""{year}"";
+    public const string Year = ""{year}"";
     /// <summary>
     /// The interpreter's copyright information.
     /// </summary>
-    public static string Copyright {{ get; }} = ""{copyright}"";
+    public const string Copyright = ""{copyright}"";
     /// <summary>
     /// The interpreter's current version.
     /// </summary>
@@ -100,11 +100,11 @@ public static class __module__
     /// <summary>
     /// The Git hash associated with the current build.
     /// </summary>
-    public static string GitHash {{ get; }} = ""{githash}"";
+    public const string GitHash = ""{githash}"";
     /// <summary>
     /// The URL of this project's Git(Hub) repository.
     /// </summary>
-    public static string GetRepositoryURL {{ get; }} = ""{REPOSITORY}"";
+    public const string RepositoryURL = ""{REPOSITORY}"";
 }}
 ");
         }

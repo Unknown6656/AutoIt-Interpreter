@@ -42,6 +42,8 @@ using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
   Use an other display language than English for the interpreter:
       autoit3 -l fr C:\User\Public\Script.au3
 
+  Visit " + "\x1b[4m" + __module__.RepositoryURL + "/wiki/Usage/\x1b[24m" + @" for more information.
+
 -------------------------------------------------------------------------------
 
 COMMAND LINE OPTIONS:")]
@@ -106,8 +108,10 @@ namespace Unknown6656.AutoIt3
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
         public static readonly DirectoryInfo INCLUDE_DIR = ASM_DIR.CreateSubdirectory("include/");
+        public static readonly FileInfo WINAPI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.win32apiserver.exe"));
         public static readonly FileInfo COM_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
         public static readonly FileInfo GUI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
+
 
         private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;
@@ -174,6 +178,7 @@ namespace Unknown6656.AutoIt3
                             {
                                 Console.WriteLine(help.Heading);
                                 Console.WriteLine(help.Copyright);
+                                Console.WriteLine($"\x1b[4m{__module__.RepositoryURL}/\x1b[24m");
 
                                 help_requested = true;
                             }
@@ -350,9 +355,6 @@ namespace Unknown6656.AutoIt3
             if (!extensive && Console.CursorLeft > 0)
                 Console.WriteLine();
 
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
-            Console.WriteLine(new string('_', Console.WindowWidth - 1));
-
             if (extensive)
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
@@ -381,7 +383,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
             Console.WriteLine(message.TrimEnd());
-            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.GetRepositoryURL}/issues/\x1b[24m.");
+            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/\x1b[24m.");
 
             if (extensive)
             {
@@ -710,12 +712,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.SetCursorPosition(2, ypos);
                 ConsoleExtensions.RGBForegroundColor = col_text;
                 ConsoleExtensions.WriteUnderlined("CPU Load");
-                Console.SetCursorPosition(2, ypos + 1);
+                Console.SetCursorPosition(2, ypos + 2);
                 ConsoleExtensions.RGBForegroundColor = col_cpu_user;
                 Console.Write("███ ");
                 ConsoleExtensions.RGBForegroundColor = col_text;
                 Console.Write("User");
-                Console.SetCursorPosition(2, ypos + 2);
+                Console.SetCursorPosition(2, ypos + 3);
                 ConsoleExtensions.RGBForegroundColor = col_cpu_kernel;
                 Console.Write("███ ");
                 ConsoleExtensions.RGBForegroundColor = col_text;
@@ -824,7 +826,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                           | |
                           |_|  {lang?["banner.written_by", __module__.Author, __module__.Year]}
 {lang?["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
-{'\x1b'}[4m{__module__.GetRepositoryURL}{'\x1b'}[24m
+   {'\x1b'}[4m{__module__.RepositoryURL}{'\x1b'}[24m
 ");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
                     Console.Write("    ");

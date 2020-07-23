@@ -22,10 +22,14 @@ namespace Unknown6656.AutoIt3.Runtime
         : IDisposable
         , IDebugPrintingService
     {
-        private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new ConcurrentDictionary<AU3Thread, __empty>();
+        private static readonly ConcurrentDictionary<Interpreter, __empty> _instances = new();
+
+        private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new();
         private readonly object _main_thread_mutex = new object();
         private volatile int _error;
 
+
+        internal static Interpreter[] Instances => _instances.Keys.ToArray();
 
         public Random Random { get; private set; }
 
@@ -41,9 +45,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public COMConnector? COMConnector { get; }
 
+        public bool IsCOMAvailable => COMConnector is { };
+
+        //public WinAPIConnector? Win32APIConnector { get; }
+
         //public GUIConnector GUIConnector { get; }
 
-        public bool IsCOMAvailable => COMConnector is { };
+        //public bool IsWin32APIAvailable => Win32APIConnector is { };
 
         public ScriptScanner ScriptScanner { get; }
 
@@ -75,6 +83,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Interpreter(CommandLineOptions opt, Telemetry telemetry, LanguageLoader lang_loader)
         {
+            _instances[this] = default;
+
             CommandLineOptions = opt;
             Telemetry = telemetry;
             LanguageLoader = lang_loader;
@@ -97,10 +107,13 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
 
-            //GUIConnector = new GUIConnector(this);
-
             if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
+            {
                 COMConnector = new COMConnector(this);
+                //Win32APIConnector = new WinAPIConnector(this);
+            }
+
+            //GUIConnector = new GUIConnector(this);
 
             Random = new BuiltinRandom();
             ResetRandom();
@@ -125,6 +138,9 @@ namespace Unknown6656.AutoIt3.Runtime
             GlobalObjectStorage.Dispose();
             // GUIConnector.Dispose();
             COMConnector?.Dispose();
+            //Win32APIConnector?.Dispose();
+
+            _instances.TryRemove(this, out _);
         }
 
         public void Stop(int exitcode)

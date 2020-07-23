@@ -83,7 +83,7 @@ namespace Unknown6656.AutoIt3.Runtime
     /// <para/>
     /// Data is internally stored using a <see cref="VariantType"/> (to resolve the semantic type), a <see cref="object"/> containing the actual data, and an optional <see cref="Variable"/> reference.
     /// </summary>
-    [DebuggerDisplay("{" + nameof(ToDebugString) + "(),nq}")]
+    [DebuggerDisplay("{" + nameof(ToDebugStringPrivate) + "(),nq}")]
     public readonly struct Variant
         : IEquatable<Variant>
         , IComparable<Variant>
@@ -325,6 +325,8 @@ namespace Unknown6656.AutoIt3.Runtime
             _ when RawData is byte[] { Length: > 0 } bytes => "0x" + From.Bytes(bytes).To.Hex(),
             _ => "",
         };
+
+        private readonly string ToDebugStringPrivate() => ToDebugString(Interpreter.Instances.First());
 
         public readonly string ToDebugString(Interpreter interpreter)
         {
