@@ -21,6 +21,7 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     public sealed class AU3Thread
         : IDisposable
+        , IEquatable<AU3Thread>
     {
         private static volatile int _tid = 0;
         private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
@@ -65,14 +66,14 @@ namespace Unknown6656.AutoIt3.Runtime
                     return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
                 else
                     _running = true;
-            
+
                 Union<InterpreterError, Variant> result = Call(function, args);
-            
-                _running = false;
-            
+
+                Stop();
+
                 if (_override_exitcode is int code)
                     return Variant.FromNumber(code);
-            
+
                 return result;
             });
 
@@ -125,7 +126,13 @@ namespace Unknown6656.AutoIt3.Runtime
             return CurrentLocation;
         }
 
-        public override string ToString() => $"0x{_tid:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
+        public override string ToString() => $"0x{ThreadID:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
+
+        public override int GetHashCode() => HashCode.Combine(Interpreter, ThreadID);
+
+        public override bool Equals(object? obj) => obj is AU3Thread thread && Equals(thread);
+
+        public bool Equals(AU3Thread? other) => Interpreter == other?.Interpreter && ThreadID == other?.ThreadID;
 
         public void Dispose()
         {

@@ -29,7 +29,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
         }
 
-        internal static FunctionReturnValue ThreadIsRunning(CallFrame frame, Variant[] args)
+        public static FunctionReturnValue ThreadIsRunning(CallFrame frame, Variant[] args)
         {
             if (args[0].TryResolveHandle(frame.Interpreter, out ThreadHandle? handle))
                 return (Variant)handle.Thread.IsRunning;
@@ -37,7 +37,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return FunctionReturnValue.Error(1);
         }
 
-        internal static FunctionReturnValue ThreadKill(CallFrame frame, Variant[] args)
+        public static FunctionReturnValue ThreadKill(CallFrame frame, Variant[] args)
         {
             if (args[0].TryResolveHandle(frame.Interpreter, out ThreadHandle? handle))
             {
@@ -53,7 +53,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return FunctionReturnValue.Error(1);
         }
 
-        internal static FunctionReturnValue ThreadWait(CallFrame frame, Variant[] args)
+        public static FunctionReturnValue ThreadWait(CallFrame frame, Variant[] args)
         {
             if (args[0].TryResolveHandle(frame.Interpreter, out ThreadHandle? handle))
             {
@@ -69,7 +69,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return FunctionReturnValue.Error(1);
         }
 
-        internal static FunctionReturnValue ThreadStart(CallFrame frame, Variant[] args)
+        public static FunctionReturnValue ThreadStart(CallFrame frame, Variant[] args)
         {
             if (!args[0].IsFunction(out ScriptFunction? func))
                 func = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
@@ -86,7 +86,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return FunctionReturnValue.Error(1);
         }
 
-        internal static FunctionReturnValue ThreadGetID(CallFrame frame, Variant[] args)
+        public static FunctionReturnValue ThreadGetID(CallFrame frame, Variant[] args)
         {
             AU3Thread thread;
 

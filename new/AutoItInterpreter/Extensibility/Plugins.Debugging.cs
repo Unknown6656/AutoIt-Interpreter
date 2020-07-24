@@ -225,7 +225,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 int c_width = widths.Sum();
                 int diff = c_width - max_width;
 
-                if (diff > 0 || r <= widths.Length)
+                if (diff > 0 && r <= widths.Length)
                 {
                     (int w, int i) = widths.WithIndex().OrderByDescending(Generics.fst).FirstOrDefault();
 
@@ -302,15 +302,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                      .ToString();
         }
 
-        private FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
+        public FunctionReturnValue DebugVar(CallFrame frame, Variant[] args) => SerializePrint(frame, GetVariableInfo(args[0].AssignedTo), args[0].AssignedTo);
 
-        private FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] _) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
+        public FunctionReturnValue DebugCallFrame(CallFrame frame, Variant[] _) => SerializePrint(frame, GetCallFrameInfo(frame), "Call Frame");
 
-        private FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
+        public FunctionReturnValue DebugThread(CallFrame frame, Variant[] _) => SerializePrint(frame, GetThreadInfo(frame.CurrentThread), frame.CurrentThread);
 
-        private FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
+        public FunctionReturnValue DebugAllVars(CallFrame frame, Variant[] _) => SerializePrint(frame, GetAllVariables(frame.Interpreter), frame.Interpreter);
 
-        private FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
             LanguagePack lang = Interpreter.CurrentUILanguage;
@@ -391,7 +391,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
         {
             if (Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
             {
@@ -415,7 +415,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugCodeLines(CallFrame frame, Variant[] _)
         {
             if (frame.CurrentThread.CallStack.OfType<AU3CallFrame>().FirstOrDefault() is AU3CallFrame au3frame)
             {
@@ -436,14 +436,28 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
-            // TODO
+            AU3Thread[] threads = frame.Interpreter.Threads.Where(t => !t.IsDisposed).OrderBy(t => t.ThreadID).ToArray();
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine($"Overview ({threads.Length} threads):");
+
+            foreach (var ts in threads.Select(t => ($"Thread {t.ThreadID}{(t.IsMainThread ? " (main)" : t.IsRunning ? " (active)" : "")}", true, t.CallStack.ToArray(f => f.CurrentFunction.Name)))
+                                      .PartitionByArraySize(6))
+                sb.Append(GenerateTable(ts!, Math.Min(Console.BufferWidth, Console.WindowWidth), false));
+
+            sb.AppendLine();
+
+            foreach (AU3Thread thread in threads)
+                sb.Append(SerializeDictionary(GetThreadInfo(thread), $"Thread {thread.ThreadID}"));
+
+            frame.Print(sb.ToString());
 
             return Variant.Zero;
         }
 
-        private FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
+        public FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
         {
             // TODO
 
