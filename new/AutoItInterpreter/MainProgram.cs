@@ -129,6 +129,17 @@ namespace Unknown6656.AutoIt3
 
             sw.Start();
 
+
+            Console.CancelKeyPress += (_, e) =>
+            {
+                Interpreter[] instances = Interpreter.Instances;
+
+                e.Cancel = instances.Length > 0;
+
+                foreach (Interpreter interpreter in instances)
+                    interpreter.Stop(-1);
+            };
+
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
             using Task printer_task = Task.Factory.StartNew(PrinterTask);
             using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitorAsync);

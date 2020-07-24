@@ -137,12 +137,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 IsDisposed = true;
 
             Interpreter.RemoveThread(this);
-            _callstack.TryPop(out _);
+
+            while (_callstack.TryPop(out CallFrame? frame))
+                frame?.Dispose();
 
             MainProgram.PrintfDebugMessage("debug.au3thread.disposed", this);
-
-            if (!_callstack.IsEmpty)
-                throw new InvalidOperationException("The execution stack is not empty.");
         }
     }
 

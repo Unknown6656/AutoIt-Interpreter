@@ -225,11 +225,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 int c_width = widths.Sum();
                 int diff = c_width - max_width;
 
-                if (diff > 0 || r >= widths.Length)
+                if (diff > 0 || r <= widths.Length)
                 {
                     (int w, int i) = widths.WithIndex().OrderByDescending(Generics.fst).FirstOrDefault();
 
-                    widths[i] = Math.Max(w - diff, w / 2) + 3;
+                    widths[i] = new[] { w - diff, w / 2, 3 }.Max();
                     ++r;
                 }
                 else

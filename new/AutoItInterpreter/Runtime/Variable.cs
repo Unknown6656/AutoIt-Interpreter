@@ -362,7 +362,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 uint id = (uint)this;
 
                 if (interpreter.GlobalObjectStorage.TryGet(id, out object? obj))
-                    data = obj?.GetType().FullName ?? "null";
+                    data = obj?.GetType().Name ?? "null";
 
                 return $"hnd:0x{id:x8} ({data})";
             }

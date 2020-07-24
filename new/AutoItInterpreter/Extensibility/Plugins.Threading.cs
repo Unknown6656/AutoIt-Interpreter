@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Text;
 using System;
@@ -7,7 +8,6 @@ using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
-using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -20,6 +20,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             ProvidedNativeFunction.Create(nameof(ThreadKill), 1, ThreadKill),
             ProvidedNativeFunction.Create(nameof(ThreadStart), 1, 256, ThreadStart),
             ProvidedNativeFunction.Create(nameof(ThreadWait), 1, ThreadWait),
+            ProvidedNativeFunction.Create(nameof(ThreadGetID), 0, 1, ThreadGetID, Variant.Default),
         };
 
 
@@ -85,6 +86,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return FunctionReturnValue.Error(1);
         }
 
+        internal static FunctionReturnValue ThreadGetID(CallFrame frame, Variant[] args)
+        {
+            AU3Thread thread;
+
+            if (args[0].TryResolveHandle(frame.Interpreter, out ThreadHandle? handle))
+                thread = handle.Thread;
+            else if (args[0].IsDefault)
+                thread = frame.CurrentThread;
+            else
+                return FunctionReturnValue.Error(1);
+
+            return (Variant)thread.ThreadID;
+        }
+
 
         private sealed class ThreadHandle
             : IDisposable
@@ -107,6 +122,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 Runner.Dispose();
                 Thread.Dispose();
             }
+
+            public override string ToString() => Thread.ToString();
         }
     }
 }

@@ -1,24 +1,24 @@
+dim $threads[10]
 
-Func myThread()
-   for $i = 100 to 95 step -1
-	  ConsoleWriteLine($i)
-   Next
-EndFunc
-Func mainThread()
-   for $i = 0 to 5 step 1
-	  ConsoleWriteLine($i)
-   Next
-EndFunc
+for $j = 0 to 9
+   $threads[$j] = ThreadStart(my_func)
+next
 
-
-$t = ThreadStart(myThread)
+my_func()
 DebugAllVarsCompact()
-mainThread()
-ThreadWait($t)
+
+for $j = 0 to 9
+   ThreadWait($threads[$j])
+next
+
+func my_func()
+   for $i = 0 to 100 step 1
+	  ConsoleWriteLine('thread no. ' & ThreadGetID() & ': ' & $i)
+   next
+endfunc
 
 
-
-Exit
+exit
 
 ClipPut('top " kek | jej ')
 ConsoleWrite(@OSVersion)

@@ -3048,6 +3048,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
 
             public FileSearchHandle(FileSystemInfo[] files) => Enumerator = (IEnumerator<FileSystemInfo>)files.GetEnumerator();
+
+            public override string ToString() => Enumerator.Current?.ToString();
         }
 
         private sealed class FileHandle
@@ -3087,6 +3089,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 FileStream.Close();
                 FileStream.Dispose();
             }
+
+            public override string ToString() => $"{FileStream} ({Flags}, {Encoding})";
         }
 
         private sealed class InetHandle
@@ -3167,6 +3171,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 return data;
             }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+            public override string ToString() => $"uri={_uri}, file={_file}, running={_running}, error={_error}";
         }
 
         private abstract class UDPBase
@@ -3197,11 +3203,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             private readonly IPEndPoint _listenon; // TODO : ??
 
-
-            public UDPServer()
-                : this(new IPEndPoint(IPAddress.Any, 31488))
-            {
-            }
 
             public UDPServer(IPEndPoint endpoint)
             {
