@@ -56,7 +56,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
             ["name"] = variable,
             ["constant"] = variable.IsConst,
-            ["global"] = variable.IsGlobal,
             ["location"] = variable.DeclaredLocation,
             ["scope"] = variable.DeclaredScope,
             ["value"] = GetVariantInfo(variable.Value)
@@ -169,7 +168,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                     serialize(d, level + 2);
                                 }
                                 else
-                                    sb.Append(elem?.ToString());
+                                    sb.AppendLine(elem?.ToString());
 
                                 ++index;
                             }
@@ -459,7 +458,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
         {
-            // TODO
+            Interpreter interpreter = frame.Interpreter;
+            Dictionary<string, object?> dic = new()
+            {
+                ["CurrentLang"] = interpreter.CurrentUILanguage,
+                ["LoadedLangs"] = interpreter.LanguageLoader.LoadedLanguageCodes,
+                ["Threads"] = interpreter.Threads,
+                ["Scripts"] = interpreter.ScriptScanner.ActiveScripts,
+                ["Plugins"] = interpreter.PluginLoader.LoadedPlugins,
+                ["CommandLine"] = interpreter.CommandLineOptions,
+                ["GlobalObjects"] = interpreter.GlobalObjectStorage.Objects.ToArray(),
+                ["GlobalVariables"] = interpreter.VariableResolver.LocalVariables,
+            };
+
+            frame.Print(SerializeDictionary(dic, "Interpreter"));
 
             return Variant.Zero;
         }

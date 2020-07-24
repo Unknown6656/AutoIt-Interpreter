@@ -94,7 +94,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (!opt.DontLoadPlugins)
                 PluginLoader.LoadPlugins();
 
-            if (PluginLoader.LoadedPlugins.Count is int i and > 0)
+            if (PluginLoader.LoadedPluginFiles.Count is int i and > 0)
                 MainProgram.PrintInterpreterMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
             else
                 MainProgram.PrintInterpreterMessage("general.no_plugins_loaded");

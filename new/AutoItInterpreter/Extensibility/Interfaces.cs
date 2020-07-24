@@ -37,6 +37,14 @@ namespace Unknown6656.AutoIt3.Extensibility
         /// </summary>
         /// <param name="interpreter">The interpreter which has loaded the current plugin instance.</param>
         protected AbstractInterpreterPlugin(Interpreter interpreter) => Interpreter = interpreter;
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            Type t = GetType();
+
+            return $"{t.Assembly.Location}: {t.Name}";
+        }
     }
 
     public abstract class AbstractDirectiveProcessor

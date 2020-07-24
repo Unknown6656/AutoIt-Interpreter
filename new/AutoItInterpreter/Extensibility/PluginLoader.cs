@@ -36,7 +36,16 @@ namespace Unknown6656.AutoIt3.Extensibility
             _macro_providers,
         }.Sum(p => p.Count());
 
-        public IReadOnlyList<FileInfo> LoadedPlugins => _plugin_files;
+        public IReadOnlyList<FileInfo> LoadedPluginFiles => _plugin_files;
+
+        public AbstractInterpreterPlugin[] LoadedPlugins => _line_processors.Cast<AbstractInterpreterPlugin>()
+                                                                            .Concat(_directive_processors)
+                                                                            .Concat(_statement_processors)
+                                                                            .Concat(_pragma_processors)
+                                                                            .Concat(_func_providers)
+                                                                            .Concat(_resolvers)
+                                                                            .Concat(_macro_providers)
+                                                                            .ToArray();
 
         public IReadOnlyList<AbstractLineProcessor> LineProcessors => _line_processors;
 

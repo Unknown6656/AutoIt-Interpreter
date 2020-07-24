@@ -98,6 +98,9 @@ namespace Unknown6656.AutoIt3
 
         [Value(0, HelpText = "The file path to the AutoIt-3 script.", Required = true)]
         public string? FilePath { set; get; } = null;
+
+
+        public override string ToString() => Parser.Default.FormatCommandLine(this);
     }
 
     public static class MainProgram
@@ -226,7 +229,7 @@ namespace Unknown6656.AutoIt3
                         }
 
                         PrintBanner();
-                        // PrintDebugMessage(JsonConvert.SerializeObject(opt)); // TODO
+                        PrintDebugMessage(opt.ToString());
                         PrintInterpreterMessage("general.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
                         PrintInterpreterMessage("general.loaded_langpack", lang);
                         PrintfDebugMessage("debug.interpreter_loading");

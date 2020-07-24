@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-tvq ../test/unittest-multithreading"
+      "commandLineArgs": "-tvq ../test/test"
     }
   }
 }
