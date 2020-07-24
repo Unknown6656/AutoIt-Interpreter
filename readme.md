@@ -1,6 +1,8 @@
 ![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
 ![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
 ![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
+![repo size](https://img.shields.io/github/repo-size/unknown6656/AutoIt-Interpreter)
+![downloads](https://img.shields.io/github/downloads/unknown6656/AutoIt-Interpreter/total)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
 
 ![Banner image](new/artwork/banner.png)
