@@ -1,13 +1,15 @@
 ﻿using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Threading;
+using System.Linq;
+using System.Text;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net;
-using System.Linq;
-using System.Text;
 using System.IO;
 using System;
 
@@ -16,7 +18,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -31,6 +32,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
             ProvidedNativeFunction.Create(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle),
+            // ProvidedNativeFunction.Create(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default),
+            // ProvidedNativeFunction.Create("Opt", 1, 2, AutoItSetOption, Variant.Default),
             ProvidedNativeFunction.Create(nameof(BlockInput), 1, BlockInput),
             ProvidedNativeFunction.Create(nameof(CDTray), 2, CDTray),
             ProvidedNativeFunction.Create(nameof(ClipPut), 1, ClipPut),
@@ -168,11 +171,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
-            //ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete),
-            //ProvidedNativeFunction.Create(nameof(RegEnumKey), , RegEnumKey),
-            //ProvidedNativeFunction.Create(nameof(RegEnumVal), , RegEnumVal),
-            //ProvidedNativeFunction.Create(nameof(RegRead), , RegRead),
-            //ProvidedNativeFunction.Create(nameof(RegWrite), , RegWrite),
+            ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RegEnumKey), 2, RegEnumKey),
+            ProvidedNativeFunction.Create(nameof(RegEnumVal), 2, RegEnumVal),
+            ProvidedNativeFunction.Create(nameof(RegRead), 2, RegRead),
+            ProvidedNativeFunction.Create(nameof(RegWrite), 1, 4, RegWrite, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -2130,32 +2133,167 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(val);
         }
 
-        // internal static unsafe FunctionReturnValue RegDelete(CallFrame frame, Variant[] args)
-        // {
-        //     string key = args[0].ToString();
-        //     string val = args[1].ToString();
-        // 
-        // }
-        // 
-        // internal static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // internal static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // internal static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // internal static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        private static unsafe void GetRegistryPath(string key, out void* hk_base, out string path)
+        {
+            string[] tokens = key.Split('\\');
+            hk_base = (void*)(int)(tokens[0].ToUpperInvariant() switch
+            {
+                "HKEY_LOCAL_MACHINE" or "HKLM" => RegPredefinedkeys.HKEY_LOCAL_MACHINE,
+                "HKEY_USERS" or "HKU" => RegPredefinedkeys.HKEY_USERS,
+                "HKEY_CURRENT_USER" or "HKCU" => RegPredefinedkeys.HKEY_CURRENT_USER,
+                "HKEY_CLASSES_ROOT" or "HKCR" => RegPredefinedkeys.HKEY_CLASSES_ROOT,
+                "HKEY_CURRENT_CONFIG" or "HKCC" => RegPredefinedkeys.HKEY_CURRENT_CONFIG,
+                "HKEY_DYN_DATA" or "HKDD" => RegPredefinedkeys.HKEY_DYN_DATA,
+                "HKEY_PERFORMANCE_DATA" or "HKPD" => RegPredefinedkeys.HKEY_PERFORMANCE_DATA,
+                _ => default,
+            });
+            path = tokens.Skip(1).StringJoin("\\");
+        }
+
+        internal static unsafe FunctionReturnValue RegDelete(CallFrame frame, Variant[] args)
+        {
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            int res = args[1].IsDefault ? NativeInterop.RegDeleteKeyEx(hk_base, key, RegSAM.WOW64_64Key, null)
+                                        : NativeInterop.RegDeleteKeyValue(hk_base, key, args[1].ToString());
+
+            return Variant.FromBoolean(res is 0);
+        }
+
+        internal static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        internal static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
+        {
+
+        }
+
+        internal static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
+        {
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            int result = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), 0xffff, out RegKeyType type, null, out int size);
+
+            if (result != 0)
+                return FunctionReturnValue.Error(result);
+
+            void* data = (void*)Marshal.AllocHGlobal(size);
+
+            result = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), type switch
+            {
+                RegKeyType.REG_SZ => 0x0002,
+                RegKeyType.REG_MULTI_SZ => 0x0020,
+                RegKeyType.REG_EXPAND_SZ => 0x0004,
+                RegKeyType.REG_DWORD => 0x0018,
+                RegKeyType.REG_QWORD => 0x0048,
+                RegKeyType.REG_BINARY => 0x0008,
+                RegKeyType.REG_UNKNOWN or _ => 0xffff,
+            }, out type, data, out size);
+
+            if (result != 0)
+                return FunctionReturnValue.Error(result);
+            else
+                switch (type)
+                {
+                    case RegKeyType.REG_SZ or RegKeyType.REG_EXPAND_SZ or RegKeyType.REG_MULTI_SZ:
+                        string s = From.Pointer(data, size - 1).To.String();
+
+                        if (type is RegKeyType.REG_MULTI_SZ)
+                            s = s.Replace('\0', '\n');
+
+                        return FunctionReturnValue.Success(s, type.ToString());
+                    case RegKeyType.REG_DWORD or RegKeyType.REG_DWORD_LITTLE_ENDIAN:
+                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<int>(), "REG_DWORD");
+                    case RegKeyType.REG_DWORD_BIG_ENDIAN:
+                        return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().To.Unmanaged<int>(), "REG_DWORD");
+                    case RegKeyType.REG_QWORD:
+                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<long>(), type.ToString());
+                    case RegKeyType.REG_LINK:
+                        return FunctionReturnValue.Error(-2);
+                    case RegKeyType.REG_NONE or RegKeyType.REG_UNKNOWN or RegKeyType.REG_BINARY:
+                    default:
+                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Bytes, type.ToString());
+                }
+        }
+
+        internal static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
+        {
+            string name = args[1].ToString();
+            Variant value = args[3];
+
+            RegKeyType type = args[2].ToString().ToUpperInvariant() switch
+            {
+                "REG_SZ" => RegKeyType.REG_SZ,
+                "REG_MULTI_SZ" => RegKeyType.REG_MULTI_SZ,
+                "REG_EXPAND_SZ" => RegKeyType.REG_EXPAND_SZ,
+                "REG_DWORD" => RegKeyType.REG_DWORD,
+                "REG_QWORD" => RegKeyType.REG_QWORD,
+                "REG_BINARY" => RegKeyType.REG_BINARY,
+                _ => RegKeyType.REG_UNKNOWN,
+            };
+
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            if (args[1].IsDefault)
+            {
+                int res = NativeInterop.RegCreateKeyEx(hk_base, key, null, null, RegOption.NonVolatile, RegSAM.Write, null, out void* hkey, out _);
+
+                NativeInterop.RegCloseKey(hkey);
+
+                return Variant.FromBoolean(res is 0);
+            }
+            else
+            {
+                int retVal = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Write, out void* hkey);
+
+                if (retVal is 0)
+                {
+                    nint pData;
+                    int size;
+
+                    switch (type)
+                    {
+                        case RegKeyType.REG_SZ or RegKeyType.REG_MULTI_SZ or RegKeyType.REG_EXPAND_SZ:
+                            if (type is RegKeyType.REG_MULTI_SZ)
+                                value = value.ToString().Replace('\n', '\0') + '\0';
+
+                            size = value.Length + 1;
+                            pData = Marshal.StringToHGlobalUni(value.ToString());
+
+                            break;
+                        case RegKeyType.REG_DWORD:
+                            pData = Marshal.AllocHGlobal(size = sizeof(int));
+                            *(int*)pData = (int)value;
+
+                            break;
+                        case RegKeyType.REG_QWORD:
+                            pData = Marshal.AllocHGlobal(size = sizeof(long));
+                            *(long*)pData = (long)value;
+
+                            break;
+                        case RegKeyType.REG_BINARY:
+                        case RegKeyType.REG_UNKNOWN:
+                        default:
+                            pData = Marshal.AllocHGlobal(size = value.Length);
+
+                            Marshal.Copy(value.ToBinary(), 0, pData, size);
+
+                            break;
+                    }
+
+                    retVal = NativeInterop.RegSetValueEx(hkey, name, null, type, (void*)pData, size);
+                }
+
+                NativeInterop.RegCloseKey(hkey);
+
+                if (retVal is 0)
+                    return Variant.True;
+                else
+                    return FunctionReturnValue.Error(retVal);
+            }
+        }
 
         internal static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
         {

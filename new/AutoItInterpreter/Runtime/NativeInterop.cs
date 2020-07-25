@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System;
+using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime.Native
 {
@@ -91,6 +93,35 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         [DllImport(OLE32)]
         public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegDeleteKeyEx(void* hKey, string lpSubKey, RegSAM samDesired, void* lpReserved);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegDeleteKeyValue(void* hKey, string lpSubKey, string lpValueName);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = false)]
+        public static unsafe extern int RegCreateKeyEx(void* hKey, string lpSubKey, void* lpReserved, void* lpClass, RegOption dwOptions, RegSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes, out void* phkResult, out RegResult lpdwDisposition);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode)]
+        public static unsafe extern int RegEnumKeyEx(void* hkey, uint index, string lpName, ref uint lpcbName, void* lpReserved, void* lpClass, IntPtr lpcbClass, out long lpftLastWriteTime);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode)]
+        public static unsafe extern int RegOpenKeyEx(void* hKey, string subKey, int ulOptions, RegSAM samDesired, out void* hkResult);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegQueryValueEx(void* hKey, string lpValueName, void* lpReserved, out RegKeyType lpType, out void* lpData, out uint lpcbData);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegSetValueEx(void* hKey, string lpValueName, void* lpReserved, RegKeyType dwType, void* lpData, int cbData);
+
+        [DllImport("Advapi32.dll", EntryPoint = "RegGetValueW", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegGetValue(void* hKey, string lpSubKey, string lpValue, int dwFlags, out RegKeyType pdwType, void* pvData, out int pcbData);
+
+        [DllImport(ADVAPI32, SetLastError = true)]
+        public static unsafe extern int RegCloseKey(void* hKey);
+
+
 
         [DllImport(ADVAPI32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -226,6 +257,14 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         public void* hNameMappings;
         [MarshalAs(UnmanagedType.LPWStr)]
         public string lpszProgressTitle;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct SECURITY_ATTRIBUTES
+    {
+        public int nLength;
+        public void* lpSecurityDescriptor;
+        public bool bInheritHandle;
     }
 
     [Flags]
@@ -365,5 +404,66 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         TokenIsSandboxed,
         TokenOriginatingProcessTrustLevel,
         MaxTokenInfoClass
+    }
+
+    public enum RegKeyType
+    {
+        REG_NONE = -1,
+        REG_UNKNOWN = 0,
+        REG_SZ = 1,
+        REG_EXPAND_SZ = 2,
+        REG_BINARY = 3,
+        REG_DWORD = 4,
+        REG_DWORD_LITTLE_ENDIAN = 4,
+        REG_DWORD_BIG_ENDIAN = 5,
+        REG_QWORD = 11,
+        REG_LINK = 6,
+        REG_MULTI_SZ = 7,
+    }
+
+    public enum RegPredefinedkeys
+        : uint
+    {
+        HKEY_CLASSES_ROOT = 0x80000000,
+        HKEY_CURRENT_USER = 0x80000001,
+        HKEY_LOCAL_MACHINE = 0x80000002,
+        HKEY_USERS = 0x80000003,
+        HKEY_PERFORMANCE_DATA = 0x80000004,
+        HKEY_CURRENT_CONFIG = 0x80000005,
+        HKEY_DYN_DATA = 0x80000006,
+    }
+
+    [Flags]
+    public enum RegOption
+    {
+        NonVolatile = 0x0,
+        Volatile = 0x1,
+        CreateLink = 0x2,
+        BackupRestore = 0x4,
+        OpenLink = 0x8
+    }
+
+    [Flags]
+    public enum RegSAM
+    {
+        QueryValue = 0x0001,
+        SetValue = 0x0002,
+        CreateSubKey = 0x0004,
+        EnumerateSubKeys = 0x0008,
+        Notify = 0x0010,
+        CreateLink = 0x0020,
+        WOW64_32Key = 0x0200,
+        WOW64_64Key = 0x0100,
+        WOW64_Res = 0x0300,
+        Read = 0x00020019,
+        Write = 0x00020006,
+        Execute = 0x00020019,
+        AllAccess = 0x000f003f
+    }
+
+    public enum RegResult
+    {
+        CreatedNewKey = 0x00000001,
+        OpenedExistingKey = 0x00000002
     }
 }
