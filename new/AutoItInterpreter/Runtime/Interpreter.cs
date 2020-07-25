@@ -22,20 +22,20 @@ namespace Unknown6656.AutoIt3.Runtime
         : IDisposable
         , IDebugPrintingService
     {
-        private static readonly ConcurrentDictionary<Interpreter, __empty> _instances = new();
+        private static readonly ConcurrentHashSet<Interpreter> _instances = new();
 
-        private readonly ConcurrentDictionary<AU3Thread, __empty> _threads = new();
+        private readonly ConcurrentHashSet<AU3Thread> _threads = new();
         private readonly object _main_thread_mutex = new object();
         private volatile int _error;
 
 
-        internal static Interpreter[] Instances => _instances.Keys.ToArray();
+        internal static Interpreter[] Instances => _instances.ToArray();
 
         public Random Random { get; private set; }
 
         public AU3Thread? MainThread { get; private set; }
 
-        public AU3Thread[] Threads => _threads.Keys.ToArray();
+        public AU3Thread[] Threads => _threads.ToArray();
 
         public VariableScope VariableResolver { get; }
 
@@ -83,7 +83,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Interpreter(CommandLineOptions opt, Telemetry telemetry, LanguageLoader lang_loader)
         {
-            _instances[this] = default;
+            _instances.Add(this);
 
             CommandLineOptions = opt;
             Telemetry = telemetry;
@@ -132,15 +132,16 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (AU3Thread thread in Threads)
             {
                 thread.Dispose();
-                _threads.TryRemove(thread, out _);
+                _threads.Remove(thread);
             }
 
+            _threads.Dispose();
             GlobalObjectStorage.Dispose();
             // GUIConnector.Dispose();
             COMConnector?.Dispose();
             //Win32APIConnector?.Dispose();
 
-            _instances.TryRemove(this, out _);
+            _instances.Remove(this);
         }
 
         public void Stop(int exitcode)
@@ -163,9 +164,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public AU3Thread CreateNewThread() => new AU3Thread(this);
 
-        internal void AddThread(AU3Thread thread) => _threads.TryAdd(thread, default);
+        internal void AddThread(AU3Thread thread) => _threads.Add(thread);
 
-        internal void RemoveThread(AU3Thread thread) => _threads.TryRemove(thread, out _);
+        internal void RemoveThread(AU3Thread thread) => _threads.Remove(thread);
 
         public void Print(CallFrame current_frame, Variant value) => Print(current_frame, value as object);
 

@@ -10,9 +10,9 @@ namespace Unknown6656.AutoIt3
         , IComparable<SourceLocation>
     {
         private static LanguagePack UILanguage => MainProgram.LanguageLoader.CurrentLanguage!;
-        public static SourceLocation Unknown { get; } = new SourceLocation($"<{UILanguage["general.unknown"]}>", -1);
+        private static readonly string _unknown_path = $"<{UILanguage["general.unknown"]}>";
+        public static SourceLocation Unknown { get; } = new SourceLocation(_unknown_path, -1);
 
-        private readonly FileInfo _file;
 
         /// <summary>
         /// The zero-based start line number.
@@ -27,7 +27,7 @@ namespace Unknown6656.AutoIt3
         /// </summary>
         // public readonly FileInfo FileName { get; }
 
-        public readonly string FullFileName => Path.GetFullPath(_file.FullName);
+        public readonly string FullFileName { get; }
 
         public bool IsUnknown => Equals(Unknown);
 
@@ -44,7 +44,7 @@ namespace Unknown6656.AutoIt3
             if (start > end)
                 throw new ArgumentException("The end line number must not be smaller than the start line number", nameof(end));
 
-            _file = new FileInfo(file);
+            FullFileName = file.Equals(_unknown_path, StringComparison.InvariantCultureIgnoreCase) ? file : Path.GetFullPath(new FileInfo(file).FullName);
             StartLineNumber = start;
             EndLineNumber = end;
         }
@@ -57,6 +57,9 @@ namespace Unknown6656.AutoIt3
 
         public override string ToString()
         {
+            if (IsUnknown)
+                return _unknown_path;
+
             string s = $"\"{FullFileName}\", ";
 
             if (IsSingleLine)

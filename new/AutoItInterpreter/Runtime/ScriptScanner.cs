@@ -47,8 +47,8 @@ namespace Unknown6656.AutoIt3.Runtime
             ResolveHTTP,
             ResolveFTP,
         };
-        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
-        private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
+        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
+        private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
         private readonly ScannedScript _system_script;
 
 
@@ -62,7 +62,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public ScriptScanner(Interpreter interpreter)
         {
             Interpreter = interpreter;
-            _system_script = new ScannedScript(MainProgram.ASM_FILE);
+            _system_script = new ScannedScript(MainProgram.ASM_FILE, "");
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
@@ -134,17 +134,15 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, ScannedScript>>(TelemetryCategory.ScanScript, delegate
             {
-                string key = Path.GetFullPath(file.FullName);
-
-                if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
+                if (!_cached_scripts.TryGetValue(ScannedScript.GetHashCode(file, content), out ScannedScript? script))
                 {
-                    script = new ScannedScript(file);
+                    script = new ScannedScript(file, content);
 
                     AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
                     List<(string line, SourceLocation loc)> lines = From.String(content)
                                                                         .To
                                                                         .Lines()
-                                                                        .Select((l, i) => (l, new SourceLocation(key, i)))
+                                                                        .Select((l, i) => (l, new SourceLocation(file.FullName, i)))
                                                                         .ToList();
                     int comment_lvl = 0;
                     Match m;
@@ -291,7 +289,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (!curr_func.IsMainFunction)
                         return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
 
-                    _cached_scripts.TryAdd(key, script);
+                    _cached_scripts.TryAdd(script.GetHashCode(), script);
 
                     if (file.Directory is { Exists: true, FullName: string dir })
                         Interpreter.AddFolderToEnvPath(Path.GetFullPath(dir));
@@ -409,10 +407,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsLoaded => State == ScannedScriptState.Loaded;
 
+        public string OriginalContent { get; }
+
         public FileInfo Location { get; }
 
 
-        public ScannedScript(FileInfo location) => Location = location;
+        public ScannedScript(FileInfo location, string original_content)
+        {
+            Location = location;
+            OriginalContent = original_content;
+        }
 
         public AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
         {
@@ -477,7 +481,7 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode() => Path.GetFullPath(Location.FullName).GetHashCode(StringComparison.CurrentCulture);
+        public override int GetHashCode() => GetHashCode(Location, OriginalContent);
 
         /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScannedScript);
@@ -489,6 +493,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool HasFunction(string name) => _functions.ContainsKey(name.ToUpperInvariant());
 
+        public static int GetHashCode(FileInfo location, string content) => HashCode.Combine(Path.GetFullPath(location.FullName), content);
 
         public static bool operator ==(ScannedScript? s1, ScannedScript? s2) => s1?.Equals(s2) ?? s2 is null;
 

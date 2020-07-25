@@ -1044,16 +1044,16 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class VariableScope
         : IDisposable
     {
-        private readonly ConcurrentDictionary<VariableScope, __empty> _children = new ConcurrentDictionary<VariableScope, __empty>();
-        private readonly ConcurrentDictionary<Variable, __empty> _variables = new ConcurrentDictionary<Variable, __empty>();
+        private readonly ConcurrentHashSet<VariableScope> _children = new();
+        private readonly ConcurrentHashSet<Variable> _variables = new();
 
 
-        public VariableScope[] ChildScopes => _children.Keys.ToArray();
+        public VariableScope[] ChildScopes => _children.ToArray();
 
         /// <summary>
         /// Returns all variables declared in this scope. This value is sequentially equal to <see cref="GlobalVariables"/> if the current scope is the global variable scope.
         /// </summary>
-        public Variable[] LocalVariables => _variables.Keys.ToArray();
+        public Variable[] LocalVariables => _variables.ToArray();
 
         /// <summary>
         /// Returns all variables declared in the global scope associated with the current interpreter instance.
@@ -1106,7 +1106,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (Parent is { _children: { } chd })
             {
                 DestroyAllVariables(false);
-                chd.TryRemove(this, out _);
+                chd.Remove(this);
             }
         }
 
@@ -1123,7 +1123,7 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 var = new Variable(this, location, name, isConst);
 
-                _variables.TryAdd(var, default);
+                _variables.Add(var);
             }
 
             return var;
@@ -1141,7 +1141,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Variable? v = null;
             bool resolved = Interpreter.Telemetry.Measure(TelemetryCategory.VariableResolving, delegate
             {
-                foreach (Variable var in _variables.Keys)
+                foreach (Variable var in _variables)
                     if (var.Equals(name))
                     {
                         v = var;
@@ -1159,7 +1159,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool DestroyVariable(string name, VariableSearchScope scope)
         {
-            if (TryGetVariable(name, scope, out Variable? var) && _variables.TryRemove(var, out _))
+            if (TryGetVariable(name, scope, out Variable? var) && _variables.Remove(var))
                 return true;
             else if (scope != VariableSearchScope.Local)
                 return Parent?.DestroyVariable(name, scope) ?? false;
@@ -1179,8 +1179,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariableScope res = new VariableScope(Interpreter, target, this);
 
-            while (!_children.TryAdd(res, default))
-                ;
+            _children.Add(res);
 
             return res;
         }
