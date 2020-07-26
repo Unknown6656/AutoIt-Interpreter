@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System;
 
@@ -17,7 +16,11 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     using static AST;
 
-
+    /// <summary>
+    /// Represents the core management logic of the AutoIt interpreter.
+    /// <br/>
+    /// The interpreter consists of threads, the global object storage, service connector, telemetry parser, the plugin loading system etc.
+    /// </summary>
     public sealed class Interpreter
         : IDisposable
         , IDebugPrintingService
@@ -29,22 +32,47 @@ namespace Unknown6656.AutoIt3.Runtime
         private volatile int _error;
 
 
-        internal static Interpreter[] Instances => _instances.ToArray();
+        /// <summary>
+        /// <b>[UNSAFE!]</b>
+        /// Returns a collection of currently active interpreter instances.
+        /// </summary>
+        public static Interpreter[] ActiveInstances => _instances.ToArray();
 
+        /// <summary>
+        /// The interpreter's random number generator. The used generator can be reset and seeded using the methods <see cref="ResetRandom"/> and <see cref="ResetRandom(int)"/>.
+        /// </summary>
         public Random Random { get; private set; }
 
+        /// <summary>
+        /// The interpreter's main thread.
+        /// </summary>
         public AU3Thread? MainThread { get; private set; }
 
+        /// <summary>
+        /// A collection of currently active threads.
+        /// </summary>
         public AU3Thread[] Threads => _threads.ToArray();
 
+        /// <summary>
+        /// The interpreter's <i>global</i> <see cref="VariableScope"/>. This scope contains all global variables.
+        /// </summary>
         public VariableScope VariableResolver { get; }
 
+        /// <summary>
+        /// The command line options used to launch this interpreter.
+        /// </summary>
         public CommandLineOptions CommandLineOptions { get; }
 
+        /// <summary>
+        /// The interpreter's global object storage.
+        /// </summary>
         public GlobalObjectStorage GlobalObjectStorage { get; }
 
         public COMConnector? COMConnector { get; }
 
+        /// <summary>
+        /// Indicates whether COM interoperability is available to the interpreter.
+        /// </summary>
         public bool IsCOMAvailable => COMConnector is { };
 
         //public WinAPIConnector? Win32APIConnector { get; }
@@ -53,12 +81,18 @@ namespace Unknown6656.AutoIt3.Runtime
 
         //public bool IsWin32APIAvailable => Win32APIConnector is { };
 
+        /// <summary>
+        /// The interpreter's script scanner and caching unit.
+        /// </summary>
         public ScriptScanner ScriptScanner { get; }
 
         public PluginLoader PluginLoader { get; }
 
         public ParserProvider ParserProvider { get; }
 
+        /// <summary>
+        /// The interpreter's telemetry logger.
+        /// </summary>
         public Telemetry Telemetry { get; }
 
         public LanguageLoader LanguageLoader { get; }
@@ -76,11 +110,22 @@ namespace Unknown6656.AutoIt3.Runtime
         public Variant ExtendedValue { get; set; }
 
 
+        /// <summary>
+        /// Creates a new interpreter instance using the given command line options and language pack loader.
+        /// </summary>
+        /// <param name="opt">Command line options to initialize the interpreter.</param>
+        /// <param name="lang_loader">Language pack loader instance.</param>
         public Interpreter(CommandLineOptions opt, LanguageLoader lang_loader)
             : this(opt, new Telemetry(), lang_loader)
         {
         }
 
+        /// <summary>
+        /// Creates a new interpreter instance using the given command line options, telemetry logger, and language pack loader.
+        /// </summary>
+        /// <param name="opt">Command line options to initialize the interpreter.</param>
+        /// <param name="telemetry">Existing telemetry logger instance.</param>
+        /// <param name="lang_loader">Language pack loader instance.</param>
         public Interpreter(CommandLineOptions opt, Telemetry telemetry, LanguageLoader lang_loader)
         {
             _instances.Add(this);
@@ -119,14 +164,22 @@ namespace Unknown6656.AutoIt3.Runtime
             ResetRandom();
         }
 
+        /// <summary>
+        /// Resets the random number generator (<see cref="Random"/>) to a new non-deterministic seed.
+        /// </summary>
         public void ResetRandom() => ResetRandom(Guid.NewGuid().GetHashCode());
 
+        /// <summary>
+        /// Resets the random number generator (<see cref="Random"/>) to the given seed.
+        /// </summary>
+        /// <param name="seed">New seed</param>
         public void ResetRandom(int seed)
         {
             lock (_main_thread_mutex)
                 Random = new XorShift(seed); // BuiltinRandom
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             foreach (AU3Thread thread in Threads)
@@ -144,22 +197,17 @@ namespace Unknown6656.AutoIt3.Runtime
             _instances.Remove(this);
         }
 
+        /// <inheritdoc/>
+        public override string ToString() => $"[{_threads.Count} Threads] {CommandLineOptions}";
+
+        /// <summary>
+        /// Halts the interpreter and all currently running threads with the given exit code.
+        /// </summary>
+        /// <param name="exitcode">Exit code.</param>
         public void Stop(int exitcode)
         {
             foreach (AU3Thread thread in Threads)
                 thread.Stop(exitcode);
-        }
-
-        public void AddFolderToEnvPath(string dir)
-        {
-            char separator = NativeInterop.DoPlatformDependent(';', ':');
-            List<string> path = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)?
-                                           .Split(separator, StringSplitOptions.RemoveEmptyEntries)
-                                           .ToList() ?? new();
-
-            path.Add(dir);
-
-            Environment.SetEnvironmentVariable("PATH", string.Join(separator, path.Distinct()), EnvironmentVariableTarget.Process);
         }
 
         public AU3Thread CreateNewThread() => new AU3Thread(this);
@@ -172,8 +220,22 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void Print(CallFrame current_frame, object? value) => MainProgram.PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
 
+        /// <inheritdoc/>
         void IDebugPrintingService.Print(string channel, string message) => MainProgram.PrintChannelMessage(channel, message);
 
+        /// <summary>
+        /// Runs the global function of the script file, with which the interpreter has been initialized
+        /// (This essentially executes the script stored in <see cref="CommandLineOptions.FilePath"/> of the interpreter's <see cref="CommandLineOptions"/>-property),
+        /// </summary>
+        /// <returns>The interpreter result of the script invocation.</returns>
+        public InterpreterResult Run() => CommandLineOptions.FilePath is string s ? Run(s) : new InterpreterResult(-1, InterpreterError.WellKnown(null, "error.unresolved_script", "<null>"));
+
+        /// <summary>
+        /// Creates a new (anonymous) interpreter, which invokes the given function with the given arguments.
+        /// </summary>
+        /// <param name="entry_point">The function (entry point) to be invoked.</param>
+        /// <param name="args">Arguments to be passed to the invoked function.</param>
+        /// <returns>The interpreter result of the function invocation.</returns>
         public InterpreterResult Run(ScriptFunction entry_point, Variant[] args)
         {
             try
@@ -196,11 +258,19 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        /// <summary>
+        /// Creates a new (anonymous) interpreter, which invokes the global function of the given script. This essentially executes the given script.
+        /// </summary>
+        /// <param name="script">The script to be executed.</param>
+        /// <returns>The interpreter result of the script invocation.</returns>
         public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
 
+        /// <summary>
+        /// Creates a new (anonymous) interpreter, which invokes the global function of the given script. This essentially executes the given script.
+        /// </summary>
+        /// <param name="path">The path of the script to be executed.</param>
+        /// <returns>The interpreter result of the script invocation.</returns>
         public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
-
-        public InterpreterResult Run() => CommandLineOptions.FilePath is string s ? Run(s) : new InterpreterResult(-1, InterpreterError.WellKnown(null, "error.unresolved_script", "<null>"));
     }
 
     public sealed class InterpreterResult

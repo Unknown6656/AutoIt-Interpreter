@@ -326,7 +326,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => "",
         };
 
-        private readonly string ToDebugStringPrivate() => ToDebugString(Interpreter.Instances.First());
+        private readonly string ToDebugStringPrivate() => ToDebugString(Interpreter.ActiveInstances.First());
 
         public readonly string ToDebugString(Interpreter interpreter)
         {

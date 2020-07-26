@@ -135,7 +135,7 @@ namespace Unknown6656.AutoIt3
 
             Console.CancelKeyPress += (_, e) =>
             {
-                Interpreter[] instances = Interpreter.Instances;
+                Interpreter[] instances = Interpreter.ActiveInstances;
 
                 e.Cancel = instances.Length > 0;
 

@@ -11,13 +11,14 @@ using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.AutoIt3.Runtime.Native;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
     using static AST;
 
     /// <summary>
-    /// Represents an AutoIt3 script scanning module.
+    /// Represents an AutoIt3 script scanning and caching module.
     /// </summary>
     public sealed class ScriptScanner
     {
@@ -292,7 +293,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     _cached_scripts.TryAdd(script.GetHashCode(), script);
 
                     if (file.Directory is { Exists: true, FullName: string dir })
-                        Interpreter.AddFolderToEnvPath(Path.GetFullPath(dir));
+                        NativeInterop.AddFolderToEnvPath(Path.GetFullPath(dir));
                 }
 
                 return script;

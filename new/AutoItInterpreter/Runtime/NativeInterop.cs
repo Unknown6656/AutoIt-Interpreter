@@ -1,14 +1,17 @@
 ﻿using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
-using System;
 using System.Text;
-using System.Runtime.CompilerServices;
+using System;
 
 namespace Unknown6656.AutoIt3.Runtime.Native
 {
+    /// <summary>
+    /// A static module containing functions and constants for native interop.
+    /// </summary>
     public static class NativeInterop
     {
         public const uint TOKEN_READ = 0x00020008;
@@ -148,6 +151,18 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(POWRPROF, CharSet = CharSet.Auto, ExactSpelling = true)]
         public static extern bool SetSuspendState(bool hiberate, bool forceCritical, bool disableWakeEvent);
 
+
+        public static void AddFolderToEnvPath(string dir)
+        {
+            char separator = NativeInterop.DoPlatformDependent(';', ':');
+            List<string> path = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)?
+                                           .Split(separator, StringSplitOptions.RemoveEmptyEntries)
+                                           .ToList() ?? new();
+
+            path.Add(dir);
+
+            Environment.SetEnvironmentVariable("PATH", string.Join(separator, path.Distinct()), EnvironmentVariableTarget.Process);
+        }
 
         public static (string stdout, int code) Bash(string command) => DoPlatformDependent(
             delegate
