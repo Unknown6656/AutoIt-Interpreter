@@ -103,19 +103,22 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = false)]
         public static unsafe extern int RegCreateKeyEx(void* hKey, string lpSubKey, void* lpReserved, void* lpClass, RegOption dwOptions, RegSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes, out void* phkResult, out RegResult lpdwDisposition);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode)]
-        public static unsafe extern int RegEnumKeyEx(void* hkey, uint index, string lpName, ref uint lpcbName, void* lpReserved, void* lpClass, IntPtr lpcbClass, out long lpftLastWriteTime);
-
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode)]
-        public static unsafe extern int RegOpenKeyEx(void* hKey, string subKey, int ulOptions, RegSAM samDesired, out void* hkResult);
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegEnumKeyEx(void* hkey, int index, StringBuilder lpName, int* lpcbName, void* lpReserved, void* lpClass, void* lpcbClass, out long lpftLastWriteTime);
 
         [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
-        public static unsafe extern int RegQueryValueEx(void* hKey, string lpValueName, void* lpReserved, out RegKeyType lpType, out void* lpData, out uint lpcbData);
+        public static unsafe extern int RegEnumValue( void* hKey, int dwIndex, StringBuilder lpValueName, int* lpcValueName, void* lpReserved, out RegKeyType lpType, void* lpData, out int lpcbData);
+
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        public static unsafe extern int RegOpenKeyEx(void* hKey, string subKey, int ulOptions, RegSAM samDesired, out void* hkResult);
+
+        // [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        // public static unsafe extern int RegQueryValueEx(void* hKey, string lpValueName, void* lpReserved, out RegKeyType lpType, out void* lpData, out uint lpcbData);
 
         [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegSetValueEx(void* hKey, string lpValueName, void* lpReserved, RegKeyType dwType, void* lpData, int cbData);
 
-        [DllImport("Advapi32.dll", EntryPoint = "RegGetValueW", CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegGetValue(void* hKey, string lpSubKey, string lpValue, int dwFlags, out RegKeyType pdwType, void* pvData, out int pcbData);
 
         [DllImport(ADVAPI32, SetLastError = true)]

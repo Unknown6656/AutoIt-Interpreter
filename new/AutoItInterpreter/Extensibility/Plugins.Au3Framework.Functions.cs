@@ -2162,60 +2162,114 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
         {
+            void* hkey = null;
+            int err = 0;
 
+            try
+            {
+                GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
+                {
+                    int max_size = 512;
+                    StringBuilder sb = new StringBuilder(max_size);
+
+                    if ((err = NativeInterop.RegEnumKeyEx(hkey, (int)args[1], sb, &max_size, null, null, null, out _)) is 0)
+                        return (Variant)sb;
+                }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
         }
 
         internal static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
         {
+            void* hkey = null;
+            int err = 0;
 
+            try
+            {
+                GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
+                {
+                    int max_size = 512;
+                    StringBuilder sb = new StringBuilder(max_size);
+
+                    if ((err = NativeInterop.RegEnumValue(hkey, (int)args[1], sb, &max_size, null, out RegKeyType type, null, out _)) is 0)
+                        return FunctionReturnValue.Success(sb, type.ToString());
+                }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
         }
 
         internal static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
         {
             GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
 
-            int result = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), 0xffff, out RegKeyType type, null, out int size);
+            void* hkey = null;
+            int err;
 
-            if (result != 0)
-                return FunctionReturnValue.Error(result);
-
-            void* data = (void*)Marshal.AllocHGlobal(size);
-
-            result = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), type switch
+            try
             {
-                RegKeyType.REG_SZ => 0x0002,
-                RegKeyType.REG_MULTI_SZ => 0x0020,
-                RegKeyType.REG_EXPAND_SZ => 0x0004,
-                RegKeyType.REG_DWORD => 0x0018,
-                RegKeyType.REG_QWORD => 0x0048,
-                RegKeyType.REG_BINARY => 0x0008,
-                RegKeyType.REG_UNKNOWN or _ => 0xffff,
-            }, out type, data, out size);
-
-            if (result != 0)
-                return FunctionReturnValue.Error(result);
-            else
-                switch (type)
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Write, out hkey)) != 0)
+                    return FunctionReturnValue.Error(err);
+                else if ((err = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), 0xffff, out RegKeyType type, null, out int size)) != 0)
+                    return FunctionReturnValue.Error(err);
+                else
                 {
-                    case RegKeyType.REG_SZ or RegKeyType.REG_EXPAND_SZ or RegKeyType.REG_MULTI_SZ:
-                        string s = From.Pointer(data, size - 1).To.String();
+                    void* data = (void*)Marshal.AllocHGlobal(size);
 
-                        if (type is RegKeyType.REG_MULTI_SZ)
-                            s = s.Replace('\0', '\n');
+                    err = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), type switch
+                    {
+                        RegKeyType.REG_SZ => 0x0002,
+                        RegKeyType.REG_MULTI_SZ => 0x0020,
+                        RegKeyType.REG_EXPAND_SZ => 0x0004,
+                        RegKeyType.REG_DWORD => 0x0018,
+                        RegKeyType.REG_QWORD => 0x0048,
+                        RegKeyType.REG_BINARY => 0x0008,
+                        RegKeyType.REG_UNKNOWN or _ => 0xffff,
+                    }, out type, data, out size);
 
-                        return FunctionReturnValue.Success(s, type.ToString());
-                    case RegKeyType.REG_DWORD or RegKeyType.REG_DWORD_LITTLE_ENDIAN:
-                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<int>(), "REG_DWORD");
-                    case RegKeyType.REG_DWORD_BIG_ENDIAN:
-                        return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().To.Unmanaged<int>(), "REG_DWORD");
-                    case RegKeyType.REG_QWORD:
-                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<long>(), type.ToString());
-                    case RegKeyType.REG_LINK:
-                        return FunctionReturnValue.Error(-2);
-                    case RegKeyType.REG_NONE or RegKeyType.REG_UNKNOWN or RegKeyType.REG_BINARY:
-                    default:
-                        return FunctionReturnValue.Success(From.Pointer(data, size).To.Bytes, type.ToString());
+                    if (err is 0)
+                        switch (type)
+                        {
+                            case RegKeyType.REG_SZ or RegKeyType.REG_EXPAND_SZ or RegKeyType.REG_MULTI_SZ:
+                                string s = From.Pointer(data, size - 1).To.String();
+
+                                if (type is RegKeyType.REG_MULTI_SZ)
+                                    s = s.Replace('\0', '\n');
+
+                                return FunctionReturnValue.Success(s, type.ToString());
+                            case RegKeyType.REG_DWORD or RegKeyType.REG_DWORD_LITTLE_ENDIAN:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<int>(), "REG_DWORD");
+                            case RegKeyType.REG_DWORD_BIG_ENDIAN:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().To.Unmanaged<int>(), "REG_DWORD");
+                            case RegKeyType.REG_QWORD:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<long>(), type.ToString());
+                            case RegKeyType.REG_LINK:
+                                return FunctionReturnValue.Error(-2);
+                            case RegKeyType.REG_NONE or RegKeyType.REG_UNKNOWN or RegKeyType.REG_BINARY:
+                            default:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Bytes, type.ToString());
+                        }
                 }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
         }
 
         internal static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
