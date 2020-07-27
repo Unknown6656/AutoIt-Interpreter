@@ -82,17 +82,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DllCall), 3, 255, DllCall),
-            ProvidedNativeFunction.Create(nameof(DllCallAddress), , DllCallAddress),
-            ProvidedNativeFunction.Create(nameof(DllCallbackFree), , DllCallbackFree),
-            ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), , DllCallbackGetPtr),
-            ProvidedNativeFunction.Create(nameof(DllCallbackRegister), , DllCallbackRegister),
+            // ProvidedNativeFunction.Create(nameof(DllCallAddress), , DllCallAddress),
+            // ProvidedNativeFunction.Create(nameof(DllCallbackFree), , DllCallbackFree),
+            // ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), , DllCallbackGetPtr),
+            // ProvidedNativeFunction.Create(nameof(DllCallbackRegister), , DllCallbackRegister),
             ProvidedNativeFunction.Create(nameof(DllClose), 1, DllClose),
             ProvidedNativeFunction.Create(nameof(DllOpen), 1, DllOpen),
-            ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
-            ProvidedNativeFunction.Create(nameof(DllStructGetData), , DllStructGetData),
-            ProvidedNativeFunction.Create(nameof(DllStructGetPtr), , DllStructGetPtr),
-            ProvidedNativeFunction.Create(nameof(DllStructGetSize), , DllStructGetSize),
-            ProvidedNativeFunction.Create(nameof(DllStructSetData), , DllStructSetData),
+            //ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetData), , DllStructGetData),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetPtr), , DllStructGetPtr),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetSize), , DllStructGetSize),
+            //ProvidedNativeFunction.Create(nameof(DllStructSetData), , DllStructSetData),
             ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
             ProvidedNativeFunction.Create(nameof(DriveGetFileSystem), 1, DriveGetFileSystem),
             ProvidedNativeFunction.Create(nameof(DriveGetLabel), 1, DriveGetLabel),
@@ -428,11 +428,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     };
                 }, delegate
                 {
-                    int cdrom = NativeInterop.open(args[0].ToString(), 0x0800);
+                    int cdrom = NativeInterop.Linux__open(args[0].ToString(), 0x0800);
 
                     return args[1].ToString().ToLower() switch
                     {
-                        "open" or "closed" => NativeInterop.ioctl(cdrom, 0x5309, __arglist()), // TODO ?
+                        "open" or "closed" => NativeInterop.Linux__ioctl(cdrom, 0x5309, __arglist()), // TODO ?
                         _ => false
                     };
                 });
@@ -645,42 +645,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         #endregion
         #region DLL...
 
-        private static string? TranslateDllType(string typestring) => typestring.ToUpperInvariant() switch
-        {
-            "U0" or "NONE" => "void",
-            "U1" or "BYTE" or "BOOLEAN" => "byte",
-            "I2" or "SHORT" => "short",
-            "U2" or "USHORT" or "WORD" => "ushort",
-            "I4" or "INT" or "LONG" or "BOOL" or "HANDLE" => "int",
-            "U4" or "UINT" or "ULONG" or "DWORD" => "uint",
-            "I8" or "INT64" or "LONGLONG" or "LARGE_INTEGER" => "long",
-            "U8" or "UINT64" or "ULONGLONG" or "ULARGE_INTEGER" => "ulong",
-            "R4" or "FLOAT" => "float",
-            "R8" or "DOUBLE" => "double",
-            "INT_PTR" or "LONG_PTR" or "LRESULT" or "LPARAM" => "nint",
-            "UINT_PTR" or "ULONG_PTR" or "DWORD_PTR" or "WPARAM" or "ULONG_PTR" => "nuint",
-            "I2" or "PTR" or "LPVOID" or "HANDLE" or "HWND" or "HINSTANCE" => "void*",
-            "STR" or "LPCSTR" or "LPSTR" => "StringBuilder", // ansi
-            "WSTR" or "LPCWSTR" or "LPWSTR" => "StringBuilder", // utf16
-            "STRUCT" => ,
-            { Length: > 1 } s when s[^1] == '*' && TranslateDllType(s[1..]) is string t => t + '*',
-            { Length: > 2 } s when s[..2] == "LP" && TranslateDllType(s[2..]) is string t => t + '*',
-            _ => null,
-        };
-
         internal static FunctionReturnValue DllCall(CallFrame frame, Variant[] args)
         {
-            FileInfo? dll = null;
+            if (!args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? dllhandle))
+                try
+                {
+                    dllhandle = new LibraryHandle(args[0].ToString());
+                }
+                catch
+                {
+                }
 
-            try
-            {
-                dll = args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? dllhandle) ? dllhandle.File : new FileInfo(args[0].ToString());
-            }
-            catch
-            {
-            }
+            if (dllhandle?.IsLoaded is false)
+                dllhandle.LoadLibrary();
 
-            if (dll?.Exists is null or false)
+            if (dllhandle?.IsLoaded is null or false)
                 return FunctionReturnValue.Error(1);
 
             List<(string type, Variant value)> arguments = new();
@@ -701,31 +680,57 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                     return FunctionReturnValue.Error(5);
 
+            nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
+                NativeInterop.GetProcAddress,
+                NativeInterop.Linux__dlsym,
+                NativeInterop.MacOS__dlsym
+            )(dllhandle.Handle, funcname);
 
+            if (funcptr == default)
+                return FunctionReturnValue.Error(3);
+
+
+
+
+
+            Delegate.CreateDelegate()
+            Marshal.GetDelegateForFunctionPointer(funcptr);
 
             // TODO
 
+
+            throw new NotImplementedException();
         }
 
-        internal static FunctionReturnValue DllCallAddress(CallFrame frame, Variant[] args)
+        public static void CreateDelegate(Type ret, Type[] pars)
         {
 
         }
 
-        internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
-        {
 
-        }
 
-        internal static FunctionReturnValue DllCallbackGetPtr(CallFrame frame, Variant[] args)
-        {
 
-        }
+        // TODO : DllGetAddress ?
 
-        internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
-        {
-
-        }
+        // internal static FunctionReturnValue DllCallAddress(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllCallbackGetPtr(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         internal static FunctionReturnValue DllClose(CallFrame frame, Variant[] args)
         {
@@ -739,10 +744,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                FileInfo dll = new FileInfo(args[0].ToString());
-
-                if (dll.Exists)
-                    return frame.Interpreter.GlobalObjectStorage.Store(new LibraryHandle(dll));
+                return frame.Interpreter.GlobalObjectStorage.Store(new LibraryHandle(args[0].ToString()));
             }
             catch
             {
@@ -751,29 +753,29 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(-1);
         }
 
-        internal static FunctionReturnValue DllStructCreate(CallFrame frame, Variant[] args)
-        {
-        }
-
-        internal static FunctionReturnValue DllStructGetData(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        internal static FunctionReturnValue DllStructGetPtr(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        internal static FunctionReturnValue DllStructGetSize(CallFrame frame, Variant[] args)
-        {
-
-        }
-
-        internal static FunctionReturnValue DllStructSetData(CallFrame frame, Variant[] args)
-        {
-
-        }
+        // internal static FunctionReturnValue DllStructCreate(CallFrame frame, Variant[] args)
+        // {
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetData(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetPtr(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetSize(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructSetData(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
 
         #endregion
         #region DRIVE...
@@ -1977,7 +1979,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 }
 
             return false;
-        }, () => NativeInterop.geteuid() == 0);
+        }, () => NativeInterop.Linux__geteuid() == 0);
 
         internal static FunctionReturnValue IsArray(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Array);
 
@@ -2542,7 +2544,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     else if (mode is ShutdownMode.SD_STANDBY or ShutdownMode.SD_HIBERNATE)
                         code = 0xD000FCE2;
 
-                    return code is uint msg && NativeInterop.reboot(0xfee1dead, 0x28121969, msg, null) == 0;
+                    return code is uint msg && NativeInterop.Linux__reboot(0xfee1dead, 0x28121969, msg, null) == 0;
                 });
 
                 return Variant.FromBoolean(success);
@@ -3469,12 +3471,48 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             public override string ToString() => $"{FileStream} ({Flags}, {Encoding})";
         }
 
-        private sealed class LibraryHandle
+        private sealed unsafe class LibraryHandle
+            : IDisposable
         {
-            public FileInfo File { get; }
+            public bool IsDisposed { get; private set; }
+            public nint Handle { get; private set; }
+            public string Path { get; }
+            public bool IsLoaded => Handle != 0;
 
 
-            public LibraryHandle(FileInfo file) => File = file;
+            public LibraryHandle(string path) => Path = path;
+
+            ~LibraryHandle() => Dispose(false);
+
+            private void Dispose(bool _)
+            {
+                if (!IsDisposed)
+                {
+                    if (IsLoaded)
+                        NativeInterop.DoPlatformDependent(
+                            () => NativeInterop.FreeLibrary(Handle),
+                            () => NativeInterop.Linux__dlclose(Handle),
+                            () => NativeInterop.MacOS__dlclose(Handle)
+                        );
+
+                    Handle = default;
+                    IsDisposed = true;
+                }
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            public void LoadLibrary() => Handle = NativeInterop.DoPlatformDependent(
+                () => NativeInterop.LoadLibrary(Path),
+                () => NativeInterop.Linux__dlopen(Path),
+                () => NativeInterop.MacOS__dlopen(Path)
+            );
+
+            public override string ToString() => $"0x{(long)Handle:x16}: {Path}";
         }
 
         private sealed class InetHandle

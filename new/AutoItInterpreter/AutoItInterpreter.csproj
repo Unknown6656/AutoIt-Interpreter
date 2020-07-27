@@ -58,9 +58,10 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
+        <ProjectReference Include="..\AutoItExpressionParser\AutoItParser.fsproj" />
         <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
     </ItemGroup>
     <ItemGroup>

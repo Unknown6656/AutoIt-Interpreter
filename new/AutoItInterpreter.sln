@@ -34,7 +34,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "~", "~", "{621B4FD7-F769-44
 		readme.md = readme.md
 	EndProjectSection
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItExpressionParser", "AutoItExpressionParser\AutoItExpressionParser.fsproj", "{6350112E-9412-4078-9F2D-D453D871D7AB}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "AutoItParser", "AutoItParser\AutoItParser.fsproj", "{6350112E-9412-4078-9F2D-D453D871D7AB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.COM.Server", "util\AutoIt3.COM.Server\AutoIt3.COM.Server.csproj", "{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB}"
 EndProject
@@ -56,7 +56,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Common", "util\Auto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.GUI.Server", "util\AutoIt3.GUI.Server\AutoIt3.GUI.Server.csproj", "{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoIt3.WinAPI.Server", "util\AutoIt3.WinAPI.Server\AutoIt3.WinAPI.Server.csproj", "{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.WinAPI.Server", "util\AutoIt3.WinAPI.Server\AutoIt3.WinAPI.Server.csproj", "{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

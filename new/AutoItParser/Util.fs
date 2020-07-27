@@ -1,4 +1,4 @@
-﻿namespace Unknown6656.AutoIt3.ExpressionParser
+﻿namespace Unknown6656.AutoIt3
 
 
 [<AutoOpen>]

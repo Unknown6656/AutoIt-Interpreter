@@ -840,7 +840,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                           | |
                           |_|  {lang?["banner.written_by", __module__.Author, __module__.Year]}
 {lang?["banner.version"]} v.{__module__.InterpreterVersion} ({__module__.GitHash})
-   {'\x1b'}[4m{__module__.RepositoryURL}{'\x1b'}[24m
+   {'\x1b'}[4m{__module__.RepositoryURL}/{'\x1b'}[24m 
 ");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Crimson;
                     Console.Write("    ");

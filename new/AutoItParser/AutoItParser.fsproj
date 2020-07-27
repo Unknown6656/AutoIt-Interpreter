@@ -6,13 +6,13 @@
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-        <RootNamespace>Unknown6656.AutoIt3.ExpressionParser</RootNamespace>
+        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
         <Authors>Unknown6656</Authors>
         <Company>Unknown6656</Company>
         <Copyright>Copyright © 2020, Unknown6656</Copyright>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Product>Unknown6656 AutoIt3 Expression Parser</Product>
-        <PackageId>Unknown6656.AutoIt3.ExpressionParser</PackageId>
+        <PackageId>Unknown6656.AutoIt3.Parser</PackageId>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>

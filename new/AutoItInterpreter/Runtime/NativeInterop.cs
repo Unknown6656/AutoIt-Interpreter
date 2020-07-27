@@ -14,20 +14,28 @@ namespace Unknown6656.AutoIt3.Runtime.Native
     /// </summary>
     public static class NativeInterop
     {
+        #region CONSTANTS
+
         public const uint TOKEN_READ = 0x00020008;
         public const uint TOKEN_ADJUST_PRIVILEGES = 0x00000020;
         public const uint TOKEN_QUERY = 0x00000008;
 
         public const int MAX_PATH = 255;
-        public const string KERNEL32 = "kernel32.dll";
-        public const string SHELL32 = "shell32.dll";
-        public const string OLE32 = "ole32.dll";
-        public const string USER32 = "user32.dll";
-        public const string LIBC = "libc.so.6"; // libc.so
-        public const string COREDLL = "coredll.dll";
-        public const string NTDLL = "ntdll.dll";
-        public const string ADVAPI32 = "advapi32.dll";
-        public const string POWRPROF = "powrprof.dll";
+        public const string LIBC6_SO = "libc.so"; // libc.so.6
+        public const string LIBDL_SO = "libdl.so"; // libdl.so.2
+
+        public const string LIBDL_DYLIB = "libdl.dylib";
+
+        public const string KERNEL32_DLL = "kernel32.dll";
+        public const string SHELL32_DLL = "shell32.dll";
+        public const string OLE32_DLL = "ole32.dll";
+        public const string USER32_DLL = "user32.dll";
+        public const string COREDLL_DLL = "coredll.dll";
+        public const string NTDLL_DLL = "ntdll.dll";
+        public const string ADVAPI32_DLL = "advapi32.dll";
+        public const string POWRPROF_DLL = "powrprof.dll";
+
+        #endregion
 
         public static OperatingSystem OperatingSystem { get; } = Environment.OSVersion.Platform switch
         {
@@ -36,121 +44,181 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             _ => OperatingSystem.Windows
         };
 
+        #region LIBC.SO
 
-        [DllImport(LIBC)]
-        public static unsafe extern uint geteuid();
+        [DllImport(LIBC6_SO, EntryPoint = "geteuid")]
+        public static unsafe extern uint Linux__geteuid();
 
-        [DllImport(LIBC)]
-        public static unsafe extern int ioctl(int fd, ulong req, __arglist);
+        [DllImport(LIBC6_SO, EntryPoint = "ioctl")]
+        public static unsafe extern int Linux__ioctl(int fd, ulong req, __arglist);
 
-        [DllImport(LIBC)]
-        public static unsafe extern int reboot(uint magic, uint magic2, uint cmd, void* arg);
+        [DllImport(LIBC6_SO, EntryPoint = "reboot")]
+        public static unsafe extern int Linux__reboot(uint magic, uint magic2, uint cmd, void* arg);
 
-        [DllImport(LIBC, CharSet = CharSet.Ansi)]
-        public static unsafe extern int open([MarshalAs(UnmanagedType.LPStr)] string path, int flags);
+        [DllImport(LIBC6_SO, EntryPoint = "open", CharSet = CharSet.Ansi)]
+        public static unsafe extern int Linux__open([MarshalAs(UnmanagedType.LPStr)] string path, int flags);
 
-        [DllImport(USER32, SetLastError = true)]
+        #endregion
+        #region LIBDL.SO
+
+        [DllImport(LIBDL_SO, EntryPoint = "dlopen", CharSet = CharSet.Ansi)]
+        public static extern nint Linux__dlopen([MarshalAs(UnmanagedType.LPStr)] string filename, int flags = 0x0101);
+
+        [DllImport(LIBDL_SO, EntryPoint = "dlsym", CharSet = CharSet.Ansi)]
+        public static extern nint Linux__dlsym(nint handle, [MarshalAs(UnmanagedType.LPStr)] string funcname);
+
+        [DllImport(LIBDL_SO, EntryPoint = "dlclose")]
+        public static extern nint Linux__dlclose(nint handle);
+
+        #endregion
+        #region LIBDL.DYLIB
+
+        [DllImport(LIBDL_DYLIB, EntryPoint = "dlopen", CharSet = CharSet.Ansi)]
+        public static extern nint MacOS__dlopen([MarshalAs(UnmanagedType.LPStr)] string filename, int flags = 0x0101);
+
+        [DllImport(LIBDL_DYLIB, EntryPoint = "dlsym", CharSet = CharSet.Ansi)]
+        public static extern nint MacOS__dlsym(nint handle, [MarshalAs(UnmanagedType.LPStr)] string funcname);
+
+        [DllImport(LIBDL_DYLIB, EntryPoint = "dlclose")]
+        public static extern int MacOS__dlclose(nint handle);
+
+        #endregion
+        #region USER32.DLL
+
+        [DllImport(USER32_DLL, SetLastError = true)]
         public static unsafe extern bool SetForegroundWindow(nint hWnd);
 
-        [DllImport(USER32, CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(USER32_DLL, CharSet = CharSet.Auto, SetLastError = true)]
         public static unsafe extern void* SetFocus(void* hWnd);
 
-        [DllImport(USER32, SetLastError = true, CharSet = CharSet.Unicode)]
+        [DllImport(USER32_DLL, SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern int MessageBox(int hWnd, string text, string title, uint type);
 
-        [DllImport(SHELL32, CharSet = CharSet.Unicode)]
+        #endregion
+        #region SHELL32.DLL
+
+        [DllImport(SHELL32_DLL, CharSet = CharSet.Unicode)]
         public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
 
-        [DllImport(SHELL32, CharSet = CharSet.Unicode)]
-        public static unsafe extern uint SHEmptyRecycleBin(void* hwnd, [MarshalAs(UnmanagedType.LPWStr)] string? pszRootPath, RecycleFlags dwFlags);
+        [DllImport(SHELL32_DLL, CharSet = CharSet.Unicode)]
+        public static unsafe extern uint SHEmptyRecycleBin(void* hwnd, string? pszRootPath, RecycleFlags dwFlags);
 
-        [DllImport(KERNEL32, CharSet = CharSet.Auto)]
+        #endregion
+        #region KERNEL32.DLL
+
+        [DllImport(KERNEL32_DLL, CharSet = CharSet.Auto)]
         public static extern ushort GetUserDefaultUILanguage();
 
-        [DllImport(KERNEL32, SetLastError = true)]
+        [DllImport(KERNEL32_DLL, SetLastError = true)]
         public static extern unsafe void* GetCurrentProcess();
 
-        [DllImport(KERNEL32)]
+        [DllImport(KERNEL32_DLL)]
         public static extern unsafe nint LocalFree(void* hMem);
 
-        [DllImport(NTDLL)]
+        [DllImport(KERNEL32_DLL, SetLastError = true)]
+        public static extern nint LoadLibrary(string lpLibFileName);
+
+        [DllImport(KERNEL32_DLL, SetLastError = true)]
+        public static extern nint GetProcAddress(nint hLibModule, string lpProcName);
+
+        [DllImport(KERNEL32_DLL, SetLastError = true)]
+        public static extern bool FreeLibrary(nint hLibModule);
+
+        #endregion
+        #region NTDLL.DLL
+
+        [DllImport(NTDLL_DLL)]
         public static extern int RtlAdjustPrivilege(int Privilege, bool bEnablePrivilege, bool IsThreadPrivilege, out bool _);
 
-        [DllImport(NTDLL)]
+        [DllImport(NTDLL_DLL)]
         public static unsafe extern int NtRaiseHardError(uint ErrorStatus, uint NumberOfParameters, uint UnicodeStringParameterMask, void* Parameters, uint ValidResponseOption, out uint _);
 
-        [DllImport(COREDLL, SetLastError = true)]
+        #endregion
+        #region COREDLL.DLL
+
+        [DllImport(COREDLL_DLL, SetLastError = true)]
         public static unsafe extern bool DeviceIoControl(void* hDevice, int dwIoControlCode, byte* lpInBuffer, int nInBufferSize, byte* lpOutBuffer, int nOutBufferSize, int* lpBytesReturned, void* lpOverlapped);
 
-        [DllImport(COREDLL, CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(COREDLL_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern void* CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, void* lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, void* hTemplateFile);
 
-        [DllImport(USER32)]
+        #endregion
+        #region USER32.DLL
+
+        [DllImport(USER32_DLL)]
         public static extern bool BlockInput(bool fBlockIt);
 
-        [DllImport(USER32)]
+        [DllImport(USER32_DLL)]
         public static extern int ShowWindow(int hwnd, int nCmdShow);
 
-        [DllImport(OLE32)]
+        #endregion
+        #region OLE32.DLL
+
+        [DllImport(OLE32_DLL)]
         public static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
 
-        [DllImport(OLE32)]
+        [DllImport(OLE32_DLL)]
         public static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        #endregion
+        #region ADVAPI32.DLL
+
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegDeleteKeyEx(void* hKey, string lpSubKey, RegSAM samDesired, void* lpReserved);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegDeleteKeyValue(void* hKey, string lpSubKey, string lpValueName);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = false)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = false)]
         public static unsafe extern int RegCreateKeyEx(void* hKey, string lpSubKey, void* lpReserved, void* lpClass, RegOption dwOptions, RegSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes, out void* phkResult, out RegResult lpdwDisposition);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegEnumKeyEx(void* hkey, int index, StringBuilder lpName, int* lpcbName, void* lpReserved, void* lpClass, void* lpcbClass, out long lpftLastWriteTime);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegEnumValue( void* hKey, int dwIndex, StringBuilder lpValueName, int* lpcValueName, void* lpReserved, out RegKeyType lpType, void* lpData, out int lpcbData);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegOpenKeyEx(void* hKey, string subKey, int ulOptions, RegSAM samDesired, out void* hkResult);
 
         // [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
         // public static unsafe extern int RegQueryValueEx(void* hKey, string lpValueName, void* lpReserved, out RegKeyType lpType, out void* lpData, out uint lpcbData);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegSetValueEx(void* hKey, string lpValueName, void* lpReserved, RegKeyType dwType, void* lpData, int cbData);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Unicode, SetLastError = true)]
         public static unsafe extern int RegGetValue(void* hKey, string lpSubKey, string lpValue, int dwFlags, out RegKeyType pdwType, void* pvData, out int pcbData);
 
-        [DllImport(ADVAPI32, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, SetLastError = true)]
         public static unsafe extern int RegCloseKey(void* hKey);
 
-
-
-        [DllImport(ADVAPI32, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool GetTokenInformation(void* TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, void* TokenInformation, uint TokenInformationLength, out uint ReturnLength);
 
-        [DllImport(ADVAPI32, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool OpenProcessToken(void* ProcessHandle, uint DesiredAccess, void** TokenHandle);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Auto, SetLastError = true)]
         public static extern unsafe int InitiateShutdown([MarshalAs(UnmanagedType.LPWStr)] string? lpMachineName, [MarshalAs(UnmanagedType.LPWStr)] string? lpMessage, uint dwTimeout, uint flags, uint dwReason);
 
-        [DllImport(ADVAPI32, CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue([MarshalAs(UnmanagedType.LPWStr)] string? lpSystemName, [MarshalAs(UnmanagedType.LPWStr)] string? lpName, ref (uint low, int high) lpLuid);
 
-        [DllImport(ADVAPI32, SetLastError = true)]
+        [DllImport(ADVAPI32_DLL, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern unsafe bool AdjustTokenPrivileges(void* TokenHandle, [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, int BufferLengthInBytes, void* PreviousState, int* ReturnLengthInBytes);
 
-        [DllImport(POWRPROF, CharSet = CharSet.Auto, ExactSpelling = true)]
+        #endregion
+        #region POWRPROF.DLL
+
+        [DllImport(POWRPROF_DLL, CharSet = CharSet.Auto, ExactSpelling = true)]
         public static extern bool SetSuspendState(bool hiberate, bool forceCritical, bool disableWakeEvent);
 
+        #endregion
 
         public static void AddFolderToEnvPath(string dir)
         {
@@ -364,11 +432,14 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         SHERB_NOSOUND = 0x00000004
     }
 
+    [Flags]
     public enum OperatingSystem
+         : byte
     {
-        Windows,
-        Unix,
-        MacOS
+        Unknown = 0,
+        Windows = 1,
+        Unix = 2,
+        MacOS = 4
     }
 
     public enum TOKEN_INFORMATION_CLASS
