@@ -1,5 +1,7 @@
 ﻿namespace Unknown6656.AutoIt3.Parser.ExpressionParser
 
+open Unknown6656.AutoIt3.Parser
+
 open System.Globalization
 open System
 
@@ -14,10 +16,6 @@ type ParserMode =
     | MultiDeclaration = 0
     | ArbitraryExpression = 1
     | FunctionParameters = 2
-
-type Associativity =
-    | Left
-    | Right
 
 type ExpressionParser(mode : ParserMode) =
     inherit ParserConstructor<PARSABLE_EXPRESSION>()

@@ -1,28 +1,28 @@
-﻿using System.Text.RegularExpressions;
-using System.Runtime.InteropServices;
+﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Threading;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Net;
-using System.IO;
-using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
-using Unknown6656.AutoIt3.Runtime.Native;
-using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
+using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Reflection.Metadata;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
     using static Unknown6656.AutoIt3.Parser.DLLStructParser.AST;
+
     using TCPHandle = Union<TcpListener, TcpClient>;
 
     public sealed class FrameworkFunctions
@@ -672,12 +672,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             Variant[] arguments = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
             string raw_signature = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[1]).StringJoin(", ");
-            SIGNATURE signature;
-
-            if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out var result) && result is { })
-                signature = result.ParsedValue;
-            else
-                return FunctionReturnValue.Error(3);
 
             nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
                 NativeInterop.GetProcAddress,
@@ -687,14 +681,18 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             if (funcptr == default)
                 return FunctionReturnValue.Error(3);
+            else if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out var result)
+                && result is { ParsedValue: SIGNATURE signature }
+                && DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes) is { } @delegate)
+            {
+                object del = @delegate.Constructor(null, funcptr);
 
+                // @delegate.Invoker(del, )
 
-            var delegatetype = DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes);
-
-            // TODO
-
-
-            throw new NotImplementedException();
+                throw new NotImplementedException();
+            }
+            else
+                return FunctionReturnValue.Error(3);
         }
 
         // TODO : DllGetAddress ?

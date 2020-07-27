@@ -1,7 +1,10 @@
 ﻿namespace Unknown6656.AutoIt3.Parser.DLLStructParser
 
+open Unknown6656.AutoIt3.Parser
+
 open Piglet.Parser.Configuration.Generic
 open Piglet.Parser.Configuration.FSharp
+open Piglet.Parser.Construction
 
 open AST
 
@@ -17,6 +20,7 @@ type DLLStructParser() =
         let nt_parameters      = x.CreateNonTerminal<TYPE list>        "parameters"
         let nt_call_conv       = x.CreateNonTerminal<CALL_CONVENTION>  "call-conv"
         let nt_type            = x.CreateNonTerminal<TYPE>             "type"
+        let nt_non_composite   = x.CreateNonTerminal<TYPE>             "non-composite"
         let nt_composite       = x.CreateNonTerminal<TYPE list>        "composite"
 
         let t_symbol_oparen    = x.CreateTerminal  @"\("
@@ -46,6 +50,19 @@ type DLLStructParser() =
         let t_keyword_dynamic  = x.CreateTerminalF @"(dynamic|var|struct)"              (fun _ -> Struct)
         let t_pointer          = x.CreateTerminalF @"lp([a-zA-Z0-9_]+)"                 (fun s -> s.[2..])
 
+        let precedences =
+            ([
+                Left, [ t_symbol_comma ]
+                Left, [ t_symbol_semicolon ]
+                Right, [ t_symbol_asterisk ]
+            ] : list<Associativity * ITerminalWrapper list>)
+            |> List.map (fun (a, g) -> struct(match a with
+                                              | Right -> AssociativityDirection.Right
+                                              | _ -> AssociativityDirection.Left
+                                              , List.toArray g))
+            |> List.toArray
+        
+        x.SetPrecedenceList precedences
 
         reduce_3i nt_result nt_annotated_type t_symbol_comma nt_parameters (fun r _ ps -> { ReturnType = r; ParameterTypes = List.toArray ps })
         
@@ -63,27 +80,29 @@ type DLLStructParser() =
         reduce_0i nt_call_conv t_keyword_thiscall
         reduce_0i nt_call_conv t_keyword_winapi
 
-        reduce_3i nt_type t_symbol_oparen nt_type t_symbol_cparen (fun _ t _ -> t)
+        reduce_0i nt_type nt_non_composite
         reduce_1i nt_type nt_composite Composite
-        reduce_0i nt_type t_keyword_none
-        reduce_0i nt_type t_keyword_uint8
-        reduce_0i nt_type t_keyword_int16
-        reduce_0i nt_type t_keyword_uint16
-        reduce_0i nt_type t_keyword_int32
-        reduce_0i nt_type t_keyword_uint32
-        reduce_0i nt_type t_keyword_int64
-        reduce_0i nt_type t_keyword_uint64
-        reduce_0i nt_type t_keyword_float32
-        reduce_0i nt_type t_keyword_float64
-        reduce_0i nt_type t_keyword_float128
-        reduce_0i nt_type t_keyword_ptr
-        reduce_0i nt_type t_keyword_astr
-        reduce_0i nt_type t_keyword_wstr
-        reduce_0i nt_type t_keyword_dynamic
+
+        reduce_0i nt_non_composite t_keyword_none
+        reduce_0i nt_non_composite t_keyword_uint8
+        reduce_0i nt_non_composite t_keyword_uint16
+        reduce_0i nt_non_composite t_keyword_int16
+        reduce_0i nt_non_composite t_keyword_uint32
+        reduce_0i nt_non_composite t_keyword_int32
+        reduce_0i nt_non_composite t_keyword_uint64
+        reduce_0i nt_non_composite t_keyword_int64
+        reduce_0i nt_non_composite t_keyword_float32
+        reduce_0i nt_non_composite t_keyword_float64
+        reduce_0i nt_non_composite t_keyword_float128
+        reduce_0i nt_non_composite t_keyword_ptr
+        reduce_0i nt_non_composite t_keyword_astr
+        reduce_0i nt_non_composite t_keyword_wstr
+        reduce_0i nt_non_composite t_keyword_dynamic
+        reduce_3i nt_non_composite t_symbol_oparen nt_type t_symbol_cparen (fun _ t _ -> t)
         
         reduce_1i nt_type t_pointer (fun t -> PTR) // TODO
         reduce_2i nt_type nt_type t_symbol_asterisk (fun t _ -> PTR) // TODO
         
-        reduce_3i nt_composite nt_composite t_symbol_semicolon nt_type (fun xs _ x -> xs@[x])
-        reduce_3i nt_composite nt_type t_symbol_semicolon nt_type (fun x1 _ x2 -> [x1; x2])
+        reduce_3i nt_composite nt_composite t_symbol_semicolon nt_non_composite (fun xs _ x -> xs@[x])
+        reduce_3i nt_composite nt_non_composite t_symbol_semicolon nt_non_composite (fun x1 _ x2 -> [x1; x2])
 

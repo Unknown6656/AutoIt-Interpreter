@@ -1,6 +1,10 @@
 ﻿namespace Unknown6656.AutoIt3.Parser
 
 
+type Associativity =
+    | Left
+    | Right
+
 [<AutoOpen>]
 module Util =
     let inline (?) a b c = if a then b else c

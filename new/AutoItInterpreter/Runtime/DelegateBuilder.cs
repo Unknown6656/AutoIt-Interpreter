@@ -27,7 +27,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
         }
 
-        public Type? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
+        public (Type Type, Func<object?, nint, object> Constructor, Func<object?, object?[], object> Invoker)? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
         {
             try
             {
@@ -43,11 +43,13 @@ namespace Unknown6656.AutoIt3.Runtime
                         return_type.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl
                     }
                 ));
-                delegate_builder.DefineConstructor(
+               
+                ConstructorBuilder constructor = delegate_builder.DefineConstructor(
                     MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
                     new[] { typeof(object), typeof(nint) }
-                ).SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
+                );
+                constructor.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
 
                 Type?[] @params = parameters.ToArray(t => ConvertType(t, true));
 
@@ -85,7 +87,11 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         ProcessParameter(i + 1, parameters[i]);
 
-                return delegate_builder.CreateType();
+                return (
+                    delegate_builder.CreateType(),
+                    (@this, ptr) => constructor.Invoke(new object?[] { @this, ptr }),
+                    (@this, args) => invoke.Invoke(@this, args)
+                );
             }
             catch
             {
