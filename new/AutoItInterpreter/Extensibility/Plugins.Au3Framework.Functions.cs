@@ -28,8 +28,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         private static readonly Regex REGEX_WS = new Regex(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
 
-        #region FUNCTION REGISTRATION
-
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
             ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
@@ -83,13 +81,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(DllCall), , DllCall),
+            ProvidedNativeFunction.Create(nameof(DllCall), 3, 255, DllCall),
             ProvidedNativeFunction.Create(nameof(DllCallAddress), , DllCallAddress),
             ProvidedNativeFunction.Create(nameof(DllCallbackFree), , DllCallbackFree),
             ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), , DllCallbackGetPtr),
             ProvidedNativeFunction.Create(nameof(DllCallbackRegister), , DllCallbackRegister),
-            ProvidedNativeFunction.Create(nameof(DllClose), , DllClose),
-            ProvidedNativeFunction.Create(nameof(DllOpen), , DllOpen),
+            ProvidedNativeFunction.Create(nameof(DllClose), 1, DllClose),
+            ProvidedNativeFunction.Create(nameof(DllOpen), 1, DllOpen),
             ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
             ProvidedNativeFunction.Create(nameof(DllStructGetData), , DllStructGetData),
             ProvidedNativeFunction.Create(nameof(DllStructGetPtr), , DllStructGetPtr),
@@ -251,7 +249,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(VarGetType), 1, VarGetType),
         };
 
-        #endregion
 
         public FrameworkFunctions(Interpreter interpreter)
             : base(interpreter)
@@ -648,8 +645,65 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         #endregion
         #region DLL...
 
+        private static string? TranslateDllType(string typestring) => typestring.ToUpperInvariant() switch
+        {
+            "U0" or "NONE" => "void",
+            "U1" or "BYTE" or "BOOLEAN" => "byte",
+            "I2" or "SHORT" => "short",
+            "U2" or "USHORT" or "WORD" => "ushort",
+            "I4" or "INT" or "LONG" or "BOOL" or "HANDLE" => "int",
+            "U4" or "UINT" or "ULONG" or "DWORD" => "uint",
+            "I8" or "INT64" or "LONGLONG" or "LARGE_INTEGER" => "long",
+            "U8" or "UINT64" or "ULONGLONG" or "ULARGE_INTEGER" => "ulong",
+            "R4" or "FLOAT" => "float",
+            "R8" or "DOUBLE" => "double",
+            "INT_PTR" or "LONG_PTR" or "LRESULT" or "LPARAM" => "nint",
+            "UINT_PTR" or "ULONG_PTR" or "DWORD_PTR" or "WPARAM" or "ULONG_PTR" => "nuint",
+            "I2" or "PTR" or "LPVOID" or "HANDLE" or "HWND" or "HINSTANCE" => "void*",
+            "STR" or "LPCSTR" or "LPSTR" => "StringBuilder", // ansi
+            "WSTR" or "LPCWSTR" or "LPWSTR" => "StringBuilder", // utf16
+            "STRUCT" => ,
+            { Length: > 1 } s when s[^1] == '*' && TranslateDllType(s[1..]) is string t => t + '*',
+            { Length: > 2 } s when s[..2] == "LP" && TranslateDllType(s[2..]) is string t => t + '*',
+            _ => null,
+        };
+
         internal static FunctionReturnValue DllCall(CallFrame frame, Variant[] args)
         {
+            FileInfo? dll = null;
+
+            try
+            {
+                dll = args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? dllhandle) ? dllhandle.File : new FileInfo(args[0].ToString());
+            }
+            catch
+            {
+            }
+
+            if (dll?.Exists is null or false)
+                return FunctionReturnValue.Error(1);
+
+            List<(string type, Variant value)> arguments = new();
+            string? ret_type = TranslateDllType(args[1].ToString());
+            string funcname = args[2].ToString();
+
+            if (ret_type is null)
+                return FunctionReturnValue.Error(2);
+
+            int argc = frame.PassedArguments.Length - 3;
+
+            if ((argc % 2) != 0)
+                return FunctionReturnValue.Error(4);
+
+            for (int i = 0; i < argc / 2; ++i)
+                if (TranslateDllType(args[2 * i + 3].ToString()) is string type)
+                    arguments.Add((type, args[2 * i + 4]));
+                else
+                    return FunctionReturnValue.Error(5);
+
+
+
+            // TODO
 
         }
 
@@ -675,17 +729,30 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue DllClose(CallFrame frame, Variant[] args)
         {
+            if (args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? _))
+                frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
 
+            return Variant.Zero;
         }
 
         internal static FunctionReturnValue DllOpen(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                FileInfo dll = new FileInfo(args[0].ToString());
 
+                if (dll.Exists)
+                    return frame.Interpreter.GlobalObjectStorage.Store(new LibraryHandle(dll));
+            }
+            catch
+            {
+            }
+
+            return Variant.FromNumber(-1);
         }
 
         internal static FunctionReturnValue DllStructCreate(CallFrame frame, Variant[] args)
         {
-
         }
 
         internal static FunctionReturnValue DllStructGetData(CallFrame frame, Variant[] args)
@@ -3400,6 +3467,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
 
             public override string ToString() => $"{FileStream} ({Flags}, {Encoding})";
+        }
+
+        private sealed class LibraryHandle
+        {
+            public FileInfo File { get; }
+
+
+            public LibraryHandle(FileInfo file) => File = file;
         }
 
         private sealed class InetHandle

@@ -253,7 +253,7 @@ namespace Unknown6656.AutoIt3.Runtime
         : IDisposable
     {
         private static volatile uint _id = 0;
-        private readonly ConcurrentDictionary<uint, object> _objects = new ConcurrentDictionary<uint, object>();
+        private readonly ConcurrentDictionary<uint, object> _objects = new();
 
 
         /// <summary>
@@ -274,10 +274,7 @@ namespace Unknown6656.AutoIt3.Runtime
         internal IEnumerable<object> Objects => _objects.Values;
 
 
-        internal GlobalObjectStorage(Interpreter interpreter)
-        {
-            Interpreter = interpreter;
-        }
+        internal GlobalObjectStorage(Interpreter interpreter) => Interpreter = interpreter;
 
         private Variant GetFreeId()
         {
