@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System;
+﻿using System;
 
 using Unknown6656.AutoIt3.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
@@ -210,14 +208,34 @@ namespace Unknown6656.AutoIt3.Runtime
                 thread.Stop(exitcode);
         }
 
+        /// <summary>
+        /// Creates a new thread. Use <see cref="AU3Thread.Start(ScriptFunction, Variant[])"/> on the returned thread to invoke a method asynchronously from the current thread.
+        /// </summary>
+        /// <returns>The newly created thread.</returns>
         public AU3Thread CreateNewThread() => new AU3Thread(this);
 
         internal void AddThread(AU3Thread thread) => _threads.Add(thread);
 
         internal void RemoveThread(AU3Thread thread) => _threads.Remove(thread);
 
+        /// <summary>
+        /// Prints the given value to the STDOUT stream.
+        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
+        /// <para/>
+        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
+        /// </summary>
+        /// <param name="current_frame">Call frame which invoked the print request.</param>
+        /// <param name="value">Value to be printed.</param>
         public void Print(CallFrame current_frame, Variant value) => Print(current_frame, value as object);
 
+        /// <summary>
+        /// Prints the given value to the STDOUT stream.
+        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
+        /// <para/>
+        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
+        /// </summary>
+        /// <param name="current_frame">Call frame which invoked the print request.</param>
+        /// <param name="value">Value to be printed.</param>
         public void Print(CallFrame current_frame, object? value) => MainProgram.PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
 
         /// <inheritdoc/>
@@ -271,43 +289,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="path">The path of the script to be executed.</param>
         /// <returns>The interpreter result of the script invocation.</returns>
         public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
-    }
-
-    public sealed class InterpreterResult
-    {
-        public static InterpreterResult OK { get; } = new InterpreterResult(0, null);
-
-        public int ProgramExitCode { get; }
-
-        public InterpreterError? OptionalError { get; }
-
-        public bool IsOK => OptionalError is null && ProgramExitCode == 0;
-
-
-        public InterpreterResult(int programExitCode, InterpreterError? err = null)
-        {
-            ProgramExitCode = programExitCode;
-            OptionalError = err;
-        }
-
-        public static implicit operator InterpreterResult?(InterpreterError? err) => err is null ? null : new InterpreterResult(-1, err);
-    }
-
-    public sealed class InterpreterError
-    {
-        public static InterpreterError Empty = new InterpreterError(SourceLocation.Unknown, "");
-
-        public SourceLocation? Location { get; }
-        public string Message { get; }
-
-
-        public InterpreterError(SourceLocation? location, string message)
-        {
-            Location = location;
-            Message = message;
-        }
-
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.LanguageLoader.CurrentLanguage?[key, args] ?? key);
     }
 }
 
