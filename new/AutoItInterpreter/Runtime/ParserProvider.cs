@@ -2,19 +2,21 @@
 
 using Piglet.Parser.Configuration.Generic;
 
-using Unknown6656.AutoIt3.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.DLLStructParser;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using exprparser = ExpressionParser.ExpressionParser;
-    using wrapper = ParserConstructor<AST.PARSABLE_EXPRESSION>.ParserWrapper;
+    using exp_parser = ParserConstructor<Parser.ExpressionParser.AST.PARSABLE_EXPRESSION>.ParserWrapper;
+    using dll_parser = ParserConstructor<Parser.DLLStructParser.AST.SIGNATURE>.ParserWrapper;
 
 
     public sealed class ParserProvider
     {
-        public wrapper ExpressionParser { get; }
-        public wrapper ParameterParser { get; }
-        public wrapper MultiDeclarationParser { get; }
+        public exp_parser ExpressionParser { get; }
+        public exp_parser ParameterParser { get; }
+        public exp_parser MultiDeclarationParser { get; }
+        public dll_parser DLLStructParser { get; }
         public Interpreter Interpreter { get; }
 
 
@@ -22,11 +24,12 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Interpreter = interpreter;
 
-            wrapper create(ParserMode mode) => interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new exprparser(mode).CreateParser);
+            exp_parser create(ParserMode mode) => interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new ExpressionParser(mode).CreateParser);
 
             ParameterParser = create(ParserMode.FunctionParameters);
             ExpressionParser = create(ParserMode.ArbitraryExpression);
             MultiDeclarationParser = create(ParserMode.MultiDeclaration);
+            DLLStructParser = interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new DLLStructParser().CreateParser);
         }
 
         /// <summary>

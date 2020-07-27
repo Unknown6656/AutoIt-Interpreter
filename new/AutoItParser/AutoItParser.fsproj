@@ -6,7 +6,7 @@
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+        <RootNamespace>Unknown6656.AutoIt3.Parser</RootNamespace>
         <Authors>Unknown6656</Authors>
         <Company>Unknown6656</Company>
         <Copyright>Copyright © 2020, Unknown6656</Copyright>
@@ -21,8 +21,10 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="Util.fs" />
-        <Compile Include="AST.fs" />
+        <Compile Include="ExpressionParser.AST.fs" />
         <Compile Include="ExpressionParser.fs" />
+        <Compile Include="DLLStructParser.AST.fs" />
+        <Compile Include="DLLStructParser.fs" />
         <Compile Include="Cleanup.fs" />
     </ItemGroup>
     <ItemGroup>

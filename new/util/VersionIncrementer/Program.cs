@@ -70,7 +70,7 @@ using System;
 
 [assembly: AssemblyVersion(""{v2}"")]
 [assembly: AssemblyFileVersion(""{v2}"")]
-[assembly: AssemblyInformationalVersion(""{githash}"")]
+[assembly: AssemblyInformationalVersion(""v.{v2}, commit: {githash}"")]
 [assembly: AssemblyCompany(""{AUTHOR}"")]
 [assembly: AssemblyCopyright(""{copyright}"")]
 [assembly: AssemblyProduct(""AutoIt3 Interpreter by {AUTHOR}"")]

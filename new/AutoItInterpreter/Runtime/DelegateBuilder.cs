@@ -1,15 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Runtime.InteropServices;
 using System.Reflection.Emit;
+using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
+using System.Linq;
+using System;
 
+using Unknown6656.AutoIt3.Parser.DLLStructParser;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
+    using static AST;
+
     public sealed class DelegateBuilder
     {
         public static DelegateBuilder Instance { get; } = new DelegateBuilder();
@@ -25,33 +27,63 @@ namespace Unknown6656.AutoIt3.Runtime
             _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
         }
 
-        public Type? CreateDelegateType(Type return_type, params Type[] parameters)
+        public Type? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
         {
             try
             {
-                string delegate_name = Guid.NewGuid().ToString("N");
-                TypeBuilder delegate_builder = _module.DefineType(delegate_name, TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
+                TypeBuilder delegate_builder = _module.DefineType(Guid.NewGuid().ToString("N"), TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
 
+                delegate_builder.SetCustomAttribute(new CustomAttributeBuilder(
+                    typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) })!,
+                    new object[]
+                    {
+                        return_type.CallConvention.IsFastcall ? CallingConvention.FastCall :
+                        return_type.CallConvention.IsStdcall ? CallingConvention.StdCall :
+                        return_type.CallConvention.IsThiscall ? CallingConvention.ThisCall :
+                        return_type.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl
+                    }
+                ));
                 delegate_builder.DefineConstructor(
                     MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
                     new[] { typeof(object), typeof(nint) }
                 ).SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
 
+                Type?[] @params = parameters.ToArray(t => ConvertType(t, true));
+
                 MethodBuilder invoke = delegate_builder.DefineMethod(
                     "Invoke",
-                    MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Public,
-                    return_type,
-                    parameters
+                    MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Public,
+                    ConvertType(return_type.Type, false),
+                    @params!
                 );
                 invoke.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
 
-                for (int i = 0; i < parameters.Length; i++)
+                ParameterBuilder ProcessParameter(int index, TYPE type)
                 {
-                    ParameterBuilder par = invoke.DefineParameter(i + 1, ParameterAttributes.None, "p" + i);
+                    ParameterAttributes attr = index is 0 ? ParameterAttributes.Retval : ParameterAttributes.None;
 
-                    // par.SetCustomAttribute(new CustomAttributeBuilder(parameters[i].attributes[0].GetType().GetConstructor()))
+                    if (type.IsWSTR || type.IsSTR)
+                        attr |= ParameterAttributes.HasFieldMarshal;
+
+                    ParameterBuilder parameter = invoke.DefineParameter(index, attr, index is 0 ? null : "item" + index);
+
+                    if (type.IsWSTR || type.IsSTR)
+                        parameter.SetCustomAttribute(new CustomAttributeBuilder(
+                            typeof(MarshalAsAttribute).GetConstructor(new[] { typeof(UnmanagedType) })!,
+                            new object[] { type.IsWSTR ? UnmanagedType.LPWStr : UnmanagedType.LPStr }
+                        ));
+
+                    return parameter;
                 }
+
+                ProcessParameter(0, return_type.Type);
+
+                for (int i = 0; i < @params.Length; i++)
+                    if (@params[i] is null)
+                        return null;
+                    else
+                        ProcessParameter(i + 1, parameters[i]);
 
                 return delegate_builder.CreateType();
             }
@@ -61,29 +93,71 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        public static Type? TranslateDLLType(string typestring) => typestring.ToUpperInvariant() switch
+        private Type? ConvertType(TYPE type, bool is_parameter)
         {
-            "U0" or "NONE" => typeof(void),
-            "U1" or "BYTE" or "BOOLEAN" => typeof(byte),
-            "I2" or "SHORT" => typeof(short),
-            "U2" or "USHORT" or "WORD" => typeof(ushort),
-            "I4" or "INT" or "LONG" or "BOOL" or "HANDLE" => typeof(int),
-            "U4" or "UINT" or "ULONG" or "DWORD" => typeof(uint),
-            "I8" or "INT64" or "LONGLONG" or "LARGE_INTEGER" => typeof(long),
-            "U8" or "UINT64" or "ULONGLONG" or "ULARGE_INTEGER" => typeof(ulong),
-            "R4" or "FLOAT" => typeof(float),
-            "R8" or "DOUBLE" => typeof(double),
-            "INT_PTR" or "LONG_PTR" or "LRESULT" or "LPARAM" => typeof(nint),
-            "UINT_PTR" or "ULONG_PTR" or "DWORD_PTR" or "WPARAM" or "ULONG_PTR" => typeof(nuint),
-            "I2" or "PTR" or "LPVOID" or "HANDLE" or "HWND" or "HINSTANCE" or "STRUCT*" or "LPSTRUCT" => typeof(nint), // void*
-            "STR" or "LPCSTR" or "LPSTR" => typeof(string), // ansi
-            "WSTR" or "LPCWSTR" or "LPWSTR" => typeof(string), // utf16
-            { Length: > 2 } s when s[..2] == "LP" => TranslateDLLType(s + '*'),
-            { Length: > 1 } s when s[^1] == '*' => typeof(nint),
+            if (type.IsU0)
+                return is_parameter ? null : typeof(void);
+            else if (type.IsU8)
+                return typeof(byte);
+            else if (type.IsU16)
+                return typeof(ushort);
+            else if (type.IsU32)
+                return typeof(uint);
+            else if (type.IsU64)
+                return typeof(ulong);
+            else if (type.IsI16)
+                return typeof(short);
+            else if (type.IsI32)
+                return typeof(int);
+            else if (type.IsI64)
+                return typeof(long);
+            else if (type.IsR32)
+                return typeof(float);
+            else if (type.IsR64)
+                return typeof(double);
+            else if (type.IsR128)
+                return typeof(decimal);
+            else if (type.IsSTR || type.IsWSTR)
+                return typeof(StringBuilder);
+            else if (type.IsPTR)
+                return typeof(nint);
+            else if (type.IsStruct)
+                ; // TODO
+            else if (type is TYPE.Composite { Item: { } types })
+            {
+                TYPE[] otypes = types.ToArray();
+                Type?[] fields = types.ToArray(t => ConvertType(t, true));
+                bool unicode = otypes.Any(t => t.IsWSTR);
 
-            "STRUCT" => throw new NotImplementedException(),
-            _ => throw new NotImplementedException(),
-        };
+                TypeBuilder builder = _module.DefineType(
+                    Guid.NewGuid().ToString("N"),
+                    TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout | TypeAttributes.BeforeFieldInit | (unicode ? TypeAttributes.UnicodeClass : TypeAttributes.AnsiClass),
+                    typeof(ValueType)
+                );
 
+                for (int i = 0; i < fields.Length; i++)
+                    if (fields[i] is Type ftype)
+                    {
+                        FieldAttributes attr = FieldAttributes.Public;
+
+                        if (otypes[i].IsWSTR || otypes[i].IsSTR)
+                            attr |= FieldAttributes.HasFieldMarshal;
+
+                        FieldBuilder field = builder.DefineField("Item" + i, ftype, attr);
+
+                        if (otypes[i].IsWSTR || otypes[i].IsSTR)
+                            field.SetCustomAttribute(new CustomAttributeBuilder(
+                                typeof(MarshalAsAttribute).GetConstructor(new[] { typeof(UnmanagedType) })!,
+                                new object[] { otypes[i].IsWSTR ? UnmanagedType.LPWStr : UnmanagedType.LPStr }
+                            ));
+                    }
+                    else
+                        return null;
+
+                return builder.CreateType();
+            }
+
+            return null; // TODO
+        }
     }
 }

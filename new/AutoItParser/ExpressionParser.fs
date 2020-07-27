@@ -1,4 +1,4 @@
-﻿namespace Unknown6656.AutoIt3.ExpressionParser
+﻿namespace Unknown6656.AutoIt3.Parser.ExpressionParser
 
 open System.Globalization
 open System

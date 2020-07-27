@@ -11,11 +11,11 @@ using Piglet.Parser.Configuration.Generic;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework;
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
-using Unknown6656.AutoIt3.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.Common;
 
-using static Unknown6656.AutoIt3.ExpressionParser.AST;
+using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

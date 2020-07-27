@@ -1,4 +1,6 @@
-﻿module Unknown6656.AutoIt3.ExpressionParser.AST
+﻿module Unknown6656.AutoIt3.Parser.ExpressionParser.AST
+
+open Unknown6656.AutoIt3.Parser
 
 
 type IDENTIFIER = Identifier of string

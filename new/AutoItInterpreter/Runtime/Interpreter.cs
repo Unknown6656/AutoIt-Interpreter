@@ -1,6 +1,6 @@
 ﻿using System;
 
-using Unknown6656.AutoIt3.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Runtime.Native;

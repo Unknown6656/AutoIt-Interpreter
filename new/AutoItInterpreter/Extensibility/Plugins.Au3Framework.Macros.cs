@@ -6,7 +6,7 @@ using System.Net;
 using System.IO;
 using System;
 
-using Unknown6656.AutoIt3.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;

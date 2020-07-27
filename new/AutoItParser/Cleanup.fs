@@ -1,6 +1,8 @@
-﻿namespace Unknown6656.AutoIt3.ExpressionParser
+﻿namespace Unknown6656.AutoIt3.Parser.ExpressionParser
 
+open Unknown6656.AutoIt3.Parser
 open AST
+
 open System
 
 

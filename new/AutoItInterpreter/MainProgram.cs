@@ -22,6 +22,8 @@ using Unknown6656.Imaging;
 using Unknown6656.Common;
 
 using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
+using CLParser = CommandLine.Parser;
+
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -100,7 +102,7 @@ namespace Unknown6656.AutoIt3
         public string? FilePath { set; get; } = null;
 
 
-        public override string ToString() => Parser.Default.FormatCommandLine(this);
+        public override string ToString() => CLParser.Default.FormatCommandLine(this);
     }
 
     public static class MainProgram
@@ -167,7 +169,7 @@ namespace Unknown6656.AutoIt3
 
                     Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
                     {
-                        using Parser parser = new Parser(p => p.HelpWriter = null);
+                        using CLParser parser = new CLParser(p => p.HelpWriter = null);
 
                         ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 

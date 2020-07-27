@@ -18,9 +18,11 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Reflection.Metadata;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
+    using static Unknown6656.AutoIt3.Parser.DLLStructParser.AST;
     using TCPHandle = Union<TcpListener, TcpClient>;
 
     public sealed class FrameworkFunctions
@@ -662,23 +664,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             if (dllhandle?.IsLoaded is null or false)
                 return FunctionReturnValue.Error(1);
 
-            List<(string type, Variant value)> arguments = new();
-            string? ret_type = TranslateDllType(args[1].ToString());
             string funcname = args[2].ToString();
-
-            if (ret_type is null)
-                return FunctionReturnValue.Error(2);
-
             int argc = frame.PassedArguments.Length - 3;
 
             if ((argc % 2) != 0)
                 return FunctionReturnValue.Error(4);
 
-            for (int i = 0; i < argc / 2; ++i)
-                if (TranslateDllType(args[2 * i + 3].ToString()) is string type)
-                    arguments.Add((type, args[2 * i + 4]));
-                else
-                    return FunctionReturnValue.Error(5);
+            Variant[] arguments = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
+            string raw_signature = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[1]).StringJoin(", ");
+            SIGNATURE signature;
+
+            if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out var result) && result is { })
+                signature = result.ParsedValue;
+            else
+                return FunctionReturnValue.Error(3);
 
             nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
                 NativeInterop.GetProcAddress,
@@ -690,25 +689,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(3);
 
 
-
-
-
-            Delegate.CreateDelegate()
-            Marshal.GetDelegateForFunctionPointer(funcptr);
+            var delegatetype = DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes);
 
             // TODO
 
 
             throw new NotImplementedException();
         }
-
-        public static void CreateDelegate(Type ret, Type[] pars)
-        {
-
-        }
-
-
-
 
         // TODO : DllGetAddress ?
 
