@@ -1,6 +1,5 @@
-﻿using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
+﻿//#define USE_VS_DEBUGGER
+
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO.Pipes;
@@ -10,10 +9,15 @@ using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.Localization;
+#if USE_VS_DEBUGGER
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 using EnvDTE;
 
 using DTEProcess = EnvDTE.Process;
+#endif
 using Process = System.Diagnostics.Process;
 
 namespace Unknown6656.AutoIt3.Runtime.ExternalServices
@@ -216,7 +220,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 DataWriter = new BinaryWriter(_pipe_odata);
 
                 DebugPrint("debug.external.started", server.FullName, name_odata, name_idata, name_debug, ServerProcess.Id);
-#if DEBUG
+#if USE_VS_DEBUGGER
                 if (System.Diagnostics.Debugger.IsAttached && Environment.OSVersion.Platform is PlatformID.Win32NT)
                     AttachVSDebugger();
 #endif
@@ -228,7 +232,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         }
 
         ~ExternalServiceConnector() => Dispose(false);
-#if DEBUG
+#if USE_VS_DEBUGGER
         private void AttachVSDebugger()
         {
             using Process vs_current = Process.GetCurrentProcess();
@@ -354,7 +358,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
         }
     }
 
-#if DEBUG
+#if USE_VS_DEBUGGER
     public static class VisualStudioAttacher
     {
         private const string DEVENV_NAME = "devenv";

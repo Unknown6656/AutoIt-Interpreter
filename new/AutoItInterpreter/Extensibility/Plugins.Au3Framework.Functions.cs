@@ -20,6 +20,8 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Runtime.CompilerServices;
+using System.Reflection;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -59,7 +61,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(AscW), 1, AscW),
             ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
             ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
-            ProvidedNativeFunction.Create(nameof(Beep), OS.Window, 0, 2, Beep, 500m, 1000m),
+            ProvidedNativeFunction.Create(nameof(Beep), OS.Windows, 0, 2, Beep, 500m, 1000m),
             ProvidedNativeFunction.Create(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
             ProvidedNativeFunction.Create(nameof(BitOR), 2, 256, BitOR),
             ProvidedNativeFunction.Create(nameof(BitXOR), 2, 256, BitXOR),
@@ -188,10 +190,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
             ProvidedNativeFunction.Create(nameof(RegDelete), OS.Windows, 1, 2, RegDelete, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RegEnumKey), OS.Window, 2, RegEnumKey),
-            ProvidedNativeFunction.Create(nameof(RegEnumVal), OS.Window, 2, RegEnumVal),
-            ProvidedNativeFunction.Create(nameof(RegRead), OS.Window, 2, RegRead),
-            ProvidedNativeFunction.Create(nameof(RegWrite), OS.Window, 1, 4, RegWrite, Variant.Default, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RegEnumKey), OS.Windows, 2, RegEnumKey),
+            ProvidedNativeFunction.Create(nameof(RegEnumVal), OS.Windows, 2, RegEnumVal),
+            ProvidedNativeFunction.Create(nameof(RegRead), OS.Windows, 2, RegRead),
+            ProvidedNativeFunction.Create(nameof(RegWrite), OS.Windows, 1, 4, RegWrite, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -685,10 +687,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(3);
             else if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result)
                 && result is { ParsedValue: SIGNATURE signature }
-                && DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes) is { } @delegate)
+                && DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes) is NativeDelegateWrapper @delegate)
             {
-                object del = @delegate.Constructor.Invoke(new object?[] { null, funcptr });
-                object res = @delegate.Invoker.Invoke(del, new object?[] { });
+
+                @delegate.Invoke(funcptr, );
 
                 throw new NotImplementedException();
             }

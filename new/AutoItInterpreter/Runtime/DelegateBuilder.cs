@@ -7,6 +7,9 @@ using System;
 
 using Unknown6656.AutoIt3.Parser.DLLStructParser;
 using Unknown6656.Common;
+using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
+using Unknown6656.AutoIt3.Runtime.Native;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -23,35 +26,33 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private DelegateBuilder()
         {
-            _assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(nameof(DelegateBuilder)), AssemblyBuilderAccess.RunAndCollect);
+            _assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(GetRandomName()), AssemblyBuilderAccess.RunAndCollect);
             _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
         }
 
-        public (Type Type, ConstructorInfo Constructor, MethodInfo Invoker)? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
+        public NativeDelegateWrapper? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
         {
             try
             {
-                TypeBuilder delegate_builder = _module.DefineType(Guid.NewGuid().ToString("N"), TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
+                TypeBuilder delegate_builder = _module.DefineType(GetRandomName(), TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
+                CallingConvention callconv = return_type.CallConvention.IsFastcall ? CallingConvention.FastCall :
+                                             return_type.CallConvention.IsStdcall ? CallingConvention.StdCall :
+                                             return_type.CallConvention.IsThiscall ? CallingConvention.ThisCall :
+                                             return_type.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl;
 
                 delegate_builder.SetCustomAttribute(new CustomAttributeBuilder(
                     typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) })!,
-                    new object[]
-                    {
-                        return_type.CallConvention.IsFastcall ? CallingConvention.FastCall :
-                        return_type.CallConvention.IsStdcall ? CallingConvention.StdCall :
-                        return_type.CallConvention.IsThiscall ? CallingConvention.ThisCall :
-                        return_type.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl
-                    }
+                    new object[] { callconv }
                 ));
-               
+
                 ConstructorBuilder constructor = delegate_builder.DefineConstructor(
                     MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
                     new[] { typeof(object), typeof(nint) }
                 );
                 constructor.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
-                constructor.DefineParameter(1, ParameterAttributes.None, "object");
-                constructor.DefineParameter(2, ParameterAttributes.None, "method");
+                // constructor.DefineParameter(1, ParameterAttributes.None, "object");
+                // constructor.DefineParameter(2, ParameterAttributes.None, "method");
 
                 Type?[] @params = parameters.ToArray(t => ConvertType(t, true));
 
@@ -60,16 +61,30 @@ namespace Unknown6656.AutoIt3.Runtime
                     MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
                     ConvertType(return_type.Type, false),
-                    @params!
+                    null,
+                    new[] {
+                        callconv switch
+                        {
+                            CallingConvention.Cdecl => typeof(CallConvCdecl),
+                            CallingConvention.StdCall => typeof(CallConvStdcall),
+                            CallingConvention.ThisCall => typeof(CallConvThiscall),
+                            CallingConvention.FastCall => typeof(CallConvFastcall),
+                            CallingConvention.Winapi when NativeInterop.OperatingSystem == OS.Windows => typeof(CallConvStdcall),
+                            _ => typeof(CallConvCdecl),
+                        }
+                    },
+                    @params!,
+                    null,
+                    null
                 );
-                // invoke.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
+                invoke.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
 
                 ParameterBuilder ProcessParameter(int index, TYPE type)
                 {
                     ParameterAttributes attr = index is 0 ? ParameterAttributes.Retval : ParameterAttributes.None;
 
-                    // if (type.IsWSTR || type.IsSTR)
-                    //     attr |= ParameterAttributes.HasFieldMarshal;
+                    //if (type.IsWSTR || type.IsSTR)
+                    //    attr |= ParameterAttributes.HasFieldMarshal;
 
                     ParameterBuilder parameter = invoke.DefineParameter(index, attr, index is 0 ? null : "item" + index);
 
@@ -94,17 +109,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     type.GetMethod(invoke.Name) is MethodInfo inv &&
                     type.GetConstructor(new[] { typeof(object), typeof(nint) }) is ConstructorInfo ctor)
                 {
+                    // new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, GetRandomName("__test", ".dll"));
 
-
-                    new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, $"__test{Guid.NewGuid():N}.dll");
-
-
-                    return (type, ctor, inv);
-
-
+                    return new NativeDelegateWrapper(type, ctor, inv);
                 }
             }
-            catch
+            catch (Exception ex)
             {
             }
 
@@ -176,6 +186,45 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             return null; // TODO
+        }
+
+        private static string GetRandomName(string prefix = "", string suffix = "") => prefix + Guid.NewGuid() + suffix;
+    }
+
+    public unsafe record NativeDelegateWrapper(Type Type, ConstructorInfo Constructor, MethodInfo Invoker)
+    {
+        private static readonly FieldInfo _methodPtr = typeof(Delegate).GetField(nameof(_methodPtr), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        private static readonly FieldInfo _methodPtrAux = typeof(Delegate).GetField(nameof(_methodPtrAux), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        private static readonly delegate*<void> pdummy = &DummyMethod;
+        private static readonly object _mutex = new object();
+
+
+        public object? Invoke(void* funcptr, params object?[] arguments) => Invoke((nint)funcptr, arguments);
+
+        public object? Invoke(nint funcptr, params object?[] arguments)
+        {
+            object @delegate = Constructor.Invoke(new object?[] { null, (nint)pdummy });
+            object? result;
+
+            lock (_mutex)
+                try
+                {
+                    _methodPtr.SetValue(@delegate, funcptr);
+                    _methodPtrAux.SetValue(@delegate, funcptr);
+
+                    result = Invoker.Invoke(@delegate, arguments);
+                }
+                finally
+                {
+                    _methodPtr.SetValue(@delegate, (nint)pdummy);
+                    _methodPtrAux.SetValue(@delegate, (nint)pdummy);
+                }
+
+            return result;
+        }
+
+        private static void DummyMethod()
+        {
         }
     }
 }
