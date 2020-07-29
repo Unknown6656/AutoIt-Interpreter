@@ -52,7 +52,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     string result = type switch
                     {
-                        'd' or 'i' => Generics.Do(delegate
+                        'd' or 'i' => FunctionExtensions.Do(delegate
                         {
                             long value = (long)arg;
 

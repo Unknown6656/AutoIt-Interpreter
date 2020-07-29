@@ -4,6 +4,7 @@ using Piglet.Parser.Configuration.Generic;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Parser.DLLStructParser;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -13,24 +14,24 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class ParserProvider
     {
-        public exp_parser ExpressionParser { get; }
-        public exp_parser ParameterParser { get; }
-        public exp_parser MultiDeclarationParser { get; }
-        public dll_parser DLLStructParser { get; }
         public Interpreter Interpreter { get; }
+        public exp_parser ExpressionParser { get; private set; }
+        public exp_parser ParameterParser { get; private set; }
+        public exp_parser MultiDeclarationParser { get; private set; }
+        public dll_parser DLLStructParser { get; private set; }
 
-
+#nullable disable
         internal ParserProvider(Interpreter interpreter)
         {
             Interpreter = interpreter;
-
-            exp_parser create(ParserMode mode) => interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new ExpressionParser(mode).CreateParser);
-
-            ParameterParser = create(ParserMode.FunctionParameters);
-            ExpressionParser = create(ParserMode.ArbitraryExpression);
-            MultiDeclarationParser = create(ParserMode.MultiDeclaration);
-            DLLStructParser = interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, new DLLStructParser().CreateParser);
+            Interpreter.Telemetry.Measure(TelemetryCategory.ParserInitialization, () => Parallel.Invoke(
+                () => ParameterParser = new ExpressionParser(ParserMode.FunctionParameters).CreateParser(),
+                () => ExpressionParser = new ExpressionParser(ParserMode.ArbitraryExpression).CreateParser(),
+                () => MultiDeclarationParser = new ExpressionParser(ParserMode.MultiDeclaration).CreateParser(),
+                () => DLLStructParser = new DLLStructParser().CreateParser()
+            ));
         }
+#nullable enable
 
         /// <summary>
         /// This method does nothing at all. When called, it implicitly invokes the static constructor (if the cctor has not been invoked before).

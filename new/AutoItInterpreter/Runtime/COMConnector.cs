@@ -204,7 +204,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariantType.Null or VariantType.Default => COMData.Null,
             VariantType.Boolean => COMData.FromBool(com_data.ToBoolean()),
-            VariantType.Number => Generics.Do(delegate
+            VariantType.Number => FunctionExtensions.Do(delegate
             {
                 decimal d = com_data.ToNumber();
 

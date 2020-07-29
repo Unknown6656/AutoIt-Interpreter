@@ -41,7 +41,6 @@ Works on Linux | Yes, but not tested thoroughly | Kinda
 Works on MacOs | Yes, but not tested thoroughly | Kinda
 Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
 
-
 ## Links
 
  - [Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
