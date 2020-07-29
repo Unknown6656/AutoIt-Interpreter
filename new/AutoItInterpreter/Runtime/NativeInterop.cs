@@ -37,15 +37,15 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         #endregion
 
-        public static OperatingSystem OperatingSystem { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? OperatingSystem.Windows
-            : RuntimeInformation.IsOSPlatform(OSPlatform.Browser) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD) ? OperatingSystem.UnixLike
-            : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? OperatingSystem.Linux
-            : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OperatingSystem.MacOS
+        public static OS OperatingSystem { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? OS.Windows
+            : RuntimeInformation.IsOSPlatform(OSPlatform.Browser) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD) ? OS.UnixLike
+            : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? OS.Linux
+            : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OS.MacOS
             : Environment.OSVersion.Platform switch
             {
-                PlatformID.MacOSX => OperatingSystem.MacOS,
-                PlatformID.Unix => OperatingSystem.UnixLike,
-                _ => OperatingSystem.Windows
+                PlatformID.MacOSX => OS.MacOS,
+                PlatformID.Unix => OS.UnixLike,
+                _ => OS.Windows
             };
 
         #region LIBC.SO
@@ -273,13 +273,13 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         public static T DoPlatformDependent<T>(T on_windows, T on_linux, T on_macos) => OperatingSystem switch
         {
-            OperatingSystem.Windows => on_windows,
-            OperatingSystem.Linux => on_linux,
-            OperatingSystem.MacOS => on_macos,
-            OperatingSystem.UnixLike => on_linux,
+            OS.Windows => on_windows,
+            OS.Linux => on_linux,
+            OS.MacOS => on_macos,
+            OS.UnixLike => on_linux,
         };
 
-        public static void DoPlatformDependent(Action action, params OperatingSystem[] os)
+        public static void DoPlatformDependent(Action action, params OS[] os)
         {
             if (os.Contains(OperatingSystem))
                 action();
@@ -294,30 +294,30 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         public static T DoPlatformDependent<T>(Func<T> on_windows, Func<T> on_linux, Func<T> on_macos) => OperatingSystem switch
         {
-            OperatingSystem.Windows => on_windows(),
-            OperatingSystem.Linux => on_linux(),
-            OperatingSystem.MacOS => on_macos(),
-            OperatingSystem.UnixLike => on_linux(),
+            OS.Windows => on_windows(),
+            OS.Linux => on_linux(),
+            OS.MacOS => on_macos(),
+            OS.UnixLike => on_linux(),
         };
 
         public static async Task DoPlatformDependent(Task on_windows, Task on_unix) => await DoPlatformDependent(on_windows, on_unix, on_unix);
 
         public static async Task DoPlatformDependent(Task on_windows, Task on_linux, Task on_macos) => await (OperatingSystem switch
         {
-            OperatingSystem.Windows => on_windows,
-            OperatingSystem.Linux => on_linux,
-            OperatingSystem.MacOS => on_macos,
-            OperatingSystem.UnixLike => on_linux,
+            OS.Windows => on_windows,
+            OS.Linux => on_linux,
+            OS.MacOS => on_macos,
+            OS.UnixLike => on_linux,
         });
 
         public static async Task<T> DoPlatformDependent<T>(Task<T> on_windows, Task<T> on_unix) => await DoPlatformDependent(on_windows, on_unix, on_unix);
 
         public static async Task<T> DoPlatformDependent<T>(Task<T> on_windows, Task<T> on_linux, Task<T> on_macos) => await (OperatingSystem switch
         {
-            OperatingSystem.Windows => on_windows,
-            OperatingSystem.Linux => on_linux,
-            OperatingSystem.MacOS => on_macos,
-            OperatingSystem.UnixLike => on_linux,
+            OS.Windows => on_windows,
+            OS.Linux => on_linux,
+            OS.MacOS => on_macos,
+            OS.UnixLike => on_linux,
         });
     }
 
@@ -441,7 +441,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
     }
 
     [Flags]
-    public enum OperatingSystem
+    public enum OS
          : byte
     {
         Unknown = 0,

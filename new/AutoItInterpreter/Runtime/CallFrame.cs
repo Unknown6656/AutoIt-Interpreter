@@ -11,8 +11,9 @@ using Piglet.Parser.Configuration.Generic;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework;
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
-using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
@@ -131,7 +132,18 @@ namespace Unknown6656.AutoIt3.Runtime
 
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
-            FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => ((NativeFunction)CurrentFunction).Execute(this, args));
+            NativeFunction native = (NativeFunction)CurrentFunction;
+
+            if (!native.SupportedOS.HasFlag(NativeInterop.OperatingSystem))
+                return InterpreterError.WellKnown(
+                    CurrentLocation,
+                    "error.unsupported_platform",
+                    native.Name,
+                    NativeInterop.OperatingSystem,
+                    new[] { OS.Windows, OS.Linux, OS.MacOS }.Where(os => native.SupportedOS.HasFlag(os)).StringJoin("', '")
+                );
+
+            FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => native.Execute(this, args));
             Variant? extended = null;
             int error = 0;
 

@@ -1,11 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Text;
+﻿using System.Threading.Tasks;
 using System;
 
-using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
-using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
 

@@ -21,7 +21,7 @@ using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
 
-using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
+using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
 
 
@@ -159,7 +159,7 @@ namespace Unknown6656.AutoIt3
                     {
                         Console.WindowWidth = Math.Max(Console.WindowWidth, 100);
                         Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                    }, OperatingSystem.Windows);
+                    }, OS.Windows);
 
                     // Console.OutputEncoding = Encoding.Unicode;
                     // Console.InputEncoding = Encoding.Unicode;
@@ -456,11 +456,11 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 {
                     Console.WindowWidth = Math.Max(Console.WindowWidth, MIN_WIDTH);
                     Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                }, OperatingSystem.Windows);
+                }, OS.Windows);
 
                 width = Math.Min(Console.WindowWidth, Console.BufferWidth);
 
-                if (NativeInterop.OperatingSystem == OperatingSystem.Windows && width < MIN_WIDTH)
+                if (NativeInterop.OperatingSystem == OS.Windows && width < MIN_WIDTH)
                 {
                     PrintError(lang["debug.telemetry.print_error", MIN_WIDTH]);
 
@@ -676,7 +676,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             #endregion
 
-            if (NativeInterop.OperatingSystem == OperatingSystem.Windows)
+            if (NativeInterop.OperatingSystem == OS.Windows)
             {
                 #region PERFORMANCE : FETCH DATA
 

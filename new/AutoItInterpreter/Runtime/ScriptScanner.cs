@@ -69,7 +69,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute));
+                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute, function.SupportedSystems));
 
             foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
                 _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
@@ -655,12 +655,15 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
+        public OS SupportedOS { get; }
 
-        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute)
+
+        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS supported_os)
             : base(script, name)
         {
             _execute = execute;
             ParameterCount = param_count;
+            SupportedOS = supported_os;
         }
 
         public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);

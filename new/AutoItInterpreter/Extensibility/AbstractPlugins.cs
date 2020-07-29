@@ -6,9 +6,8 @@ using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
-
-using OperatingSystem = Unknown6656.AutoIt3.Runtime.Native.OperatingSystem;
 
 [assembly: AutoIt3Plugin]
 
@@ -134,7 +133,7 @@ namespace Unknown6656.AutoIt3.Extensibility
     {
         public abstract string Name { get; }
 
-        public virtual OperatingSystem SupportedSystems { get; set; }
+        public virtual OS SupportedSystems { get; set; }
 
         public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
@@ -144,15 +143,15 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args);
 
         public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate) =>
-            Create(name, OperatingSystem.Any, param_count, param_count, @delegate);
+            Create(name, OS.Any, param_count, param_count, @delegate);
 
         public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
-            Create(name, OperatingSystem.Any, min_param_count, max_param_count, @delegate, default_values);
+            Create(name, OS.Any, min_param_count, max_param_count, @delegate, default_values);
 
-        public static ProvidedNativeFunction Create(string name, OperatingSystem supported_systems, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate) =>
+        public static ProvidedNativeFunction Create(string name, OS supported_systems, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate) =>
             Create(name, supported_systems, param_count, param_count, @delegate);
 
-        public static ProvidedNativeFunction Create(string name, OperatingSystem supported_systems, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
+        public static ProvidedNativeFunction Create(string name, OS supported_systems, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
             new FromDelegate(@delegate, name, min_param_count, max_param_count, default_values)
             {
                 SupportedSystems = supported_systems

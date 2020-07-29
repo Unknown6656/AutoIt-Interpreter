@@ -150,7 +150,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
 
-            if (NativeInterop.OperatingSystem is Native.OperatingSystem.Windows)
+            if (NativeInterop.OperatingSystem is Native.OS.Windows)
             {
                 COMConnector = new COMConnector(this);
                 //Win32APIConnector = new WinAPIConnector(this);

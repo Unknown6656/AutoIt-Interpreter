@@ -190,6 +190,7 @@ strings:
         unresolved_func: "Unresolved function name '{0}'."
         unresolved_script: "The script or include file '{0}' could not be resolved. Verify that the path is correct and the file in question is accessible. If you have an include resolver plugin, verify whether the .dll can be correctly loaded from the plugin-folder."
         unsupported_operator: "The operator '{0}' is not supported."
+        unsupported_platform: "The function '{0}' is not supported on the current operating system '{1}'. Supported system(s) is/are: '{2}'."
 
         experimental:
             one_liner: "One-liner functions can only be used if the interpreter is started without the '--strict' option."
