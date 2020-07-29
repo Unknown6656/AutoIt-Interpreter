@@ -1,21 +1,23 @@
-﻿using System;
+﻿using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
+using System.Threading.Tasks;
+using System.Threading;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text;
+using System.Linq;
+using System.IO;
+using System;
 
-using Unknown6656.AutoIt3.COM;
-using Unknown6656.AutoIt3.Runtime;
+using Piglet.Parser.Configuration.Generic;
+
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
 
@@ -681,13 +683,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             if (funcptr == default)
                 return FunctionReturnValue.Error(3);
-            else if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out var result)
+            else if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result)
                 && result is { ParsedValue: SIGNATURE signature }
                 && DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes) is { } @delegate)
             {
-                object del = @delegate.Constructor(null, funcptr);
-
-                // @delegate.Invoker(del, )
+                object del = @delegate.Constructor.Invoke(new object?[] { null, funcptr });
+                object res = @delegate.Invoker.Invoke(del, new object?[] { });
 
                 throw new NotImplementedException();
             }

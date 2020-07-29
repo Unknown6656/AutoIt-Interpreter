@@ -27,7 +27,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
         }
 
-        public (Type Type, Func<object?, nint, object> Constructor, Func<object?, object?[], object> Invoker)? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
+        public (Type Type, ConstructorInfo Constructor, MethodInfo Invoker)? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
         {
             try
             {
@@ -45,28 +45,31 @@ namespace Unknown6656.AutoIt3.Runtime
                 ));
                
                 ConstructorBuilder constructor = delegate_builder.DefineConstructor(
-                    MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
+                    MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
                     new[] { typeof(object), typeof(nint) }
                 );
                 constructor.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
+                constructor.DefineParameter(1, ParameterAttributes.None, "object");
+                constructor.DefineParameter(2, ParameterAttributes.None, "method");
 
                 Type?[] @params = parameters.ToArray(t => ConvertType(t, true));
 
                 MethodBuilder invoke = delegate_builder.DefineMethod(
                     "Invoke",
-                    MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.Public,
+                    MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Public,
+                    CallingConventions.Standard,
                     ConvertType(return_type.Type, false),
                     @params!
                 );
-                invoke.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
+                // invoke.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
 
                 ParameterBuilder ProcessParameter(int index, TYPE type)
                 {
                     ParameterAttributes attr = index is 0 ? ParameterAttributes.Retval : ParameterAttributes.None;
 
-                    if (type.IsWSTR || type.IsSTR)
-                        attr |= ParameterAttributes.HasFieldMarshal;
+                    // if (type.IsWSTR || type.IsSTR)
+                    //     attr |= ParameterAttributes.HasFieldMarshal;
 
                     ParameterBuilder parameter = invoke.DefineParameter(index, attr, index is 0 ? null : "item" + index);
 
@@ -87,16 +90,25 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         ProcessParameter(i + 1, parameters[i]);
 
-                return (
-                    delegate_builder.CreateType(),
-                    (@this, ptr) => constructor.Invoke(new object?[] { @this, ptr }),
-                    (@this, args) => invoke.Invoke(@this, args)
-                );
+                if (delegate_builder.CreateType() is Type type &&
+                    type.GetMethod(invoke.Name) is MethodInfo inv &&
+                    type.GetConstructor(new[] { typeof(object), typeof(nint) }) is ConstructorInfo ctor)
+                {
+
+
+                    new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, $"__test{Guid.NewGuid():N}.dll");
+
+
+                    return (type, ctor, inv);
+
+
+                }
             }
             catch
             {
-                return null;
             }
+
+            return null;
         }
 
         private Type? ConvertType(TYPE type, bool is_parameter)
@@ -146,10 +158,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         FieldAttributes attr = FieldAttributes.Public;
 
-                        if (otypes[i].IsWSTR || otypes[i].IsSTR)
-                            attr |= FieldAttributes.HasFieldMarshal;
+                        // if (otypes[i].IsWSTR || otypes[i].IsSTR)
+                        //     attr |= FieldAttributes.HasFieldMarshal;
 
-                        FieldBuilder field = builder.DefineField("Item" + i, ftype, attr);
+                        FieldBuilder field = builder.DefineField("Item" + i, ftype, new[] { typeof(MarshalAsAttribute) }, null, attr);
 
                         if (otypes[i].IsWSTR || otypes[i].IsSTR)
                             field.SetCustomAttribute(new CustomAttributeBuilder(
