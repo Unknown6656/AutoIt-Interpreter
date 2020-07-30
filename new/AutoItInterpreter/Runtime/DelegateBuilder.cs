@@ -10,6 +10,9 @@ using Unknown6656.Common;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using Unknown6656.AutoIt3.Runtime.Native;
+using System.Collections.Concurrent;
+using Microsoft.FSharp.Core;
+using EnvDTE;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -17,6 +20,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class DelegateBuilder
     {
+        private static readonly ConcurrentDictionary<int, NativeDelegateWrapper> _cache = new();
+
         public static DelegateBuilder Instance { get; } = new DelegateBuilder();
 
 
@@ -30,15 +35,20 @@ namespace Unknown6656.AutoIt3.Runtime
             _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
         }
 
-        public NativeDelegateWrapper? CreateDelegateType(ANNOTATED_TYPE return_type, params TYPE[] parameters)
+        public NativeDelegateWrapper? CreateDelegateType(SIGNATURE signature)
         {
+            int hash = signature.GetHashCode();
+
+            if (_cache.TryGetValue(hash, out NativeDelegateWrapper? wrapper))
+                return wrapper;
+
             try
             {
                 TypeBuilder delegate_builder = _module.DefineType(GetRandomName(), TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
-                CallingConvention callconv = return_type.CallConvention.IsFastcall ? CallingConvention.FastCall :
-                                             return_type.CallConvention.IsStdcall ? CallingConvention.StdCall :
-                                             return_type.CallConvention.IsThiscall ? CallingConvention.ThisCall :
-                                             return_type.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl;
+                CallingConvention callconv = signature.ReturnType.CallConvention.IsFastcall ? CallingConvention.FastCall :
+                                             signature.ReturnType.CallConvention.IsStdcall ? CallingConvention.StdCall :
+                                             signature.ReturnType.CallConvention.IsThiscall ? CallingConvention.ThisCall :
+                                             signature.ReturnType.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl;
 
                 delegate_builder.SetCustomAttribute(new CustomAttributeBuilder(
                     typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) })!,
@@ -54,13 +64,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 // constructor.DefineParameter(1, ParameterAttributes.None, "object");
                 // constructor.DefineParameter(2, ParameterAttributes.None, "method");
 
-                Type?[] @params = parameters.ToArray(t => ConvertType(t, true));
+                Type?[] @params = signature.ParameterTypes.ToArray(t => ConvertType(t, true));
 
                 MethodBuilder invoke = delegate_builder.DefineMethod(
                     "Invoke",
                     MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
-                    ConvertType(return_type.Type, false),
+                    ConvertType(signature.ReturnType.Type, false),
                     null,
                     new[] {
                         callconv switch
@@ -97,13 +107,13 @@ namespace Unknown6656.AutoIt3.Runtime
                     return parameter;
                 }
 
-                ProcessParameter(0, return_type.Type);
+                ProcessParameter(0, signature.ReturnType.Type);
 
                 for (int i = 0; i < @params.Length; i++)
                     if (@params[i] is null)
                         return null;
                     else
-                        ProcessParameter(i + 1, parameters[i]);
+                        ProcessParameter(i + 1, signature.ParameterTypes[i]);
 
                 if (delegate_builder.CreateType() is Type type &&
                     type.GetMethod(invoke.Name) is MethodInfo inv &&
@@ -111,7 +121,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     // new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, GetRandomName("__test", ".dll"));
 
-                    return new NativeDelegateWrapper(type, ctor, inv);
+                    wrapper = new NativeDelegateWrapper(type, ctor, inv);
+
+                    _cache[hash] = wrapper;
+
+                    return wrapper;
                 }
             }
             catch (Exception ex)
@@ -199,9 +213,9 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly object _mutex = new object();
 
 
-        public object? Invoke(void* funcptr, params object?[] arguments) => Invoke((nint)funcptr, arguments);
+        public object? InvokePointer(void* funcptr, params object?[] arguments) => InvokePointer((nint)funcptr, arguments);
 
-        public object? Invoke(nint funcptr, params object?[] arguments)
+        public object? InvokePointer(nint funcptr, params object?[] arguments)
         {
             object @delegate = Constructor.Invoke(new object?[] { null, (nint)pdummy });
             object? result;
@@ -226,5 +240,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private static void DummyMethod()
         {
         }
+
+        // create dummy
+        // create callback
     }
 }

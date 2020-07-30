@@ -651,6 +651,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         #endregion
         #region DLL...
 
+        private static FunctionReturnValue InternalDllCall(Interpreter interpreter, nint funcptr, string raw_signature, Variant[] args)
+        {
+            if (interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
+                DelegateBuilder.Instance.CreateDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+            {
+                @delegate.InvokePointer(funcptr, );
+
+                throw new NotImplementedException();
+            }
+            else
+                return FunctionReturnValue.Error(3);
+        }
+
         internal static FunctionReturnValue DllCall(CallFrame frame, Variant[] args)
         {
             if (!args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? dllhandle))
@@ -668,7 +681,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             if (dllhandle?.IsLoaded is null or false)
                 return FunctionReturnValue.Error(1);
 
-            string funcname = args[2].ToString();
+            nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
+                NativeInterop.GetProcAddress,
+                NativeInterop.Linux__dlsym,
+                NativeInterop.MacOS__dlsym
+            )(dllhandle.Handle, args[2].ToString());
+
+            if (funcptr == default)
+                return FunctionReturnValue.Error(3);
+
             int argc = frame.PassedArguments.Length - 3;
 
             if ((argc % 2) != 0)
@@ -677,34 +698,27 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             Variant[] arguments = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
             string raw_signature = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[1]).StringJoin(", ");
 
-            nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
-                NativeInterop.GetProcAddress,
-                NativeInterop.Linux__dlsym,
-                NativeInterop.MacOS__dlsym
-            )(dllhandle.Handle, funcname);
-
-            if (funcptr == default)
-                return FunctionReturnValue.Error(3);
-            else if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result)
-                && result is { ParsedValue: SIGNATURE signature }
-                && DelegateBuilder.Instance.CreateDelegateType(signature.ReturnType, signature.ParameterTypes) is NativeDelegateWrapper @delegate)
-            {
-
-                @delegate.Invoke(funcptr, );
-
-                throw new NotImplementedException();
-            }
-            else
-                return FunctionReturnValue.Error(3);
+            return InternalDllCall(frame.Interpreter, funcptr, raw_signature, arguments);
         }
 
         // TODO : DllGetAddress ?
 
-        // internal static FunctionReturnValue DllCallAddress(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
+        internal static FunctionReturnValue DllCallAddress(CallFrame frame, Variant[] args)
+        {
+            int argc = frame.PassedArguments.Length - 2;
+
+            if ((argc % 2) != 0)
+                return FunctionReturnValue.Error(4);
+
+            Variant[] arguments = args.Skip(2).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
+            string raw_signature = args.Skip(2).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[0]).StringJoin(", ");
+            nint funcptr = (nint)(long)args[1];
+
+            // TODO ?
+
+            return InternalDllCall(frame.Interpreter, funcptr, raw_signature, arguments);
+        }
+
         // internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
         // {
         // 
@@ -714,11 +728,33 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         // {
         // 
         // }
-        // 
-        // internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+
+        internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (!args[0].IsFunction(out ScriptFunction? function))
+                    function = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
+
+                if (function is { })
+                {
+                    string raw_signature = args[1].ToString() + ", " + args[2].ToString().Replace(';', ',');
+
+                    if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
+                        DelegateBuilder.Instance.CreateDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+                    {
+                        @delegate
+
+
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return Variant.False;
+        }
 
         internal static FunctionReturnValue DllClose(CallFrame frame, Variant[] args)
         {
