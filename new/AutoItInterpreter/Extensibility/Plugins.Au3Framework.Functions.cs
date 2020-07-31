@@ -88,10 +88,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DllCall), 3, 255, DllCall),
-            // ProvidedNativeFunction.Create(nameof(DllCallAddress), , DllCallAddress),
-            // ProvidedNativeFunction.Create(nameof(DllCallbackFree), , DllCallbackFree),
-            // ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), , DllCallbackGetPtr),
-            // ProvidedNativeFunction.Create(nameof(DllCallbackRegister), , DllCallbackRegister),
+            ProvidedNativeFunction.Create(nameof(DllCallAddress), 2, 254, DllCallAddress),
+            ProvidedNativeFunction.Create(nameof(DllCallbackFree), 1, DllCallbackFree),
+            ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), 1, DllCallbackGetPtr),
+            ProvidedNativeFunction.Create(nameof(DllCallbackRegister), 3, DllCallbackRegister),
             ProvidedNativeFunction.Create(nameof(DllClose), 1, DllClose),
             ProvidedNativeFunction.Create(nameof(DllOpen), 1, DllOpen),
             //ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
@@ -654,11 +654,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         private static FunctionReturnValue InternalDllCall(Interpreter interpreter, nint funcptr, string raw_signature, Variant[] args)
         {
             if (interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
-                DelegateBuilder.Instance.CreateDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+                DelegateBuilder.Instance.CreateNativeDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
             {
-                @delegate.InvokePointer(funcptr, );
-
-                throw new NotImplementedException();
+                return @delegate.CallCPPfromAutoit(funcptr, interpreter, args);
             }
             else
                 return FunctionReturnValue.Error(3);
@@ -719,15 +717,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return InternalDllCall(frame.Interpreter, funcptr, raw_signature, arguments);
         }
 
-        // internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // internal static FunctionReturnValue DllCallbackGetPtr(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
+        {
+            if (args[0].TryResolveHandle(frame.Interpreter, out UserFunctionCallback? _))
+                frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue DllCallbackGetPtr(CallFrame frame, Variant[] args)
+        {
+            if (args[0].TryResolveHandle(frame.Interpreter, out UserFunctionCallback? callback))
+                return (Variant)(long)callback.FunctionPointer;
+
+            return Variant.Zero;
+        }
 
         internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
         {
@@ -738,14 +742,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 if (function is { })
                 {
+                    var callback = UserFunctionCallback.CreateNativeCallback(function, frame.Interpreter);
                     string raw_signature = args[1].ToString() + ", " + args[2].ToString().Replace(';', ',');
 
                     if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
-                        DelegateBuilder.Instance.CreateDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+                        DelegateBuilder.Instance.CreateUserFunctionCallback(result!.ParsedValue, callback) is UserFunctionCallback @delegate)
                     {
-                        @delegate
-
-
+                        return frame.Interpreter.GlobalObjectStorage.Store(@delegate);
                     }
                 }
             }
@@ -2022,6 +2025,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
 
         internal static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)args[0].IsObject;
+
+        internal static FunctionReturnValue IsPtr(CallFrame frame, Variant[] args) => (Variant)args[0].IsPtr;
 
         internal static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
 

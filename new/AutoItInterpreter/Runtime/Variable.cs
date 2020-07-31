@@ -10,6 +10,9 @@ using System;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -249,6 +252,11 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly bool IsHandle => Type is VariantType.Handle;
 
         /// <summary>
+        /// Indicates whether the current instance is a valid C++/C#/C pointer address. This requires the current value to be a positive non-zero integer smaller or equal to <see cref="ulong.MaxValue"/>.
+        /// </summary>
+        public readonly bool IsPtr => ToNumber() is decimal d and > 0 and <= ulong.MaxValue && (ulong)d == d;
+
+        /// <summary>
         /// Returns the semantic length of this value (e.g. elements in an array/map, length of a regular or binary string, etc.)
         /// </summary>
         public readonly int Length => (RawData as IEnumerable)?.Count() ?? 0; // TODO : com object
@@ -482,6 +490,50 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <returns>The map.</returns>
         public readonly IDictionary<Variant, Variant> ToMap(Interpreter interpreter) => ToOrderedMap(interpreter).ToDictionary();
 
+        public unsafe object? ToCPPObject(Type type, Interpreter interpreter)
+        {
+            if (IsNull)
+                return type.IsValueType ? Activator.CreateInstance(type) : null;
+            else if (type == typeof(string))
+                return ToString();
+            else if (type == typeof(StringBuilder))
+                return new StringBuilder(ToString());
+            else if (type == typeof(bool))
+                return (bool)this;
+            else if (type == typeof(sbyte))
+                return (sbyte)this;
+            else if (type == typeof(byte))
+                return (byte)this;
+            else if (type == typeof(ushort))
+                return (ushort)this;
+            else if (type == typeof(short))
+                return (short)this;
+            else if (type == typeof(int))
+                return (int)this;
+            else if (type == typeof(uint))
+                return (uint)this;
+            else if (type == typeof(long))
+                return (long)this;
+            else if (type == typeof(ulong))
+                return (ulong)this;
+            else if (type == typeof(float))
+                return (float)this;
+            else if (type == typeof(double))
+                return (double)this;
+            else if (type == typeof(decimal))
+                return (decimal)this;
+            else if (type == typeof(char))
+                return (char)this;
+            else if (type == typeof(nint))
+                return (nint)(ulong)this;
+            else if (type == typeof(nuint))
+                return (nuint)(ulong)this;
+            else if (type.IsPointer)
+                return Pointer.Box((void*)(ulong)this, type);
+            else
+                throw new NotImplementedException($"{this} --> {type}");
+        }
+
         /// <summary>
         /// Assigns a copy of the current instance to the given variable and returns the associated copy.
         /// <para/>
@@ -669,7 +721,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="obj">Object to be converted.</param>
         /// <exception cref="NotImplementedException"/>
         /// <returns>Converted object.</returns>
-        public static Variant FromObject(Interpreter interpreter, object? obj) => obj switch
+        public static unsafe Variant FromObject(Interpreter interpreter, object? obj) => obj switch
         {
             null or LITERAL => FromLiteral(obj as LITERAL),
             Variable v => FromReference(v),
@@ -693,7 +745,9 @@ namespace Unknown6656.AutoIt3.Runtime
             IEnumerable<Variant> arr => FromArray(interpreter, arr),
             IDictionary<Variant, Variant> dic => FromMap(interpreter, dic),
             ScriptFunction func => FromFunction(func),
-
+            nint n => FromNumber((ulong)n),
+            nuint n => FromNumber(n),
+            _ when obj.GetType().IsPointer => FromNumber((ulong)Pointer.Unbox(obj)),
             _ => throw new NotImplementedException(obj.ToString()),
             //_ => FromNETObject(obj),
         };
