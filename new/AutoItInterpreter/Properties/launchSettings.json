@@ -3,7 +3,7 @@
     "AutoItInterpreter": {
       "commandName": "Project",
       "commandLineArgs": "-tvv ../test/test",
-      "nativeDebugging": true
+      "nativeDebugging": false
     }
   }
 }

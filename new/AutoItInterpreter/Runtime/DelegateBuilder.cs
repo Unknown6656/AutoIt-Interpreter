@@ -21,8 +21,6 @@ namespace Unknown6656.AutoIt3.Runtime
     /// </summary>
     public sealed class DelegateBuilder
     {
-        private static readonly ConcurrentDictionary<int, NativeDelegateWrapper> _nativecache = new();
-
         public static DelegateBuilder Instance { get; } = new DelegateBuilder();
 
 
@@ -111,6 +109,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     nint ptr = (nint)field_ptr.GetValue(null)!;
 
+                    SaveAssemly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
+
                     return new UserFunctionCallback(ptr);
                 }
             }
@@ -123,11 +123,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public NativeDelegateWrapper? CreateNativeDelegateType(SIGNATURE signature)
         {
-            int hash = signature.GetHashCode();
-
-            if (_nativecache.TryGetValue(hash, out NativeDelegateWrapper? wrapper))
-                return wrapper;
-
             try
             {
                 TypeBuilder delegate_builder = _module.DefineType(GetRandomName(), TypeAttributes.Sealed | TypeAttributes.Public, typeof(MulticastDelegate));
@@ -147,16 +142,20 @@ namespace Unknown6656.AutoIt3.Runtime
                     new[] { typeof(object), typeof(nint) }
                 );
                 constructor.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
-                // constructor.DefineParameter(1, ParameterAttributes.None, "object");
-                // constructor.DefineParameter(2, ParameterAttributes.None, "method");
+                constructor.DefineParameter(1, ParameterAttributes.None, "object");
+                constructor.DefineParameter(2, ParameterAttributes.None, "method");
 
                 Type?[] @params = signature.ParameterTypes.ToArray(t => ConvertType(t, true));
+                Type? rettype = ConvertType(signature.ReturnType.Type, false);
+
+                if (rettype is null || @params.Contains(null))
+                    return null;
 
                 MethodBuilder invoke = delegate_builder.DefineMethod(
                     "Invoke",
                     MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.Public,
                     CallingConventions.Standard,
-                    ConvertType(signature.ReturnType.Type, false),
+                    rettype,
                     null,
                     new[] {
                         callconv switch
@@ -201,15 +200,22 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         ProcessParameter(i + 1, signature.ParameterTypes[i]);
 
-                if (delegate_builder.CreateType() is Type type &&
-                    type.GetMethod(invoke.Name) is MethodInfo inv &&
-                    type.GetConstructor(new[] { typeof(object), typeof(nint) }) is ConstructorInfo ctor)
+                MethodBuilder dummy_builder = delegate_builder.DefineMethod("Dummy", MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, CallingConventions.Standard, rettype, @params!);
+                ILGenerator dummy_il = dummy_builder.GetILGenerator();
+
+                dummy_il.Emit(OpCodes.Ldnull);
+                dummy_il.Emit(OpCodes.Throw);
+
+                if (delegate_builder.CreateType() is Type type)
                 {
-                    wrapper = new NativeDelegateWrapper(type, ctor, inv);
+                    MethodInfo inv = type.GetMethod(invoke.Name)!;
+                    MethodInfo dummy = type.GetMethod(dummy_builder.Name)!;
+                    // ConstructorInfo ctor = type.GetConstructor(new[] { typeof(object), typeof(nint) })!;
+                    object @delegate = dummy.CreateDelegate(type);
 
-                    _nativecache[hash] = wrapper;
+                    SaveAssemly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
 
-                    return wrapper;
+                    return new NativeDelegateWrapper(@delegate, @params, rettype, inv);
                 }
             }
             catch (Exception ex)
@@ -321,7 +327,7 @@ namespace Unknown6656.AutoIt3.Runtime
         };
     }
 
-    public unsafe record NativeDelegateWrapper(Type Type, ConstructorInfo Constructor, MethodInfo Invoker)
+    public unsafe record NativeDelegateWrapper(object Delegate, Type[] ArgTypes, Type RetType, MethodInfo Invoker)
     {
         internal static readonly FieldInfo _methodPtr = typeof(Delegate).GetField(nameof(_methodPtr), BindingFlags.NonPublic | BindingFlags.Instance)!;
         internal static readonly FieldInfo _methodPtrAux = typeof(Delegate).GetField(nameof(_methodPtrAux), BindingFlags.NonPublic | BindingFlags.Instance)!;
@@ -331,23 +337,22 @@ namespace Unknown6656.AutoIt3.Runtime
         public object? CallCPP(void* funcptr, params object?[] arguments) => CallCPP((nint)funcptr, arguments);
 
         //debugging this method will crash the entire application
-        [DebuggerNonUserCode, DebuggerHidden, DebuggerStepThrough]
+       // [DebuggerNonUserCode, DebuggerHidden, DebuggerStepThrough]
         public object? CallCPP(nint funcptr, params object?[] arguments)
         {
-            object @delegate = Constructor.Invoke(new object?[] { null, (nint)pdummy });
             object? result;
 
             try
             {
-                _methodPtr.SetValue(@delegate, funcptr);
-                _methodPtrAux.SetValue(@delegate, funcptr);
+                //_methodPtr.SetValue(Delegate, funcptr);
+                //_methodPtrAux.SetValue(Delegate, funcptr);
 
-                result = Invoker.Invoke(@delegate, arguments);
+                result = Invoker.Invoke(Delegate, arguments);
             }
             finally
             {
-                _methodPtr.SetValue(@delegate, (nint)pdummy);
-                _methodPtrAux.SetValue(@delegate, (nint)pdummy);
+                //_methodPtr.SetValue(Delegate, (nint)pdummy);
+                //_methodPtrAux.SetValue(Delegate, (nint)pdummy);
             }
 
             return result;
@@ -357,14 +362,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variant CallCPPfromAutoit(nint funcptr, Interpreter interpreter, Variant[] arguments)
         {
-            Type[] ptypes = Invoker.GetParameters().ToArray(p => p.ParameterType);
-            object?[] cpp_arguments = new object?[ptypes.Length];
+            object?[] cpp_arguments = new object?[ArgTypes.Length];
 
             for (int i = 0; i < cpp_arguments.Length; ++i)
                 if (i < arguments.Length)
-                    cpp_arguments[i] = arguments[i].ToCPPObject(ptypes[i], interpreter);
+                    cpp_arguments[i] = arguments[i].ToCPPObject(ArgTypes[i], interpreter);
                 else
-                    cpp_arguments[i] = ptypes[i].IsValueType ? Activator.CreateInstance(ptypes[i]) : null;
+                    cpp_arguments[i] = ArgTypes[i].IsValueType ? Activator.CreateInstance(ArgTypes[i]) : null;
 
             object? result = CallCPP(funcptr, cpp_arguments);
 

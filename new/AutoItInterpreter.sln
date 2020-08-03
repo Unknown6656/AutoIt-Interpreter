@@ -61,6 +61,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.WinAPI.Server", "ut
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpp-interop-test", "test\cpp-interop-test\cpp-interop-test.vcxproj", "{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "test\UnitTests\UnitTests.csproj", "{7B511104-4D4E-4B2E-9276-095A4D476F11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -165,6 +167,18 @@ Global
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794}.Release|x64.Build.0 = Release|x64
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794}.Release|x86.ActiveCfg = Release|Win32
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794}.Release|x86.Build.0 = Release|Win32
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|x64.Build.0 = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Debug|x86.Build.0 = Debug|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|x64.ActiveCfg = Release|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|x64.Build.0 = Release|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|x86.ActiveCfg = Release|Any CPU
+		{7B511104-4D4E-4B2E-9276-095A4D476F11}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -176,6 +190,7 @@ Global
 		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}
+		{7B511104-4D4E-4B2E-9276-095A4D476F11} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC63CA64-CCD2-471E-8DB3-72D91D747EA9}

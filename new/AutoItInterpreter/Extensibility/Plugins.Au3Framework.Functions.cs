@@ -20,8 +20,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Runtime.CompilerServices;
-using System.Reflection;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -653,13 +651,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         private static FunctionReturnValue InternalDllCall(Interpreter interpreter, nint funcptr, string raw_signature, Variant[] args)
         {
-            if (interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
-                DelegateBuilder.Instance.CreateNativeDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+            try
             {
-                return @delegate.CallCPPfromAutoit(funcptr, interpreter, args);
+                if (interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
+                    DelegateBuilder.Instance.CreateNativeDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+                {
+                    return @delegate.CallCPPfromAutoit(funcptr, interpreter, args);
+                }
             }
-            else
-                return FunctionReturnValue.Error(3);
+            catch (Exception ex)
+            {
+                MainProgram.PrintDebugMessage(ex.ToString());
+            }
+
+            return FunctionReturnValue.Error(3);
         }
 
         internal static FunctionReturnValue DllCall(CallFrame frame, Variant[] args)
@@ -752,8 +757,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                MainProgram.PrintDebugMessage(ex.ToString());
             }
 
             return Variant.False;

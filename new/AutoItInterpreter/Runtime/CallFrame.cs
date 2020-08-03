@@ -8,6 +8,10 @@ using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 
 using Piglet.Parser.Configuration.Generic;
+using Piglet.Parser.Configuration;
+using Piglet.Parser;
+using Piglet.Lexer.Construction;
+using Piglet.Lexer;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework;
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
@@ -1040,10 +1044,12 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate
                 {
+                    string key = ex is ParseException or ParserConfigurationException or LexerException or LexerConstructionException ? "error.unparsable_line" : "error.unprocessable_line";
+
                     if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
-                        return new InterpreterError(CurrentLocation, $"{Interpreter.CurrentUILanguage["error.unparsable_line", line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                        return new InterpreterError(CurrentLocation, $"{Interpreter.CurrentUILanguage[key, line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
                     else
-                        return WellKnownError("error.unparsable_line", line, ex.Message);
+                        return WellKnownError(key, line, ex.Message);
                 });
             }
         });

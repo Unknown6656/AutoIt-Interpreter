@@ -119,7 +119,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(KERNEL32_DLL)]
         public static extern unsafe nint LocalFree(void* hMem);
 
-        [DllImport(KERNEL32_DLL, SetLastError = true)]
+        [DllImport(KERNEL32_DLL, SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern nint LoadLibrary(string lpLibFileName);
 
         [DllImport(KERNEL32_DLL, SetLastError = true)]

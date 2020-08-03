@@ -77,6 +77,9 @@ namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
+        [Option('w', "view", Default = false, HelpText = "Only displays the file instead of executing it. This implies the flag 'B' and a verbosity level of 'q'")]
+        public bool ViewOnly { get; set; } = false;
+
         [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
         public bool HideBanner { set; get; } = false;
 
@@ -133,7 +136,6 @@ namespace Unknown6656.AutoIt3
             Stopwatch sw = new Stopwatch();
 
             sw.Start();
-
 
             Console.CancelKeyPress += (_, e) =>
             {
@@ -212,6 +214,13 @@ namespace Unknown6656.AutoIt3
                         return result;
                     }).WithParsed(opt =>
                     {
+                        if (opt.ViewOnly)
+                        {
+                            opt.Verbosity = Verbosity.q;
+                            opt.PrintTelemetry = false;
+                            opt.DontLoadPlugins = true;
+                        }
+
                         CommandLineOptions = opt;
 
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
@@ -238,14 +247,32 @@ namespace Unknown6656.AutoIt3
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
 
-                        PrintfDebugMessage("debug.interpreter_loaded", opt.FilePath);
+                        Union<InterpreterError, ScannedScript> resolved = interpreter.ScriptScanner.ScanScriptFile(SourceLocation.Unknown, opt.FilePath, false);
+                        InterpreterError? error = null;
 
-                        InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+                        if (resolved.Is(out ScannedScript? script))
+                        {
+                            PrintfDebugMessage("debug.interpreter_loaded", opt.FilePath);
 
-                        if (result.OptionalError is InterpreterError err)
+                            if (opt.ViewOnly)
+                            {
+                                ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(script);
+
+                                ScriptVisualizer.PrintScriptTokens(tokens);
+                            }
+                            else
+                            {
+                                InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+
+                                error = result.OptionalError;
+                                code = result.ProgramExitCode;
+                            }
+                        }
+                        else
+                            error = resolved.As<InterpreterError>();
+
+                        if (error is InterpreterError err)
                             PrintError($"{lang["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
-
-                        code = result.ProgramExitCode;
                     });
                 }
                 catch (Exception ex)
@@ -353,15 +380,21 @@ namespace Unknown6656.AutoIt3
 
         public static void PrintException(this Exception? ex)
         {
-            StringBuilder sb = new StringBuilder();
+            if (ex is { })
+                if (CommandLineOptions.Verbosity < Verbosity.q)
+                    PrintError(ex.Message);
+                else
+                {
+                    StringBuilder sb = new StringBuilder();
 
-            while (ex is { })
-            {
-                sb.Insert(0, $"[{ex.GetType()}] \"{ex.Message}\":\n{ex.StackTrace}\n");
-                ex = ex.InnerException;
-            }
+                    while (ex is { })
+                    {
+                        sb.Insert(0, $"[{ex.GetType()}] \"{ex.Message}\":\n{ex.StackTrace}\n");
+                        ex = ex.InnerException;
+                    }
 
-            PrintError(sb.ToString());
+                    PrintError(sb.ToString());
+                }
         }
 
         public static void PrintError(this string message) => _print_queue.Enqueue(delegate
