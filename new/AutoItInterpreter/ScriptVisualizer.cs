@@ -1,13 +1,11 @@
-﻿using System;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using System;
 
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.Common;
 using Unknown6656.Controls.Console;
+using Unknown6656.Common;
 using Unknown6656.Imaging;
 
 namespace Unknown6656.AutoIt3
@@ -31,8 +29,8 @@ namespace Unknown6656.AutoIt3
 
         public static Dictionary<TokenType, RGBAColor> ColorScheme { get; } = new()
         {
-            [TokenType.NewLine] = RGBAColor.White,
-            [TokenType.Whitespace] = RGBAColor.White,
+            // [TokenType.NewLine] = RGBAColor.White,
+            // [TokenType.Whitespace] = RGBAColor.White,
             [TokenType.Keyword] = RGBAColor.DeepSkyBlue,
             [TokenType.Identifier] = RGBAColor.White,
             [TokenType.Comment] = RGBAColor.DarkSeaGreen,
@@ -48,7 +46,7 @@ namespace Unknown6656.AutoIt3
         };
 
 
-        public static ScriptToken[] TokenizeScript(ScannedScript script) => TokenizeScript(script.OriginalContent);
+        public static ScriptToken[] TokenizeScript(this ScannedScript script) => TokenizeScript(script.OriginalContent);
 
         public static ScriptToken[] TokenizeScript(string au3_script) => TokenizeScript(au3_script.SplitIntoLines());
 
@@ -124,30 +122,21 @@ namespace Unknown6656.AutoIt3
             return tokens.ToArray();
         }
 
-        public static void PrintScriptTokens(params ScriptToken[] tokens)
+        public static string ConvertToVT100(this IEnumerable<ScriptToken> tokens, bool print_linebreaks) =>
+            (from t in tokens
+             orderby t.LineIndex, t.CharIndex
+             select ConvertToVT100(t, print_linebreaks)).StringConcat();
+
+        public static string ConvertToVT100(this ScriptToken token, bool print_linebreaks)
         {
-            if (tokens.Length == 0)
-                return;
+            if (token.Type is TokenType.NewLine)
+                return print_linebreaks ? "\n" : string.Empty;
+            else if (token.Type is TokenType.Whitespace)
+                return token.Content;
 
-            tokens = tokens.OrderBy(t => t.LineIndex).ThenBy(t => t.CharIndex).ToArray();
+            string str = ColorScheme[token.Type].ToVT100ForegroundString() + token.Content;
 
-            foreach (ScriptToken token in tokens)
-            {
-                if (token.Type is TokenType.NewLine)
-                    Console.WriteLine();
-
-                PrintSingleScriptToken(token);
-            }
-        }
-
-        public static void PrintSingleScriptToken(ScriptToken token)
-        {
-            ConsoleExtensions.RGBForegroundColor = ColorScheme[token.Type];
-
-            if (token.Type is TokenType.UNKNOWN)
-                ConsoleExtensions.WriteUnderlined(token.Content);
-            else
-                Console.Write(token.Content);
+            return token.Type is TokenType.UNKNOWN ? $"\x1b[4m{str}\x1b[24m" : str;
         }
     }
 

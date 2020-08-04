@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
@@ -15,6 +16,7 @@ namespace Unknown6656.AutoIt3
         ProgramRuntimeAndPrinting,
         ProgramRuntime,
         ParseCommandLine,
+        GithubUpdater,
         LoadLanguage,
         PerformanceMonitor,
         Printing,
@@ -78,6 +80,30 @@ namespace Unknown6656.AutoIt3
         // TODO : other stuff, such as exceptions, mem usage, cpu usage, etc.
 
         public void SubmitTimings(TelemetryCategory category, in TimeSpan span) => _recorded_timings.Add((category, span));
+
+        public async Task MeasureAsync(TelemetryCategory category, Func<Task> function) => await MeasureAsync<__empty>(category, async delegate
+        {
+            await function();
+
+            return default;
+        });
+
+        public async Task<T> MeasureAsync<T>(TelemetryCategory category, Func<Task<T>> function) => await Task.Factory.StartNew(delegate
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            Task<T> task = function();
+            TaskAwaiter<T> awaiter = task.GetAwaiter();
+            T result = awaiter.GetResult();
+
+            sw.Stop();
+
+            SubmitTimings(category, sw.Elapsed);
+
+            return result;
+        });
 
         public void Measure(TelemetryCategory category, Action function) => Measure<__empty>(category, delegate
         {
@@ -230,6 +256,7 @@ namespace Unknown6656.AutoIt3
             root.AddChild(pack["debug.telemetry.categories.perfmon"], get_timings(TelemetryCategory.PerformanceMonitor));
 
             nd_interpreter.AddChild(pack["debug.telemetry.categories.argument_parsing"], get_timings(TelemetryCategory.ParseCommandLine));
+            nd_interpreter.AddChild(pack["debug.telemetry.categories.github_updater"], get_timings(TelemetryCategory.GithubUpdater));
             nd_interpreter.AddChild(pack["debug.telemetry.categories.load_lang_packs"], get_timings(TelemetryCategory.LoadLanguage));
             nd_init = nd_interpreter.AddChild(pack["debug.telemetry.categories.init"], get_timings(TelemetryCategory.InterpreterInitialization));
             nd_runtime = nd_interpreter.AddChild(pack["debug.telemetry.categories.runtime"], get_timings(TelemetryCategory.InterpreterRuntime));

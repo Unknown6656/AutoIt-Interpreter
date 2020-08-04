@@ -6,8 +6,9 @@ namespace VersionIncrementer
 {
     public static class Program
     {
-        public const string AUTHOR = "Unknown6656";
-        public const string REPOSITORY = "https://github.com/" + AUTHOR + "/AutoIt-Interpreter";
+        public const string REPOSITORY_AUTHOR = "Unknown6656";
+        public const string REPOSITORY_NAME = "AutoIt-Interpreter";
+        public const string REPOSITORY_URL = "https://github.com/" + REPOSITORY_AUTHOR + "/" + REPOSITORY_NAME;
         public const int START_YEAR = 2018;
 
 
@@ -56,12 +57,12 @@ namespace VersionIncrementer
                 githash = "<unknown git commit hash>";
 
             string year = START_YEAR < now.Year ? $"{START_YEAR} - {now.Year}" : START_YEAR.ToString();
-            string copyright = $"Copyright © {year}, {AUTHOR}";
+            string copyright = $"Copyright © {year}, {REPOSITORY_AUTHOR}";
 
             File.WriteAllText(verspath, $"{v2}\n{githash}");
             File.WriteAllText(metapath, $@"
 //////////////////////////////////////////////////////////////////////////
-// Auto-generated {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}                               //
+// Auto-generated {now:yyyy-MM-dd HH:mm:ss.fff}                               //
 // ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION         //
 //////////////////////////////////////////////////////////////////////////
 
@@ -71,9 +72,9 @@ using System;
 [assembly: AssemblyVersion(""{v2}"")]
 [assembly: AssemblyFileVersion(""{v2}"")]
 [assembly: AssemblyInformationalVersion(""v.{v2}, commit: {githash}"")]
-[assembly: AssemblyCompany(""{AUTHOR}"")]
+[assembly: AssemblyCompany(""{REPOSITORY_AUTHOR}"")]
 [assembly: AssemblyCopyright(""{copyright}"")]
-[assembly: AssemblyProduct(""AutoIt3 Interpreter by {AUTHOR}"")]
+[assembly: AssemblyProduct(""{REPOSITORY_NAME} by {REPOSITORY_AUTHOR}"")]
 [assembly: AssemblyTitle(""autoit3"")]
 
 /// <summary>
@@ -82,9 +83,9 @@ using System;
 public static class __module__
 {{
     /// <summary>
-    /// The interpreter's author.
+    /// The interpreter's author. This value is equal to the author of the GitHub repository associated with <see cref=""RepositoryURL""/>.
     /// </summary>
-    public const string Author = ""{AUTHOR}"";
+    public const string Author = ""{REPOSITORY_AUTHOR}"";
     /// <summary>
     /// Development year(s).
     /// </summary>
@@ -102,9 +103,17 @@ public static class __module__
     /// </summary>
     public const string GitHash = ""{githash}"";
     /// <summary>
-    /// The URL of this project's Git(Hub) repository.
+    /// The name of the GitHub repository associated with <see cref=""RepositoryURL""/>.
     /// </summary>
-    public const string RepositoryURL = ""{REPOSITORY}"";
+    public const string RepositoryName = ""{REPOSITORY_NAME}"";
+    /// <summary>
+    /// The URL of this project's GitHub repository.
+    /// </summary>
+    public const string RepositoryURL = ""{REPOSITORY_URL}"";
+    /// <summary>
+    /// The date and time of the current build ({now:yyyy-MM-dd HH:mm:ss.fff}).
+    /// </summary>
+    public static DateTime DateBuilt {{ get; }} = DateTime.FromFileTimeUtc(0x{now.ToFileTimeUtc():x16}L);
 }}
 ");
         }

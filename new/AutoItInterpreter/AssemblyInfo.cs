@@ -1,18 +1,18 @@
 
 //////////////////////////////////////////////////////////////////////////
-// Auto-generated 2020-08-03 20:17:34.704                               //
+// Auto-generated 2020-08-04 08:17:02.708                               //
 // ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION         //
 //////////////////////////////////////////////////////////////////////////
 
 using System.Reflection;
 using System;
 
-[assembly: AssemblyVersion("0.6.1355.7336")]
-[assembly: AssemblyFileVersion("0.6.1355.7336")]
-[assembly: AssemblyInformationalVersion("v.0.6.1355.7336, commit: a10409a5da8f4aaff80042b34d74b8d6e0f2da21")]
+[assembly: AssemblyVersion("0.6.1372.7337")]
+[assembly: AssemblyFileVersion("0.6.1372.7337")]
+[assembly: AssemblyInformationalVersion("v.0.6.1372.7337, commit: ce4153da4e6780b1dfc64217253c71f0f50ba414")]
 [assembly: AssemblyCompany("Unknown6656")]
 [assembly: AssemblyCopyright("Copyright © 2018 - 2020, Unknown6656")]
-[assembly: AssemblyProduct("AutoIt3 Interpreter by Unknown6656")]
+[assembly: AssemblyProduct("AutoIt-Interpreter by Unknown6656")]
 [assembly: AssemblyTitle("autoit3")]
 
 /// <summary>
@@ -21,7 +21,7 @@ using System;
 public static class __module__
 {
     /// <summary>
-    /// The interpreter's author.
+    /// The interpreter's author. This value is equal to the author of the GitHub repository associated with <see cref="RepositoryURL"/>.
     /// </summary>
     public const string Author = "Unknown6656";
     /// <summary>
@@ -35,13 +35,21 @@ public static class __module__
     /// <summary>
     /// The interpreter's current version.
     /// </summary>
-    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1355.7336");
+    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1372.7337");
     /// <summary>
     /// The Git hash associated with the current build.
     /// </summary>
-    public const string GitHash = "a10409a5da8f4aaff80042b34d74b8d6e0f2da21";
+    public const string GitHash = "ce4153da4e6780b1dfc64217253c71f0f50ba414";
     /// <summary>
-    /// The URL of this project's Git(Hub) repository.
+    /// The name of the GitHub repository associated with <see cref="RepositoryURL"/>.
+    /// </summary>
+    public const string RepositoryName = "AutoIt-Interpreter";
+    /// <summary>
+    /// The URL of this project's GitHub repository.
     /// </summary>
     public const string RepositoryURL = "https://github.com/Unknown6656/AutoIt-Interpreter";
+    /// <summary>
+    /// The date and time of the current build (2020-08-04 08:17:02.708).
+    /// </summary>
+    public static DateTime DateBuilt { get; } = DateTime.FromFileTimeUtc(0x01d66a26de6e52a2L);
 }

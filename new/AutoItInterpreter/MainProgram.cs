@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -23,7 +24,6 @@ using Unknown6656.Common;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
-
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -77,7 +77,7 @@ namespace Unknown6656.AutoIt3
 {
     public sealed class CommandLineOptions
     {
-        [Option('w', "view", Default = false, HelpText = "Only displays the file instead of executing it. This implies the flag 'B' and a verbosity level of 'q'")]
+        [Option('w', "view", Default = false, HelpText = "Only displays the file instead of executing it. This implies the flag 'B' and a verbosity level of 'q'.")]
         public bool ViewOnly { get; set; } = false;
 
         [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
@@ -120,6 +120,13 @@ namespace Unknown6656.AutoIt3
         public static readonly FileInfo COM_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
         public static readonly FileInfo GUI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
 
+        internal static readonly RGBAColor COLOR_TIMESTAMP = RGBAColor.Gray;
+        internal static readonly RGBAColor COLOR_PREFIX_SCRIPT = RGBAColor.Cyan;
+        internal static readonly RGBAColor COLOR_PREFIX_DEBUG = RGBAColor.PaleTurquoise;
+        internal static readonly RGBAColor COLOR_SCRIPT = RGBAColor.White;
+        internal static readonly RGBAColor COLOR_DEBUG = RGBAColor.LightSteelBlue;
+        internal static readonly RGBAColor COLOR_ERROR = RGBAColor.Salmon;
+        internal static readonly RGBAColor COLOR_WARNING = RGBAColor.Orange;
 
         private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;
@@ -169,6 +176,18 @@ namespace Unknown6656.AutoIt3
                     // Console.BackgroundColor = ConsoleColor.Black;
                     // Console.Clear();
 
+                    Task<bool?> updater_task = GithubUpdater.TryCheckForUpdatesAsync(Telemetry);
+                    void display_update(bool enqueue)
+                    {
+                        TaskAwaiter<bool?> awaiter = updater_task.GetAwaiter();
+                        bool? result = awaiter.GetResult();
+
+                        if (result is null)
+                            ; // error
+                        else if (result is true)
+                            ; // update
+                    }
+
                     Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
                     {
                         using CLParser parser = new CLParser(p => p.HelpWriter = null);
@@ -191,6 +210,8 @@ namespace Unknown6656.AutoIt3
 
                                 return HelpText.DefaultParsingErrorsHandler(result, h);
                             }, e => e);
+
+                            display_update(false);
 
                             if (err.FirstOrDefault() is VersionRequestedError or UnknownOptionError { StopsProcessing: false, Token: "version" })
                             {
@@ -222,6 +243,8 @@ namespace Unknown6656.AutoIt3
                         }
 
                         CommandLineOptions = opt;
+
+                        display_update(opt.Verbosity > Verbosity.q);
 
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
                         {
@@ -258,7 +281,7 @@ namespace Unknown6656.AutoIt3
                             {
                                 ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(script);
 
-                                ScriptVisualizer.PrintScriptTokens(tokens);
+                                Console.WriteLine(tokens.ConvertToVT100(true));
                             }
                             else
                             {
@@ -348,15 +371,15 @@ namespace Unknown6656.AutoIt3
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write('[');
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
+                ConsoleExtensions.RGBForegroundColor = COLOR_TIMESTAMP;
                 Console.Write(now.ToString("HH:mm:ss.fff"));
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("][");
-                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.PaleTurquoise : RGBAColor.Cyan;
+                ConsoleExtensions.RGBForegroundColor = from_script ? COLOR_PREFIX_SCRIPT : COLOR_PREFIX_DEBUG;
                 Console.Write(prefix);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("] ");
-                ConsoleExtensions.RGBForegroundColor = from_script ? RGBAColor.White : RGBAColor.Aquamarine;
+                ConsoleExtensions.RGBForegroundColor = from_script ? COLOR_SCRIPT : COLOR_DEBUG;
                 Console.WriteLine(msg);
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             });
@@ -430,7 +453,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             else
                 Console.WriteLine();
 
-            ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
+            ConsoleExtensions.RGBForegroundColor = COLOR_ERROR;
             Console.WriteLine(message.TrimEnd());
             Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/\x1b[24m.");
 
@@ -448,22 +471,22 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 if (Console.CursorLeft > 0)
                     Console.WriteLine();
 
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
                 Console.WriteLine(LanguageLoader.CurrentLanguage?["warning.warning_in", location] + ":\n    " + msg.Trim());
             }
             else
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write('[');
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Gray;
+                ConsoleExtensions.RGBForegroundColor = COLOR_TIMESTAMP;
                 Console.Write(DateTime.Now.ToString("HH:mm:ss.fff", null));
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("][");
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
                 Console.Write("warning");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("] ");
-                ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
+                ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
                 Console.WriteLine(msg.Trim());
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             }
@@ -671,7 +694,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                         ConsoleExtensions.RGBForegroundColor = col_backg;
                         Console.Write(new string('─', widths[i]));
                         ConsoleExtensions.RGBForegroundColor = node.IsHot ? col_hotpath : col_text;
-                        Console.CursorLeft = xoffs + 1;
+                        Console.CursorLeft = xoffs;
 
                         for (int j = 0, k = Math.Min(widths[i], cell.Length); j < k; ++j)
                             if (char.IsWhiteSpace(cell[j]))
@@ -703,7 +726,6 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 Console.Write(i == l - 1 ? '┘' : '┴');
             }
 
-
             Console.WriteLine();
             Console.WriteLine(lang["debug.telemetry.explanation"]);
 
@@ -716,7 +738,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 const int PADDING = 22;
                 List<(DateTime, double total, double user, double kernel, long ram)> performance_data = new();
                 int width_perf = width - 2 - PADDING;
-                const int height_perf_cpu = 15;
+                const int height_perf_cpu = 14;
 
                 performance_data.AddRange(telemetry.PerformanceMeasurements);
 
@@ -780,6 +802,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     ConsoleExtensions.RGBForegroundColor = col_backg;
                     Console.Write(new string('─', performance_data.Count + 2));
                 }
+                // TODO : smthing with Environment.ProcessorCount?
 
                 #endregion
                 #region PERFORMANCE : PRINT DATA

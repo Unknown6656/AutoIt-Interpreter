@@ -82,6 +82,7 @@ strings:
                 perfmon: "Performance Monitoring"
                 argument_parsing: "Argument Parsing"
                 load_lang_packs: "Load Language Pack(s)"
+                github_updater: "GitHub version checker"
                 init: "Initialization"
                 runtime: "Runtime"
                 load_plugin: "Load Plugin DLLs"

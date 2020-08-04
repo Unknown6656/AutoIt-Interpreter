@@ -67,6 +67,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Octokit" Version="0.48.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
     </ItemGroup>
     <ItemGroup>

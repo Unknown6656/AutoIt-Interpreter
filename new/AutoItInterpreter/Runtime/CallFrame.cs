@@ -18,6 +18,7 @@ using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.Imaging;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
@@ -403,9 +404,14 @@ namespace Unknown6656.AutoIt3.Runtime
 
             line = line.Trim();
 
-            MainProgram.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
-            MainProgram.PrintfDebugMessage("debug.au3thread.location", loc);
-            MainProgram.PrintfDebugMessage("debug.au3thread.content", line);
+            if (Interpreter.CommandLineOptions.Verbosity > Verbosity.n)
+            {
+                ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(line);
+
+                MainProgram.PrintDebugMessage("-----------------------------------------------------------------------------------------------");
+                MainProgram.PrintfDebugMessage("debug.au3thread.location", loc);
+                MainProgram.PrintfDebugMessage("debug.au3thread.content", tokens.ConvertToVT100(false));
+            }
 
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return InterpreterResult.OK;
@@ -1031,7 +1037,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
-                MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
+                //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
 
                 if (declaration_type == DeclarationType.None)
                     return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
@@ -1330,7 +1336,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 };
 
                 if (value.Is(out Variant v))
-                    MainProgram.PrintfDebugMessage("debug.au3thread.expression", expression, v.ToDebugString(Interpreter));
+                    MainProgram.PrintfDebugMessage(
+                        "debug.au3thread.expression",
+                        ScriptVisualizer.TokenizeScript(expression?.ToString() ?? "Null").ConvertToVT100(false) + MainProgram.COLOR_DEBUG.ToVT100ForegroundString(),
+                        v.ToDebugString(Interpreter)
+                    );
 
                 return value;
             });
