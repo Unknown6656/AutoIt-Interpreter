@@ -75,6 +75,9 @@ catch (Exception? ex)
 
 namespace Unknown6656.AutoIt3
 {
+    /// <summary>
+    /// Represents a structure of command line options for the AutoIt interpreter.
+    /// </summary>
     public sealed class CommandLineOptions
     {
         [Option('w', "view", Default = false, HelpText = "Only displays the file instead of executing it. This implies the flag 'B' and a verbosity level of 'q'.")]
@@ -105,9 +108,13 @@ namespace Unknown6656.AutoIt3
         public string? FilePath { set; get; } = null;
 
 
+        /// <inheritdoc/>
         public override string ToString() => CLParser.Default.FormatCommandLine(this);
     }
 
+    /// <summary>
+    /// The module containing the AutoIt Interpreter's main entry point.
+    /// </summary>
     public static class MainProgram
     {
         public static readonly Assembly ASM = typeof(MainProgram).Assembly;
@@ -138,6 +145,11 @@ namespace Unknown6656.AutoIt3
         public static Telemetry Telemetry { get; } = new Telemetry();
 
 
+        /// <summary>
+        /// The main entry point for this application.
+        /// </summary>
+        /// <param name="argv">Command line arguments.</param>
+        /// <returns>Return/exit code.</returns>
         public static int Start(string[] argv)
         {
             Stopwatch sw = new Stopwatch();
@@ -385,14 +397,33 @@ namespace Unknown6656.AutoIt3
             });
         }
 
+        /// <summary>
+        /// Prints the given localized interpreter message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="key">The language key of the message to be printed.</param>
+        /// <param name="args">The arguments used to format the message to be printed.</param>
         public static void PrintInterpreterMessage(string key, params object?[] args) => SubmitPrint(Verbosity.n, "Interpreter", LanguageLoader.CurrentLanguage?[key, args] ?? key, false);
 
+        /// <summary>
+        /// Prints the given debug message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="message">The debug message to be printed.</param>
         public static void PrintDebugMessage(string message) => PrintChannelMessage("Debug", message);
 
+        /// <summary>
+        /// Prints the given localized debug message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="key">The language key of the message to be printed.</param>
+        /// <param name="args">The arguments used to format the message to be printed.</param>
         public static void PrintfDebugMessage(string key, params object?[] args) => PrintDebugMessage(LanguageLoader.CurrentLanguage?[key, args] ?? key);
 
         internal static void PrintChannelMessage(string channel, string message) => SubmitPrint(Verbosity.v, channel, message, false);
 
+        /// <summary>
+        /// Prints the given message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="file">The (script) file which emitted the message.</param>
+        /// <param name="message">The message to be printed.</param>
         public static void PrintScriptMessage(string? file, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {
             if (CommandLineOptions.Verbosity < Verbosity.n)
@@ -401,25 +432,33 @@ namespace Unknown6656.AutoIt3
                 SubmitPrint(Verbosity.n, file ?? '<' + LanguageLoader.CurrentLanguage?["general.unknown"] + '>', message.Trim(), true);
         });
 
-        public static void PrintException(this Exception? ex)
+        /// <summary>
+        /// Prints the given exception asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="exception">The exception to be printed.</param>
+        public static void PrintException(this Exception? exception)
         {
-            if (ex is { })
+            if (exception is { })
                 if (CommandLineOptions.Verbosity < Verbosity.q)
-                    PrintError(ex.Message);
+                    PrintError(exception.Message);
                 else
                 {
                     StringBuilder sb = new StringBuilder();
 
-                    while (ex is { })
+                    while (exception is { })
                     {
-                        sb.Insert(0, $"[{ex.GetType()}] \"{ex.Message}\":\n{ex.StackTrace}\n");
-                        ex = ex.InnerException;
+                        sb.Insert(0, $"[{exception.GetType()}] \"{exception.Message}\":\n{exception.StackTrace}\n");
+                        exception = exception.InnerException;
                     }
 
                     PrintError(sb.ToString());
                 }
         }
 
+        /// <summary>
+        /// Prints the given error message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="message">The error message to be printed.</param>
         public static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
             bool extensive = !CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n;
@@ -464,7 +503,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             }
         });
 
-        public static void PrintWarning(SourceLocation location, string msg) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
+        /// <summary>
+        /// Prints the given warning message asynchronously to STDOUT.
+        /// </summary>
+        /// <param name="location">The source location at which the warning occurred.</param>
+        /// <param name="message">The warning message to be printed.</param>
+        public static void PrintWarning(SourceLocation location, string message) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
         {
             if (CommandLineOptions.Verbosity == Verbosity.q)
             {
@@ -472,7 +516,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.WriteLine();
 
                 ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
-                Console.WriteLine(LanguageLoader.CurrentLanguage?["warning.warning_in", location] + ":\n    " + msg.Trim());
+                Console.WriteLine(LanguageLoader.CurrentLanguage?["warning.warning_in", location] + ":\n    " + message.Trim());
             }
             else
             {
@@ -487,11 +531,16 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.DarkGray;
                 Console.Write("] ");
                 ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
-                Console.WriteLine(msg.Trim());
+                Console.WriteLine(message.Trim());
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
             }
         }));
 
+        /// <summary>
+        /// Prints the given return code and telemetry data synchronously to STDOUT.
+        /// </summary>
+        /// <param name="retcode">Return code, e.g. from the interpreter execution.</param>
+        /// <param name="telemetry">Telemetry data to be printed.</param>
         public static void PrintReturnCodeAndTelemetry(int retcode, Telemetry telemetry) => _print_queue.Enqueue(delegate
         {
             LanguagePack? lang = LanguageLoader.CurrentLanguage;
@@ -872,6 +921,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(new string('_', width - 1));
         });
 
+        /// <summary>
+        /// Prints the banner synchronously to STDOUT.
+        /// </summary>
         public static void PrintBanner()
         {
             if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
@@ -909,10 +961,22 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         }
     }
 
+    /// <summary>
+    /// An enumeration of different verbosity levels.
+    /// </summary>
     public enum Verbosity
     {
+        /// <summary>
+        /// Quiet.
+        /// </summary>
         q,
+        /// <summary>
+        /// Normal.
+        /// </summary>
         n,
+        /// <summary>
+        /// Verbose.
+        /// </summary>
         v,
     }
 }

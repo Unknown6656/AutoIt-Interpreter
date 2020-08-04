@@ -65,11 +65,11 @@ type DLLStructParser() =
         x.SetPrecedenceList precedences
 
         reduce_3i nt_result nt_annotated_type t_symbol_comma nt_parameters (fun r _ ps -> { ReturnType = r; ParameterTypes = List.toArray ps })
+        reduce_1i nt_result nt_annotated_type (fun r -> { ReturnType = r; ParameterTypes = [||] })
         
         reduce_3i nt_parameters nt_parameters t_symbol_comma nt_type (fun ps _ p -> ps@[p])
         reduce_1i nt_parameters nt_type (fun p -> [p])
         reduce_ci nt_parameters (fun _ -> [])
-
 
         reduce_2i nt_annotated_type nt_type nt_call_conv (fun t c -> { Type = t; CallConvention = c })
         reduce_1i nt_annotated_type nt_type (fun t -> { Type = t; CallConvention = Stdcall })
