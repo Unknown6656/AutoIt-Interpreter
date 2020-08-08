@@ -18,7 +18,6 @@ using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
-using Unknown6656.Imaging;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
@@ -81,9 +80,20 @@ namespace Unknown6656.AutoIt3.Runtime
                 return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.not_enough_args", CurrentFunction.Name, min_argc, args.Length);
             else if (args.Length > max_argc)
                 return InterpreterError.WellKnown(CurrentThread.CurrentLocation, "error.too_many_args", CurrentFunction.Name, max_argc, args.Length);
+            else if (!CurrentFunction.Metadata.SupportedPlatforms.HasFlag(NativeInterop.OperatingSystem))
+                return InterpreterError.WellKnown(
+                    CurrentLocation,
+                    "error.unsupported_platform",
+                    CurrentFunction.Name,
+                    NativeInterop.OperatingSystem,
+                    new[] { OS.Windows, OS.Linux, OS.MacOS }.Where(os => CurrentFunction.Metadata.SupportedPlatforms.HasFlag(os)).StringJoin("', '")
+                );
             else if (result.Is<Variant>())
                 if (CurrentThread.IsRunning)
                 {
+                    if (CurrentFunction.Metadata.IsDeprecated)
+                        IssueWarning("warning.deprecated_function", CurrentFunction.Name);
+
                     MainProgram.PrintfDebugMessage("debug.au3thread.executing", CurrentFunction);
 
                     result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
@@ -138,16 +148,6 @@ namespace Unknown6656.AutoIt3.Runtime
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             NativeFunction native = (NativeFunction)CurrentFunction;
-
-            if (!native.SupportedOS.HasFlag(NativeInterop.OperatingSystem))
-                return InterpreterError.WellKnown(
-                    CurrentLocation,
-                    "error.unsupported_platform",
-                    native.Name,
-                    NativeInterop.OperatingSystem,
-                    new[] { OS.Windows, OS.Linux, OS.MacOS }.Where(os => native.SupportedOS.HasFlag(os)).StringJoin("', '")
-                );
-
             FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => native.Execute(this, args));
             Variant? extended = null;
             int error = 0;
@@ -1339,7 +1339,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     MainProgram.PrintfDebugMessage(
                         "debug.au3thread.expression",
                         ScriptVisualizer.TokenizeScript(expression?.ToString() ?? "Null").ConvertToVT100(false) + MainProgram.COLOR_DEBUG.ToVT100ForegroundString(),
-                        v.ToDebugString(Interpreter)
+                        v.ToDebugString(Interpreter),
+                        v.Type
                     );
 
                 return value;

@@ -69,7 +69,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute, function.SupportedSystems));
+                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute, function.Metadata));
 
             foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
                 _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
@@ -520,6 +520,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScannedScript Script { get; }
 
+        public FunctionMetadata Metadata { get; init; } = FunctionMetadata.Default;
+
         public abstract SourceLocation Location { get; }
 
         public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
@@ -655,21 +657,38 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
-        public OS SupportedOS { get; }
 
-
-        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS supported_os)
+        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, FunctionMetadata metadata)
             : base(script, name)
         {
             _execute = execute;
             ParameterCount = param_count;
-            SupportedOS = supported_os;
+            Metadata = metadata;
         }
 
         public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
         /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
+    }
+
+    public record FunctionMetadata(OS SupportedPlatforms, bool IsDeprecated)
+    {
+        public static FunctionMetadata Default { get; } = new();
+
+        public static FunctionMetadata WindowsOnly { get; } = new(OS.Windows, false);
+
+        public static FunctionMetadata MacOSOnly { get; } = new(OS.MacOS, false);
+
+        public static FunctionMetadata LinuxOnly { get; } = new(OS.Linux, false);
+
+        public static FunctionMetadata UnixOnly { get; } = new(OS.UnixLike, false);
+
+
+        public FunctionMetadata()
+            : this(OS.Any, false)
+        {
+        }
     }
 
     public enum ScannedScriptState

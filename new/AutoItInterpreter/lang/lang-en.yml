@@ -120,12 +120,13 @@ strings:
             location: "Location:             {0}"
             content: "Line content:         {0}"
             expr_statement: "Expression statement: {0}"
-            expression: "Expression:           {0} --> {1}"
+            expression: "Expression:           {0} --> {1} ({2})"
             raw_expr: "Raw expression:       {0}"
     warning:
         warning_in: "WARNING in {0}"
         unparsable_dirctive: "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder."
         com_unavailable: "Interactions with the COM (Component Object Model) framework are not possible on this platform. Currently, COM is only available to Windows-like platforms."
+        deprecated_function: "The function '{0}' is considered to be deprecated and may be removed from future versions of the AutoIt interpreter."
     error:
         error_in: "ERROR in {0}"
         not_yet_implemented: "The functionality '{0}' has not yet been implemented. We're sorry :/"

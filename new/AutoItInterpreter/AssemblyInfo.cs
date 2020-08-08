@@ -1,15 +1,15 @@
 
 //////////////////////////////////////////////////////////////////////////
-// Auto-generated 2020-08-04 12:59:36.989                               //
+// Auto-generated 2020-08-09 00:13:49.718                               //
 // ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION         //
 //////////////////////////////////////////////////////////////////////////
 
 using System.Reflection;
 using System;
 
-[assembly: AssemblyVersion("0.6.1373.7337")]
-[assembly: AssemblyFileVersion("0.6.1373.7337")]
-[assembly: AssemblyInformationalVersion("v.0.6.1373.7337, commit: f2e2c841ece40a8191a4e44fd5735bc4fec5c2da")]
+[assembly: AssemblyVersion("0.6.1406.7342")]
+[assembly: AssemblyFileVersion("0.6.1406.7342")]
+[assembly: AssemblyInformationalVersion("v.0.6.1406.7342, commit: e02541f8f564047b8968cb9e6d1c40da44310b48")]
 [assembly: AssemblyCompany("Unknown6656")]
 [assembly: AssemblyCopyright("Copyright © 2018 - 2020, Unknown6656")]
 [assembly: AssemblyProduct("AutoIt-Interpreter by Unknown6656")]
@@ -35,11 +35,11 @@ public static class __module__
     /// <summary>
     /// The interpreter's current version.
     /// </summary>
-    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1373.7337");
+    public static Version? InterpreterVersion { get; } = Version.Parse("0.6.1406.7342");
     /// <summary>
     /// The Git hash associated with the current build.
     /// </summary>
-    public const string GitHash = "f2e2c841ece40a8191a4e44fd5735bc4fec5c2da";
+    public const string GitHash = "e02541f8f564047b8968cb9e6d1c40da44310b48";
     /// <summary>
     /// The name of the GitHub repository associated with <see cref="RepositoryURL"/>.
     /// </summary>
@@ -49,7 +49,7 @@ public static class __module__
     /// </summary>
     public const string RepositoryURL = "https://github.com/Unknown6656/AutoIt-Interpreter";
     /// <summary>
-    /// The date and time of the current build (2020-08-04 12:59:36.989).
+    /// The date and time of the current build (2020-08-09 00:13:49.718).
     /// </summary>
-    public static DateTime DateBuilt { get; } = DateTime.FromFileTimeUtc(0x01d66a4e57f848a0L);
+    public static DateTime DateBuilt { get; } = DateTime.FromFileTimeUtc(0x01d66dd13153fce3L);
 }

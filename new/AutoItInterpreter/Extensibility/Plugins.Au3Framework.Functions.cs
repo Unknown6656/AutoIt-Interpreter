@@ -59,7 +59,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(AscW), 1, AscW),
             ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
             ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
-            ProvidedNativeFunction.Create(nameof(Beep), OS.Windows, 0, 2, Beep, 500m, 1000m),
+            ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, FunctionMetadata.WindowsOnly, 500m, 1000m),
             ProvidedNativeFunction.Create(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
             ProvidedNativeFunction.Create(nameof(BitOR), 2, 256, BitOR),
             ProvidedNativeFunction.Create(nameof(BitXOR), 2, 256, BitXOR),
@@ -187,11 +187,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
-            ProvidedNativeFunction.Create(nameof(RegDelete), OS.Windows, 1, 2, RegDelete, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RegEnumKey), OS.Windows, 2, RegEnumKey),
-            ProvidedNativeFunction.Create(nameof(RegEnumVal), OS.Windows, 2, RegEnumVal),
-            ProvidedNativeFunction.Create(nameof(RegRead), OS.Windows, 2, RegRead),
-            ProvidedNativeFunction.Create(nameof(RegWrite), OS.Windows, 1, 4, RegWrite, Variant.Default, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete, FunctionMetadata.WindowsOnly, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RegEnumKey), 2, RegEnumKey, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegEnumVal), 2, RegEnumVal, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegRead), 2, RegRead, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegWrite), 1, 4, RegWrite, FunctionMetadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -788,6 +788,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         // internal static FunctionReturnValue DllStructCreate(CallFrame frame, Variant[] args)
         // {
+        //     string struct_type = args[0].ToString();
+        //     long pointer = args[1]
+        // 
         // }
         // 
         // internal static FunctionReturnValue DllStructGetData(CallFrame frame, Variant[] args)

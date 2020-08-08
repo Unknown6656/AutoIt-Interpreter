@@ -203,7 +203,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 MethodBuilder dummy_builder = delegate_builder.DefineMethod("Dummy", MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, CallingConventions.Standard, rettype, @params!);
                 ILGenerator dummy_il = dummy_builder.GetILGenerator();
 
-                dummy_il.Emit(OpCodes.Ldnull);
+                dummy_il.Emit(OpCodes.Newobj, typeof(NotImplementedException).GetConstructor(Array.Empty<Type>())!);
                 dummy_il.Emit(OpCodes.Throw);
 
                 if (delegate_builder.CreateType() is Type type)
@@ -215,7 +215,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     SaveAssemly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
 
-                    return new NativeDelegateWrapper(@delegate, @params, rettype, inv);
+                    return new NativeDelegateWrapper(@delegate, @params!, rettype, inv);
                 }
             }
             catch (Exception ex)
@@ -331,28 +331,40 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         internal static readonly FieldInfo _methodPtr = typeof(Delegate).GetField(nameof(_methodPtr), BindingFlags.NonPublic | BindingFlags.Instance)!;
         internal static readonly FieldInfo _methodPtrAux = typeof(Delegate).GetField(nameof(_methodPtrAux), BindingFlags.NonPublic | BindingFlags.Instance)!;
-        private static readonly delegate*<void> pdummy = &DummyMethod;
 
 
         public object? CallCPP(void* funcptr, params object?[] arguments) => CallCPP((nint)funcptr, arguments);
 
-        //debugging this method will crash the entire application
-       // [DebuggerNonUserCode, DebuggerHidden, DebuggerStepThrough]
+        /// <summary>
+        /// Calls the given function pointer with the given arguments and returns the function return value of the called function.
+        /// <para/>
+        /// <b>WARNING: Debugging this method will most certainly crash the entire application due to missing debug symbols!</b>
+        /// </summary>
+        /// <param name="funcptr">Function pointer to be called.</param>
+        /// <param name="arguments">The function arguments to be passed.</param>
+        /// <returns>Function return value.</returns>
+        [DebuggerNonUserCode, DebuggerHidden, DebuggerStepThrough]
         public object? CallCPP(nint funcptr, params object?[] arguments)
         {
+            nint orig = default;
             object? result;
 
             try
             {
-                //_methodPtr.SetValue(Delegate, funcptr);
-                //_methodPtrAux.SetValue(Delegate, funcptr);
+                orig = (nint)(_methodPtr.GetValue(Delegate) ?? _methodPtrAux.GetValue(Delegate) ?? default(nint));
+
+                _methodPtr.SetValue(Delegate, funcptr);
+                _methodPtrAux.SetValue(Delegate, funcptr);
 
                 result = Invoker.Invoke(Delegate, arguments);
             }
             finally
             {
-                //_methodPtr.SetValue(Delegate, (nint)pdummy);
-                //_methodPtrAux.SetValue(Delegate, (nint)pdummy);
+                if (orig != default)
+                {
+                    _methodPtr.SetValue(Delegate, orig);
+                    _methodPtrAux.SetValue(Delegate, orig);
+                }
             }
 
             return result;
@@ -373,11 +385,6 @@ namespace Unknown6656.AutoIt3.Runtime
             object? result = CallCPP(funcptr, cpp_arguments);
 
             return Variant.FromObject(interpreter, result);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        private static void DummyMethod()
-        {
         }
     }
 }

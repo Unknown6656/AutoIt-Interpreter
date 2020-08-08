@@ -261,6 +261,8 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         public Interpreter Interpreter { get; }
 
+        public ReadOnlyIndexer<Variant, Type?> NETType { get; }
+
         /// <summary>
         /// A list of all currently unique handles in use. Each handle is associated with a global .NET object.
         /// </summary>
@@ -274,7 +276,11 @@ namespace Unknown6656.AutoIt3.Runtime
         internal IEnumerable<object> Objects => _objects.Values;
 
 
-        internal GlobalObjectStorage(Interpreter interpreter) => Interpreter = interpreter;
+        internal GlobalObjectStorage(Interpreter interpreter)
+        {
+            Interpreter = interpreter;
+            NETType = new(h => TryGet(h, out object? item) ? item?.GetType() ?? null);
+        }
 
         private Variant GetFreeId()
         {
@@ -291,14 +297,41 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <typeparam name="T">The generic type of the item (constrained to <see langword="class"/>).</typeparam>
         /// <param name="item">The item to be stored.</param>
         /// <returns>The handle associated with the stored object.</returns>
-        public Variant Store<T>(T item) where T : class
+        public Variant Store<T>(T? item)
+            where T : class
         {
+            if (item is null)
+                return Variant.Zero;
+
             Variant handle = GetFreeId();
 
             TryUpdate(handle, item);
 
             return handle;
         }
+
+        public Variant GetOrStore<T>(T item)
+            where T : class
+        {
+            if (!TryGetHandle(item, out Variant handle))
+                handle = Store(item);
+
+            return handle;
+        }
+
+        public bool TryGetHandle<T>(T? item, out Variant handle)
+            where T : class
+        {
+            uint key = item is { } ? _objects.FirstOrDefault(kvp => ReferenceEquals(item, kvp.Value)).Key : 0;
+
+            handle = key == 0 ? Variant.Zero : Variant.FromHandle(key);
+
+            return key != 0;
+        }
+
+        public bool Contains<T>(T? item) where T : class => item is { } && _objects.Values.Contains(item);
+
+        public bool Contains(Variant handle) => _objects.ContainsKey((uint)handle);
 
         public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue((uint)handle, out item);
 
@@ -309,7 +342,8 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="handle">The handle to be resolved.</param>
         /// <param name="item">The resolved object (or <see langword="null"/> if the object could not be resolved and converted to <typeparamref name="T"/>).</param>
         /// <returns>Indicates whether the object resolution <i>and</i> type conversion were successful.</returns>
-        public bool TryGet<T>(Variant handle, out T? item) where T : class
+        public bool TryGet<T>(Variant handle, out T? item)
+            where T : class
         {
             bool res = TryGet(handle, out object? value);
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Globalization;
 using System.Diagnostics;
+using System.Reflection;
 using System.Linq;
 using System.Text;
 using System;
@@ -10,9 +11,6 @@ using System;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -62,9 +60,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Represents an <see cref="uint"/>-handle pointing towards a COM object instance.
         /// </summary>
         COMObject,
-
-        //TODO : NETObject,
-
         /// <summary>
         /// Represents an <see cref="uint"/>-handle pointing towards a managed object instance.
         /// </summary>
@@ -444,9 +439,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 return arr.Cast<object>().ToArray(o => FromObject(interpreter, o));
             else if (RawData is string s)
                 return s.Cast<char>().ToArray(c => FromObject(interpreter, c));
+            else if (Type is VariantType.Handle)
+
+                ; // TODO : NET objects
+
 
             // TODO : COM objects
-            // TODO : NET objects
             // TODO : maps
 
             else
@@ -471,14 +469,15 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is string s)
                 for (int i = 0; i < s.Length; ++i)
                     output.Add((i, FromObject(interpreter, s[i])));
+            else if (Type is VariantType.Handle)
+
+                ; // TODO : NET objects
+
             else
 
                 // TODO : COM objects
-                // TODO : NET objects
 
-                ;
-
-            return output.ToArray();
+                return output.ToArray();
         }
 
         /// <summary>
@@ -573,6 +572,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TrySetIndex(id, index, value) ?? false;
+            else if (Type is VariantType.Handle)
+                ;
             else
                 return false;
         }
@@ -609,6 +610,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TryGetIndex(id, index, out value) ?? false;
+            else if (Type is VariantType.Handle)
+                ;
             else if (index.EqualsCaseInsensitive(nameof(Length)))
             {
                 value = Length;
@@ -623,14 +626,16 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TrySetMember(id, member, value) ?? false;
+            else if (Type is VariantType.Handle)
+                ;
             else if (RawData is IDictionary<Variant, Variant> dic)
             {
                 dic[member] = value;
 
                 return true;
             }
-
-            return false;
+            else
+                return false;
         }
 
         public readonly bool TryGetMember(Interpreter interpreter, string member, out Variant value)
@@ -639,6 +644,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TryGetMember(id, member, out value) ?? false;
+            else if (Type is VariantType.Handle)
+                ;
             else if (RawData is IDictionary<Variant, Variant> dic)
                 return dic.TryGetValue(member, out value);
             else if (string.Equals(member, nameof(Length), StringComparison.InvariantCultureIgnoreCase))
@@ -647,8 +654,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return true;
             }
+            else
+                return false;
+        }
 
-            return false;
+        public readonly bool TryInvoke(CallFrame current_frame, string member, Variant[] arguments, out Variant value)
+        {
+
         }
 
         public readonly bool ResizeArray(Interpreter interpreter, int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
@@ -740,16 +752,19 @@ namespace Unknown6656.AutoIt3.Runtime
             decimal n => FromNumber(n),
             char c => FromString(c.ToString()),
             string str => FromString(str),
-            StringBuilder strb => FromString(strb.ToString()),
+            StringBuilder builder => FromString(builder.ToString()),
             IEnumerable<byte> bytes => FromBinary(bytes),
-            IEnumerable<Variant> arr => FromArray(interpreter, arr),
+            IEnumerable<Variant> array => FromArray(interpreter, array),
             IDictionary<Variant, Variant> dic => FromMap(interpreter, dic),
+
+            // convert any ienumerable
+
             ScriptFunction func => FromFunction(func),
             nint n => FromNumber((ulong)n),
             nuint n => FromNumber(n),
             _ when obj.GetType().IsPointer => FromNumber((ulong)Pointer.Unbox(obj)),
+            _ when obj.GetType().IsClass => interpreter.GlobalObjectStorage.GetOrStore(obj),
             _ => throw new NotImplementedException(obj.ToString()),
-            //_ => FromNETObject(obj),
         };
 
         /// <summary>
