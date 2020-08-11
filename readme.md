@@ -11,6 +11,8 @@ _NOTICE: To avoid any association with slavery, the `master`-branch has been ren
 
 # Platform-Independent AutoIt3 Interpreter
 
+### [TL;DR: Take a look at the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
+
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
 The aim of this repository is to provide an AutoIt3 Interpreter for other platforms, such as Linux/Unix and MacOS.
 
