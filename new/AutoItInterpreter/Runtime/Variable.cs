@@ -796,8 +796,8 @@ namespace Unknown6656.AutoIt3.Runtime
             nint n => FromNumber((ulong)n),
             nuint n => FromNumber(n),
             _ when obj.GetType().IsPointer => FromNumber((ulong)Pointer.Unbox(obj)),
-            _ when obj.GetType().IsClass => interpreter.GlobalObjectStorage.GetOrStore(obj),
-            _ => throw new NotImplementedException(obj.ToString()),
+            _ => interpreter.GlobalObjectStorage.GetOrStore(obj),
+            // _ => throw new NotImplementedException(obj.ToString()),
         };
 
         /// <summary>

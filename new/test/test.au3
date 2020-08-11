@@ -1,18 +1,3 @@
-$float = NETClass("System.Single")
-$func = $float.IsFinite
-$res = $float.IsFinite(42)
-DebugAll()
-exit
-
-$DateTime = NETClass("System.DateTime")
-$now = $DateTime.Now
-$unow = $DateTime.UtcNow
-$year = $unow.Year
-$ins = NETNew("System.DateTime")
-DebugAllVarsCompact()
-
-exit
-
 
 $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "int:cdecl", "add", "int", 20, "int", 400)
 ; $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "void:cdecl", "say_hello")
