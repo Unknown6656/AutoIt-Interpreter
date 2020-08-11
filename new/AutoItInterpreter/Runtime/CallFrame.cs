@@ -160,7 +160,33 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new InvalidOperationException("Return value could not be processed");
         }
 
-        public override string ToString() => $"{base.ToString()} native call frame";
+        public override string ToString() => $"{base.ToString()} native callframe";
+    }
+
+    public sealed class NETCallFrame
+        : CallFrame
+    {
+        internal NETCallFrame(AU3Thread thread, CallFrame? caller, NETFrameworkFunction function, Variant[] args)
+            : base(thread, caller, function, args)
+        {
+        }
+
+        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
+        {
+            NETFrameworkFunction function = (NETFrameworkFunction)CurrentFunction;
+            FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => function.Execute(this, args));
+            Variant? extended = null;
+            int error = 0;
+
+            if (result.IsFatal(out InterpreterError? fatal))
+                return fatal;
+            else if (result.IsSuccess(out Variant variant, out extended) || result.IsError(out variant, out error, out extended))
+                return SetError(error, extended, in variant);
+            else
+                throw new InvalidOperationException("Return value could not be processed");
+        }
+
+        public override string ToString() => $"{base.ToString()} .NET callframe";
     }
 
     public sealed class AU3CallFrame
@@ -1329,7 +1355,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary } => ProcessUnary(unary.Item1, unary.Item2),
                     EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary } => ProcessBinary(binary.Item1, binary.Item2, binary.Item3),
                     EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary } => ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3),
-                    EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member),
+                    EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member).Match<Union<InterpreterError, Variant>>(err => err, v => v.MemberValue),
                     EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer } => ProcessIndexer(indexer.Item1, indexer.Item2),
                     EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall } => ProcessFunctionCall(funccall),
                     _ => WellKnownError("error.not_yet_implemented", expression),
@@ -1356,23 +1382,20 @@ namespace Unknown6656.AutoIt3.Runtime
                 return WellKnownError("error.invalid_index", key);
             }));
 
-        private Union<InterpreterError, Variant> ProcessMember(MEMBER_EXPRESSION expr)
+        private Union<InterpreterError, (Variant Instance, string MemberName, Variant MemberValue)> ProcessMember(MEMBER_EXPRESSION expr)
         {
-            Union<InterpreterError, Variant> result = WellKnownError("error.not_yet_implemented", expr);
-            string? member = null;
+            Union<InterpreterError, (Variant, string, Variant)> result = WellKnownError("error.not_yet_implemented", expr);
 
             switch (expr)
             {
                 case MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } objexpr, Item2: { Item: string m } }:
-                    result = ProcessExpression(objexpr);
-                    member = m;
+                    result = (ProcessExpression(objexpr), m, default);
 
                     break;
                 case MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string m } }:
                     if (_withcontext_stack.TryPeek(out Variable? variable))
                     {
-                        result = variable.Value;
-                        member = m;
+                        result = (variable.Value, m, default);
 
                         break;
                     }
@@ -1380,16 +1403,16 @@ namespace Unknown6656.AutoIt3.Runtime
                         return WellKnownError("error.invalid_with_access", m);
             }
 
-            if (result.Is(out Variant value) && member is string)
+            if (result.Is(out (Variant instance, string name, Variant value) res))
             {
-                if (value.TryGetMember(Interpreter, member, out Variant v))
-                    result = v;
-                else if (value.TryGetIndexed(Interpreter, member, out v))
-                    result = v;
-                else if (member.Equals("length", StringComparison.InvariantCultureIgnoreCase))
-                    result = (Variant)value.Length;
+                if (res.instance.TryGetMember(Interpreter, res.name, out Variant v))
+                    result = (res.instance, res.name, v);
+                else if (res.instance.TryGetIndexed(Interpreter, res.name, out v))
+                    result = (res.instance, res.name, v);
+                else if (res.name.Equals("length", StringComparison.InvariantCultureIgnoreCase))
+                    result = (res.instance, "Length", res.instance.Length);
                 else
-                    return WellKnownError("error.unknown_member", member);
+                    return WellKnownError("error.unknown_member", res.name);
             }
             
             return result;
@@ -1531,8 +1554,15 @@ namespace Unknown6656.AutoIt3.Runtime
                         return ProcessRawArguments(raw_args).Match<Union<InterpreterError, Variant>>(args => Call(func, args), err => err);
                     else
                         return WellKnownError("error.unresolved_func", func_name);
-                case FUNCCALL_EXPRESSION.MemberCall member_call:
-                    throw new NotImplementedException();
+                case FUNCCALL_EXPRESSION.MemberCall { Item1: MEMBER_EXPRESSION member, Item2: var raw_args }:
+                    return ProcessRawArguments(raw_args).Match<Union<InterpreterError, Variant>>(args =>
+                        ProcessMember(member).Match<Union<InterpreterError, Variant>>(err => err, member =>
+                        {
+                            if (member.Instance.TryInvoke(Interpreter, member.MemberName, args, out Variant result))
+                                return result;
+
+                            throw new NotImplementedException();
+                        }), err => err);
             }
 
             return WellKnownError("error.not_yet_implemented", funccall);

@@ -939,7 +939,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue FuncName(CallFrame frame, Variant[] args)
         {
-            if (args[0].RawData is ScriptFunction func)
+            if (args[0].IsFunction(out ScriptFunction? func))
                 return (Variant)func.Name;
             else
                 return FunctionReturnValue.Error("", 1, 0);
@@ -2143,11 +2143,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
         {
-            if (args[0] is { Type: VariantType.COMObject, RawData: uint id })
+            if (args[0] is { Type: VariantType.COMObject } handle)
             {
                 string? info = null;
 
-                frame.Interpreter.COMConnector?.TryGetCOMObjectInfo(id, (COMObjectInfoMode)(int)args[1], out info);
+                frame.Interpreter.COMConnector?.TryGetCOMObjectInfo((uint)handle, (COMObjectInfoMode)(int)args[1], out info);
 
                 if (info is string s)
                     return (Variant)s;

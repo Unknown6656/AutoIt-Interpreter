@@ -198,7 +198,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return true;
         }
 
-        uint ICOMResolver<Variant>.GetCOMObjectID(Variant com_object) => System.Convert.ToUInt32(com_object.RawData);
+        uint ICOMResolver<Variant>.GetCOMObjectID(Variant com_object) => (uint)com_object;
 
         private COMData Convert(Variant com_data) => com_data.Type switch
         {
@@ -219,7 +219,7 @@ namespace Unknown6656.AutoIt3.Runtime
             }),
             VariantType.String => COMData.FromString(com_data.ToString()),
             VariantType.Array => COMData.FromArray(com_data.ToArray(Interpreter).Select(Convert)),
-            VariantType.COMObject => COMData.FromCOMObjectID((uint)com_data.RawData!),
+            VariantType.COMObject => COMData.FromCOMObjectID((uint)com_data),
 
             // TODO
             VariantType.Binary or VariantType.Map or VariantType.Function or VariantType.Handle or VariantType.Reference or _ => throw new NotImplementedException(),

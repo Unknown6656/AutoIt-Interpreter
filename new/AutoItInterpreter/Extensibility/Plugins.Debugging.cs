@@ -7,6 +7,7 @@ using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Common;
+using Unknown6656.Imaging;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {
@@ -33,14 +34,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         private IDictionary<string, object?> GetVariantInfo(Variant value)
         {
-            string s = value.RawData?.ToString()?.Trim() ?? "";
-            string ts = value.RawData?.GetType().ToString() ?? "<void>";
-
             IDictionary<string, object?> dic = new Dictionary<string, object?>
             {
                 ["value"] = value.ToDebugString(Interpreter),
                 ["type"] = value.Type,
-                ["raw"] = s != ts ? $"\"{s}\" ({ts})" : ts
+                ["NETtype"] = value.RawType,
             };
 
             if (value.AssignedTo is Variable variable)
@@ -130,6 +128,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         private string SerializeDictionary(IDictionary<string, object?> dic, string title)
         {
             StringBuilder sb = new StringBuilder();
+            string indent = $"{RGBAColor.DarkSlateGray.ToVT100ForegroundString()}│{MainProgram.COLOR_SCRIPT.ToVT100ForegroundString()}   ";
 
             sb.AppendLine(title + ": {");
 
@@ -139,7 +138,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 foreach (string key in dic.Keys)
                 {
-                    sb.Append($"{new string(' ', level * 4)}{(key + ':').PadRight(w + 1)} ");
+                    if (level > 0)
+                        sb.Append(Enumerable.Repeat(indent, level).StringConcat());
+
+                    sb.Append((key + ':').PadRight(w + 1))
+                      .Append(' ');
 
                     switch (dic[key])
                     {
@@ -149,7 +152,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                             break;
                         case Array { Length: 0 }:
-                            sb.Append($"(0)");
+                            sb.Append("(0)");
 
                             break;
                         case Array arr:
@@ -160,7 +163,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                             foreach (object? elem in arr)
                             {
-                                sb.Append($"{new string(' ', (level + 1) * 4)}[{index.ToString().PadLeft(rad, '0')}]: ");
+                                sb.Append($"{Enumerable.Repeat(indent, level + 1).StringConcat()}[{index.ToString().PadLeft(rad, '0')}]: ");
 
                                 if (elem is IDictionary<string, object?> d)
                                 {
@@ -476,10 +479,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return Variant.Zero;
         }
 
-        private FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
+        public FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
         {
             DebugCodeLines(frame, args);
-            DebugCallFrame(frame, args);
+            // DebugCallFrame(frame, args);
             DebugAllVarsCompact(frame, args);
             DebugAllCOM(frame, args);
             DebugAllThreads(frame, args);

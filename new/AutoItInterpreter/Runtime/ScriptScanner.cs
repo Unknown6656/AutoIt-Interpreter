@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Linq;
 using System.IO;
 using System;
@@ -49,12 +50,13 @@ namespace Unknown6656.AutoIt3.Runtime
         };
         private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
         private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
-        private readonly ScannedScript _system_script;
 
 
         public ScannedScript[] ActiveScripts => (from thread in Interpreter.Threads
                                                  from frame in thread.CallStack
-                                                 select frame.CurrentFunction.Script).Distinct().ToArray();
+                                                 select frame.CurrentFunction.Script).Append(SystemScript).Distinct().ToArray();
+
+        internal ScannedScript SystemScript { get; }
 
         public Interpreter Interpreter { get; }
 
@@ -62,16 +64,16 @@ namespace Unknown6656.AutoIt3.Runtime
         public ScriptScanner(Interpreter interpreter)
         {
             Interpreter = interpreter;
-            _system_script = new ScannedScript(MainProgram.ASM_FILE, "");
+            SystemScript = new ScannedScript(MainProgram.ASM_FILE, "");
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute, function.Metadata));
+                    SystemScript.AddFunction(new NativeFunction(SystemScript, function.Name, function.ParameterCount, function.Execute, function.Metadata));
 
-            foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
+            foreach (KeyValuePair<string, ScriptFunction> func in SystemScript.Functions)
                 _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
         });
 
@@ -670,6 +672,28 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
+    }
+
+    public sealed class NETFrameworkFunction
+        : ScriptFunction
+    {
+        public override SourceLocation Location { get; } = SourceLocation.Unknown;
+
+        public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
+        public object? Instance { get; }
+
+
+        internal NETFrameworkFunction(Interpreter interpreter, MethodInfo method, object? instance)
+            : base(interpreter.ScriptScanner.SystemScript, $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", method.GetParameters().Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}")
+        {
+            Instance = instance;
+        }
+
+        internal FunctionReturnValue Execute(NETCallFrame nETCallFrame, Variant[] args) => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public override string ToString() => "[.NET] " + base.ToString();
     }
 
     public record FunctionMetadata(OS SupportedPlatforms, bool IsDeprecated)

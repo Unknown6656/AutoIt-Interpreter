@@ -198,10 +198,12 @@ namespace Unknown6656.AutoIt3.Runtime
         ///         <term><see cref="VariantType.Handle"/></term>
         ///         <description><see cref="uint"/></description>
         ///     </item>
+        ///     <!--
         ///     <item>
         ///         <term><see cref="VariantType.NETObject"/></term>
         ///         <description><see cref="object"/></description>
         ///     </item>
+        ///     -->
         ///     <item>
         ///         <term><see cref="VariantType.COMObject"/></term>
         ///         <description><see cref="uint"/></description>
@@ -209,7 +211,9 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </list>
         /// The application's behavior is undefined should the value does not match the criteria above.
         /// </summary>
-        internal readonly object? RawData { get; }
+        private readonly object? RawData { get; }
+
+        internal Type RawType => RawData?.GetType() ?? typeof(void);
 
         /// <summary>
         /// Returns the optional <see cref="Variable"/> to which this value has been assigned.
@@ -364,7 +368,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 uint id = (uint)this;
 
                 if (interpreter.GlobalObjectStorage.TryGet(id, out object? obj))
-                    data = obj?.GetType().Name ?? "null";
+                    data = obj is StaticTypeReference(Type t) ? $"static {t.Name}" : obj?.GetType().Name ?? "null";
 
                 return $"hnd:0x{id:x8} ({data})";
             }
@@ -439,12 +443,10 @@ namespace Unknown6656.AutoIt3.Runtime
                 return arr.Cast<object>().ToArray(o => FromObject(interpreter, o));
             else if (RawData is string s)
                 return s.Cast<char>().ToArray(c => FromObject(interpreter, c));
-            else if (Type is VariantType.Handle)
-
-                ; // TODO : NET objects
-
+            // else if (Type is VariantType.Handle)
 
             // TODO : COM objects
+            // TODO : NET objects
             // TODO : maps
 
             else
@@ -469,15 +471,15 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (RawData is string s)
                 for (int i = 0; i < s.Length; ++i)
                     output.Add((i, FromObject(interpreter, s[i])));
-            else if (Type is VariantType.Handle)
+            // else if (Type is VariantType.Handle)
+            //     ;
+            // else
+            //     ;
 
-                ; // TODO : NET objects
+            // TODO : NET objects
+            // TODO : COM objects
 
-            else
-
-                // TODO : COM objects
-
-                return output.ToArray();
+            return output.ToArray();
         }
 
         /// <summary>
@@ -493,6 +495,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             if (IsNull)
                 return type.IsValueType ? Activator.CreateInstance(type) : null;
+            else if(type.IsAssignableFrom(RawType))
+                return RawData;
             else if (type == typeof(string))
                 return ToString();
             else if (type == typeof(StringBuilder))
@@ -530,7 +534,20 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (type.IsPointer)
                 return Pointer.Box((void*)(ulong)this, type);
             else
-                throw new NotImplementedException($"{this} --> {type}");
+            {
+                if (!TryResolveHandle(interpreter, out object? value))
+                    value = RawData;
+
+                if (value is null ? type.IsClass : type.IsAssignableFrom(value.GetType()))
+                    return value;
+
+                // TODO : resolve handle, then type cast
+                // TODO : general type cast
+                // TODO : array conversions
+
+                else
+                    throw new NotImplementedException($"{this} --> {type}");
+            }
         }
 
         /// <summary>
@@ -572,8 +589,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TrySetIndex(id, index, value) ?? false;
-            else if (Type is VariantType.Handle)
-                ;
+            else if (TryResolveHandle(interpreter, out object? instance))
+                return interpreter.GlobalObjectStorage.TrySetNETIndex(instance, index, value);
             else
                 return false;
         }
@@ -610,8 +627,8 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TryGetIndex(id, index, out value) ?? false;
-            else if (Type is VariantType.Handle)
-                ;
+            else if (TryResolveHandle(interpreter, out object? instance))
+                return interpreter.GlobalObjectStorage.TryGetNETIndex(instance, index, out value);
             else if (index.EqualsCaseInsensitive(nameof(Length)))
             {
                 value = Length;
@@ -626,8 +643,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TrySetMember(id, member, value) ?? false;
-            else if (Type is VariantType.Handle)
-                ;
+            else if (TryResolveHandle(interpreter, out object? instance))
+                return interpreter.GlobalObjectStorage.TrySetNETMember(instance, member, value);
             else if (RawData is IDictionary<Variant, Variant> dic)
             {
                 dic[member] = value;
@@ -644,8 +661,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (Type is VariantType.COMObject && RawData is uint id)
                 return interpreter.COMConnector?.TryGetMember(id, member, out value) ?? false;
-            else if (Type is VariantType.Handle)
-                ;
+            else if (TryResolveHandle(interpreter, out object? instance))
+                return interpreter.GlobalObjectStorage.TryGetNETMember(instance, member, out value);
             else if (RawData is IDictionary<Variant, Variant> dic)
                 return dic.TryGetValue(member, out value);
             else if (string.Equals(member, nameof(Length), StringComparison.InvariantCultureIgnoreCase))
@@ -658,9 +675,25 @@ namespace Unknown6656.AutoIt3.Runtime
                 return false;
         }
 
-        public readonly bool TryInvoke(CallFrame current_frame, string member, Variant[] arguments, out Variant value)
+        public readonly bool TryInvoke(Interpreter interpreter, string member, Variant[] arguments, out Variant value)
         {
+            value = Zero;
 
+            // TODO : implement COM Object instance calls
+
+            return TryResolveHandle(interpreter, out object? instance) && interpreter.GlobalObjectStorage.TryInvokeNETMember(instance, member, arguments, out value);
+        }
+
+        public readonly (Variant Name, bool IsMethod)[] EnumerateMemberNames(Interpreter interpreter)
+        {
+            if (RawData is IDictionary<Variant, Variant> { Keys: IEnumerable<Variant> keys })
+                return keys.ToArray(k => (k, false));
+            else if (RawData is Array array)
+                return Enumerable.Range(0, array.Length).Select(i => (Variant)i).Append(nameof(Length)).ToArray(k => (k, false));
+            else if (TryResolveHandle(interpreter, out object? instance))
+                return interpreter.GlobalObjectStorage.TryListNETMembers(instance).ToArray(m => ((Variant)m.Name, m.IsMethod));
+            else
+                return new[] { ((Variant)nameof(Length), false) };
         }
 
         public readonly bool ResizeArray(Interpreter interpreter, int new_size, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? new_array)
@@ -862,13 +895,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         // public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
 
-        public static Variant FromNumber(decimal d) => new Variant(VariantType.Number, d, null);
+        public static Variant FromNumber(decimal value) => new Variant(VariantType.Number, value, null);
 
-        public static Variant FromString(string? s) => s is null ? Null : new Variant(VariantType.String, s, null);
+        public static Variant FromString(string? value) => value is null ? Null : new Variant(VariantType.String, value, null);
 
-        public static Variant FromBoolean(bool b) => new Variant(VariantType.Boolean, b, null);
+        public static Variant FromBoolean(bool value) => new Variant(VariantType.Boolean, value, null);
 
-        public static Variant FromFunction(ScriptFunction func) => new Variant(VariantType.Function, func, null);
+        public static Variant FromFunction(ScriptFunction function) => new Variant(VariantType.Function, function, null);
 
         internal static Variant FromCOMObject(uint id) => new Variant(VariantType.COMObject, id, null);
 
@@ -952,35 +985,37 @@ namespace Unknown6656.AutoIt3.Runtime
         #endregion
         #region CASTING OPERATORS
 
-        public static implicit operator Variant(bool b) => FromBoolean(b);
+        public static implicit operator Variant(bool value) => FromBoolean(value);
 
-        public static implicit operator Variant(sbyte n) => FromNumber(n);
+        public static implicit operator Variant(sbyte value) => FromNumber(value);
 
-        public static implicit operator Variant(byte n) => FromNumber(n);
+        public static implicit operator Variant(byte value) => FromNumber(value);
 
-        public static implicit operator Variant(short n) => FromNumber(n);
+        public static implicit operator Variant(short value) => FromNumber(value);
 
-        public static implicit operator Variant(ushort n) => FromNumber(n);
+        public static implicit operator Variant(ushort value) => FromNumber(value);
 
-        public static implicit operator Variant(int n) => FromNumber(n);
+        public static implicit operator Variant(int value) => FromNumber(value);
 
-        public static implicit operator Variant(uint n) => FromNumber(n);
+        public static implicit operator Variant(uint value) => FromNumber(value);
 
-        public static implicit operator Variant(long n) => FromNumber(n);
+        public static implicit operator Variant(long value) => FromNumber(value);
 
-        public static implicit operator Variant(ulong n) => FromNumber(n);
+        public static implicit operator Variant(ulong value) => FromNumber(value);
 
-        public static implicit operator Variant(float n) => FromNumber((decimal)n);
+        public static implicit operator Variant(float value) => FromNumber((decimal)value);
 
-        public static implicit operator Variant(double n) => FromNumber((decimal)n);
+        public static implicit operator Variant(double value) => FromNumber((decimal)value);
 
-        public static implicit operator Variant(decimal n) => FromNumber(n);
+        public static implicit operator Variant(decimal value) => FromNumber(value);
 
-        public static implicit operator Variant(char n) => FromString(n.ToString());
+        public static implicit operator Variant(char value) => FromString(value.ToString());
 
-        public static implicit operator Variant(string? str) => FromString(str);
+        public static implicit operator Variant(string? value) => FromString(value);
 
-        public static implicit operator Variant(StringBuilder? sb) => FromString(sb?.ToString());
+        public static implicit operator Variant(StringBuilder? builder) => FromString(builder?.ToString());
+
+        public static implicit operator Variant(ScriptFunction function) => FromFunction(function);
 
         // public static implicit operator Variant(Variant[]? n) => FromArray(n);
 
@@ -996,9 +1031,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static explicit operator ushort(Variant v) => Convert.ToUInt16(v.ToNumber(ushort.MinValue, ushort.MaxValue));
 
-        public static explicit operator int(Variant v) => Convert.ToInt32(v.ToNumber(int.MinValue, int.MaxValue));
+        public static explicit operator int(Variant v) => v.RawData is int i ? i : Convert.ToInt32(v.ToNumber(int.MinValue, int.MaxValue));
 
-        public static explicit operator uint(Variant v) => Convert.ToUInt32(v.ToNumber(uint.MinValue, uint.MaxValue));
+        public static explicit operator uint(Variant v) => v.RawData is uint i ? i : Convert.ToUInt32(v.ToNumber(uint.MinValue, uint.MaxValue));
 
         public static explicit operator long(Variant v) => Convert.ToInt64(v.ToNumber(long.MinValue, long.MaxValue));
 
