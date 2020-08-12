@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Text;
-using System;
-using Unknown6656.AutoIt3.Runtime;
+﻿using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Extensibility
 {

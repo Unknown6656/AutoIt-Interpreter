@@ -163,6 +163,7 @@ strings:
         missing_argument: "No value has been passed for the argument no. {0} ('{1}')."
         missing_default: "The parameter no. {0} ('{1}') is missing its default value. Any parameter following an optional parameter must also have a default value."
         missing_if: "'Else'- or 'ElseIf'-statements can only be used after an opening 'If ... Then'-statement."
+        net_execution_error: "The .NET method '{0}' could not be executed. Please verify that the number and types of parameters are correct."
         no_matching_close: "The '{0}'-statement opened in {1} does not have a corresponding closing statement."
         not_enough_args: "The function '{0}' expects at least {1} arguments, however, only {2} arguments were given."
         redefining_constant: "The variable '{0}' has been previously defined as constant (at {1}) and can therefore not be re-defined."

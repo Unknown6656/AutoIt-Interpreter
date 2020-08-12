@@ -160,33 +160,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new InvalidOperationException("Return value could not be processed");
         }
 
-        public override string ToString() => $"{base.ToString()} native callframe";
-    }
-
-    public sealed class NETCallFrame
-        : CallFrame
-    {
-        internal NETCallFrame(AU3Thread thread, CallFrame? caller, NETFrameworkFunction function, Variant[] args)
-            : base(thread, caller, function, args)
-        {
-        }
-
-        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
-        {
-            NETFrameworkFunction function = (NETFrameworkFunction)CurrentFunction;
-            FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => function.Execute(this, args));
-            Variant? extended = null;
-            int error = 0;
-
-            if (result.IsFatal(out InterpreterError? fatal))
-                return fatal;
-            else if (result.IsSuccess(out Variant variant, out extended) || result.IsError(out variant, out error, out extended))
-                return SetError(error, extended, in variant);
-            else
-                throw new InvalidOperationException("Return value could not be processed");
-        }
-
-        public override string ToString() => $"{base.ToString()} .NET callframe";
+        public override string ToString() => $"{base.ToString()} native call-frame";
     }
 
     public sealed class AU3CallFrame

@@ -122,7 +122,6 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 AU3Function f => new AU3CallFrame(this, old, f, args),
                 NativeFunction f => new NativeCallFrame(this, old, f, args),
-                NETFrameworkFunction f => new NETCallFrame(this, old, f, args),
                 _ => throw new ArgumentException($"A function of the type '{function}' cannot be handled by the current thread '{this}'.", nameof(function)),
             };
 

@@ -289,6 +289,25 @@ namespace Unknown6656.AutoIt3.Runtime
             return false;
         }
 
+        internal bool TryInvokeNETMember(object? instance, MethodInfo method, IEnumerable<Variant> arguments, out Variant value)
+        {
+            try
+            {
+                ParameterInfo[] pars = method.GetParameters();
+                object? result = method.Invoke(instance, arguments.ToArray((a, i) => a.ToCPPObject(pars[i].ParameterType, Interpreter)));
+
+                value = Variant.FromObject(Interpreter, result);
+
+                return true;
+            }
+            catch
+            {
+                value = Variant.Null;
+
+                return false;
+            }
+        }
+
         public bool TryInvokeNETMember(object instance, string member, Variant[] arguments, out Variant value)
         {
             try
@@ -303,17 +322,11 @@ namespace Unknown6656.AutoIt3.Runtime
                               select new
                               {
                                   Method = method,
-                                  Arguments = args.ToArray((a, i) => a.ToCPPObject(pars[i].ParameterType, Interpreter))
+                                  Arguments = args
                               };
 
                 if (methods.FirstOrDefault() is { } meth)
-                {
-                    object? result = meth.Method.Invoke(instance is StaticTypeReference ? null : instance, meth.Arguments);
-
-                    value = Variant.FromObject(Interpreter, result);
-
-                    return true;
-                }
+                    return TryInvokeNETMember(instance is StaticTypeReference ? null : instance, meth.Method, meth.Arguments, out value);
             }
             catch
             {

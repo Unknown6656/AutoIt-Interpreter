@@ -71,7 +71,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    SystemScript.AddFunction(new NativeFunction(SystemScript, function.Name, function.ParameterCount, function.Execute, function.Metadata));
+                    SystemScript.AddFunction(new NativeFunction(Interpreter, function.Name, function.ParameterCount, function.Execute, function.Metadata));
 
             foreach (KeyValuePair<string, ScriptFunction> func in SystemScript.Functions)
                 _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
@@ -650,7 +650,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
     }
 
-    public sealed class NativeFunction
+    public class NativeFunction
         : ScriptFunction
     {
         private readonly Func<NativeCallFrame, Variant[], FunctionReturnValue> _execute;
@@ -660,8 +660,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, FunctionMetadata metadata)
-            : base(script, name)
+        internal NativeFunction(Interpreter interpreter, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, FunctionMetadata metadata)
+            : base(interpreter.ScriptScanner.SystemScript, name)
         {
             _execute = execute;
             ParameterCount = param_count;
@@ -675,25 +675,32 @@ namespace Unknown6656.AutoIt3.Runtime
     }
 
     public sealed class NETFrameworkFunction
-        : ScriptFunction
+        : NativeFunction
     {
-        public override SourceLocation Location { get; } = SourceLocation.Unknown;
-
-        public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
-
-        public object? Instance { get; }
-
-
         internal NETFrameworkFunction(Interpreter interpreter, MethodInfo method, object? instance)
-            : base(interpreter.ScriptScanner.SystemScript, $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", method.GetParameters().Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}")
+            : this(interpreter, method, method.GetParameters(), instance)
         {
-            Instance = instance;
         }
 
-        internal FunctionReturnValue Execute(NETCallFrame nETCallFrame, Variant[] args) => throw new NotImplementedException();
+        private NETFrameworkFunction(Interpreter interpreter, MethodInfo method, ParameterInfo[] parameters, object? instance)
+            : base(
+                interpreter,
+                $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", parameters.Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}",
+                (parameters.Count(p => !p.HasDefaultValue), parameters.Length),
+                (frame, args) =>
+                {
+                    if (interpreter.GlobalObjectStorage.TryInvokeNETMember(instance, method, args, out Variant result))
+                        return result;
+                    else
+                        return FunctionReturnValue.Fatal(InterpreterError.WellKnown(null, "error.net_execution_error", method));
+                },
+                FunctionMetadata.Default
+            )
+        {
+        }
 
         /// <inheritdoc/>
-        public override string ToString() => "[.NET] " + base.ToString();
+        public override string ToString() => $"[.NET] {Name}";
     }
 
     public record FunctionMetadata(OS SupportedPlatforms, bool IsDeprecated)
