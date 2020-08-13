@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-tvv ../test/unittest-netinterop",
+      "commandLineArgs": "-tvv ../test/test",
       "nativeDebugging": false
     }
   }
