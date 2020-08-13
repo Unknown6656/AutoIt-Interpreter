@@ -1,5 +1,7 @@
 #cs
-   EXPECTED OUTPUT:
+   SCRIPT FOR UNIT-TESTING THE INTERPRETER
+
+   THE INTERPERETER OUTPUT SHOULD BE:
 
 	  +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	  ¦Name         ¦Location                                                               ¦Type       ¦                                                                   Value¦

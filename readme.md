@@ -5,7 +5,8 @@
 ![downloads](https://img.shields.io/github/downloads/unknown6656/AutoIt-Interpreter/total)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
 
-![Banner image](new/artwork/banner.png)
+![Banner image](new/artwork/banner.png)<br/>
+![Banner image](new/artwork/banner-features.png)
 
 _NOTICE: To avoid any association with slavery, the `master`-branch has been renamed to `daddy` ;)_
 

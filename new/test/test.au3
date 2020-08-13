@@ -1,14 +1,7 @@
-func static_test()
-   static $i = 0
-   $i += 1
-   ConsoleWrite($i & @CRLF)
-endfunc
+dim $intp = netclass("unknown6656.autoit3.runtime.Interpreter")
+dim $instances = $intp.Instances
 
-for $x = 0 to 5
-   static_test()
-next
-
-exit
+Exit
 
 $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "int:cdecl", "add", "int", 20, "int", 400)
 ; $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "void:cdecl", "say_hello")
