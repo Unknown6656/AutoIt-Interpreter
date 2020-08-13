@@ -21,6 +21,8 @@ using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
+using Octokit;
+using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -1031,18 +1033,18 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             try
             {
-                if (ProcessDeclarationModifiers(ref line, out DeclarationType declaration_type, out (char op, int amount)? enum_step) is { } err)
+                if (ProcessDeclarationModifiers(ref line, out DeclarationModifiers modifiers, out (char op, int amount)? enum_step) is { } err)
                     return err;
 
-                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = declaration_type is DeclarationType.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
+                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = modifiers is DeclarationModifiers.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
                 PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
 
                 //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
 
-                if (declaration_type == DeclarationType.None)
+                if (modifiers == DeclarationModifiers.None)
                     return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
                 else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
-                    return ProcessMultiDeclarationExpression(multi_decl, declaration_type, enum_step);
+                    return ProcessMultiDeclarationExpression(multi_decl, modifiers, enum_step);
                 else
                     return WellKnownError("error.invalid_multi_decl", line);
             }
@@ -1068,7 +1070,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = Interpreter.ParserProvider.ExpressionParser;
                     PARSABLE_EXPRESSION parsed = provider.Parse(expression).ParsedValue;
 
-                    MainProgram.PrintfDebugMessage("debug.au3thread.raw_expr", parsed);
+                    // MainProgram.PrintfDebugMessage("debug.au3thread.raw_expr", parsed);
 
                     return parsed;
                 }
@@ -1092,19 +1094,19 @@ namespace Unknown6656.AutoIt3.Runtime
                 return (InterpreterError?)result ?? WellKnownError("error.unparsable_line", expression);
         }
 
-        private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationType declaration_type, out (char op, int amount)? enum_step)
+        private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationModifiers modifiers, out (char op, int amount)? enum_step)
         {
-            declaration_type = DeclarationType.None;
+            modifiers = DeclarationModifiers.None;
             enum_step = null;
 
             while (line.Match(REGEX_DECLARATION_MODIFIER, out Match m_modifier))
             {
-                DeclarationType modifier = (DeclarationType)Enum.Parse(typeof(DeclarationType), m_modifier.Value, true);
+                DeclarationModifiers modifier = (DeclarationModifiers)Enum.Parse(typeof(DeclarationModifiers), m_modifier.Value, true);
 
-                if (declaration_type.HasFlag(modifier))
+                if (modifiers.HasFlag(modifier))
                     return WellKnownError("error.duplicate_modifier", modifier);
 
-                if (modifier is DeclarationType.Step)
+                if (modifier is DeclarationModifiers.Step)
                     if (line.Match(REGEX_ENUM_STEP, out Match m_step))
                     {
                         char op = '+';
@@ -1118,29 +1120,32 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         return WellKnownError("error.invalid_step", new string(line.TakeWhile(c => !char.IsWhiteSpace(c)).ToArray()));
 
-                declaration_type |= modifier;
+                modifiers |= modifier;
                 line = line[m_modifier.Length..].TrimStart();
             }
 
-            if (declaration_type.HasFlag(DeclarationType.Step) && !declaration_type.HasFlag(DeclarationType.Enum))
+            if (modifiers.HasFlag(DeclarationModifiers.Step) && !modifiers.HasFlag(DeclarationModifiers.Enum))
                 return WellKnownError("error.unexpected_step");
 
-            foreach ((DeclarationType m1, DeclarationType m2) in new[]
+            foreach ((DeclarationModifiers m1, DeclarationModifiers m2) in new[]
             {
-                (DeclarationType.Dim, DeclarationType.Global),
-                (DeclarationType.Dim, DeclarationType.Local),
-                (DeclarationType.Dim, DeclarationType.Static),
-                (DeclarationType.Enum, DeclarationType.Static),
-                (DeclarationType.Local, DeclarationType.Global),
-                (DeclarationType.Static, DeclarationType.Const),
+                (DeclarationModifiers.Dim, DeclarationModifiers.Global),
+                (DeclarationModifiers.Dim, DeclarationModifiers.Local),
+                (DeclarationModifiers.Dim, DeclarationModifiers.Static),
+                (DeclarationModifiers.Enum, DeclarationModifiers.Static),
+                (DeclarationModifiers.Local, DeclarationModifiers.Global),
+                (DeclarationModifiers.Static, DeclarationModifiers.Const),
+#if !CHECK_GLOBAL_STATIC
+                (DeclarationModifiers.Static, DeclarationModifiers.Global),
+#endif
             })
-                if (declaration_type.HasFlag(m1) && declaration_type.HasFlag(m2))
+                if (modifiers.HasFlag(m1) && modifiers.HasFlag(m2))
                     return WellKnownError("error.incomplatible_modifiers", m1, m2);
 
             return null;
         }
 
-        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationType decltype, (char op, int amount)? enum_step) =>
+        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, int amount)? enum_step) =>
             Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
             {
                 InterpreterError? error = null;
@@ -1148,16 +1153,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
                 {
-                    error ??= ProcessVariableDeclaration(variable_ast, decltype);
+                    bool existing_static = false;
+
+                    error ??= ProcessVariableDeclaration(variable_ast, modifiers, out existing_static);
 
                     switch (declaration)
                     {
                         case VARIABLE_DECLARATION.Scalar { Item: null }:
-                            if (decltype.HasFlag(DeclarationType.Const))
+                            if (modifiers.HasFlag(DeclarationModifiers.Const))
                                 return WellKnownError("error.uninitialized_constant", variable_ast);
                             else
                                 break;
                         case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
+                            if (!existing_static)
                             {
                                 // TODO : enum step handling
 
@@ -1213,29 +1221,49 @@ namespace Unknown6656.AutoIt3.Runtime
                 return error;
             });
 
-        private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationType decltype)
+        private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)
         {
-            bool constant = decltype.HasFlag(DeclarationType.Const) || decltype.HasFlag(DeclarationType.Enum);
-            bool global = decltype.HasFlag(DeclarationType.Global) && !decltype.HasFlag(DeclarationType.Local);
-
-            if (decltype.HasFlag(DeclarationType.Static) && !global)
-                return WellKnownError("error.not_yet_implemented", "static"); // TODO : static
-
+            bool constant = decltype.HasFlag(DeclarationModifiers.Const) || decltype.HasFlag(DeclarationModifiers.Enum);
+            bool global = decltype.HasFlag(DeclarationModifiers.Global) && !decltype.HasFlag(DeclarationModifiers.Local);
             VariableScope scope = (global ? VariableResolver.GlobalRoot : null) ?? VariableResolver;
+            Variable? optional_static = null;
+
+            existing_static = false;
+
+            if (decltype.HasFlag(DeclarationModifiers.Static))
+            {
+#if CHECK_GLOBAL_STATIC
+                if (global && scope.TryGetVariable(variable, VariableSearchScope.Global, out Variable? existing))
+                    return WellKnownError("error.cannot_make_static", existing, existing.DeclaredLocation);
+#endif
+                string global_name = $"__staticref:{CurrentFunction.Name}{variable}";
+                VariableScope root = scope.GlobalRoot;
+
+                if (!root.TryGetVariable(global_name, VariableSearchScope.Local, out optional_static))
+                {
+                    optional_static = root.CreateVariable(CurrentLocation, global_name, false);
+                    optional_static.Value = Variant.EmptyString;
+                }
+                else
+                    existing_static = true;
+            }
 
             // if (decltype.HasFlag(DeclarationType.Dim) || decltype == DeclarationType.None)
             //     global = CurrentFunction.IsMainFunction;
 
             if (scope.TryGetVariable(variable, VariableSearchScope.Global, out Variable? var))
             {
-                if (!(var.IsGlobal && decltype.HasFlag(DeclarationType.Local))) // potential conflict
+                if (!(var.IsGlobal && decltype.HasFlag(DeclarationModifiers.Local))) // potential conflict
                     if (constant && !var.IsConst)
                         return WellKnownError("error.cannot_make_constant", var, var.DeclaredLocation);
                     else if (var.IsConst)
                         return WellKnownError("error.redefining_constant", var, var.DeclaredLocation);
             }
 
-            scope.CreateVariable(CurrentLocation, variable, constant);
+            Variable created = scope.CreateVariable(CurrentLocation, variable, constant);
+
+            if (optional_static is { })
+                created.Value = Variant.FromReference(optional_static);
 
             return null;
         }
@@ -1586,7 +1614,7 @@ namespace Unknown6656.AutoIt3.Runtime
     }
 
     [Flags]
-    public enum DeclarationType
+    public enum DeclarationModifiers
         : byte
     {
         None = 0b_0000_0000,
