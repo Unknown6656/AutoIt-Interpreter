@@ -21,30 +21,59 @@ using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
-using Octokit;
-using System.Runtime.CompilerServices;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
 #pragma warning disable CA1063
     // TODO : covariant return for 'CurrentFunction'
+
+    /// <summary>
+    /// Represents an abstract call frame inside the call stack of an <see cref="AU3Thread"/>.
+    /// </summary>
     public abstract class CallFrame
         : IDisposable
     {
+        /// <summary>
+        /// The thread associated with the current call frame.
+        /// </summary>
         public AU3Thread CurrentThread { get; }
 
+        /// <summary>
+        /// The currently executed function.
+        /// </summary>
         public virtual ScriptFunction CurrentFunction { get; }
 
+        /// <summary>
+        /// The variable scope associated with the current call frame.
+        /// </summary>
         public VariableScope VariableResolver { get; }
 
+        /// <summary>
+        /// The raw array of arguments passed to this call frame.
+        /// 'Raw' in this context means that the array is not filled with potential default values.
+        /// </summary>
         public Variant[] PassedArguments { get; }
 
+        /// <summary>
+        /// The caller frame which called/created the current frame.
+        /// This value is <see langword="null"/> if the current call frame is the bottom-most frame of the execution stack.
+        /// </summary>
         public CallFrame? CallerFrame { get; }
 
+        /// <summary>
+        /// Gets or sets the return value of the current call frame. The default return value is <see cref="Variant.Zero"/>.
+        /// </summary>
         public Variant ReturnValue { protected set; get; } = Variant.Zero;
 
+        /// <summary>
+        /// The current <see cref="SourceLocation"/> associated with the current function execution.
+        /// This value usually represents the location of the currently executed source code line.
+        /// </summary>
         public virtual SourceLocation CurrentLocation => CurrentThread.CurrentLocation ?? CurrentFunction.Location;
 
+        /// <summary>
+        /// The interpreter associated with the current call frame.
+        /// </summary>
         public Interpreter Interpreter => CurrentThread.Interpreter;
 
 
@@ -59,8 +88,15 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope(this);
         }
 
+        /// <inheritdoc/>
         public void Dispose() => VariableResolver.Dispose();
 
+        /// <summary>
+        /// Executes the code stored inside the current call frame with the given arguments.
+        /// </summary>
+        /// <param name="args">Arguments to passed to the internal code execution logic. 
+        /// These are not in their raw form (unlike <see cref="PassedArguments"/>), but are padded with the potential optional parameter values.</param>
+        /// <returns>The return value of the code execution. This data may also contain fatal execution errors.</returns>
         protected abstract Union<InterpreterError, Variant> InternalExec(Variant[] args);
 
         internal Union<InterpreterError, Variant> Execute(Variant[] args)
@@ -113,6 +149,16 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
+        /// <summary>
+        /// <b>[UNSAFE!]</b>
+        /// Invokes the given <paramref name="ScriptFunction"/> with the given arguments. A call to this function is considered to be unsafe, as any non-concurrent call may result into undefined behavior.
+        /// This method is intended to only be called from <i>inside<i/> a call frame.
+        /// <para/>
+        /// This function is blocking and returns only after the given function has been invoked.
+        /// </summary>
+        /// <param name="function">The function to be invoked.</param>
+        /// <param name="args">The arguments to be passed to the function.</param>
+        /// <returns>The functions return value or execution error.</returns>
         public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
         public Variant SetError(int error, Variant? extended = null, in Variant @return = default)
@@ -129,16 +175,39 @@ namespace Unknown6656.AutoIt3.Runtime
             return @return;
         }
 
+        /// <summary>
+        /// Prints the given value to the standard console output stream.
+        /// A line-break will only be appended if the interpreter is launched with a verbosity higher than <see cref="Verbosity.q"/>.
+        /// <para/>
+        /// Use this function if you intend to simulate printing behavior from inside an AutoIt script.
+        /// <br/>
+        /// Do not use <see cref="Console"/>.Write[...] as they do not handle multi-threading very well.
+        /// </summary>
+        /// <param name="value">The value to be printed.</param>
         public void Print(Variant value) => Interpreter.Print(this, value);
 
+        /// <summary>
+        /// Prints the given value to the standard console output stream.
+        /// A line-break will only be appended if the interpreter is launched with a verbosity higher than <see cref="Verbosity.q"/>.
+        /// <para/>
+        /// Use this function if you intend to simulate printing behavior from inside an AutoIt script.
+        /// <br/>
+        /// Do not use <see cref="Console"/>.Write[...] as they do not handle multi-threading very well.
+        /// </summary>
+        /// <param name="value">The value to be printed.</param>
         public void Print(object? value) => Interpreter.Print(this, value);
 
+        /// <inheritdoc/>
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
 
         internal void IssueWarning(string key, params object?[] args) => MainProgram.PrintWarning(CurrentLocation, Interpreter.CurrentUILanguage[key, args]);
     }
 #pragma warning restore CA1063
 
+    /// <summary>
+    /// Represents a call frame for native code executions (e.g. framework or interop functions).
+    /// This kind of call frames is used when a <see cref="NativeFunction"/> gets executed on the call stack of an <see cref="AU3Thread"/>.
+    /// </summary>
     public sealed class NativeCallFrame
         : CallFrame
     {
@@ -147,6 +216,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
         }
 
+        /// <inheritdoc/>
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             NativeFunction native = (NativeFunction)CurrentFunction;
@@ -162,9 +232,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new InvalidOperationException("Return value could not be processed");
         }
 
-        public override string ToString() => $"{base.ToString()} native call-frame";
+        /// <inheritdoc/>
+        public override string ToString() => $"{base.ToString()} native call frame";
     }
 
+    /// <summary>
+    /// Represents a call frame for non-native code executions (regular AutoIt3 script code executions).
+    /// This kind of call frames is used when a <see cref="AU3Function"/> gets executed on the call stack of an <see cref="AU3Thread"/>.
+    /// </summary>
     public sealed class AU3CallFrame
         : CallFrame
     {
@@ -210,14 +285,29 @@ namespace Unknown6656.AutoIt3.Runtime
         private List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
 
+        /// <summary>
+        /// The current instruction pointer.
+        /// <para/>
+        /// This value does not coincide with the line number of the source code file. Use <see cref="CurrentLocation"/> for that information instead.
+        /// </summary>
         public int CurrentInstructionPointer => _instruction_pointer;
 
+        /// <summary>
+        /// The current cache of ordered source code lines and their location.
+        /// </summary>
         public (SourceLocation LineLocation, string LineContent)[] CurrentLineCache => _line_cache.ToArray();
 
+        /// <inheritdoc/>
         public override SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
+        /// <summary>
+        /// Returns the raw string content of the currently executed source code line.
+        /// </summary>
         public string CurrentLineContent => _instruction_pointer < 0 ? '<' + Interpreter.CurrentUILanguage["general.unknown"] + '>' : _line_cache[_instruction_pointer].LineContent;
 
+        /// <summary>
+        /// A dictionary of internally used jump label indices.
+        /// </summary>
         public Dictionary<string, int> InternalJumpLabels => _line_cache.WithIndex().Where(l => REGEX_INTERNAL_LABEL.IsMatch(l.Item.LineContent)).ToDictionary(l => l.Item.LineContent, l => l.Index);
 
 
@@ -228,8 +318,10 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = 0;
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
+        /// <inheritdoc/>
         protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
@@ -399,6 +491,10 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = eip;
         }
 
+        /// <summary>
+        /// Parses the current line and returns the execution result without moving the current instruction pointer (except when processing loops, branches, or explicit jump instructions).
+        /// </summary>
+        /// <returns>Execution result. A value of <see langword="null"/> represents that the line might not have been processed. However, this does <b>not</b> imply a fatal execution error.</returns>
         public InterpreterResult? ParseCurrentLine()
         {
             (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
