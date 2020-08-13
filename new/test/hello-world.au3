@@ -2,5 +2,5 @@ ConsoleWrite("Hello World!" & @CRLF)
 PrintOS()
 
 Func PrintOS()
-   ConsoleWrite(@OSTYPE & " (Version " & @OSBUILD & ")" & @CRLF)
+   ConsoleWrite(@OSVERSION & " (Version " & @OSBUILD & ")" & @CRLF)
 EndFunc

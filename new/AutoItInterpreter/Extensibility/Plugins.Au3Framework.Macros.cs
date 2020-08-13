@@ -21,6 +21,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         internal const string MACRO_DISCARD = "DISCARD";
         private static readonly Regex REGEX_IPADDRESS = new Regex(@"ipaddress(?<num>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly OperatingSystem _os = Environment.OSVersion;
 
 
         public FrameworkMacros(Interpreter interpreter)
@@ -86,9 +87,40 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 "SW_SHOWNORMAL" => 1,
                 "SW_UNLOCK" => 67,
                 "TEMPDIR" => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"),
-
-                "OSBUILD" => Environment.OSVersion.Version.Build,
-                "OSTYPE" => NativeInterop.DoPlatformDependent("WIN32_NT", "UNIX", "MACOS_X"),
+                "OSSERVICEPACK" => _os.ServicePack,
+                "OSBUILD" => _os.Version.Build,
+                "OSTYPE" => NativeInterop.DoPlatformDependent("WIN32_NT", "LINUX", "MACOS_X"),
+                "OSVERSION" => NativeInterop.OperatingSystem switch
+                {
+                    OS.Windows => (_os.Platform, _os.Version.Major, _os.Version.Minor, NativeInterop.IsWindowsServer()) switch
+                    {
+                        // https://stackoverflow.com/a/2819962/3902603
+                        (PlatformID.WinCE, _, _, _) => "WIN_CE",
+                        (PlatformID.Win32S, _, _, _) => "WIN_S",
+                        (PlatformID.Win32Windows, 4, 0, _) => "WIN_95",
+                        (PlatformID.Win32Windows, 4, 10, _) => "WIN_98",
+                        (PlatformID.Win32Windows, 4, 90, _) => "WIN_ME",
+                        (PlatformID.Win32NT, 4, _, _) => "WIN_NT4",
+                        (PlatformID.Win32NT, 5, 0, _) => "WIN_2000",
+                        (PlatformID.Win32NT, 5, 1, _) => "WIN_XP",
+                        (PlatformID.Win32NT, 5, 2, _) => "WIN_2003",
+                        (PlatformID.Win32NT, 6, 0, false) => "WIN_VISTA",
+                        (PlatformID.Win32NT, 6, 0, true) => "WIN_2008",
+                        (PlatformID.Win32NT, 6, 1, false) => "WIN_7",
+                        (PlatformID.Win32NT, 6, 1, true) => "WIN_2008R2",
+                        (PlatformID.Win32NT, 6, 2, false) => "WIN_8",
+                        (PlatformID.Win32NT, 6, 2, true) => "WIN_2012",
+                        (PlatformID.Win32NT, 6, 3, false) => "WIN_81",
+                        (PlatformID.Win32NT, 6, 3, true) => "WIN_2012R2",
+                        (PlatformID.Win32NT, 10, 0, false) => "WIN_10",
+                        // (PlatformID.Win32NT, 10, 0, true) => "WIN_2016",
+                        // (PlatformID.Win32NT, 10, 0, true) => "WIN_2019",
+                        _ => "WIN32_NT"
+                    },
+                    OS.Linux => "LINUX",
+                    OS.MacOS => "MACOS_X",
+                    OS.Unknown or _ => "UNKNOWN",
+                },
 
                 "PROGRAMFILESDIR" => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "PROGRAMSCOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
@@ -153,7 +185,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             "NL" => Environment.NewLine,
             "PHI" => 1.618033988749894848204586834m,
             "PI" => Math.PI,
-            "TAU" => Math.PI * 2,
+            "TAU" => Math.Tau,
             _ => (Variant?)null,
         }) is Variant;
     }

@@ -128,6 +128,12 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(KERNEL32_DLL, SetLastError = true)]
         public static extern bool FreeLibrary(nint hLibModule);
 
+        [DllImport(KERNEL32_DLL)]
+        public static extern ulong VerSetConditionMask(ulong ConditionMask, int TypeMask, byte Condition);
+
+        [DllImport(KERNEL32_DLL)]
+        public static extern unsafe bool VerifyVersionInfo(OSVERSIONINFOEXW* lpVersionInformation, int dwTypeMask, ulong dwlConditionMask);
+
         #endregion
         #region NTDLL.DLL
 
@@ -269,6 +275,18 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             return (result, process.ExitCode);
         }
 
+        public static unsafe bool IsWindowsServer()
+        {
+            OSVERSIONINFOEXW osvi = new OSVERSIONINFOEXW
+            {
+                dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXW),
+                wProductType = 1
+            };
+            ulong mask = VerSetConditionMask(0, 0x0080, 1);
+
+            return !VerifyVersionInfo(&osvi, 0x0080, mask);
+        }
+
         public static T DoPlatformDependent<T>(T on_windows, T on_unix) => DoPlatformDependent(on_windows, on_unix, on_unix);
 
         public static T DoPlatformDependent<T>(T on_windows, T on_linux, T on_macos) => OperatingSystem switch
@@ -319,6 +337,22 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             OS.MacOS => on_macos,
             OS.UnixLike => on_linux,
         });
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct OSVERSIONINFOEXW
+    {
+        public int dwOSVersionInfoSize;
+        public int dwMajorVersion;
+        public int dwMinorVersion;
+        public int dwBuildNumber;
+        public int dwPlatformId;
+        public fixed char szCSDVersion[128];
+        public short wServicePackMajor;
+        public short wServicePackMinor;
+        public short wSuiteMask;
+        public byte wProductType;
+        public byte wReserved;
     }
 
     [StructLayout(LayoutKind.Sequential)]

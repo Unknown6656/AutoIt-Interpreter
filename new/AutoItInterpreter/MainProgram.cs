@@ -108,6 +108,10 @@ namespace Unknown6656.AutoIt3
         public string? FilePath { set; get; } = null;
 
 
+        // TODO : -C --no-com  "Disable the COM service connector (Windows only)."
+        // TODO : -G --no-gui  "Disable the GUI service connector (implied by --strict)."
+
+
         /// <inheritdoc/>
         public override string ToString() => CLParser.Default.FormatCommandLine(this);
     }

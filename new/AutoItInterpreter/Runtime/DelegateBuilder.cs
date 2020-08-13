@@ -107,9 +107,9 @@ namespace Unknown6656.AutoIt3.Runtime
                     field_func.SetValue(null, callback);
 
                     nint ptr = (nint)field_ptr.GetValue(null)!;
-
-                    SaveAssemly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
-
+#if DEBUG
+                    SaveAssembly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
+#endif
                     return new UserFunctionCallback(ptr);
                 }
             }
@@ -211,9 +211,9 @@ namespace Unknown6656.AutoIt3.Runtime
                     MethodInfo dummy = type.GetMethod(dummy_builder.Name)!;
                     // ConstructorInfo ctor = type.GetConstructor(new[] { typeof(object), typeof(nint) })!;
                     object @delegate = dummy.CreateDelegate(type);
-
-                    SaveAssemly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
-
+#if DEBUG
+                    SaveAssembly($"{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.dll");
+#endif
                     return new NativeDelegateWrapper(@delegate, @params!, rettype, inv);
                 }
             }
@@ -293,7 +293,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return null; // TODO
         }
 #if DEBUG
-        public void SaveAssemly(string path) => new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, path);
+        public void SaveAssembly(string path) => new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, path);
 #endif
         private static string GetRandomName(string prefix = "", string suffix = "") => prefix + Guid.NewGuid() + suffix;
     }

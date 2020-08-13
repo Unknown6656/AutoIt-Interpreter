@@ -30,6 +30,7 @@
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryType>Git</RepositoryType>
         <PackageTags>unknown6656; AutoIt; AutoIt3; Interpreter; Compiler</PackageTags>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
     <ItemGroup>
         <None Remove="lang\lang-en.yml" />
