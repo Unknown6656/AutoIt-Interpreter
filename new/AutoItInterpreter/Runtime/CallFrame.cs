@@ -1129,7 +1129,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             try
             {
-                if (ProcessDeclarationModifiers(ref line, out DeclarationModifiers modifiers, out (char op, int amount)? enum_step) is { } err)
+                if (ProcessDeclarationModifiers(ref line, out DeclarationModifiers modifiers, out (char op, long amount)? enum_step) is { } err)
                     return err;
 
                 ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = modifiers is DeclarationModifiers.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
@@ -1190,7 +1190,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 return (InterpreterError?)result ?? WellKnownError("error.unparsable_line", expression);
         }
 
-        private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationModifiers modifiers, out (char op, int amount)? enum_step)
+        private InterpreterError? ProcessDeclarationModifiers(ref string line, out DeclarationModifiers modifiers, out (char op, long amount)? enum_step)
         {
             modifiers = DeclarationModifiers.None;
             enum_step = null;
@@ -1199,25 +1199,26 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 DeclarationModifiers modifier = (DeclarationModifiers)Enum.Parse(typeof(DeclarationModifiers), m_modifier.Value, true);
 
+                line = line[m_modifier.Length..].TrimStart();
+
                 if (modifiers.HasFlag(modifier))
                     return WellKnownError("error.duplicate_modifier", modifier);
-
-                if (modifier is DeclarationModifiers.Step)
+                else if (modifier is DeclarationModifiers.Step)
                     if (line.Match(REGEX_ENUM_STEP, out Match m_step))
                     {
                         char op = '+';
-                        int amount = int.Parse(m_step.Groups["step"].Value);
+                        long amount = long.Parse(m_step.Groups["step"].Value);
 
                         if (m_step.Groups["op"] is { Length: > 0, Value: string s })
                             op = s[0];
 
                         enum_step = (op, amount);
+                        line = line[m_step.Length..].TrimStart();
                     }
                     else
                         return WellKnownError("error.invalid_step", new string(line.TakeWhile(c => !char.IsWhiteSpace(c)).ToArray()));
 
                 modifiers |= modifier;
-                line = line[m_modifier.Length..].TrimStart();
             }
 
             if (modifiers.HasFlag(DeclarationModifiers.Step) && !modifiers.HasFlag(DeclarationModifiers.Enum))
@@ -1241,11 +1242,20 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, int amount)? enum_step) =>
+        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
             Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
             {
                 InterpreterError? error = null;
                 Variable? variable;
+                Variant last_enum_value = Variant.Zero;
+
+                Variant next_enum_value() => enum_step switch
+                {
+                    ('*', long amount) => last_enum_value * amount,
+                    ('+', long amount) => last_enum_value + amount,
+                    ('-', long amount) => last_enum_value - amount,
+                    _ => last_enum_value,
+                };
 
                 foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
                 {
@@ -1258,18 +1268,25 @@ namespace Unknown6656.AutoIt3.Runtime
                         case VARIABLE_DECLARATION.Scalar { Item: null }:
                             if (modifiers.HasFlag(DeclarationModifiers.Const))
                                 return WellKnownError("error.uninitialized_constant", variable_ast);
-                            else
-                                break;
+                            else if (enum_step != null && VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out Variable? var))
+                            {
+                                var.Value = last_enum_value;
+                                last_enum_value = next_enum_value();
+                            }
+
+                            break;
                         case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
                             if (!existing_static)
                             {
-                                // TODO : enum step handling
-
                                 var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
                                 Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
 
-                                if (result.Is(out Variant value))
-                                    MainProgram.PrintDebugMessage($"{variable_ast} = {value}");
+                                if (result.Is(out last_enum_value))
+                                {
+                                    MainProgram.PrintDebugMessage($"{variable_ast} = {last_enum_value}");
+
+                                    last_enum_value = next_enum_value();
+                                }
                                 else
                                     error ??= (InterpreterError)result;
                             }

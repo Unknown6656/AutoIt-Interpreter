@@ -1,9 +1,10 @@
-ConsoleWrite("Hello World!" & @CRLF)
-PrintOS()
-
-Func PrintOS()
-   ConsoleWrite(@OSVERSION & " (Version " & @OSBUILD & ")" & @CRLF)
-EndFunc
+enum step *2 $v1 = 3, $v2, $v3, $v4 = 7, $v5
+; enum step +1 $v1, $v2, $v3, $v4, $v5
+ConsoleWrite($v1&@CRLF)
+ConsoleWrite($v2&@CRLF)
+ConsoleWrite($v3&@CRLF)
+ConsoleWrite($v4&@CRLF)
+ConsoleWrite($v5&@CRLF)
 exit
 
 $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "int:cdecl", "add", "int", 20, "int", 400)
