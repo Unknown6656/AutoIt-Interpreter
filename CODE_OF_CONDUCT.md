@@ -40,6 +40,8 @@ Like I'd give a f█ck.
 
  - `CAPS_LOCK_CASE` for constants
 
+ - Document `public` and `protected` classes and members using XML comments. You do not have to document inaccessible/private members.
+
  - Try to avoid using external libraries or packages as much as possible. There are already enough dependencies in this project.
  
 **To avoid any association with slavery, the `master`-branch has been renamed to `daddy` :wink:.**
