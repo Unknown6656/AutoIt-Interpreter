@@ -8,8 +8,6 @@
 ![Banner image](new/artwork/banner.png)<br/>
 ![Banner image](new/artwork/banner-features.png)
 
-_NOTICE: To avoid any association with slavery, the `master`-branch has been renamed to `daddy` ;)_
-
 # Platform-Independent AutoIt3 Interpreter
 
 ### [TL;DR: Take a look at the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
