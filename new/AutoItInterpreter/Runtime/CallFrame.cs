@@ -1138,7 +1138,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
 
                 if (modifiers == DeclarationModifiers.None)
-                    return ProcessAssignmentStatement(expression, false).Match(Generics.id, _ => null);
+                    return ProcessAssignmentStatement(expression, false).Match(LINQ.id, _ => null);
                 else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
                     return ProcessMultiDeclarationExpression(multi_decl, modifiers, enum_step);
                 else

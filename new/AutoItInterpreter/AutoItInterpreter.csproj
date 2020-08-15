@@ -46,9 +46,6 @@
         <Reference Include="Piglet.FSharp">
             <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
         </Reference>
-        <Reference Include="unknown6656.core">
-            <HintPath>..\lib\unknown6656.core.dll</HintPath>
-        </Reference>
     </ItemGroup>
     <ItemGroup>
         <Content Include="lang\lang-en.yml">
@@ -64,12 +61,13 @@
     <ItemGroup>
         <PackageReference Include="CommandLineParser" Version="2.8.0" />
         <PackageReference Include="Lokad.ILPack" Version="0.1.4" />
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0">
+        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Octokit" Version="0.48.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+        <PackageReference Include="Unknown6656.Core" Version="1.0.3" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />

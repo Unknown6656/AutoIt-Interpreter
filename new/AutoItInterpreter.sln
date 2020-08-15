@@ -48,9 +48,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{CCA3DC14-871
 		lib\Piglet.FSharp.pdb = lib\Piglet.FSharp.pdb
 		lib\Piglet.pdb = lib\Piglet.pdb
 		lib\Piglet.xml = lib\Piglet.xml
-		lib\unknown6656.core.deps.json = lib\unknown6656.core.deps.json
-		lib\unknown6656.core.dll = lib\unknown6656.core.dll
-		lib\unknown6656.core.pdb = lib\unknown6656.core.pdb
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Common", "util\AutoIt3.Common\AutoIt3.Common.csproj", "{84894845-C1AF-4A45-9026-C5C30E31E43D}"
@@ -61,7 +58,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.WinAPI.Server", "ut
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpp-interop-test", "test\cpp-interop-test\cpp-interop-test.vcxproj", "{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "test\UnitTests\UnitTests.csproj", "{7B511104-4D4E-4B2E-9276-095A4D476F11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "test\UnitTests\UnitTests.csproj", "{7B511104-4D4E-4B2E-9276-095A4D476F11}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

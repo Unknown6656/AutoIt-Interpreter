@@ -229,7 +229,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 if (diff > 0 && r <= widths.Length)
                 {
-                    (int w, int i) = widths.WithIndex().OrderByDescending(Generics.fst).FirstOrDefault();
+                    (int w, int i) = widths.WithIndex().OrderByDescending(LINQ.fst).FirstOrDefault();
 
                     widths[i] = new[] { w - diff, w / 2, 3 }.Max();
                     ++r;
@@ -429,7 +429,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 {
                     ("", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
                     (Interpreter.CurrentUILanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
-                    (Interpreter.CurrentUILanguage["debug.content"], false, lines.ToArray(Generics.snd)),
+                    (Interpreter.CurrentUILanguage["debug.content"], false, lines.ToArray(LINQ.snd)),
                 }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
 
                 frame.Print(table);

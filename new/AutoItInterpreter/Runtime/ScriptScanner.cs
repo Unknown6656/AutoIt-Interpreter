@@ -601,7 +601,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             get
             {
-                SourceLocation[] lines = _lines.Keys.OrderBy(Generics.id).ToArray();
+                SourceLocation[] lines = _lines.Keys.OrderBy(LINQ.id).ToArray();
 
                 return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
             }

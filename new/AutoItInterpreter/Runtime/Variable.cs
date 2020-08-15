@@ -14,7 +14,7 @@ using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-    using static Generics;
+    using static LINQ;
     using static AST;
 
 
