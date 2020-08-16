@@ -5,6 +5,8 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Localization;
+using Unknown6656.AutoIt3.CLI;
+
 using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 

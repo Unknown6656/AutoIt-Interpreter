@@ -18,6 +18,7 @@ using Piglet.Parser.Configuration.Generic;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 using Unknown6656.IO;
 

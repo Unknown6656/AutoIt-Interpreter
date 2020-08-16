@@ -131,6 +131,7 @@ strings:
         error_in: "ERROR in {0}"
         not_yet_implemented: "The functionality '{0}' has not yet been implemented. We're sorry :/"
 
+        no_script_path_provided: "No script path has been provided. You can refer to \u001b[4mhttps://github.com/Unknown6656/AutoIt-Interpreter/wiki/Usage\u001b[24m a documentation of the interpreter's command line usage."
         au3_caller_only: "The execution of the function '{0}' requires an Au3 (non-native) call frame."
         byref_default: "The ByRef-parameter '{0}' cannot have a default value."
         cannot_make_static: "The already existing variable '{0}' (declared at {1}) cannot be made static by a re-definition."

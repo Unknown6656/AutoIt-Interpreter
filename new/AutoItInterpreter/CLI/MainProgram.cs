@@ -14,16 +14,17 @@ using System;
 using CommandLine.Text;
 using CommandLine;
 
+using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.AutoIt3.Localization;
-using Unknown6656.AutoIt3;
+
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
+
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -50,38 +51,15 @@ using CLParser = CommandLine.Parser;
 
 COMMAND LINE OPTIONS:")]
 
-
-//////////////////////// CODE WRAPPER IF ANYTHING GOES SERIOUSLY WRONG ////////////////////////
-try
-{
-    return MainProgram.Start(args);
-}
-catch (Exception? ex)
-{
-    StringBuilder sb = new StringBuilder();
-    int code = ex.HResult;
-
-    while (ex is { })
-    {
-        sb.Insert(0, $"[{ex.GetType()}] ({ex.HResult:x8}h) {ex.Message}:\n{ex.StackTrace}\n");
-        ex = ex.InnerException;
-    }
-
-    Console.Error.WriteLine(sb);
-
-    return code;
-}
-
-
-namespace Unknown6656.AutoIt3
+namespace Unknown6656.AutoIt3.CLI
 {
     /// <summary>
     /// Represents a structure of command line options for the AutoIt interpreter.
     /// </summary>
     public sealed class CommandLineOptions
     {
-        [Option('w', "view", Default = false, HelpText = "Only displays the file instead of executing it. This implies the flag 'B' and a verbosity level of 'q'.")]
-        public bool ViewOnly { get; set; } = false;
+        [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. The value 'view' will imply the flags '-B -s -v q'.")]
+        public ExecutionMode ProgramExecutionMode { get; set; } = ExecutionMode.normal;
 
         [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
         public bool HideBanner { set; get; } = false;
@@ -118,6 +96,8 @@ namespace Unknown6656.AutoIt3
 
     /// <summary>
     /// The module containing the AutoIt Interpreter's main entry point.
+    /// <para/>
+    /// <b>NOTE:</b> The .NET runtime does not actually call this class directly. The actual entry point resides in the file "../EntryPoint.cs"
     /// </summary>
     public static class MainProgram
     {
@@ -171,8 +151,8 @@ namespace Unknown6656.AutoIt3
             };
 
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
-            using Task printer_task = Task.Factory.StartNew(PrinterTask);
-            using Task telemetry_task = Task.Factory.StartNew(Telemetry.StartPerformanceMonitorAsync);
+            using Task printer_task = Task.Run(PrinterTask);
+            using Task telemetry_task = Task.Run(Telemetry.StartPerformanceMonitorAsync);
             bool help_requested = false;
             int code = 0;
 
@@ -251,11 +231,11 @@ namespace Unknown6656.AutoIt3
                         return result;
                     }).WithParsed(opt =>
                     {
-                        if (opt.ViewOnly)
+                        if (opt.ProgramExecutionMode != ExecutionMode.normal)
                         {
                             opt.Verbosity = Verbosity.q;
                             opt.PrintTelemetry = false;
-                            opt.DontLoadPlugins = true;
+                            opt.DontLoadPlugins = opt.ProgramExecutionMode is ExecutionMode.view;
                         }
 
                         CommandLineOptions = opt;
@@ -268,7 +248,7 @@ namespace Unknown6656.AutoIt3
                             LanguageLoader.TrySetCurrentLanguagePack(opt.Language);
                         });
 
-                        var lang = LanguageLoader.CurrentLanguage;
+                        LanguagePack? lang = LanguageLoader.CurrentLanguage;
 
                         if (lang is null)
                         {
@@ -286,32 +266,43 @@ namespace Unknown6656.AutoIt3
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
 
-                        Union<InterpreterError, ScannedScript> resolved = interpreter.ScriptScanner.ScanScriptFile(SourceLocation.Unknown, opt.FilePath, false);
-                        InterpreterError? error = null;
-
-                        if (resolved.Is(out ScannedScript? script))
+                        if (opt.ProgramExecutionMode is ExecutionMode.interactive)
                         {
-                            PrintfDebugMessage("debug.interpreter_loaded", opt.FilePath);
 
-                            if (opt.ViewOnly)
+                            PrintfDebugMessage("error.not_yet_implemented", opt.ProgramExecutionMode); // TODO
+
+                        }
+                        else if (opt.FilePath is string path)
+                        {
+                            Union<InterpreterError, ScannedScript> resolved = interpreter.ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false);
+                            InterpreterError? error = null;
+
+                            if (resolved.Is(out ScannedScript? script))
                             {
-                                ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(script);
+                                PrintfDebugMessage("debug.interpreter_loaded", path);
 
-                                Console.WriteLine(tokens.ConvertToVT100(true));
+                                if (opt.ProgramExecutionMode is ExecutionMode.view)
+                                {
+                                    ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(script);
+
+                                    Console.WriteLine(tokens.ConvertToVT100(true));
+                                }
+                                else if (opt.ProgramExecutionMode is ExecutionMode.normal)
+                                {
+                                    InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+
+                                    error = result.OptionalError;
+                                    code = result.ProgramExitCode;
+                                }
                             }
                             else
-                            {
-                                InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+                                error = resolved.As<InterpreterError>();
 
-                                error = result.OptionalError;
-                                code = result.ProgramExitCode;
-                            }
+                            if (error is InterpreterError err)
+                                PrintError($"{lang["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
                         }
                         else
-                            error = resolved.As<InterpreterError>();
-
-                        if (error is InterpreterError err)
-                            PrintError($"{lang["error.error_in", err.Location ?? SourceLocation.Unknown]}:\n    {err.Message}");
+                            PrintError(lang["error.no_script_path_provided"]);
                     });
                 }
                 catch (Exception ex)
@@ -690,6 +681,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             #endregion
             #region TIMINGS : PRINT HEADER
 
+            Console.CursorTop -= 2;
             ConsoleExtensions.RGBForegroundColor = col_table;
 
             for (int i = 0, l = widths.Length; i < l; i++)
@@ -982,5 +974,15 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         /// Verbose.
         /// </summary>
         v,
+    }
+
+    /// <summary>
+    /// An enumeration of different program execution modes.
+    /// </summary>
+    public enum ExecutionMode
+    {
+        normal,
+        view,
+        interactive,
     }
 }

@@ -371,9 +371,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public Variant CallCPPfromAutoit(void* funcptr, Interpreter interpreter, Variant[] arguments) => CallCPPfromAutoit((nint)funcptr, interpreter, arguments);
 
-        public Variant CallCPPfromAutoit(nint funcptr, Interpreter interpreter, Variant[] arguments)
+        public Variant CallCPPfromAutoit(nint funcptr, Interpreter interpreter, Variant[]? arguments)
         {
             object?[] cpp_arguments = new object?[ArgTypes.Length];
+
+            arguments ??= Array.Empty<Variant>();
 
             for (int i = 0; i < cpp_arguments.Length; ++i)
                 if (i < arguments.Length)

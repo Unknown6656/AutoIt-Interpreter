@@ -6,6 +6,7 @@ using System;
 
 using Unknown6656.Mathematics.LinearAlgebra;
 using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.CLI;
 
 namespace Unknown6656.AutoIt3.Extensibility
 {

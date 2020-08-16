@@ -5,6 +5,7 @@ using System;
 using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Common;
 using Unknown6656.AutoIt3.COM;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime

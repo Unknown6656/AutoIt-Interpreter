@@ -6,8 +6,10 @@ using System;
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.Common;
+using Unknown6656.AutoIt3.CLI;
+
 using Unknown6656.Imaging;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {

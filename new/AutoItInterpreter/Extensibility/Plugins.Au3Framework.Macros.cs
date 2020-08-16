@@ -9,11 +9,11 @@ using System;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
-    using static MainProgram;
     using static AST;
 
     public sealed class FrameworkMacros
@@ -37,7 +37,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 "APPDATACOMMONDIR" => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "APPDATADIR" => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "AUTOITEXE" => ASM_FILE.FullName,
+                "AUTOITEXE" => MainProgram.ASM_FILE.FullName,
                 "AUTOITPID" => Process.GetCurrentProcess().Id,
                 "AUTOITVERSION" => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0",
                 "AUTOITX64" => sizeof(void*) > 4,

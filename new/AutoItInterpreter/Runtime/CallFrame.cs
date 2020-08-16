@@ -18,6 +18,7 @@ using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;

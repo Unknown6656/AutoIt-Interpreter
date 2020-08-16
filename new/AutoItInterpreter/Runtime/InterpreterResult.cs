@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
@@ -29,7 +30,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
     public sealed class InterpreterError
     {
-        public static InterpreterError Empty = new InterpreterError(SourceLocation.Unknown, "");
+        public static InterpreterError Empty { get; } = new InterpreterError(SourceLocation.Unknown, "");
 
         public SourceLocation? Location { get; }
         public string Message { get; }

@@ -4,11 +4,10 @@ using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.Controls.Console;
-using Unknown6656.Common;
 using Unknown6656.Imaging;
+using Unknown6656.Common;
 
-namespace Unknown6656.AutoIt3
+namespace Unknown6656.AutoIt3.CLI
 {
     public static class ScriptVisualizer
     {

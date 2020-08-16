@@ -10,6 +10,7 @@ using System;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 using Unknown6656.IO;
 
@@ -376,12 +377,21 @@ namespace Unknown6656.AutoIt3.Runtime
                     fi = new FileInfo(path + ext);
 
             if (fi is { Exists: true })
-                return (fi, From.File(fi).To.String());
+            {
+                using FileStream stream = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using StreamReader reader = new StreamReader(stream);
+                string content = reader.ReadToEnd();
+
+                reader.Close();
+                stream.Close();
+
+                return (fi, content);
+            }
 
             return null;
         }
 
-        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(path).To.String());
+        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(new Uri(path)).To.String());
 
         private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).To.String());
 
