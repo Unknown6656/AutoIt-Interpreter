@@ -121,12 +121,16 @@ namespace Unknown6656.AutoIt3.CLI
 
         private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
         private static volatile bool _isrunning = true;
-        private static volatile bool _finished = false;
+        private static volatile bool _finished;
+
 #nullable disable
         public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
 #nullable enable
         public static LanguageLoader LanguageLoader { get; } = new LanguageLoader();
+
         public static Telemetry Telemetry { get; } = new Telemetry();
+
+        public static bool PausePrinter { get; set; }
 
 
         /// <summary>
@@ -151,6 +155,7 @@ namespace Unknown6656.AutoIt3.CLI
             };
 
             ConsoleState state = ConsoleExtensions.SaveConsoleState();
+
             using Task printer_task = Task.Run(PrinterTask);
             using Task telemetry_task = Task.Run(Telemetry.StartPerformanceMonitorAsync);
             bool help_requested = false;
@@ -168,6 +173,7 @@ namespace Unknown6656.AutoIt3.CLI
 
                     // Console.OutputEncoding = Encoding.Unicode;
                     // Console.InputEncoding = Encoding.Unicode;
+                    Console.ResetColor();
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     // Console.BackgroundColor = ConsoleColor.Black;
                     // Console.Clear();
@@ -186,7 +192,10 @@ namespace Unknown6656.AutoIt3.CLI
 
                     Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
                     {
-                        using CLParser parser = new CLParser(p => p.HelpWriter = null);
+                        using CLParser parser = new CLParser(p =>
+                        {
+                            p.HelpWriter = null;
+                        });
 
                         ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
@@ -268,9 +277,16 @@ namespace Unknown6656.AutoIt3.CLI
 
                         if (opt.ProgramExecutionMode is ExecutionMode.interactive)
                         {
+                            using InteractiveShell shell = new InteractiveShell(interpreter);
 
-                            PrintfDebugMessage("error.not_yet_implemented", opt.ProgramExecutionMode); // TODO
+                            if (shell.Initialize())
+                            {
 
+                                // TODO
+
+                            }
+
+                            PrintfDebugMessage("error.not_yet_implemented", opt.ProgramExecutionMode);
                         }
                         else if (opt.FilePath is string path)
                         {
@@ -342,7 +358,7 @@ namespace Unknown6656.AutoIt3.CLI
         private static async Task PrinterTask()
         {
             while (_isrunning)
-                if (_print_queue.TryDequeue(out Action? func))
+                if (!PausePrinter && _print_queue.TryDequeue(out Action? func))
                     try
                     {
                         Telemetry.Measure(TelemetryCategory.Printing, func);
