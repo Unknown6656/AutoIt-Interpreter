@@ -29,8 +29,8 @@ namespace Unknown6656.AutoIt3.CLI
         {
             // [TokenType.NewLine] = RGBAColor.White,
             // [TokenType.Whitespace] = RGBAColor.White,
-            [TokenType.Keyword] = RGBAColor.DodgerBlue,
-            [TokenType.FunctionCall] = RGBAColor.LightBlue,
+            [TokenType.Keyword] = RGBAColor.CornflowerBlue,
+            [TokenType.FunctionCall] = RGBAColor.LightCyan,
             [TokenType.Identifier] = RGBAColor.White,
             [TokenType.Comment] = RGBAColor.DarkSeaGreen,
             [TokenType.Number] = RGBAColor.Moccasin,
@@ -96,12 +96,12 @@ namespace Unknown6656.AutoIt3.CLI
                     }
                     else if (line.Match(REGEX_STRING, out match))
                         add_token(match.Length, TokenType.String);
+                    else if (line.Match(REGEX_KEYWORD, out match))
+                        add_token(match.Length, TokenType.Keyword);
                     else if (line.Match(REGEX_SYMOBLS, out match))
                         add_token(match.Length, TokenType.Symbol);
                     else if (line.Match(REGEX_OPERATORS, out match))
                         add_token(match.Length, TokenType.Operator);
-                    else if (line.Match(REGEX_KEYWORD, out match))
-                        add_token(match.Length, TokenType.Keyword);
                     else if (line.Match(REGEX_VARIABLE, out match))
                         add_token(match.Length, TokenType.Variable);
                     else if (line.Match(REGEX_MACRO, out match))

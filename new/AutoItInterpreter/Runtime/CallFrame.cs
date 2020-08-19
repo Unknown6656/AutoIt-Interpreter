@@ -465,8 +465,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return name;
         }
-        
-        private void InsertReplaceSourceCode(int instruction_ptr, params string[] lines)
+
+        internal void InsertReplaceSourceCode(int instruction_ptr, params string[] lines)
         {
             int eip = _instruction_pointer;
 

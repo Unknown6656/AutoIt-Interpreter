@@ -59,6 +59,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal ScannedScript SystemScript { get; }
 
+        internal AU3Function AnonymousFunction { get; }
+
         public Interpreter Interpreter { get; }
 
         public IEnumerable<ScriptFunction> CachedFunctions => _cached_functions.Values;
@@ -70,6 +72,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Interpreter = interpreter;
             SystemScript = new ScannedScript(MainProgram.ASM_FILE, "");
+            AnonymousFunction = new AU3Function(SystemScript, "", null);
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate

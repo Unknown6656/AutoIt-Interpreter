@@ -119,7 +119,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 throw new ObjectDisposedException(nameof(AU3Thread));
 
             CallFrame? old = CurrentFrame;
-            CallFrame frame = function switch
+            using CallFrame frame = function switch
             {
                 AU3Function f => new AU3CallFrame(this, old, f, args),
                 NativeFunction f => new NativeCallFrame(this, old, f, args),
@@ -165,8 +165,16 @@ namespace Unknown6656.AutoIt3.Runtime
             _callstack.TryPop(out CallFrame? frame);
             frame?.Dispose();
 
-
             return CurrentLocation;
+        }
+
+        internal AU3CallFrame PushAnonymousCallFrame()
+        {
+            AU3CallFrame frame = new AU3CallFrame(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>());
+
+            _callstack.Push(frame);
+
+            return frame;
         }
 
         /// <inheritdoc/>

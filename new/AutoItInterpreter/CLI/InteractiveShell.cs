@@ -7,6 +7,7 @@ using Unknown6656.Common;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using System.Windows.Forms;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -77,11 +78,14 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
         public AU3Thread Thread { get; }
 
+        public AU3CallFrame CallFrame { get; }
+
 
         public InteractiveShell(Interpreter interpreter)
         {
             Interpreter = interpreter;
             Thread = interpreter.CreateNewThread();
+            CallFrame = Thread.PushAnonymousCallFrame();
         }
 
         ~InteractiveShell() => Dispose(disposing: false);
@@ -502,9 +506,18 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 else
                     try
                     {
-                        // TODO : actual processing
+                        CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
 
-                        _ = Thread;
+                        InterpreterResult? result = CallFrame.ParseCurrentLine();
+
+                        if (result?.OptionalError is { Message: string error })
+                            History.Add((new[] { new ScriptToken(0, 0, error.Length, error, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
+                        else if (CallFrame.VariableResolver.TryGetVariable(AST.VARIABLE.Discard, VariableSearchScope.Global, out Variable? variable))
+                        {
+                            string text = variable.Value.ToDebugString(Interpreter);
+
+                            History.Add((new[] { new ScriptToken(0, 0, text.Length, text, TokenType.Comment) }, InteractiveShellStreamDirection.Output));
+                        }
                     }
                     catch
                     {
@@ -554,7 +567,8 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 filter = null;
 
             Suggestions.AddRange(from s in suggestions.Distinct()
-                                 let text = s + ' '
+                                 let text = s.Trim() + ' '
+                                 where text.Length > 1
                                  let tokens = ScriptVisualizer.TokenizeScript(text)[..^1]
                                  let first = tokens[0]
                                  where filter is null || first.Content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
