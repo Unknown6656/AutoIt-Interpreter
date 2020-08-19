@@ -12,15 +12,14 @@ namespace Unknown6656.AutoIt3.CLI
     public static class ScriptVisualizer
     {
         private static readonly Regex REGEX_WHITESPACE = new Regex(@"^\s+", RegexOptions.Compiled);
-        private static readonly Regex REGEX_CS = new Regex(@"^#(cs|comments?-start)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex REGEX_CE = new Regex(@"^#(cs|comments?-end)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex REGEX_DIRECTIVE = new Regex(@"^#.+(?=['""<\$])", RegexOptions.Compiled);
+        private static readonly Regex REGEX_DIRECTIVE = new Regex(@"^#[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_STRING = new Regex(@"^('[^']*'|""[^""]*"")", RegexOptions.Compiled);
         private static readonly Regex REGEX_KEYWORD = new Regex(@$"^(->|{ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex REGEX_SYMOBLS = new Regex(@"^[\.,()\[\]{}'""_]", RegexOptions.Compiled);
-        private static readonly Regex REGEX_OPERATORS = new Regex(@"^[\-+*/\\\?:&%|~!=\^<>]", RegexOptions.Compiled);
+        private static readonly Regex REGEX_SYMOBLS = new Regex(@"^[\.,()\[\]{}'""]", RegexOptions.Compiled);
+        private static readonly Regex REGEX_OPERATORS = new Regex(@$"^([\?:]|{InteractiveShell.KNOWN_OPERATORS.Select(Regex.Escape).StringJoin("|")})(?=[\s\w])", RegexOptions.Compiled);
         private static readonly Regex REGEX_VARIABLE = new Regex(@"^\$[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_MACRO = new Regex(@"^@[^\W\d]\w*\b", RegexOptions.Compiled);
+        private static readonly Regex REGEX_FUNCCALL = new Regex(@"^[^\W\d]\w*(?=\()", RegexOptions.Compiled);
         private static readonly Regex REGEX_IDENTIFIER = new Regex(@"^[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_COMMENT = new Regex(@"^;.*", RegexOptions.Compiled);
         private static readonly Regex REGEX_NUMBER = new Regex(@"^(0x[\da-f_]+|[\da-f_]+h|0b[01_]+|0o[0-7_]+|\d+(\.\d+)?(e[+\-]?\d+)?)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -30,7 +29,8 @@ namespace Unknown6656.AutoIt3.CLI
         {
             // [TokenType.NewLine] = RGBAColor.White,
             // [TokenType.Whitespace] = RGBAColor.White,
-            [TokenType.Keyword] = RGBAColor.DeepSkyBlue,
+            [TokenType.Keyword] = RGBAColor.DodgerBlue,
+            [TokenType.FunctionCall] = RGBAColor.LightBlue,
             [TokenType.Identifier] = RGBAColor.White,
             [TokenType.Comment] = RGBAColor.DarkSeaGreen,
             [TokenType.Number] = RGBAColor.Moccasin,
@@ -49,14 +49,15 @@ namespace Unknown6656.AutoIt3.CLI
 
         public static ScriptToken[] TokenizeScript(string au3_script) => TokenizeScript(au3_script.SplitIntoLines());
 
-        public static ScriptToken[] TokenizeScript(params string[] au3_script_lines)
+        public static ScriptToken[] TokenizeScript(IEnumerable<string> au3_script_lines)
         {
             List<ScriptToken> tokens = new();
             int comment_level = 0;
+            string[] lines = au3_script_lines.ToArray();
 
-            for (int line_index = 0; line_index < au3_script_lines.Length; ++line_index)
+            for (int line_index = 0; line_index < lines.Length; ++line_index)
             {
-                string line = au3_script_lines[line_index];
+                string line = lines[line_index];
                 bool is_directive = false;
                 int char_index = 0;
 
@@ -72,13 +73,13 @@ namespace Unknown6656.AutoIt3.CLI
                 {
                     if (line.Match(REGEX_WHITESPACE, out Match match))
                         add_token(match.Length, TokenType.Whitespace);
-                    else if (line.Match(REGEX_CS, out match))
+                    else if (line.Match(ScriptScanner.REGEX_CS, out match))
                     {
                         ++comment_level;
 
                         add_token(line.Length, TokenType.Comment);
                     }
-                    else if (line.Match(REGEX_CE, out match))
+                    else if (line.Match(ScriptScanner.REGEX_CE, out match))
                     {
                         if (comment_level > 0)
                             --comment_level;
@@ -109,6 +110,8 @@ namespace Unknown6656.AutoIt3.CLI
                         add_token(match.Length, TokenType.Comment);
                     else if (line.Match(REGEX_NUMBER, out match))
                         add_token(match.Length, TokenType.Number);
+                    else if (line.Match(REGEX_FUNCCALL, out match))
+                        add_token(match.Length, is_directive ? TokenType.DirectiveOption : TokenType.FunctionCall);
                     else if (line.Match(REGEX_IDENTIFIER, out match))
                         add_token(match.Length, is_directive ? TokenType.DirectiveOption : TokenType.Identifier);
                     else
@@ -149,6 +152,7 @@ namespace Unknown6656.AutoIt3.CLI
         Whitespace,
         NewLine,
         Keyword,
+        FunctionCall,
         Identifier,
         Comment,
         Number,

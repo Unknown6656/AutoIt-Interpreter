@@ -281,7 +281,7 @@ namespace Unknown6656.AutoIt3.CLI
 
                             if (shell.Initialize())
                             {
-
+                                shell.Run();
                                 // TODO
 
                             }

@@ -27,8 +27,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_COMMENT = new Regex(@"\;[^\""\']*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new Regex(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new Regex(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
         private static readonly Regex REGEX_REGION = new Regex(@"^#(end-?)?region\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_PRAGMA = new Regex(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LINECONT = new Regex(@"(\s|^)_$", _REGEX_OPTIONS);
@@ -60,6 +60,10 @@ namespace Unknown6656.AutoIt3.Runtime
         internal ScannedScript SystemScript { get; }
 
         public Interpreter Interpreter { get; }
+
+        public IEnumerable<ScriptFunction> CachedFunctions => _cached_functions.Values;
+
+        public IEnumerable<ScannedScript> CachedScripts => _cached_scripts.Values;
 
 
         public ScriptScanner(Interpreter interpreter)

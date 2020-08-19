@@ -251,7 +251,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_WHILE = new Regex(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WEND = new Regex(@"^wend$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_NEXT = new Regex(@"^next$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_EXIT = new Regex(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_EXIT = new Regex(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_RETURN = new Regex(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FOR = new Regex(@"^for\s+.+$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FORTO = new Regex(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
