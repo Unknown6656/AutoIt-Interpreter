@@ -24,7 +24,7 @@ using Unknown6656.Common;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
-
+using Piglet.Common;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -84,6 +84,10 @@ namespace Unknown6656.AutoIt3.CLI
 
         [Value(0, HelpText = "The file path to the AutoIt-3 script.", Required = true)]
         public string? FilePath { set; get; } = null;
+
+#pragma warning disable CA1819 // Properties should not return arrays
+        public string[] ScriptArguments { get; set; } = Array.Empty<string>();
+#pragma warning restore CA1819
 
 
         // TODO : -C --no-com  "Disable the COM service connector (Windows only)."
@@ -190,11 +194,20 @@ namespace Unknown6656.AutoIt3.CLI
                             ; // update
                     }
 
+                    string[]? script_args = null;
+
                     Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
                     {
+                        if (argv.WithIndex().SkipWhile(i => i.Item != "--").FirstOrDefault() is { Index: int idx, Item: not null })
+                        {
+                            script_args = argv[(idx + 1)..];
+                            argv = argv[..idx];
+                        }
+
                         using CLParser parser = new CLParser(p =>
                         {
                             p.HelpWriter = null;
+                            p.IgnoreUnknownArguments = false;
                         });
 
                         ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
@@ -228,7 +241,7 @@ namespace Unknown6656.AutoIt3.CLI
                             }
                             else
                             {
-                                Console.WriteLine(help);
+                                Console.WriteLine(help + "  --                     All subsequent arguments will be passed to the AutoIt-3 script.");
 
                                 if (err.FirstOrDefault() is HelpRequestedError or HelpVerbRequestedError)
                                     help_requested = true;
@@ -247,6 +260,7 @@ namespace Unknown6656.AutoIt3.CLI
                             opt.DontLoadPlugins = opt.ProgramExecutionMode is ExecutionMode.view;
                         }
 
+                        opt.ScriptArguments = script_args ?? opt.ScriptArguments;
                         CommandLineOptions = opt;
 
                         display_update(opt.Verbosity > Verbosity.q);
@@ -505,7 +519,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = COLOR_ERROR;
             Console.WriteLine(message.TrimEnd());
-            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/\x1b[24m.");
+            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/new/choose\x1b[24m.");
 
             if (extensive)
             {

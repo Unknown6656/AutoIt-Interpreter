@@ -851,7 +851,7 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (object? element in array ?? Array.Empty<Variant>())
             {
                 v.TrySetIndexed(interpreter, i, FromObject(interpreter, element));
-                ++v;
+                ++i;
             }
 
             return v;

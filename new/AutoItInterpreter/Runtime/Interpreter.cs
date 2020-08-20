@@ -151,6 +151,8 @@ namespace Unknown6656.AutoIt3.Runtime
             GlobalObjectStorage = new GlobalObjectStorage(this);
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
+            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLineRaw", true).Value = Variant.FromString(opt.ScriptArguments.StringJoin(" "));
+            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLine", true).Value = Variant.FromArray(this, opt.ScriptArguments.ToArray(Variant.FromString));
 
             if (NativeInterop.OperatingSystem is Native.OS.Windows)
             {

@@ -492,14 +492,16 @@ namespace Unknown6656.AutoIt3.Runtime
             _instruction_pointer = eip;
         }
 
+        // TODO: CHANGE EVERYTHING TO FUNCTIONRETURNVALUE
+
         /// <summary>
         /// Parses the current line and returns the execution result without moving the current instruction pointer (except when processing loops, branches, or explicit jump instructions).
         /// </summary>
         /// <returns>Execution result. A value of <see langword="null"/> represents that the line might not have been processed. However, this does <b>not</b> imply a fatal execution error.</returns>
-        public InterpreterResult? ParseCurrentLine()
+        public Union<InterpreterError, Variant> ParseCurrentLine()
         {
             (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
-            InterpreterResult? result = null;
+            Union<InterpreterError, Variant> result;
 
             line = line.Trim();
 
@@ -513,21 +515,26 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
-                return InterpreterResult.OK;
+                return Variant.Zero;
 
             Interpreter.Telemetry.Measure(TelemetryCategory.ProcessLine, delegate
             {
-                result ??= ProcessDirective(line);
-                result ??= ProcessStatement(line);
-                result ??= UseExternalLineProcessors(line);
-                result ??= ProcessExpressionStatement(line);
+                void TryDo(Func<string, Union<InterpreterError, Variant>> func)
+                {
+                    result ??= func(line);
+                }
+
+                TryDo(ProcessDirective);
+                TryDo(ProcessStatement);
+                TryDo(UseExternalLineProcessors);
+                TryDo(ProcessExpressionStatement);
             });
 
-            if (Interpreter.CommandLineOptions.IgnoreErrors && result?.OptionalError?.Message is string msg)
+            if (Interpreter.CommandLineOptions.IgnoreErrors && result.As<InterpreterError>()?.Message is string msg)
             {
                 MainProgram.PrintWarning(CurrentLocation, msg);
 
-                result = null;
+                return Variant.Zero;
             }
 
             return result ?? InterpreterResult.OK;
@@ -1126,38 +1133,39 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         });
 
-        private InterpreterError? ProcessExpressionStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessExpressionStatement, delegate
-        {
-            try
+        private Union<InterpreterError, Variant> ProcessExpressionStatement(string line) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessExpressionStatement, delegate
             {
-                if (ProcessDeclarationModifiers(ref line, out DeclarationModifiers modifiers, out (char op, long amount)? enum_step) is { } err)
-                    return err;
-
-                ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = modifiers is DeclarationModifiers.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
-                PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
-
-                //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
-
-                if (modifiers == DeclarationModifiers.None)
-                    return ProcessAssignmentStatement(expression, false).Match(LINQ.id, _ => null);
-                else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
-                    return ProcessMultiDeclarationExpression(multi_decl, modifiers, enum_step);
-                else
-                    return WellKnownError("error.invalid_multi_decl", line);
-            }
-            catch (Exception ex)
-            {
-                return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate
+                try
                 {
-                    string key = ex is ParseException or ParserConfigurationException or LexerException or LexerConstructionException ? "error.unparsable_line" : "error.unprocessable_line";
+                    if (ProcessDeclarationModifiers(ref line, out DeclarationModifiers modifiers, out (char op, long amount)? enum_step) is { } err)
+                        return err;
 
-                    if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
-                        return new InterpreterError(CurrentLocation, $"{Interpreter.CurrentUILanguage[key, line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                    ParserConstructor<PARSABLE_EXPRESSION>.ParserWrapper? provider = modifiers is DeclarationModifiers.None ? Interpreter.ParserProvider.ExpressionParser : Interpreter.ParserProvider.MultiDeclarationParser;
+                    PARSABLE_EXPRESSION? expression = provider.Parse(line).ParsedValue;
+
+                    //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
+
+                    if (modifiers == DeclarationModifiers.None)
+                        return ProcessAssignmentStatement(expression, false).Match(LINQ.id, _ => null);
+                    else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
+                        return ProcessMultiDeclarationExpression(multi_decl, modifiers, enum_step);
                     else
-                        return WellKnownError(key, line, ex.Message);
-                });
-            }
-        });
+                        return WellKnownError("error.invalid_multi_decl", line);
+                }
+                catch (Exception ex)
+                {
+                    return Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate
+                    {
+                        string key = ex is ParseException or ParserConfigurationException or LexerException or LexerConstructionException ? "error.unparsable_line" : "error.unprocessable_line";
+
+                        if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
+                            return new InterpreterError(CurrentLocation, $"{Interpreter.CurrentUILanguage[key, line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
+                        else
+                            return WellKnownError(key, line, ex.Message);
+                    });
+                }
+            });
 
         private Union<InterpreterError, PARSABLE_EXPRESSION> ProcessAsRawExpression(string expression) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, PARSABLE_EXPRESSION>>(TelemetryCategory.ProcessExpression, delegate
@@ -1243,13 +1251,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private InterpreterError? ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
-            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
+        private Union<InterpreterError, Variant> ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
+            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessDeclaration, delegate
             {
-                InterpreterError? error = null;
-                Variable? variable;
+                List<Variable> declared_variables = new();
                 Variant last_enum_value = Variant.Zero;
-
                 Variant next_enum_value() => enum_step switch
                 {
                     ('*', long amount) => last_enum_value * amount,
@@ -1260,82 +1266,90 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
                 {
-                    bool existing_static = false;
+                    Union<InterpreterError, Variant> result = ProcessVariableDeclaration(variable_ast, modifiers, out bool existing_static);
+                    Variable? variable = null;
 
-                    error ??= ProcessVariableDeclaration(variable_ast, modifiers, out existing_static);
+                    if (result.Is(out InterpreterError? error))
+                        return error;
+                    else
+                        VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable);
 
-                    switch (declaration)
-                    {
-                        case VARIABLE_DECLARATION.Scalar { Item: null }:
-                            if (modifiers.HasFlag(DeclarationModifiers.Const))
-                                return WellKnownError("error.uninitialized_constant", variable_ast);
-                            else if (enum_step != null && VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out Variable? var))
-                            {
-                                var.Value = last_enum_value;
-                                last_enum_value = next_enum_value();
-                            }
-
-                            break;
-                        case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
-                            if (!existing_static)
-                            {
-                                var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
-                                Union<InterpreterError, Variant> result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
-
-                                if (result.Is(out last_enum_value))
+                    if (variable is null)
+                        return WellKnownError("error.undeclared_variable", variable_ast);
+                    else
+                        switch (declaration)
+                        {
+                            case VARIABLE_DECLARATION.Scalar { Item: null }:
+                                if (modifiers.HasFlag(DeclarationModifiers.Const))
+                                    return WellKnownError("error.uninitialized_constant", variable_ast);
+                                else if (enum_step != null)
                                 {
-                                    MainProgram.PrintDebugMessage($"{variable_ast} = {last_enum_value}");
-
+                                    variable.Value = last_enum_value;
                                     last_enum_value = next_enum_value();
-                                }
-                                else
-                                    error ??= (InterpreterError)result;
-                            }
-                            break;
-                        case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
-                            if (size < 0)
-                                return WellKnownError("error.invalid_array_size", variable_ast, size);
-                            else if (items.Length > size)
-                                return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
-                            else if (VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable))
-                            {
-                                variable.Value = Variant.NewArray(size);
-
-                                int index = 0;
-
-                                foreach (EXPRESSION item in items)
-                                {
-                                    Union<InterpreterError, Variant> result = ProcessExpression(item);
-
-                                    if (result.Is(out error))
-                                        return error;
-
-                                    variable.Value.TrySetIndexed(Interpreter, index, result);
-                                    ++index;
                                 }
 
                                 break;
-                            }
-                            else
-                                return WellKnownError("error.undeclared_variable", variable_ast);
-                        case VARIABLE_DECLARATION.Map:
-                            if (VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable))
-                            {
+                            case VARIABLE_DECLARATION.Scalar { Item: FSharpOption<EXPRESSION> { Value: EXPRESSION expression } }:
+                                if (!existing_static)
+                                {
+                                    var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
+                                    result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
+
+                                    if (result.Is(out last_enum_value))
+                                    {
+                                        MainProgram.PrintDebugMessage($"{variable_ast} = {last_enum_value}");
+
+                                        variable.Value = last_enum_value;
+                                        last_enum_value = next_enum_value();
+                                    }
+                                    else
+                                        return (InterpreterError)result;
+                                }
+                                break;
+                            case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
+                                if (size < 0)
+                                    return WellKnownError("error.invalid_array_size", variable_ast, size);
+                                else if (items.Length > size)
+                                    return WellKnownError("error.too_many_array_items", variable_ast, size, items.Length);
+                                else
+                                {
+                                    variable.Value = Variant.NewArray(size);
+
+                                    int index = 0;
+
+                                    foreach (EXPRESSION item in items)
+                                    {
+                                        result = ProcessExpression(item);
+
+                                        if (result.Is(out error))
+                                            return error;
+
+                                        variable.Value.TrySetIndexed(Interpreter, index, result);
+                                        ++index;
+                                    }
+
+                                    break;
+                                }
+                            case VARIABLE_DECLARATION.Map:
                                 variable.Value = Variant.NewMap();
 
                                 break;
-                            }
-                            else
-                                return WellKnownError("error.undeclared_variable", variable_ast);
-                        default:
-                            return WellKnownError("error.not_yet_implemented", declaration);
-                    }
+                            default:
+                                return WellKnownError("error.not_yet_implemented", declaration);
+                        }
+
+                    declared_variables.Add(variable);
                 }
 
-                return error;
+                return declared_variables.Count switch
+                {
+                    0 => Variant.Zero,
+                    1 => declared_variables[0].Value,
+                    _ => Variant.FromMap(Interpreter, declared_variables.ToArray(v => (Variant.FromReference(v), v.Value))),
+                };
             });
 
-        private InterpreterError? ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)
+        private Union<InterpreterError, Variant> ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)
         {
             bool constant = decltype.HasFlag(DeclarationModifiers.Const) || decltype.HasFlag(DeclarationModifiers.Enum);
             bool global = decltype.HasFlag(DeclarationModifiers.Global) && !decltype.HasFlag(DeclarationModifiers.Local);
@@ -1379,7 +1393,7 @@ namespace Unknown6656.AutoIt3.Runtime
             if (optional_static is { })
                 created.Value = Variant.FromReference(optional_static);
 
-            return null;
+            return created.Value;
         }
 
         private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force) =>

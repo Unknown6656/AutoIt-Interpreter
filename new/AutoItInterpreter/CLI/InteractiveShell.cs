@@ -516,7 +516,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                         {
                             string text = variable.Value.ToDebugString(Interpreter);
 
-                            History.Add((new[] { new ScriptToken(0, 0, text.Length, text, TokenType.Comment) }, InteractiveShellStreamDirection.Output));
+                            History.Add((new[] { new ScriptToken(0, 0, text.Length, text, TokenType.DirectiveOption) }, InteractiveShellStreamDirection.Output));
                         }
                     }
                     catch
