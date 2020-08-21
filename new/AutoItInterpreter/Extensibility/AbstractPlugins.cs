@@ -55,7 +55,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract InterpreterResult? ProcessDirective(CallFrame frame, string directive);
+        public abstract FunctionReturnValue? TryProcessDirective(CallFrame frame, string directive);
     }
 
     public abstract class AbstractStatementProcessor
@@ -68,7 +68,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract InterpreterResult? ProcessStatement(CallFrame frame, string directive);
+        public abstract FunctionReturnValue ProcessStatement(CallFrame frame, string directive);
     }
 
     public abstract class AbstractLineProcessor
@@ -80,7 +80,7 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public abstract bool CanProcessLine(string line);
 
-        public abstract InterpreterResult? ProcessLine(CallFrame frame, string line);
+        public abstract FunctionReturnValue ProcessLine(CallFrame frame, string line);
     }
 
     public abstract class AbstractIncludeResolver

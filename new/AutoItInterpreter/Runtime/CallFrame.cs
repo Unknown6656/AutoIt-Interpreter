@@ -98,20 +98,13 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="args">Arguments to passed to the internal code execution logic. 
         /// These are not in their raw form (unlike <see cref="PassedArguments"/>), but are padded with the potential optional parameter values.</param>
         /// <returns>The return value of the code execution. This data may also contain fatal execution errors.</returns>
-        protected abstract Union<InterpreterError, Variant> InternalExec(Variant[] args);
+        protected abstract FunctionReturnValue InternalExec(Variant[] args);
 
-        internal Union<InterpreterError, Variant> Execute(Variant[] args)
+        internal FunctionReturnValue Execute(Variant[] args)
         {
-            Union<InterpreterError, Variant> result = Variant.Zero;
             ScannedScript script = CurrentFunction.Script;
 
             SetError(0, 0);
-
-            Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItStart, delegate
-            {
-                if (CurrentFunction.IsMainFunction && script.LoadScript(this) is InterpreterError load_error)
-                    result = load_error;
-            });
 
             (int min_argc, int max_argc) = CurrentFunction.ParameterCount;
 
@@ -127,27 +120,39 @@ namespace Unknown6656.AutoIt3.Runtime
                     NativeInterop.OperatingSystem,
                     new[] { OS.Windows, OS.Linux, OS.MacOS }.Where(os => CurrentFunction.Metadata.SupportedPlatforms.HasFlag(os)).StringJoin("', '")
                 );
-            else if (result.Is<Variant>())
-                if (CurrentThread.IsRunning)
-                {
-                    if (CurrentFunction.Metadata.IsDeprecated)
-                        IssueWarning("warning.deprecated_function", CurrentFunction.Name);
-
-                    MainProgram.PrintfDebugMessage("debug.au3thread.executing", CurrentFunction);
-
-                    result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
-                }
-
-            Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItExit, delegate
+            else
             {
-                if (CurrentFunction.IsMainFunction && result.Is<Variant>() && script.UnLoadScript(this) is InterpreterError unload_error)
-                    result = unload_error;
-            });
+                FunctionReturnValue result = Variant.True;
 
-            if (result.Is(out Variant @return))
-                ReturnValue = @return;
+                if (CurrentFunction.IsMainFunction)
+                    result = Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItStart, () => script.LoadScript(this));
 
-            return result;
+                return result.IfNonFatal(_ =>
+                {
+                    if (CurrentThread.IsRunning)
+                    {
+                        if (CurrentFunction.Metadata.IsDeprecated)
+                            IssueWarning("warning.deprecated_function", CurrentFunction.Name);
+
+                        MainProgram.PrintfDebugMessage("debug.au3thread.executing", CurrentFunction);
+
+                        return Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
+                    }
+                    else
+                        return Variant.False;
+                }).IfNonFatal((ret, err, ext) =>
+                {
+                    if (CurrentFunction.IsMainFunction && !result.IsFatal(out _))
+                        return Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItExit, () => script.UnLoadScript(this));
+                    else
+                        return new(ret, err, ext);
+                }).IfNonFatal((ret, err, ext) =>
+                {
+                    ReturnValue = ret;
+
+                    return new(ret, err, ext);
+                });
+            };
         }
 
         /// <summary>
@@ -160,7 +165,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
+        public FunctionReturnValue Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
 
         public Variant SetError(int error, Variant? extended = null, in Variant @return = default)
         {
@@ -218,19 +223,17 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         /// <inheritdoc/>
-        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
+        protected override FunctionReturnValue InternalExec(Variant[] args)
         {
             NativeFunction native = (NativeFunction)CurrentFunction;
             FunctionReturnValue result = Interpreter.Telemetry.Measure(TelemetryCategory.NativeScriptExecution, () => native.Execute(this, args));
             Variant? extended = null;
             int error = 0;
 
-            if (result.IsFatal(out InterpreterError? fatal))
-                return fatal;
-            else if (result.IsSuccess(out Variant variant, out extended) || result.IsError(out variant, out error, out extended))
-                return SetError(error, extended, in variant);
-            else
-                throw new InvalidOperationException("Return value could not be processed");
+            if (result.IsSuccess(out Variant variant, out extended) || result.IsError(out variant, out error, out extended))
+                SetError(error, extended, in variant);
+
+            return result;
         }
 
         /// <inheritdoc/>
@@ -323,7 +326,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
         /// <inheritdoc/>
-        protected override Union<InterpreterError, Variant> InternalExec(Variant[] args)
+        protected override FunctionReturnValue InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
 
@@ -352,23 +355,21 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                 {
                     EXPRESSION expr = param.DefaultValue.Value;
-                    Union<InterpreterError, Variant> result = ProcessExpression(expr);
+                    FunctionReturnValue result = ProcessExpression(expr);
 
-                    if (result.Is(out InterpreterError? error))
+                    if (result.IfNonFatal(value => args[i] = value).IsFatal(out InterpreterError? error))
                         return error;
-                    else if (result.Is(out Variant value))
-                        args[i] = value;
                 }
 
                 param_var.Value = args[i];
             }
 
-            return Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.Au3ScriptExecution, delegate
+            return Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.Au3ScriptExecution, delegate
             {
                 _instruction_pointer = 0;
 
                 while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
-                    if (ParseCurrentLine()?.OptionalError is InterpreterError error)
+                    if (ParseCurrentLine().IsFatal(out InterpreterError? error))
                         return error;
                     else if (!MoveNext())
                         break;
@@ -410,20 +411,16 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private bool MoveTo(JumpLabel jump_label) => MoveAfter(jump_label.Location);
 
-        private InterpreterError? MoveTo(string jump_label)
+        private FunctionReturnValue MoveTo(string jump_label)
         {
             if (InternalJumpLabels.TryGetValue(jump_label, out int index))
             {
                 _instruction_pointer = index;
 
-                return null;
+                return Variant.True;
             }
             else if ((CurrentFunction as AU3Function)?.JumpLabels[jump_label] is JumpLabel label)
-            {
-                MoveTo(label);
-
-                return null;
-            }
+                return Variant.FromBoolean(MoveTo(label));
 
             return WellKnownError("error.unknown_jumplabel", jump_label);
         }
@@ -432,10 +429,12 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Copies the given value into the <see cref="CallFrame.ReturnValue"/>-field, and moves the instruction pointer to the end.
         /// </summary>
         /// <param name="value">Return value</param>
-        public void Return(Variant value)
+        public Variant Return(Variant value)
         {
             _instruction_pointer = _line_cache.Count;
             ReturnValue = value;
+
+            return value;
         }
 
         private bool RemoveInternalJumpLabel(string jump_label)
@@ -498,10 +497,9 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Parses the current line and returns the execution result without moving the current instruction pointer (except when processing loops, branches, or explicit jump instructions).
         /// </summary>
         /// <returns>Execution result. A value of <see langword="null"/> represents that the line might not have been processed. However, this does <b>not</b> imply a fatal execution error.</returns>
-        public Union<InterpreterError, Variant> ParseCurrentLine()
+        public FunctionReturnValue ParseCurrentLine()
         {
             (SourceLocation loc, string line) = _line_cache[_instruction_pointer];
-            Union<InterpreterError, Variant> result;
 
             line = line.Trim();
 
@@ -517,12 +515,11 @@ namespace Unknown6656.AutoIt3.Runtime
             if (string.IsNullOrEmpty(line) || REGEX_INTERNAL_LABEL.IsMatch(line))
                 return Variant.Zero;
 
+            FunctionReturnValue? result = null;
+
             Interpreter.Telemetry.Measure(TelemetryCategory.ProcessLine, delegate
             {
-                void TryDo(Func<string, Union<InterpreterError, Variant>> func)
-                {
-                    result ??= func(line);
-                }
+                void TryDo(Func<string, FunctionReturnValue?> func) => result ??= func(line);
 
                 TryDo(ProcessDirective);
                 TryDo(ProcessStatement);
@@ -530,65 +527,65 @@ namespace Unknown6656.AutoIt3.Runtime
                 TryDo(ProcessExpressionStatement);
             });
 
-            if (Interpreter.CommandLineOptions.IgnoreErrors && result.As<InterpreterError>()?.Message is string msg)
+            if (Interpreter.CommandLineOptions.IgnoreErrors && result is { } && result.IsFatal(out InterpreterError? error))
             {
-                MainProgram.PrintWarning(CurrentLocation, msg);
+                MainProgram.PrintWarning(CurrentLocation, error.Message);
 
-                return Variant.Zero;
+                return Variant.False;
             }
-
-            return result ?? InterpreterResult.OK;
+            else
+                return result ?? Variant.True;
         }
 
-        private InterpreterResult? ProcessDirective(string directive)
+        private FunctionReturnValue? ProcessDirective(string directive)
         {
             if (!directive.StartsWith('#'))
                 return null;
-
-            directive = directive[1..];
-
-            InterpreterResult? result = Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, delegate
+            else
             {
-                if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
+                directive = directive[1..];
+
+                FunctionReturnValue? result = Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, delegate
                 {
-                    char open = g["open"][0];
-                    char close = g["close"][0];
-                    bool relative = open != '<';
-
-                    if (open != close && open != '<' && close != '>')
-                        return WellKnownError("error.mismatched_quotes", open, close);
-
-                    return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(err => err, script =>
+                    if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
                     {
-                        ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
+                        char open = g["open"][0];
+                        char close = g["close"][0];
+                        bool relative = open != '<';
 
-                        if (active.Contains(script))
+                        if (open != close && open != '<' && close != '>')
+                            return WellKnownError("error.mismatched_quotes", open, close);
+
+                        return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(FunctionReturnValue.Fatal, script =>
                         {
-                            if (script.IncludeOnlyOnce)
-                                return InterpreterResult.OK;
+                            ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
+
+                            if (active.Contains(script))
+                            {
+                                if (script.IncludeOnlyOnce)
+                                    return Variant.True;
+                                else
+                                    return WellKnownError("error.circular_include", script.Location.FullName);
+                            }
                             else
-                                return WellKnownError("error.circular_include", script.Location.FullName);
-                        }
-                        else if (Call(script.MainFunction, Array.Empty<Variant>()).Is(out InterpreterError? err))
-                            return err;
-                        else
-                            return InterpreterResult.OK;
-                    });
-                }
+                                return Call(script.MainFunction, Array.Empty<Variant>());
+                        });
+                    }
 
-                return null;
-            });
+                    return null;
+                });
 
-            foreach (AbstractDirectiveProcessor proc in Interpreter.PluginLoader.DirectiveProcessors)
-                result ??= Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.ProcessDirective(this, directive));
+                foreach (AbstractDirectiveProcessor proc in Interpreter.PluginLoader.DirectiveProcessors)
+                    result ??= Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.TryProcessDirective(this, directive));
 
-            if (result is null)
-                IssueWarning("warning.unparsable_dirctive", directive);
+                if (result is null)
+                    IssueWarning("warning.unparsable_dirctive", directive);
 
-            return InterpreterResult.OK;
+                return Variant.True;
+            }
         }
 
-        private InterpreterError? MoveToEndOf(BlockStatementType type)
+        private FunctionReturnValue MoveToEndOf(BlockStatementType type)
         {
             SourceLocation init = CurrentLocation;
             int depth = 1;
@@ -652,12 +649,12 @@ namespace Unknown6656.AutoIt3.Runtime
             else
                 return WellKnownError("error.not_yet_implemented", type);
 
-            return depth == 0 ? null : WellKnownError("error.no_matching_close", type, init);
+            return depth == 0 ? Variant.True : WellKnownError("error.no_matching_close", type, init);
         }
 
-        private InterpreterResult? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
+        private FunctionReturnValue? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
         {
-            InterpreterResult? result = line.Match(null, new Dictionary<Regex, Func<Match, InterpreterResult?>>
+            FunctionReturnValue? result = line.Match(null, new Dictionary<Regex, Func<Match, FunctionReturnValue>>
             {
                 [REGEX_EXIT] = m =>
                 {
@@ -666,16 +663,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(code))
                         code = "0";
 
-                    Union<InterpreterError, Variant> result = ProcessAsVariant(code);
-
-                    if (result.Is(out Variant value))
+                    return ProcessAsVariant(code).IfNonFatal(value =>
                     {
                         Interpreter.Stop((int)value.ToNumber());
 
-                        return InterpreterResult.OK;
-                    }
-                    else
-                        return (InterpreterError)result;
+                        return value;
+                    });
                 },
                 [REGEX_RETURN] = m =>
                 {
@@ -687,14 +680,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(optval))
                         optval = "0";
 
-                    Union<InterpreterError, Variant> result = ProcessAsVariant(optval);
-
-                    if (result.Is(out Variant value))
-                        Return(value);
-                    else
-                        return (InterpreterError)result;
-
-                    return InterpreterResult.OK;
+                    return ProcessAsVariant(optval).IfNonFatal(v => Return(v));
                 },
                 [REGEX_FORTO] = m =>
                 {
@@ -703,61 +689,49 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (start.Is(out InterpreterError? error))
                         return error;
-                    else if (start.UnsafeItem is PARSABLE_EXPRESSION.AnyExpression
-                    {
-                        Item: EXPRESSION.Binary
+                    else if (start.UnsafeItem is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION.Binary { Item: { Item1: EXPRESSION.Variable { Item: VARIABLE counter }, Item2: { IsEqualCaseInsensitive: true }, } } } assg)
+                        return ProcessAssignmentStatement(assg, false).IfNonFatal(_ =>
                         {
-                            Item:
+                            SourceLocation loc_for = CurrentLocation;
+                            int eip_for = _instruction_pointer;
+                            int depth = 1;
+
+                            while (MoveNext())
                             {
-                                Item1: EXPRESSION.Variable { Item: VARIABLE counter },
-                                Item2: { IsEqualCaseInsensitive: true },
+                                if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
+                                    --depth;
+                                else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
+                                    ++depth;
+
+                                if (depth == 0)
+                                {
+                                    Variable v_first = VariableResolver.CreateTemporaryVariable();
+                                    string first = '$' + v_first.Name;
+                                    string stop = '$' + VariableResolver.CreateTemporaryVariable().Name;
+
+                                    v_first.Value = Variant.True;
+
+                                    InsertReplaceSourceCode(_instruction_pointer, $"WEnd");
+                                    InsertReplaceSourceCode(eip_for,
+                                        $"While True",
+                                        $"If {first} Then",
+                                        $"{first} = False",
+                                        $"Else",
+                                        $"{stop} = Number({m.Groups["stop"]})",
+                                        $"If {counter} = {stop} Then",
+                                        $"ExitLoop",
+                                        $"EndIf",
+                                        $"{counter} += {step}",
+                                        $"EndIf"
+                                    );
+                                    _instruction_pointer = eip_for - 1;
+
+                                    return Variant.True;
+                                }
                             }
-                        }
-                    } assg)
-                    {
-                        if (ProcessAssignmentStatement(assg, false).Is(out error))
-                            return error;
 
-                        SourceLocation loc_for = CurrentLocation;
-                        int eip_for = _instruction_pointer;
-                        int depth = 1;
-
-                        while (MoveNext())
-                        {
-                            if (CurrentLineContent.Match(REGEX_NEXT, out Match _))
-                                --depth;
-                            else if (CurrentLineContent.Match(REGEX_FOR, out Match _))
-                                ++depth;
-
-                            if (depth == 0)
-                            {
-                                Variable v_first = VariableResolver.CreateTemporaryVariable();
-                                string first = '$' + v_first.Name;
-                                string stop = '$' + VariableResolver.CreateTemporaryVariable().Name;
-
-                                v_first.Value = Variant.True;
-
-                                InsertReplaceSourceCode(_instruction_pointer, $"WEnd");
-                                InsertReplaceSourceCode(eip_for,
-                                    $"While True",
-                                    $"If {first} Then",
-                                    $"{first} = False",
-                                    $"Else",
-                                    $"{stop} = Number({m.Groups["stop"]})",
-                                    $"If {counter} = {stop} Then",
-                                    $"ExitLoop",
-                                    $"EndIf",
-                                    $"{counter} += {step}",
-                                    $"EndIf"
-                                );
-                                _instruction_pointer = eip_for - 1;
-
-                                return InterpreterResult.OK;
-                            }
-                        }
-
-                        return WellKnownError("error.no_matching_close", "For", loc_for);
-                    }
+                            return WellKnownError("error.no_matching_close", "For", loc_for);
+                        });
                     else
                         return WellKnownError("error.malformed_for_expr", m.Groups["start"]);
                 },
@@ -765,7 +739,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     string counter_variables = m.Groups["variable"].Value.Trim();
 
-                    if (counter_variables.Match($"^{REGEX_VARIABLE}$", out Match _))
+                    if (counter_variables.Match(REGEX_VARIABLE, out Match match) && match.Index == 0 && match.Length == counter_variables.Length)
                         counter_variables = $"${VariableResolver.CreateTemporaryVariable().Name}, {counter_variables}";
 
                     if (!counter_variables.Match(REGEX_FORIN_VARIABLES, out Match m_iterator_variables))
@@ -782,8 +756,8 @@ namespace Unknown6656.AutoIt3.Runtime
                             return var;
                     }
 
-                    return get_or_create("key").Match(err => err, iterator_key =>
-                        get_or_create("value").Match(err => err, iterator_value =>
+                    return get_or_create("key").Match(FunctionReturnValue.Fatal, iterator_key =>
+                        get_or_create("value").Match(FunctionReturnValue.Fatal, iterator_value =>
                         {
                             SourceLocation loc_for = CurrentLocation;
                             int eip_for = _instruction_pointer;
@@ -816,7 +790,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                     );
                                     _instruction_pointer = eip_for - 1;
 
-                                    return InterpreterResult.OK;
+                                    return Variant.True;
                                 }
                             }
 
@@ -829,25 +803,22 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (parsed.Is(out InterpreterError? error))
                         return error;
-                    else if (parsed.Is(out PARSABLE_EXPRESSION? pexpr) && pexpr is PARSABLE_EXPRESSION.AnyExpression
-                    {
-                        Item: EXPRESSION.Variable
-                        {
-                            Item: VARIABLE variable
-                        }
-                    } && VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? withctx) && !withctx.IsConst)
+                    else if (parsed.Is(out PARSABLE_EXPRESSION? pexpr)
+                        && pexpr is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION.Variable { Item: VARIABLE variable } }
+                        && VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? withctx)
+                        && !withctx.IsConst)
                     {
                         _withcontext_stack.Push(withctx);
 
-                        return InterpreterResult.OK;
+                        return Variant.FromReference(withctx);
                     }
                     else
                         return WellKnownError("error.invalid_with_target");
                 },
                 [REGEX_ENDWITH] = _ =>
                 {
-                    if (_withcontext_stack.TryPop(out Variable _))
-                        return InterpreterResult.OK;
+                    if (_withcontext_stack.TryPop(out Variable variable))
+                        return Variant.FromReference(variable);
                     else
                         return WellKnownError("error.unexpected_close", line, "With");
                 },
@@ -860,18 +831,17 @@ namespace Unknown6656.AutoIt3.Runtime
                         Item: EXPRESSION.Indexer { Item: { Item1: EXPRESSION.Variable { Item: { Name: string varname } }, Item2: EXPRESSION index } }
                     })
                         if (VariableResolver.TryGetVariable(varname, VariableSearchScope.Global, out Variable? variable) && !variable.IsConst)
-                        {
-                            Union<InterpreterError, Variant> size = ProcessExpression(index);
-
-                            if (size.Is(out Variant size_value) && variable.Value.ResizeArray(Interpreter, (int)size_value, out Variant? new_arr) && new_arr is Variant arr)
+                            return ProcessExpression(index).IfNonFatal(size =>
                             {
-                                variable.Value = arr;
+                                if (variable.Value.ResizeArray(Interpreter, (int)size, out Variant? new_arr) && new_arr is Variant arr)
+                                {
+                                    variable.Value = arr;
 
-                                return InterpreterResult.OK;
-                            }
-
-                            return WellKnownError("error.invalid_redim_size", index);
-                        }
+                                    return Variant.FromReference(variable);
+                                }
+                                else
+                                    return WellKnownError("error.invalid_redim_size", index);
+                            });
                         else
                             return WellKnownError("error.invalid_redim_expression", varname);
 
@@ -905,7 +875,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 );
                                 _instruction_pointer = eip_do - 1;
 
-                                return InterpreterResult.OK;
+                                return Variant.True;
                             }
                         }
 
@@ -914,17 +884,17 @@ namespace Unknown6656.AutoIt3.Runtime
                 [REGEX_UNTIL] = _ => WellKnownError("error.unexpected_close", "Until", "Do"), // REGEX_UNTIL is handled by the REGEX_DO-case
                 [REGEX_WHILE] = m =>
                 {
-                    Union<InterpreterError, Variant> result = ProcessAsVariant(m.Groups["expression"].Value);
+                    FunctionReturnValue result = ProcessAsVariant(m.Groups["expression"].Value);
 
-                    if (result.Is(out InterpreterError? error))
-                        return error;
+                    return result.IfNonFatal(condition =>
+                    {
+                        if (!condition.ToBoolean())
+                            return MoveToEndOf(BlockStatementType.While);
+                        else
+                            _while_stack.Push(InsertInternalJumpLabel());
 
-                    if (!result.As<Variant>().ToBoolean())
-                        return MoveToEndOf(BlockStatementType.While) ?? InterpreterResult.OK;
-                    else
-                        _while_stack.Push(InsertInternalJumpLabel());
-
-                    return InterpreterResult.OK;
+                        return condition;
+                    });
                 },
                 [REGEX_WEND] = _ =>
                 {
@@ -932,18 +902,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (label is null)
                         return WellKnownError("error.unexpected_close", "WEnd", "While");
-                    else if (MoveTo(label) is InterpreterError error)
-                        return error;
+                    else
+                        return MoveTo(label).IfNonFatal(_ =>
+                        {
+                            RemoveInternalJumpLabel(label);
 
-                    RemoveInternalJumpLabel(label);
+                            --_instruction_pointer;
 
-                    --_instruction_pointer;
-
-                    return InterpreterResult.OK;
+                            return Variant.True;
+                        });
                 },
                 [REGEX_IF] = m =>
                 {
-                    Union<InterpreterError, Variant> condition = ProcessAsVariant(m.Groups["condition"].Value);
+                    FunctionReturnValue condition = ProcessAsVariant(m.Groups["condition"].Value);
                     bool elif = m.Groups["elif"].Length > 0;
 
                     if (elif)
@@ -955,39 +926,34 @@ namespace Unknown6656.AutoIt3.Runtime
                         else
                             return WellKnownError("error.missing_if");
 
-                    if (condition.Is(out InterpreterError? error))
-                        return error;
-                    else
+                    return condition.IfNonFatal(condition =>
                     {
-                        bool cond = condition.As<Variant>().ToBoolean();
+                        bool cond = condition.ToBoolean();
 
                         _if_stack.Push(cond);
 
-                        if (!cond && MoveToEndOf(BlockStatementType.If) is InterpreterError err)
-                            return err;
-                    }
-
-                    return InterpreterResult.OK;
+                        return cond ? Variant.True : MoveToEndOf(BlockStatementType.If).IfNonFatal(_ => Variant.False);
+                    });
                 },
                 [REGEX_ELSE] = _ =>
                 {
                     if (_if_stack.TryPop(out bool cond))
                     {
-                        if (cond && MoveToEndOf(BlockStatementType.If) is InterpreterError error)
-                            return error;
+                        if (cond)
+                            return MoveToEndOf(BlockStatementType.If);
                     }
                     else
                         return WellKnownError("error.missing_if");
 
-                    return InterpreterResult.OK;
+                    return Variant.True;
                 },
-                [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? InterpreterResult.OK : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
+                [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? Variant.True : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
                 [REGEX_GOTO] = m =>
                 {
                     if (Interpreter.CommandLineOptions.StrictMode)
                         return WellKnownError("error.experimental.goto_instructions");
 
-                    return MoveTo(m.Groups["label"].Value) ?? InterpreterResult.OK;
+                    return MoveTo(m.Groups["label"].Value);
                 },
                 [REGEX_CONTINUELOOP_EXITLOOP] = m =>
                 {
@@ -996,69 +962,69 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     if (m.Groups["level"].Length > 0)
                     {
-                        Union<InterpreterError, Variant> parsed = ProcessAsVariant(m.Groups["level"].Value);
+                        FunctionReturnValue parsed = ProcessAsVariant(m.Groups["level"].Value).IfNonFatal(lvl =>
+                        {
+                            level = (int)lvl;
 
-                        if (parsed.Is(out InterpreterError? error))
-                            return error;
+                            return lvl;
+                        });
 
-                        level = (int)(Variant)parsed;
+                        if (parsed.IsFatal(out _))
+                            return parsed;
                     }
 
-                    while (level-- > 0)
+                    for (int i = 0; i < level; ++i)
                     {
                         if (!_while_stack.TryPop(out string? label))
                             return WellKnownError("error.unexpected_contexitloop", exit ? "ExitLoop" : "ContinueLoop");
-                        else
-                        {
-                            if ((exit ? MoveToEndOf(BlockStatementType.While) : MoveTo(label)) is InterpreterError error)
-                                return error;
-                        }
+                        else if ((exit ? MoveToEndOf(BlockStatementType.While) : MoveTo(label)).IsFatal(out InterpreterError? error))
+                            return error;
 
                         RemoveInternalJumpLabel(label);
 
                         --_instruction_pointer;
                     }
 
-                    return InterpreterResult.OK;
+                    return Variant.FromNumber(level);
                 },
                 [REGEX_SELECT] = _ =>
                 {
                     _switchselect_stack.Push((null, false));
 
-                    if (MoveToEndOf(BlockStatementType.Select) is InterpreterError error)
-                        return error;
+                    return MoveToEndOf(BlockStatementType.Select).IfNonFatal(_ =>
+                    {
+                        --_instruction_pointer;
 
-                    --_instruction_pointer;
-
-                    return InterpreterResult.OK;
+                        return Variant.True;
+                    });
                 },
                 [REGEX_SWITCH] = m =>
                 {
-                    Union<InterpreterError, Variant> expression = ProcessAsVariant(m.Groups["expression"].Value);
+                    FunctionReturnValue expression = ProcessAsVariant(m.Groups["expression"].Value);
 
-                    if (expression.Is(out InterpreterError? error))
-                        return error;
-                    else
-                        _switchselect_stack.Push(((Variant)expression, false));
+                    return expression.IfNonFatal(expr =>
+                    {
+                        _switchselect_stack.Push((expr, false));
 
-                    error = MoveToEndOf(BlockStatementType.Switch);
+                        return MoveToEndOf(BlockStatementType.Switch).IfNonFatal(_ =>
+                        {
+                            --_instruction_pointer;
 
-                    if (error is null)
-                        --_instruction_pointer;
-
-                    return error ?? InterpreterResult.OK;
+                            return expr;
+                        });
+                    });
                 },
                 [REGEX_ENDSELECT] = m =>
                 {
                     if (_switchselect_stack.TryPop(out (Variant? expr, bool) topmost) && topmost.expr is null)
-                        return InterpreterResult.OK;
+                        return Variant.True;
                     else
                         return WellKnownError("error.unexpected_close", m.Value, BlockStatementType.Select);
                 },
                 [REGEX_ENDSWITCH] = m =>
                 {
-                    if (_switchselect_stack.TryPop(out (Variant? expr, bool) topmost) && topmost.expr is Variant)
-                        return InterpreterResult.OK;
+                    if (_switchselect_stack.TryPop(out (Variant? expr, bool) topmost) && topmost.expr is Variant expr)
+                        return expr;
                     else
                         return WellKnownError("error.unexpected_close", m.Value, BlockStatementType.Switch);
                 },
@@ -1069,45 +1035,41 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (!_switchselect_stack.TryPeek(out (Variant? switch_expr, bool handled) topmost))
                         return WellKnownError("error.unexpected_case");
                     else if (topmost.handled)
-                    {
-                        if (MoveToEndOf(switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch) is InterpreterError error)
-                            return error!;
-                        else
+                        return MoveToEndOf(switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch).IfNonFatal(_ =>
+                        {
                             --_instruction_pointer;
 
-                        return InterpreterResult.OK;
-                    }
+                            return Variant.True;
+                        });
                     else if (REGEX_ELSE.IsMatch(m.Groups["expression"].Value))
-                        return InterpreterResult.OK;
+                        return Variant.True;
                     else
                         switch_expr = topmost.switch_expr;
 
                     Union<InterpreterError, PARSABLE_EXPRESSION> case_expr = ProcessAsRawExpression(m.Groups["expression"].Value);
-                    InterpreterResult process_success(bool success)
+                    FunctionReturnValue process_success(bool success)
                     {
                         _switchselect_stack.TryPop(out topmost);
                         _switchselect_stack.Push((topmost.switch_expr, success));
 
-                        if (!success)
-                            if (MoveToEndOf(BlockStatementType.Switch) is InterpreterError error)
-                                return error!;
-                            else
-                                --_instruction_pointer;
+                        return success ? Variant.True : MoveToEndOf(BlockStatementType.Switch).IfNonFatal(_ =>
+                        {
+                            --_instruction_pointer;
 
-                        return InterpreterResult.OK;
+                            return Variant.True;
+                        });
                     }
 
                     if (case_expr.Is(out PARSABLE_EXPRESSION? expression))
                         if (expression is PARSABLE_EXPRESSION.ToExpression { Item1: EXPRESSION from, Item2: EXPRESSION to })
                         {
                             if (switch_expr is Variant sw)
-                                return ProcessExpression(from).Match(err => err!, from =>
-                                       ProcessExpression(to).Match(err => err!, to => process_success(from <= sw && sw <= to)));
+                                return ProcessExpression(from).IfNonFatal(from => ProcessExpression(to).IfNonFatal(to => process_success(from <= sw && sw <= to)));
                             else
                                 return WellKnownError("error.invalid_case_range", expression);
                         }
                         else if (expression is PARSABLE_EXPRESSION.AnyExpression { Item: EXPRESSION expr })
-                            return ProcessExpression(expr).Match(err => err!, expr => process_success(switch_expr is Variant sw ? expr.EqualsCaseInsensitive(sw) : expr.ToBoolean()));
+                            return ProcessExpression(expr).IfNonFatal(expr => process_success(switch_expr is Variant sw ? expr.EqualsCaseInsensitive(sw) : expr.ToBoolean()));
                         else
                             return WellKnownError("error.invalid_case_expr", expression);
 
@@ -1117,24 +1079,28 @@ namespace Unknown6656.AutoIt3.Runtime
                 {
                     if (!_switchselect_stack.TryPeek(out (Variant? switch_expr, bool) topmost))
                         return WellKnownError("error.unexpected_continuecase");
-                    else if (MoveToEndOf(topmost.switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch) is InterpreterError error)
-                        return error;
-                    else if (!REGEX_CASE.IsMatch(CurrentLineContent))
-                        _switchselect_stack.TryPop(out topmost);
+                    else
+                        return MoveToEndOf(topmost.switch_expr is null ? BlockStatementType.Select : BlockStatementType.Switch).IfNonFatal(result =>
+                        {
+                            if (!REGEX_CASE.IsMatch(CurrentLineContent))
+                                _switchselect_stack.TryPop(out topmost);
 
-                    return InterpreterResult.OK;
+                            return result;
+                        });
                 },
             });
 
             foreach (AbstractStatementProcessor? proc in Interpreter.PluginLoader.StatementProcessors)
-                if (proc is { Regex: Regex pat } sp && line.Match(pat, out Match _))
-                    result ??= sp.ProcessStatement(this, line);
+                if (result is { })
+                    break;
+                else if (proc is { Regex: Regex pat } sp && line.Match(pat, out Match _))
+                    result = sp.ProcessStatement(this, line);
 
             return result;
         });
 
-        private Union<InterpreterError, Variant> ProcessExpressionStatement(string line) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessExpressionStatement, delegate
+        private FunctionReturnValue ProcessExpressionStatement(string line) =>
+            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessExpressionStatement, delegate
             {
                 try
                 {
@@ -1147,7 +1113,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     //MainProgram.PrintfDebugMessage("debug.au3thread.expr_statement", expression);
 
                     if (modifiers == DeclarationModifiers.None)
-                        return ProcessAssignmentStatement(expression, false).Match(LINQ.id, _ => null);
+                        return ProcessAssignmentStatement(expression, false);
                     else if (expression is PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl)
                         return ProcessMultiDeclarationExpression(multi_decl, modifiers, enum_step);
                     else
@@ -1185,7 +1151,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 }
             });
 
-        internal Union<InterpreterError, Variant> ProcessAsVariant(string expression)
+        internal FunctionReturnValue ProcessAsVariant(string expression)
         {
             Union<InterpreterError, PARSABLE_EXPRESSION>? result = ProcessAsRawExpression(expression);
 
@@ -1251,8 +1217,8 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private Union<InterpreterError, Variant> ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessDeclaration, delegate
+        private FunctionReturnValue ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
+            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
             {
                 List<Variable> declared_variables = new();
                 Variant last_enum_value = Variant.Zero;
@@ -1266,13 +1232,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 foreach ((VARIABLE variable_ast, VARIABLE_DECLARATION declaration) in multi_decl.Item.Select(t => t.ToValueTuple()))
                 {
-                    Union<InterpreterError, Variant> result = ProcessVariableDeclaration(variable_ast, modifiers, out bool existing_static);
+                    FunctionReturnValue result = ProcessVariableDeclaration(variable_ast, modifiers, out bool existing_static);
                     Variable? variable = null;
 
-                    if (result.Is(out InterpreterError? error))
-                        return error;
-                    else
-                        VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable);
+                    if (result.IsFatal(out _))
+                        return result;
+
+                    VariableResolver.TryGetVariable(variable_ast, VariableSearchScope.Global, out variable);
 
                     if (variable is null)
                         return WellKnownError("error.undeclared_variable", variable_ast);
@@ -1293,17 +1259,21 @@ namespace Unknown6656.AutoIt3.Runtime
                                 if (!existing_static)
                                 {
                                     var assg_expr = (ASSIGNMENT_TARGET.NewVariableAssignment(variable_ast), OPERATOR_ASSIGNMENT.Assign, expression).ToTuple();
+
                                     result = ProcessAssignmentStatement(PARSABLE_EXPRESSION.NewAssignmentExpression(assg_expr), true);
-
-                                    if (result.Is(out last_enum_value))
+                                    result.IfNonFatal(value =>
                                     {
-                                        MainProgram.PrintDebugMessage($"{variable_ast} = {last_enum_value}");
+                                        MainProgram.PrintDebugMessage($"{variable_ast} = {value}");
 
-                                        variable.Value = last_enum_value;
+                                        variable.Value = value;
+                                        last_enum_value = value;
                                         last_enum_value = next_enum_value();
-                                    }
-                                    else
-                                        return (InterpreterError)result;
+
+                                        return last_enum_value;
+                                    });
+
+                                    if (result.IsFatal(out _))
+                                        return result;
                                 }
                                 break;
                             case VARIABLE_DECLARATION.Array { Item1: int size, Item2: FSharpList<EXPRESSION> items }:
@@ -1320,12 +1290,16 @@ namespace Unknown6656.AutoIt3.Runtime
                                     foreach (EXPRESSION item in items)
                                     {
                                         result = ProcessExpression(item);
+                                        result.IfNonFatal(value =>
+                                        {
+                                            variable.Value.TrySetIndexed(Interpreter, index, value);
+                                            ++index;
 
-                                        if (result.Is(out error))
-                                            return error;
+                                            return value;
+                                        });
 
-                                        variable.Value.TrySetIndexed(Interpreter, index, result);
-                                        ++index;
+                                        if (result.IsFatal(out _))
+                                            return result;
                                     }
 
                                     break;
@@ -1344,12 +1318,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 return declared_variables.Count switch
                 {
                     0 => Variant.Zero,
-                    1 => declared_variables[0].Value,
-                    _ => Variant.FromMap(Interpreter, declared_variables.ToArray(v => (Variant.FromReference(v), v.Value))),
+                    1 => Variant.FromReference(declared_variables[0]),
+                    _ => Variant.FromArray(Interpreter, declared_variables.ToArray(Variant.FromReference)),
                 };
             });
 
-        private Union<InterpreterError, Variant> ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)
+        private FunctionReturnValue ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)
         {
             bool constant = decltype.HasFlag(DeclarationModifiers.Const) || decltype.HasFlag(DeclarationModifiers.Enum);
             bool global = decltype.HasFlag(DeclarationModifiers.Global) && !decltype.HasFlag(DeclarationModifiers.Local);
@@ -1396,8 +1370,8 @@ namespace Unknown6656.AutoIt3.Runtime
             return created.Value;
         }
 
-        private Union<InterpreterError, Variant> ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ProcessAssignment, delegate
+        private FunctionReturnValue ProcessAssignmentStatement(PARSABLE_EXPRESSION assignment, bool force) =>
+            Interpreter.Telemetry.Measure(TelemetryCategory.ProcessAssignment, delegate
             {
                 (ASSIGNMENT_TARGET target, EXPRESSION expression) = Interpreter.Telemetry.Measure(TelemetryCategory.ExpressionCleanup, () => Cleanup.CleanUpExpression(assignment));
 
@@ -1419,9 +1393,9 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return ProcessVariableAssignment(target_variable, expression);
                         }
                     case ASSIGNMENT_TARGET.IndexedAssignment { Item: { } indexer }:
-                        return ProcessExpression(indexer.Item1).Match<Union<InterpreterError, Variant>>(err => err, target =>
-                               ProcessExpression(indexer.Item2).Match<Union<InterpreterError, Variant>>(err => err, key =>
-                               ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                        return ProcessExpression(indexer.Item1).IfNonFatal(target =>
+                               ProcessExpression(indexer.Item2).IfNonFatal(key =>
+                               ProcessExpression(expression).IfNonFatal(value =>
                                {
                                    if (target.TrySetIndexed(Interpreter, key, value))
                                        return value;
@@ -1429,8 +1403,8 @@ namespace Unknown6656.AutoIt3.Runtime
                                    return WellKnownError("error.invalid_index_assg", target.AssignedTo, key);
                                })));
                     case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } targ, Item2: { Item: string memb } } }:
-                        return ProcessExpression(targ).Match<Union<InterpreterError, Variant>>(err => err, target =>
-                               ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                        return ProcessExpression(targ).IfNonFatal(target =>
+                               ProcessExpression(expression).IfNonFatal(value =>
                                {
                                    if (target.TrySetMember(Interpreter, memb, value) || target.TrySetIndexed(Interpreter, memb, value))
                                        return value;
@@ -1440,7 +1414,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     case ASSIGNMENT_TARGET.MemberAssignemnt { Item: MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string member } } }:
                         {
                             if (_withcontext_stack.TryPeek(out Variable? variable))
-                                return ProcessExpression(expression).Match<Union<InterpreterError, Variant>>(err => err, value =>
+                                return ProcessExpression(expression).IfNonFatal(value =>
                                 {
                                     if (variable.Value.TrySetMember(Interpreter, member, value) || variable.Value.TrySetIndexed(Interpreter, member, value))
                                         return value;
@@ -1455,43 +1429,38 @@ namespace Unknown6656.AutoIt3.Runtime
                 }
             });
 
-        private Union<InterpreterError, Variant> ProcessVariableAssignment(Variable variable, EXPRESSION expression)
+        private FunctionReturnValue ProcessVariableAssignment(Variable variable, EXPRESSION expression)
         {
             foreach (VARIABLE v in expression.ReferencedVariables)
                 if (!VariableResolver.HasVariable(v, VariableSearchScope.Global))
                     return WellKnownError("error.undeclared_variable", v);
 
-            Union<InterpreterError, Variant> value = ProcessExpression(expression);
-
-            if (value.Is(out Variant variant))
-                (variable.ReferencedVariable ?? variable).Value = variant;
-
-            return value;
+            return ProcessExpression(expression).IfNonFatal(v => (variable.ReferencedVariable ?? variable).Value = v);
         }
 
-        private Union<InterpreterError, Variant> ProcessExpression(EXPRESSION? expression) =>
+        private FunctionReturnValue ProcessExpression(EXPRESSION? expression) =>
             Interpreter.Telemetry.Measure(TelemetryCategory.EvaluateExpression, delegate
             {
-                Union<InterpreterError, Variant> value = expression switch
+                FunctionReturnValue value = expression switch
                 {
                     null => Variant.Null,
-                    EXPRESSION.Literal { Item: LITERAL literal } => ProcessLiteral(literal),
+                    EXPRESSION.Literal { Item: LITERAL literal } => Variant.FromLiteral(literal),
                     EXPRESSION.Variable { Item: VARIABLE variable } => ProcessVariable(variable),
                     EXPRESSION.Macro { Item: MACRO macro } => ProcessMacro(macro),
                     EXPRESSION.FunctionName { Item: { Item: string func_name } } =>
                         Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func
-                        ? (Union<InterpreterError, Variant>)Variant.FromFunction(func)
-                        : (Union<InterpreterError, Variant>)WellKnownError("error.unresolved_func", func_name),
+                        ? (FunctionReturnValue)Variant.FromFunction(func)
+                        : (FunctionReturnValue)WellKnownError("error.unresolved_func", func_name),
                     EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary } => ProcessUnary(unary.Item1, unary.Item2),
                     EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary } => ProcessBinary(binary.Item1, binary.Item2, binary.Item3),
                     EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary } => ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3),
-                    EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member).Match<Union<InterpreterError, Variant>>(err => err, v => v.MemberValue),
+                    EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member).Match(FunctionReturnValue.Fatal, v => v.MemberValue),
                     EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer } => ProcessIndexer(indexer.Item1, indexer.Item2),
                     EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall } => ProcessFunctionCall(funccall),
                     _ => WellKnownError("error.not_yet_implemented", expression),
                 };
 
-                if (value.Is(out Variant v))
+                if (value.IsSuccess(out Variant v, out _))
                     MainProgram.PrintfDebugMessage(
                         "debug.au3thread.expression",
                         ScriptVisualizer.TokenizeScript(expression?.ToString() ?? "Null").ConvertToVT100(false) + MainProgram.COLOR_DEBUG.ToVT100ForegroundString(),
@@ -1502,14 +1471,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 return value;
             });
 
-        private Union<InterpreterError, Variant> ProcessIndexer(EXPRESSION expr, EXPRESSION index) =>
-            ProcessExpression(expr).Match<Union<InterpreterError, Variant>>(err => err, @object =>
-            ProcessExpression(index).Match<Union<InterpreterError, Variant>>(err => err, key =>
+        private FunctionReturnValue ProcessIndexer(EXPRESSION expr, EXPRESSION index) =>
+            ProcessExpression(expr).IfNonFatal(@object =>
+            ProcessExpression(index).IfNonFatal(key =>
             {
                 if (@object.TryGetIndexed(Interpreter, key, out Variant value))
                     return value;
-
-                return WellKnownError("error.invalid_index", key);
+                else
+                    return WellKnownError("error.invalid_index", key);
             }));
 
         private Union<InterpreterError, (Variant Instance, string MemberName, Variant MemberValue)> ProcessMember(MEMBER_EXPRESSION expr)
@@ -1519,7 +1488,13 @@ namespace Unknown6656.AutoIt3.Runtime
             switch (expr)
             {
                 case MEMBER_EXPRESSION.ExplicitMemberAccess { Item1: { } objexpr, Item2: { Item: string m } }:
-                    result = (ProcessExpression(objexpr), m, default);
+                    if (ProcessExpression(objexpr).IfNonFatal(expr =>
+                        {
+                            result = (expr, m, default);
+
+                            return expr;
+                        }).IsFatal(out InterpreterError? error))
+                        result = error;
 
                     break;
                 case MEMBER_EXPRESSION.ImplicitMemberAccess { Item: { Item: string m } }:
@@ -1534,7 +1509,6 @@ namespace Unknown6656.AutoIt3.Runtime
             }
 
             if (result.Is(out (Variant instance, string name, Variant value) res))
-            {
                 if (res.instance.TryGetMember(Interpreter, res.name, out Variant v))
                     result = (res.instance, res.name, v);
                 else if (res.instance.TryGetIndexed(Interpreter, res.name, out v))
@@ -1543,16 +1517,15 @@ namespace Unknown6656.AutoIt3.Runtime
                     result = (res.instance, "Length", res.instance.Length);
                 else
                     return WellKnownError("error.unknown_member", res.name);
-            }
-            
+
             return result;
         }
 
-        private Union<InterpreterError, Variant> ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
+        private FunctionReturnValue ProcessUnary(OPERATOR_UNARY op, EXPRESSION expr)
         {
-            Union<InterpreterError, Variant> result = ProcessExpression(expr);
+            FunctionReturnValue result = ProcessExpression(expr);
 
-            if (result.Is(out Variant value))
+            if (result.IsSuccess(out Variant value, out _))
                 if (op.IsIdentity)
                     result = +value;
                 else if (op.IsNegate)
@@ -1578,20 +1551,17 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         }
 
-        private Union<InterpreterError, Variant> ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
+        private FunctionReturnValue ProcessBinary(EXPRESSION expr1, OPERATOR_BINARY op, EXPRESSION expr2)
         {
             InterpreterError? evaluate(EXPRESSION expr, out Variant target)
             {
-                Union<InterpreterError, Variant> result = ProcessExpression(expr);
+                Box<Variant> box = Variant.Zero;
 
-                target = Variant.Zero;
+                ProcessExpression(expr).IfNonFatal(result => box.Data = result).IsFatal(out InterpreterError? error);
 
-                if (result.Is(out InterpreterError? error))
-                    return error;
+                target = box;
 
-                target = (Variant)result;
-
-                return null;
+                return error;
             }
 
             InterpreterError? err = evaluate(expr1, out Variant e1);
@@ -1654,10 +1624,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.unsupported_operator", op);
         }
 
-        private Union<InterpreterError, Variant> ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
-            ProcessExpression(expr1).Match<Union<InterpreterError, Variant>>(e => e, cond => ProcessExpression(cond.ToBoolean() ? expr2 : expr3));
+        private FunctionReturnValue ProcessTernary(EXPRESSION expr1, EXPRESSION expr2, EXPRESSION expr3) =>
+            ProcessExpression(expr1).IfNonFatal(cond => ProcessExpression(cond.ToBoolean() ? expr2 : expr3));
 
-        private Union<InterpreterError, Variant> ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
+        private FunctionReturnValue ProcessFunctionCall(FUNCCALL_EXPRESSION funccall)
         {
             Union<Variant[], InterpreterError> ProcessRawArguments(FSharpList<EXPRESSION> raw_args)
             {
@@ -1666,12 +1636,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 foreach (EXPRESSION arg in raw_args)
                 {
-                    Union<InterpreterError, Variant>? res = ProcessExpression(arg);
+                    FunctionReturnValue res = ProcessExpression(arg);
 
-                    if (res.Is(out Variant value))
-                        arguments[i++] = value;
+                    if (res.IsFatal(out InterpreterError? error))
+                        return error;
                     else
-                        return (InterpreterError)res;
+                        res.IfNonFatal(value => arguments[i++] = value);
                 }
 
                 return arguments;
@@ -1681,24 +1651,24 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 case FUNCCALL_EXPRESSION.DirectFunctionCall { Item1: { Item: string func_name }, Item2: var raw_args }:
                     if (Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func)
-                        return ProcessRawArguments(raw_args).Match<Union<InterpreterError, Variant>>(args => Call(func, args), err => err);
+                        return ProcessRawArguments(raw_args).Match(args => Call(func, args), FunctionReturnValue.Fatal);
                     else
                         return WellKnownError("error.unresolved_func", func_name);
                 case FUNCCALL_EXPRESSION.MemberCall { Item1: MEMBER_EXPRESSION member, Item2: var raw_args }:
-                    return ProcessRawArguments(raw_args).Match<Union<InterpreterError, Variant>>(args =>
-                        ProcessMember(member).Match<Union<InterpreterError, Variant>>(err => err, member =>
+                    return ProcessRawArguments(raw_args).Match(args =>
+                        ProcessMember(member).Match(FunctionReturnValue.Fatal, member =>
                         {
                             if (member.Instance.TryInvoke(Interpreter, member.MemberName, args, out Variant result))
                                 return result;
 
                             throw new NotImplementedException();
-                        }), err => err);
+                        }), FunctionReturnValue.Fatal);
             }
 
             return WellKnownError("error.not_yet_implemented", funccall);
         }
 
-        private Union<InterpreterError, Variant> ProcessMacro(MACRO macro)
+        private FunctionReturnValue ProcessMacro(MACRO macro)
         {
             string name = macro.Name;
 
@@ -1709,7 +1679,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return WellKnownError("error.unknown_macro", macro.Name);
         }
 
-        private Union<InterpreterError, Variant> ProcessVariable(VARIABLE variable)
+        private FunctionReturnValue ProcessVariable(VARIABLE variable)
         {
             if (variable == VARIABLE.Discard)
                 return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, FrameworkMacros.MACRO_DISCARD);
@@ -1727,13 +1697,11 @@ namespace Unknown6656.AutoIt3.Runtime
                 return WellKnownError("error.undeclared_variable", variable);
         }
 
-        private Variant ProcessLiteral(LITERAL literal) => Variant.FromLiteral(literal); // TODO : on error throw ?
-
-        private InterpreterResult? UseExternalLineProcessors(string line)
+        private FunctionReturnValue? UseExternalLineProcessors(string line)
         {
             foreach (AbstractLineProcessor proc in Interpreter.PluginLoader.LineProcessors)
-                if (proc.CanProcessLine(line) && Interpreter.Telemetry.Measure(TelemetryCategory.ExternalProcessor, () => proc.ProcessLine(this, line)) is { } res)
-                    return res;
+                if (proc.CanProcessLine(line))
+                    return Interpreter.Telemetry.Measure(TelemetryCategory.ExternalProcessor, () => proc.ProcessLine(this, line));
 
             return null;
         }

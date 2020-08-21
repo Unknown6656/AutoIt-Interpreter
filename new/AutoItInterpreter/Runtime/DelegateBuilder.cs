@@ -315,14 +315,18 @@ namespace Unknown6656.AutoIt3.Runtime
             Variant[] args = arguments.ToArray(a => Variant.FromObject(interpreter, a.Item1));
             using AU3Thread thread = interpreter.CreateNewThread();
 
-            Union<InterpreterError, Variant> result = thread.Start(function, args);
+            object? result = type.IsValueType ? Activator.CreateInstance(type) : null;
 
-            if (result.Is(out Variant value))
-                return value.ToCPPObject(type, interpreter);
-            else if (result.Is(out InterpreterError? error))
-                ; // TODO : ErrorPrefix +  error
+            thread.Start(function, args).IfNonFatal(value =>
+            {
+                result = value.ToCPPObject(type, interpreter);
 
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
+                return value;
+            });
+
+            // TODO: error handling/reporting using the ErrorPrefix (?)
+
+            return result;
         };
     }
 

@@ -267,11 +267,12 @@ namespace Unknown6656.AutoIt3.Runtime
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                InterpreterResult result = thread.Start(entry_point, args).Match(error => new InterpreterResult(-1, error), success => new InterpreterResult((int)success.ToNumber()));
+                FunctionReturnValue result = thread.Start(entry_point, args);
+                InterpreterError? error = null;
 
-                ExitCode = result.ProgramExitCode;
+                result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret)).IsFatal(out error);
 
-                return result;
+                return error is null ? new(ExitCode) : new(-1, error);
             }
             finally
             {

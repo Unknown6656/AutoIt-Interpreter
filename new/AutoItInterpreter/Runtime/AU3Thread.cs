@@ -85,23 +85,22 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public Union<InterpreterError, Variant> Start(ScriptFunction function, Variant[] args) =>
-            Interpreter.Telemetry.Measure<Union<InterpreterError, Variant>>(TelemetryCategory.ThreadRun, delegate
-            {
-                if (_running)
-                    return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
-                else
-                    _running = true;
+        public FunctionReturnValue Start(ScriptFunction function, Variant[] args) => Interpreter.Telemetry.Measure(TelemetryCategory.ThreadRun, delegate
+        {
+            if (_running)
+                return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
+            else
+                _running = true;
 
-                Union<InterpreterError, Variant> result = Call(function, args);
+            FunctionReturnValue result = Call(function, args);
 
-                Stop();
+            Stop();
 
-                if (_override_exitcode is int code)
-                    return Variant.FromNumber(code);
+            if (_override_exitcode is int code)
+                return Variant.FromNumber(code);
 
-                return result;
-            });
+            return result;
+        });
 
         /// <summary>
         /// <b>[UNSAFE!]</b>
@@ -113,7 +112,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public Union<InterpreterError, Variant> Call(ScriptFunction function, Variant[] args)
+        public FunctionReturnValue Call(ScriptFunction function, Variant[] args)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -128,7 +127,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _callstack.Push(frame);
 
-            Union<InterpreterError, Variant> result = frame.Execute(args);
+            FunctionReturnValue result = frame.Execute(args);
 
             while (!ReferenceEquals(CurrentFrame, old))
                 ExitCall();

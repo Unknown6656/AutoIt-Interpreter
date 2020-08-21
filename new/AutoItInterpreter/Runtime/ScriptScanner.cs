@@ -474,29 +474,28 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private bool RemoveFunction(string name, in List<(string, SourceLocation)> list) => list.RemoveAll(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)) != 0;
 
-        public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
+        public FunctionReturnValue LoadScript(CallFrame frame) => HandleLoading(frame, false);
 
-        public InterpreterError? UnLoadScript(CallFrame frame) => HandleLoading(frame, true);
+        public FunctionReturnValue UnLoadScript(CallFrame frame) => HandleLoading(frame, true);
 
-        private InterpreterError? HandleLoading(CallFrame frame, bool unloading)
+        private FunctionReturnValue HandleLoading(CallFrame frame, bool unloading)
         {
             (ScannedScriptState state, List<(string, SourceLocation)>? funcs) = unloading ? (ScannedScriptState.Unloaded, _exit) : (ScannedScriptState.Loaded, _startup);
-            InterpreterError? result = null;
 
-            if (State == state)
-                return null;
+            if (State != state)
+            {
+                State = state;
 
-            State = state;
+                foreach ((string name, SourceLocation loc) in funcs)
+                    if (!_functions.TryGetValue(name, out ScriptFunction? func))
+                        return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
+                    else if (func.ParameterCount.MinimumCount > 0)
+                        return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
+                    else if (frame.Call(func, Array.Empty<Variant>()).IsFatal(out InterpreterError? error))
+                        return error;
+            }
 
-            foreach ((string name, SourceLocation loc) in funcs)
-                if (!_functions.TryGetValue(name, out ScriptFunction? func))
-                    return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
-                else if (func.ParameterCount.MinimumCount > 0)
-                    return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
-                else
-                    result ??= (InterpreterError?)frame.Call(func, Array.Empty<Variant>());
-
-            return result;
+            return Variant.True;
         }
 
         /// <inheritdoc/>

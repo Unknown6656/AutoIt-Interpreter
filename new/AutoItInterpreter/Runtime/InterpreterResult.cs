@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
@@ -45,6 +46,8 @@ namespace Unknown6656.AutoIt3.Runtime
         public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.LanguageLoader.CurrentLanguage?[key, args] ?? key);
     }
 
+    public delegate FunctionReturnValue FunctionReturnValueDelegate(Variant @return, int? error, Variant? extended);
+
     public sealed class FunctionReturnValue
     {
         private readonly Union<InterpreterError, (Variant @return, int? error, Variant? extended)> _result;
@@ -52,7 +55,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private FunctionReturnValue(InterpreterError error) => _result = error;
 
-        private FunctionReturnValue(Variant @return, int? error = null, Variant? extended = null)
+        internal FunctionReturnValue(Variant @return, int? error = null, Variant? extended = null)
         {
             if (extended is int && error is null)
                 error = -1;
@@ -82,6 +85,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
+        public FunctionReturnValue IfNonFatal(FunctionReturnValueDelegate function) => _result.Match(Fatal, t => function(t.@return, t.error, t.extended));
+
+        public FunctionReturnValue IfNonFatal(Func<Variant, FunctionReturnValue> function) => _result.Match(Fatal, t => function(t.@return));
+
         private bool Is(out Variant @return, out int? error, out Variant? extended)
         {
             bool res = _result.Is(out (Variant @return, int? error, Variant? extended) tuple);
@@ -107,6 +114,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator FunctionReturnValue(InterpreterError err) => Fatal(err);
 
-        public static implicit operator FunctionReturnValue(Union<InterpreterError, Variant> union) => union.Match(Fatal, Success);
+        // public static implicit operator FunctionReturnValue(Union<InterpreterError, Variant> union) => union.Match(Fatal, Success);
     }
 }

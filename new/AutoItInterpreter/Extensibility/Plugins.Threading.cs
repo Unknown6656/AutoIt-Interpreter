@@ -54,11 +54,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             {
                 handle.Runner.Wait();
 
-                Union<InterpreterError, Variant> result = handle.Runner.Result;
+                FunctionReturnValue result = handle.Runner.Result;
 
                 frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
 
-                return result.Match(FunctionReturnValue.Fatal, FunctionReturnValue.Success);
+                return result;
             }
             else
                 return FunctionReturnValue.Error(1);
@@ -72,7 +72,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             if (func is { })
             {
                 AU3Thread thread = frame.Interpreter.CreateNewThread();
-                Task<Union<InterpreterError, Variant>> runner = Task.Factory.StartNew(() => thread.Start(func, frame.PassedArguments[1..]));
+                Task<FunctionReturnValue> runner = Task.Run(() => thread.Start(func, frame.PassedArguments[1..]));
                 Variant handle = frame.Interpreter.GlobalObjectStorage.Store(new ThreadHandle(thread, runner));
 
                 return handle;
@@ -100,10 +100,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             : IDisposable
         {
             public AU3Thread Thread { get; }
-            public Task<Union<InterpreterError, Variant>> Runner { get; }
+            public Task<FunctionReturnValue> Runner { get; }
 
 
-            public ThreadHandle(AU3Thread thread, Task<Union<InterpreterError, Variant>> runner)
+            public ThreadHandle(AU3Thread thread, Task<FunctionReturnValue> runner)
             {
                 Thread = thread;
                 Runner = runner;

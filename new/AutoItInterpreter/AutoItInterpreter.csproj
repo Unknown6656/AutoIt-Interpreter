@@ -67,7 +67,7 @@
         </PackageReference>
         <PackageReference Include="Octokit" Version="0.48.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.0.3" />
+        <PackageReference Include="Unknown6656.Core" Version="1.0.4" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />

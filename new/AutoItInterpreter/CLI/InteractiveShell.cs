@@ -2,12 +2,11 @@
 using System.Linq;
 using System;
 
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.Common;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
-using System.Windows.Forms;
-using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -508,10 +507,10 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                     {
                         CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
 
-                        InterpreterResult? result = CallFrame.ParseCurrentLine();
+                        FunctionReturnValue result = CallFrame.ParseCurrentLine();
 
-                        if (result?.OptionalError is { Message: string error })
-                            History.Add((new[] { new ScriptToken(0, 0, error.Length, error, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
+                        if (result.IsFatal(out InterpreterError? error))
+                            History.Add((new[] { new ScriptToken(0, 0, error.Message.Length, error.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
                         else if (CallFrame.VariableResolver.TryGetVariable(AST.VARIABLE.Discard, VariableSearchScope.Global, out Variable? variable))
                         {
                             string text = variable.Value.ToDebugString(Interpreter);

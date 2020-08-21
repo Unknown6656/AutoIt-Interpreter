@@ -408,12 +408,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             else if (call_args.Length > func.ParameterCount.MaximumCount)
                 Array.Resize(ref call_args, func.ParameterCount.MaximumCount);
 
-            Union<InterpreterError, Variant> result = frame.Call(func, call_args);
+            FunctionReturnValue result = frame.Call(func, call_args);
 
-            if (result.Is(out Variant @return))
-                return @return;
-            else
-                return FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+            if (result.IsFatal(out _))
+                result = FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+
+            return result;
         }
 
         internal static unsafe FunctionReturnValue CDTray(CallFrame frame, Variant[] args)
