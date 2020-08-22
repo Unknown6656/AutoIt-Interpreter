@@ -75,8 +75,8 @@ module Cleanup =
                      let bool_op f = AsLiteral (f (AsBoolean l1) (AsBoolean l2))
                      match op, l1, l2 with
                      | StringConcat, l1, l2 ->
-                         AsString l1
-                         |> (+) (AsString l2)
+                         AsString l2
+                         |> (+) (AsString l1)
                          |> LITERAL.String
                          |> Literal
                      | Or, _, _ -> bool_op (||)

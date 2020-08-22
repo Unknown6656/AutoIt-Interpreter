@@ -16,7 +16,7 @@ namespace Unknown6656.AutoIt3.CLI
         private static readonly Regex REGEX_STRING = new Regex(@"^('[^']*'|""[^""]*"")", RegexOptions.Compiled);
         private static readonly Regex REGEX_KEYWORD = new Regex(@$"^(->|{ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex REGEX_SYMOBLS = new Regex(@"^[\.,()\[\]{}'""]", RegexOptions.Compiled);
-        private static readonly Regex REGEX_OPERATORS = new Regex(@$"^([\?:]|{InteractiveShell.KNOWN_OPERATORS.Select(Regex.Escape).StringJoin("|")})(?=[\s\w])", RegexOptions.Compiled);
+        private static readonly Regex REGEX_OPERATORS = new Regex(@"^([\^?:]|<>|[+\-\*/&<>=]=?)(?![\^?:=+\-*/&<>])", RegexOptions.Compiled);
         private static readonly Regex REGEX_VARIABLE = new Regex(@"^\$[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_MACRO = new Regex(@"^@[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_FUNCCALL = new Regex(@"^[^\W\d]\w*(?=\()", RegexOptions.Compiled);

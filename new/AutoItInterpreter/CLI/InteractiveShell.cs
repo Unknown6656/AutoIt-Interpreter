@@ -35,7 +35,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                         [F5]    Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text
                         [F6]    Repeat next line                    [ARROW UP/DOWN]    Select code suggestion
                         [ENTER] Execute current input               [TAB]              Insert selected code suggestion
-                        ""EXIT""  Exit the interactive environment  ""CLEAR""            Clear the history window
+                        ""EXIT""  Exit the interactive environment    ""CLEAR""            Clear the history window
 ".Trim();
         private static readonly int MAX_SUGGESTIONS = 8;
         private static readonly int MARGIN_RIGHT = 40;
@@ -307,6 +307,15 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                     CurrentCursorPosition = ^0;
 
                     break;
+                case ConsoleKey.F5:
+                    CurrentInput = History.Where(t => t.stream is InteractiveShellStreamDirection.Input)
+                                          .LastOrDefault()
+                                          .content
+                                          ?.Select(t => t.Content)
+                                          .StringJoin("")
+                                          ?? CurrentInput;
+
+                    break;
                 case ConsoleKey.Enter:
                     ProcessInput();
                     UpdateSuggestions();
@@ -509,7 +518,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 lines.Add(line);
 
                 return lines;
-            }).ToArray();
+            }).Where(line => !string.IsNullOrEmpty(line)).ToArray();
 
             int height = Console.WindowHeight - MARGIN_BOTTOM - MARGIN_TOP - 2;
 
