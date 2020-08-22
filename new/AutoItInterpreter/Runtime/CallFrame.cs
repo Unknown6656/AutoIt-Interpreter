@@ -1315,12 +1315,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     declared_variables.Add(variable);
                 }
 
-                return declared_variables.Count switch
-                {
-                    0 => Variant.Zero,
-                    1 => Variant.FromReference(declared_variables[0]),
-                    _ => Variant.FromArray(Interpreter, declared_variables.ToArray(Variant.FromReference)),
-                };
+                return Variant.FromArray(Interpreter, declared_variables.ToArray(Variant.FromReference));
             });
 
         private FunctionReturnValue ProcessVariableDeclaration(VARIABLE variable, DeclarationModifiers decltype, out bool existing_static)

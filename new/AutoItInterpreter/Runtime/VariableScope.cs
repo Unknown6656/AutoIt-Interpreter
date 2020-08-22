@@ -17,6 +17,7 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly ConcurrentHashSet<VariableScope> _children = new();
         private readonly ConcurrentHashSet<Variable> _variables = new();
+        private bool _isdisposed = false;
 
 
         public VariableScope[] ChildScopes => _children.ToArray();
@@ -74,17 +75,21 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (Parent is { _children: { } children })
+            if (!_isdisposed)
             {
-                DestroyAllVariables(false);
-                children.Remove(this);
+                if (Parent is { _children: { } children })
+                {
+                    DestroyAllVariables(false);
+                    children.Remove(this);
+                }
+
+                foreach (VariableScope child in _children.ToArray())
+                    child.Dispose();
+
+                _children.Dispose();
+                _variables.Dispose();
+                _isdisposed = true;
             }
-
-            foreach (VariableScope child in _children.ToArray())
-                child.Dispose();
-
-            _children.Dispose();
-            _variables.Dispose();
         }
 
         /// <inheritdoc/>
@@ -212,7 +217,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </param>
         public void DestroyAllVariables(bool recursive)
         {
-            foreach (VariableScope scope in _children)
+            foreach (VariableScope scope in _children.ToArray())
                 scope.DestroyAllVariables(recursive);
 
             _children.Clear();

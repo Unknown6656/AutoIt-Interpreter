@@ -145,6 +145,25 @@ namespace Unknown6656.AutoIt3.CLI
     public record ScriptToken(int LineIndex, int CharIndex, int TokenLength, string Content, TokenType Type)
     {
         public override string ToString() => $"{LineIndex}:{CharIndex}{(TokenLength > 1 ? ".." + (CharIndex + TokenLength) : "")}: \"{Content}\" ({Type})";
+
+        public IEnumerable<ScriptToken> SplitByLineBreaks()
+        {
+            List<ScriptToken> tokens = Content.Replace("\r\n", "\n", StringComparison.InvariantCulture)
+                                              .Split('\n')
+                                              .SelectMany((line, index) => new[]
+                                              {
+                                                  new ScriptToken(LineIndex + index * 2, index == 0 ? CharIndex : 0, line.Length, line, Type),
+                                                  new ScriptToken(LineIndex + index * 2 + 1, 0, 1, "\n", TokenType.NewLine),
+                                              })
+                                              .ToList();
+
+            if (tokens.Count > 1)
+                tokens.RemoveAt(tokens.Count - 1);
+
+            return tokens;
+        }
+
+        public static ScriptToken FromString(string text, TokenType type) => new ScriptToken(0, 0, text.Length, text, type);
     }
 
     public enum TokenType

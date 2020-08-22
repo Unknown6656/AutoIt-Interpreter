@@ -80,7 +80,7 @@ namespace Unknown6656.AutoIt3.Runtime
     /// <para/>
     /// Data is internally stored using a <see cref="VariantType"/> (to resolve the semantic type), a <see cref="object"/> containing the actual data, and an optional <see cref="Variable"/> reference.
     /// </summary>
-    [DebuggerDisplay("{" + nameof(ToDebugStringPrivate) + "(),nq}")]
+    [DebuggerDisplay("{" + nameof(ToDebugString__Internal__) + "(),nq}")]
     public readonly struct Variant
         : IEquatable<Variant>
         , IComparable<Variant>
@@ -332,9 +332,11 @@ namespace Unknown6656.AutoIt3.Runtime
             _ => "",
         };
 
-        private readonly string ToDebugStringPrivate() => ToDebugString(Interpreter.ActiveInstances.First());
+        private readonly string ToDebugString__Internal__() => ToDebugString(Interpreter.ActiveInstances.First());
 
-        public readonly string ToDebugString(Interpreter interpreter)
+        public readonly string ToDebugString(Interpreter interpreter) => ToDebugString(interpreter, new(), 0);
+
+        private readonly string ToDebugString(Interpreter interpreter, HashSet<Variable> forbidden, int level)
         {
             static string sanitize(char c) => c switch
             {
@@ -350,18 +352,15 @@ namespace Unknown6656.AutoIt3.Runtime
                 _ => c.ToString()
             };
 
+            if (AssignedTo is Variable variable)
+                forbidden.Add(variable);
+
             if (IsNull || IsDefault)
                 return Type.ToString();
-            else if (RawData is Variant[] arr)
-                return $"[{string.Join(", ", arr.Select(e => e.ToDebugString(interpreter)))}]";
-            else if (Type is VariantType.Map)
-                return $"[{string.Join(", ", ToMap(interpreter).Select(pair => $"{pair.Key.ToDebugString(interpreter)}={pair.Value.ToDebugString(interpreter)}"))}]";
-            else if (RawData is string or StringBuilder)
-                return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
-            else if (RawData is Variable v)
-                return $"${v.Name}:{v.Value.ToDebugString(interpreter)}";
             else if (RawData is ScriptFunction func)
                 return $"<{func.Location.FullFileName}>{func.Name}{func.ParameterCount}";
+            else if (RawData is string or StringBuilder)
+                return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
             else if (Type is VariantType.Handle)
             {
                 string data = "invalid";
@@ -374,6 +373,14 @@ namespace Unknown6656.AutoIt3.Runtime
             }
             else if (Type is VariantType.COMObject && RawData is uint com)
                 return $"COM:0x{com:x8}"; // TODO : type ?
+            else if (level > 5)
+                return "...";
+            else if (RawData is Variant[] arr)
+                return $"[{string.Join(", ", arr.Select(e => e.ToDebugString(interpreter, forbidden, level + 1)))}]";
+            else if (Type is VariantType.Map)
+                return $"[{string.Join(", ", ToMap(interpreter).Select(pair => $"{pair.Key.ToDebugString(interpreter, forbidden, level + 1)}={pair.Value.ToDebugString(interpreter, forbidden, level + 1)}"))}]";
+            else if (RawData is Variable v)
+                return forbidden.Contains(v) ? '$' + v.Name : $"${v.Name}:{v.Value.ToDebugString(interpreter, forbidden, level + 1)}";
             else
                 return ToString();
         }

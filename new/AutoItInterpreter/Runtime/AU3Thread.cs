@@ -156,6 +156,12 @@ namespace Unknown6656.AutoIt3.Runtime
             _override_exitcode = exitcode;
         }
 
+        /// <summary>
+        /// [UNSAFE!!!!]
+        /// </summary>
+        /// <param name="is_running"></param>
+        internal void UnsafeSetIsRunning(bool is_running) => _running = is_running;
+
         internal SourceLocation? ExitCall()
         {
             if (IsDisposed)

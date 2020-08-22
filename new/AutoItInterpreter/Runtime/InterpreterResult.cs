@@ -1,5 +1,5 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
+using System;
 
 using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
@@ -62,6 +62,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _result = (@return, error, extended);
         }
+
+        public override string ToString() => _result.Match(err => $"FATAL: {err}", val => val.error is int err ? $"ERROR: {err}" : $"SUCCESS: {val.@return}");
 
         public bool IsSuccess(out Variant value, out Variant? extended) => Is(out value, out int? err, out extended) && err is null;
 

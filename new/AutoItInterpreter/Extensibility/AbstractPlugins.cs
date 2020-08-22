@@ -6,7 +6,6 @@ using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
-using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 
 [assembly: AutoIt3Plugin]

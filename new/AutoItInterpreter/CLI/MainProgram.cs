@@ -130,6 +130,8 @@ namespace Unknown6656.AutoIt3.CLI
 #nullable disable
         public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
 #nullable enable
+        public static InteractiveShell? InteractiveShell { get; private set; }
+
         public static LanguageLoader LanguageLoader { get; } = new LanguageLoader();
 
         public static Telemetry Telemetry { get; } = new Telemetry();
@@ -295,10 +297,12 @@ namespace Unknown6656.AutoIt3.CLI
 
                             if (shell.Initialize())
                             {
-                                shell.Run();
-                                // TODO
+                                InteractiveShell = shell;
 
+                                shell.Run();
                             }
+
+                            InteractiveShell = null;
 
                             PrintfDebugMessage("error.not_yet_implemented", opt.ProgramExecutionMode);
                         }
@@ -451,7 +455,11 @@ namespace Unknown6656.AutoIt3.CLI
         /// <param name="message">The message to be printed.</param>
         public static void PrintScriptMessage(string? file, string message) => Telemetry.Measure(TelemetryCategory.ScriptConsoleOut, delegate
         {
-            if (CommandLineOptions.Verbosity < Verbosity.n)
+            if (CommandLineOptions.ProgramExecutionMode is ExecutionMode.view)
+                return;
+            else if (InteractiveShell is InteractiveShell shell)
+                shell.SubmitPrint(message);
+            else if (CommandLineOptions.Verbosity < Verbosity.n)
                 Console.Write(message);
             else
                 SubmitPrint(Verbosity.n, file ?? '<' + LanguageLoader.CurrentLanguage?["general.unknown"] + '>', message.Trim(), true);

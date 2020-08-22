@@ -2,7 +2,7 @@
 using System.Linq;
 using System;
 
-using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
@@ -35,9 +35,8 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                         [F5]    Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text
                         [F6]    Repeat next line                    [ARROW UP/DOWN]    Select code suggestion
                         [ENTER] Execute current input               [TAB]              Insert selected code suggestion
-                        ""EXIT""  Exit the interactive environment
+                        ""EXIT""  Exit the interactive environment  ""CLEAR""            Clear the history window
 ".Trim();
-        private static readonly int HISTORY_PADDING_LEFT = 6;
         private static readonly int MAX_SUGGESTIONS = 8;
         private static readonly int MARGIN_RIGHT = 40;
         private static readonly int MARGIN_TOP = HELP_TEXT.Count(c => c is '\n') + 1;
@@ -78,6 +77,17 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
         public AU3Thread Thread { get; }
 
         public AU3CallFrame CallFrame { get; }
+
+        public ScriptToken? CurrentlyTypedToken
+        {
+            get
+            {
+                ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(CurrentInput);
+                int cursor = CurrentCursorPosition.GetOffset(CurrentInput.Length);
+
+                return cursor == 0 ? tokens[0] : tokens.FirstOrDefault(t => t.CharIndex < cursor && cursor <= t.CharIndex + t.TokenLength);
+            }
+        }
 
 
         public InteractiveShell(Interpreter interpreter)
@@ -123,8 +133,6 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 return false;
             }
 
-            MainProgram.PausePrinter = true;
-
             return true;
         }
 
@@ -138,43 +146,65 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
         private void MainLoop()
         {
-            UpdateSuggestions();
-
-            int sugg_count = 0;
-            int hist_count = 0;
-            int width = 0;
-            int height = 0;
-
-            while (IsRunning)
+            try
             {
-                if (width != WIDTH || height != HEIGHT)
+                MainProgram.PausePrinter = true;
+
+                UpdateSuggestions();
+
+                //int sugg_count = 0;
+                int hist_count = 0;
+                int width = 0;
+                int height = 0;
+
+                while (IsRunning)
                 {
-                    RedrawHelp();
+                    if (NativeInterop.OperatingSystem.HasFlag(OS.Windows))
+                        Console.CursorVisible = false;
 
-                    sugg_count = 0;
-                    hist_count = 0;
+                    if (width != WIDTH || height != HEIGHT)
+                    {
+                        RedrawHelp();
+
+                        width = WIDTH;
+                        height = HEIGHT;
+                        //sugg_count = 0;
+                        hist_count = 0;
+                    }
+
+                    if (/*sugg_count != Suggestions.Count ||*/ hist_count != History.Count)
+                    {
+                        RedrawHistoryArea();
+
+                        //sugg_count = Suggestions.Count;
+                        hist_count = History.Count;
+                    }
+
+                    (int Left, int Top) cursor = RedrawInputArea(false);
+
+                    Console.CursorLeft = cursor.Left;
+                    Console.CursorTop = cursor.Top;
+
+                    if (NativeInterop.OperatingSystem.HasFlag(OS.Windows))
+                        Console.CursorVisible = true;
+
+                    HandleKeyPress();
                 }
+            }
+            finally
+            {
+                if (NativeInterop.OperatingSystem.HasFlag(OS.Windows))
+                    Console.CursorVisible = true;
 
-                if (sugg_count != Suggestions.Count || hist_count != History.Count)
-                {
-                    RedrawHistoryArea();
+                Console.Clear();
 
-                    sugg_count = Suggestions.Count;
-                    hist_count = History.Count;
-                }
-
-                (int Left, int Top) cursor = RedrawInputArea(true);
-
-                Console.CursorLeft = cursor.Left;
-                Console.CursorTop = cursor.Top;
-
-                HandleKeyPress();
+                MainProgram.PausePrinter = false;
             }
         }
 
         private void HandleKeyPress()
         {
-            ConsoleKeyInfo k = Console.ReadKey();
+            ConsoleKeyInfo k = Console.ReadKey(true);
             int cursor_pos = CurrentCursorPosition.GetOffset(CurrentInput.Length);
 
             switch (k.Key)
@@ -291,6 +321,9 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                     while (deletion_index < CurrentInput.Length && CurrentInput[deletion_index] == ' ')
                         ++deletion_index;
 
+                    if (deletion_index >= CurrentInput.Length)
+                        insertion = insertion.TrimEnd();
+
                     CurrentInput = CurrentInput[..insertion_index] + insertion + CurrentInput[deletion_index..];
                     CurrentCursorPosition = insertion_index + insertion.Length;
 
@@ -355,7 +388,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 Console.Write($"\x1b[7m{(idx < CurrentInput.Length ? CurrentInput[idx] : ' ')}\x1b[27m");
             }
 
-            Console.Write(new string(' ', width - MARGIN_RIGHT - HISTORY_PADDING_LEFT - 1));
+            Console.Write(new string(' ', width - MARGIN_RIGHT - 4));
 
             string pad_full = new string(' ', width - MARGIN_RIGHT - 1);
 
@@ -369,6 +402,8 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 int start_index = CurrentSuggestionIndex < MAX_SUGGESTIONS / 2 ? 0
                                 : CurrentSuggestionIndex > Suggestions.Count - MAX_SUGGESTIONS / 2 ? Suggestions.Count - MAX_SUGGESTIONS
                                 : CurrentSuggestionIndex - MAX_SUGGESTIONS / 2;
+
+                start_index = Math.Max(0, Math.Min(start_index, Suggestions.Count - MAX_SUGGESTIONS));
 
                 ScriptToken[][] suggestions = Suggestions.Skip(start_index).Take(MAX_SUGGESTIONS).ToArray();
 
@@ -440,30 +475,36 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
         private void RedrawHistoryArea()
         {
-            int line_width = WIDTH - HISTORY_PADDING_LEFT - MARGIN_RIGHT;
+            int width = WIDTH;
             string[] history = History.SelectMany(entry =>
             {
                 List<string> lines = new List<string>();
-                string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.stream switch
-                {
-                    InteractiveShellStreamDirection.Input => "IN",
-                    InteractiveShellStreamDirection.Output => "OUT",
-                    InteractiveShellStreamDirection.Error => "ERR",
-                }).PadLeft(HISTORY_PADDING_LEFT - 2) + "> ";
+                string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.stream is InteractiveShellStreamDirection.Input ? " > " : "");
+                int line_width = width - MARGIN_RIGHT - (entry.stream is InteractiveShellStreamDirection.Input ? 4 : 1);
                 int len = 0;
 
-                foreach (ScriptToken token in entry.content)
-                {
-                    if (len + token.TokenLength > line_width)
+                foreach (ScriptToken token in entry.content.SelectMany(c => c.SplitByLineBreaks()))
+                    if (token.Type is TokenType.NewLine)
                     {
                         lines.Add(line);
-                        line = COLOR_PROMPT.ToVT100ForegroundString() + "> ".PadLeft(HISTORY_PADDING_LEFT);
+                        line = "";
                         len = 0;
                     }
+                    else if (len + token.TokenLength > line_width)
+                        foreach (string partial in token.Content.PartitionByArraySize(line_width).ToArray(cs => new string(cs)))
+                        {
+                            if (line.Length > (entry.stream is InteractiveShellStreamDirection.Input ? 3 : 0))
+                                lines.Add(line);
 
-                    line += token.ConvertToVT100(false);
-                    len += token.TokenLength;
-                }
+                            line = (entry.stream is InteractiveShellStreamDirection.Input ? "   " : "")
+                                 + ScriptToken.FromString(partial, token.Type).ConvertToVT100(false);
+                            len = token.TokenLength;
+                        }
+                    else
+                    {
+                        line += token.ConvertToVT100(false);
+                        len += token.TokenLength;
+                    }
 
                 lines.Add(line);
 
@@ -486,7 +527,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 if (height - history.Length <= y)
                     Console.Write(history[history.Length - height + y]);
 
-                Console.Write(new string(' ', line_width + HISTORY_PADDING_LEFT - 1 - Console.CursorLeft));
+                Console.Write(new string(' ', width - MARGIN_RIGHT - 1 - Console.CursorLeft));
             }
         }
 
@@ -502,36 +543,53 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
                 if (AU3CallFrame.REGEX_EXIT.IsMatch(input))
                     IsRunning = false;
+                else if (input.Equals("clear", StringComparison.OrdinalIgnoreCase))
+                {
+                    History.Clear();
+                    HistoryScrollIndex = 0;
+                }
                 else
                     try
                     {
                         CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
+                        Thread.UnsafeSetIsRunning(true);
 
                         FunctionReturnValue result = CallFrame.ParseCurrentLine();
 
-                        if (result.IsFatal(out InterpreterError? error))
-                            History.Add((new[] { new ScriptToken(0, 0, error.Message.Length, error.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
-                        else if (CallFrame.VariableResolver.TryGetVariable(AST.VARIABLE.Discard, VariableSearchScope.Global, out Variable? variable))
-                        {
-                            string text = variable.Value.ToDebugString(Interpreter);
+                        Thread.UnsafeSetIsRunning(false);
 
-                            History.Add((new[] { new ScriptToken(0, 0, text.Length, text, TokenType.DirectiveOption) }, InteractiveShellStreamDirection.Output));
-                        }
+                        if (result.IsFatal(out InterpreterError? error))
+                            History.Add((new[] { ScriptToken.FromString(error.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
+
+                        result.IfNonFatal((value, error, extended) =>
+                        {
+                            List<ScriptToken> tokens = new()
+                            {
+                                ScriptToken.FromString(value.ToDebugString(Interpreter), TokenType.DirectiveOption),
+                            };
+
+                            if (error is int err)
+                            {
+                                tokens.Add(ScriptToken.FromString("\n", TokenType.NewLine));
+                                tokens.Add(ScriptToken.FromString("@error", TokenType.Macro));
+                                tokens.Add(ScriptToken.FromString($": {err} (0x{err:x8})", TokenType.DirectiveOption));
+                            }
+
+                            if (extended is Variant ext)
+                            {
+                                tokens.Add(ScriptToken.FromString("\n", TokenType.NewLine));
+                                tokens.Add(ScriptToken.FromString("@extended", TokenType.Macro));
+                                tokens.Add(ScriptToken.FromString($": {ext.ToDebugString(Interpreter)}", TokenType.DirectiveOption));
+                            }
+
+                            History.Add((tokens.ToArray(), InteractiveShellStreamDirection.Output));
+
+                            return value;
+                        });
                     }
                     catch
                     {
                     }
-            }
-        }
-
-        public ScriptToken? CurrentlyTypedToken
-        {
-            get
-            {
-                ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(CurrentInput);
-                int cursor = CurrentCursorPosition.GetOffset(CurrentInput.Length);
-
-                return cursor == 0 ? tokens[0] : tokens.FirstOrDefault(t => t.CharIndex < cursor && cursor <= t.CharIndex + t.TokenLength);
             }
         }
 
@@ -565,7 +623,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
             if (string.IsNullOrWhiteSpace(filter))
                 filter = null;
 
-            Suggestions.AddRange(from s in suggestions.Distinct()
+            Suggestions.AddRange(from s in suggestions.Append("CLEAR").Distinct()
                                  let text = s.Trim() + ' '
                                  where text.Length > 1
                                  let tokens = ScriptVisualizer.TokenizeScript(text)[..^1]
@@ -574,6 +632,8 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                                  orderby first.Type, text ascending
                                  select tokens);
         }
+
+        public void SubmitPrint(string message) => History.Add((new[] { ScriptToken.FromString(message, TokenType.Comment) }, InteractiveShellStreamDirection.Output));
     }
 
     public enum InteractiveShellStreamDirection
@@ -591,7 +651,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
  *      | help text                        |  variable     |
  *      +--------------------------------+-+  monitor (?)  |
  *      |                                |^|               |
- *      |     ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^      | |               |
+ *      |     ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^      | | thread monitor|
  *      |      text moves upwards        | |               |
  *      |                                | |               |
  *      | > input                        | |               |
