@@ -17,6 +17,7 @@ namespace Unknown6656.AutoIt3.CLI
         private static readonly Regex REGEX_KEYWORD = new Regex(@$"^(->|{ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex REGEX_SYMOBLS = new Regex(@"^[\.,()\[\]{}'""]", RegexOptions.Compiled);
         private static readonly Regex REGEX_OPERATORS = new Regex(@"^([\^?:]|<>|[+\-\*/&<>=]=?)(?![\^?:=+\-*/&<>])", RegexOptions.Compiled);
+        private static readonly Regex REGEX_OPERATOR_ERROR = new Regex(@"^[\^?:+\-\*/&<>=]+", RegexOptions.Compiled);
         private static readonly Regex REGEX_VARIABLE = new Regex(@"^\$[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_MACRO = new Regex(@"^@[^\W\d]\w*\b", RegexOptions.Compiled);
         private static readonly Regex REGEX_FUNCCALL = new Regex(@"^[^\W\d]\w*(?=\()", RegexOptions.Compiled);
@@ -102,6 +103,8 @@ namespace Unknown6656.AutoIt3.CLI
                         add_token(match.Length, TokenType.Symbol);
                     else if (line.Match(REGEX_OPERATORS, out match))
                         add_token(match.Length, TokenType.Operator);
+                    else if (line.Match(REGEX_OPERATOR_ERROR, out match))
+                        add_token(match.Length, TokenType.UNKNOWN);
                     else if (line.Match(REGEX_VARIABLE, out match))
                         add_token(match.Length, TokenType.Variable);
                     else if (line.Match(REGEX_MACRO, out match))

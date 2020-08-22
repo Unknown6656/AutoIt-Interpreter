@@ -314,6 +314,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                                           ?.Select(t => t.Content)
                                           .StringJoin("")
                                           ?? CurrentInput;
+                    CurrentCursorPosition = CurrentInput.Length;
 
                     break;
                 case ConsoleKey.Enter:

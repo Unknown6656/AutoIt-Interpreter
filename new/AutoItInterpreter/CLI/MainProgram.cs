@@ -24,7 +24,6 @@ using Unknown6656.Common;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
-using Piglet.Common;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -42,6 +41,12 @@ using Piglet.Common;
       autoit3 ssh://username:password@example.com/~/Documents/my_script.au3
       autoit3 scp://username:password@192.168.0.100:22/script.au3
   
+  Run the interpreter in interactive mode:
+      autoit3 -m interactive
+
+  Run the interpreter in view-only mode:
+      autoit3 -m view ~/Documents/my_script.au3
+
   Use an other display language than English for the interpreter:
       autoit3 -l fr C:\User\Public\Script.au3
 
@@ -82,7 +87,7 @@ namespace Unknown6656.AutoIt3.CLI
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
         public string Language { set; get; } = "en";
 
-        [Value(0, HelpText = "The file path to the AutoIt-3 script.", Required = true)]
+        [Value(0, HelpText = "The file path to the AutoIt-3 script.")]
         public string? FilePath { set; get; } = null;
 
 #pragma warning disable CA1819 // Properties should not return arrays

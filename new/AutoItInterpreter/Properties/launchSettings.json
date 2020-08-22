@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-Btvq -m interactive ../test/test -- batkek --kaiko=kek 1000",
+      "commandLineArgs": "-Btvq -m interactive ../test/test",
       "nativeDebugging": false
     }
   }
