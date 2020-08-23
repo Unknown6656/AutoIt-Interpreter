@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <!--<OutputType>WinExe</OutputType>-->
+        <TargetFramework>net5.0</TargetFramework>
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Unknown6656.AutoIt3.Updater</RootNamespace>
+        <AssemblyName>autoit3.updater</AssemblyName>
+    </PropertyGroup>
+</Project>

@@ -242,17 +242,17 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             Environment.SetEnvironmentVariable("PATH", string.Join(separator, path.Distinct()), EnvironmentVariableTarget.Process);
         }
 
-        public static (string stdout, int code) Bash(string command) => DoPlatformDependent(
+        public static (string stdout, int code) Bash(string command, bool use_shellexec = false) => DoPlatformDependent(
             delegate
             {
-                static string escape(char c) => "^[]|()<>&'\"=$".Contains(c) ? "^" + c : c.ToString();
+                static string escape(char c) => "^[]|()<>&'\"=$".Contains(c, StringComparison.InvariantCulture) ? "^" + c : c.ToString();
 
-                return Run("cmd.exe", $"/c \"{string.Concat(command.Select(escape))}\"");
+                return Run("cmd.exe", $"/c \"{string.Concat(command.Select(escape))}\"", use_shellexec);
             },
-            () => Run("/bin/bash", $"-c \"{command.Replace("\"", "\\\"")}\"")
+            () => Run("/bin/bash", $"-c \"{command.Replace("\"", "\\\"", StringComparison.InvariantCulture)}\"", use_shellexec)
         );
 
-        private static (string stdout, int code) Run(string filename, string arguments)
+        private static (string stdout, int code) Run(string filename, string arguments, bool use_shexec)
         {
             using Process process = new Process()
             {
@@ -261,7 +261,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
                     FileName = filename,
                     Arguments = arguments,
                     RedirectStandardOutput = true,
-                    UseShellExecute = false,
+                    UseShellExecute = use_shexec,
                     CreateNoWindow = false,
                 }
             };

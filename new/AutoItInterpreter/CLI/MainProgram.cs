@@ -14,6 +14,8 @@ using System;
 using CommandLine.Text;
 using CommandLine;
 
+using Octokit;
+
 using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
@@ -84,6 +86,9 @@ namespace Unknown6656.AutoIt3.CLI
         [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
         public Verbosity Verbosity { set; get; } = Verbosity.n;
 
+        [Option('u', "check-for-update", Default = UpdaterMode.release, HelpText = "Specifies how the interpreter should check for software updates. Updates will be downloaded from the GitHub repository (\x1b[4m" + __module__.RepositoryURL + "/releases\x1b[24m).")]
+        public UpdaterMode UpdaterMode { set; get; } = UpdaterMode.release;
+
         [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
         public string Language { set; get; } = "en";
 
@@ -119,6 +124,7 @@ namespace Unknown6656.AutoIt3.CLI
         public static readonly FileInfo WINAPI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.win32apiserver.exe"));
         public static readonly FileInfo COM_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
         public static readonly FileInfo GUI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
+        public static readonly FileInfo UPDATER = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.updater.dll"));
 
         internal static readonly RGBAColor COLOR_TIMESTAMP = RGBAColor.Gray;
         internal static readonly RGBAColor COLOR_PREFIX_SCRIPT = RGBAColor.Cyan;
@@ -133,6 +139,8 @@ namespace Unknown6656.AutoIt3.CLI
         private static volatile bool _finished;
 
 #nullable disable
+        public static string[] RawCMDLineArguments { get; private set; }
+
         public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
 #nullable enable
         public static InteractiveShell? InteractiveShell { get; private set; }
@@ -151,6 +159,8 @@ namespace Unknown6656.AutoIt3.CLI
         /// <returns>Return/exit code.</returns>
         public static int Start(string[] argv)
         {
+            RawCMDLineArguments = argv;
+
             Stopwatch sw = new Stopwatch();
 
             sw.Start();
@@ -189,18 +199,6 @@ namespace Unknown6656.AutoIt3.CLI
                     // Console.BackgroundColor = ConsoleColor.Black;
                     // Console.Clear();
 
-                    Task<bool?> updater_task = GithubUpdater.TryCheckForUpdatesAsync(Telemetry);
-                    void display_update(bool enqueue)
-                    {
-                        TaskAwaiter<bool?> awaiter = updater_task.GetAwaiter();
-                        bool? result = awaiter.GetResult();
-
-                        if (result is null)
-                            ; // error
-                        else if (result is true)
-                            ; // update
-                    }
-
                     string[]? script_args = null;
 
                     Telemetry.Measure(TelemetryCategory.ParseCommandLine, delegate
@@ -236,8 +234,6 @@ namespace Unknown6656.AutoIt3.CLI
                                 return HelpText.DefaultParsingErrorsHandler(result, h);
                             }, e => e);
 
-                            display_update(false);
-
                             if (err.FirstOrDefault() is VersionRequestedError or UnknownOptionError { StopsProcessing: false, Token: "version" })
                             {
                                 Console.WriteLine(help.Heading);
@@ -248,7 +244,7 @@ namespace Unknown6656.AutoIt3.CLI
                             }
                             else
                             {
-                                Console.WriteLine(help + "  --                     All subsequent arguments will be passed to the AutoIt-3 script.");
+                                Console.WriteLine(help + "  --                        All subsequent arguments will be passed to the AutoIt-3 script.");
 
                                 if (err.FirstOrDefault() is HelpRequestedError or HelpVerbRequestedError)
                                     help_requested = true;
@@ -260,6 +256,33 @@ namespace Unknown6656.AutoIt3.CLI
                         return result;
                     }).WithParsed(opt =>
                     {
+                        using Task update_task = Task.Run(async delegate
+                        {
+                            if (opt.UpdaterMode is UpdaterMode.none)
+                                return;
+
+                            GithubUpdater updater = new GithubUpdater(Telemetry)
+                            {
+                                UpdaterMode = opt.UpdaterMode is UpdaterMode.beta ? GithubUpdaterMode.IncludeBetaVersions : GithubUpdaterMode.ReleaseOnly
+                            };
+
+                            bool success = await updater.FetchReleaseInformationAsync();
+
+                            if (!success && opt.Verbosity > Verbosity.q)
+                                ; // warning : not able to update
+                            else if (updater.LatestReleaseAvailable is Release latest)
+                            {
+                                // ask if update
+
+                                success = await updater.TryUpdateToLatestAsync();
+
+                                if (success)
+                                    ; // restart
+                                else
+                                    ; // error
+                            }
+                        });
+
                         if (opt.ProgramExecutionMode != ExecutionMode.normal)
                         {
                             opt.Verbosity = Verbosity.q;
@@ -269,8 +292,6 @@ namespace Unknown6656.AutoIt3.CLI
 
                         opt.ScriptArguments = script_args ?? opt.ScriptArguments;
                         CommandLineOptions = opt;
-
-                        display_update(opt.Verbosity > Verbosity.q);
 
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
                         {
@@ -295,6 +316,8 @@ namespace Unknown6656.AutoIt3.CLI
                         PrintfDebugMessage("debug.interpreter_loading");
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
+
+                        update_task.GetAwaiter().GetResult();
 
                         if (opt.ProgramExecutionMode is ExecutionMode.interactive)
                         {
@@ -1027,5 +1050,12 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         normal,
         view,
         interactive,
+    }
+
+    public enum UpdaterMode
+    {
+        release,
+        beta,
+        none,
     }
 }

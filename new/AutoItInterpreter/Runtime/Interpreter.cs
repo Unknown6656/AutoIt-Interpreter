@@ -11,6 +11,7 @@ using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 
 using Random = Unknown6656.Mathematics.Numerics.Random;
+using System.Linq;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -152,7 +153,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
             VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLineRaw", true).Value = Variant.FromString(opt.ScriptArguments.StringJoin(" "));
-            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLine", true).Value = Variant.FromArray(this, opt.ScriptArguments.ToArray(Variant.FromString));
+            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLine", true).Value = Variant.FromArray(this, opt.ScriptArguments.Select(Variant.FromString).Prepend(Variant.FromNumber(opt.ScriptArguments.Length)));
 
             if (NativeInterop.OperatingSystem is Native.OS.Windows)
             {
