@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Extensibility;
@@ -11,7 +12,6 @@ using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
 
 using Random = Unknown6656.Mathematics.Numerics.Random;
-using System.Linq;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -141,9 +141,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 PluginLoader.LoadPlugins();
 
             if (PluginLoader.LoadedPluginFiles.Count is int i and > 0)
-                MainProgram.PrintInterpreterMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
+                MainProgram.PrintfDebugMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
             else
-                MainProgram.PrintInterpreterMessage("general.no_plugins_loaded");
+                MainProgram.PrintfDebugMessage("general.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
 
@@ -225,9 +225,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <summary>
         /// Prints the given value to the STDOUT stream.
-        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
+        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbose"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
         /// <para/>
-        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
+        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbose"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
         /// </summary>
         /// <param name="current_frame">Call frame which invoked the print request.</param>
         /// <param name="value">Value to be printed.</param>
@@ -235,9 +235,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <summary>
         /// Prints the given value to the STDOUT stream.
-        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
+        /// The value will be printed under the name of the script associated with the given call frame (only relevant if the <see cref="CommandLineOptions.Verbose"/>-property of <see cref="CommandLineOptions"/> is configured to be higher than <see cref="Verbosity.q"/>).
         /// <para/>
-        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbosity"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
+        /// <i>Note:</i> No new line will be appended if the <see cref="CommandLineOptions.Verbose"/>-property of <see cref="CommandLineOptions"/> has the value <see cref="Verbosity.q"/>.
         /// </summary>
         /// <param name="current_frame">Call frame which invoked the print request.</param>
         /// <param name="value">Value to be printed.</param>
@@ -297,4 +297,3 @@ namespace Unknown6656.AutoIt3.Runtime
         public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
     }
 }
-

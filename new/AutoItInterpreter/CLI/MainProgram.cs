@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -29,12 +28,12 @@ using CLParser = CommandLine.Parser;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
-      autoit3 -vq ~/Documents/my_script.au3
-      autoit3 -vq C:\User\Public\Script              (you can also omit the file extension)
+      autoit3 ~/Documents/my_script.au3
+      autoit3 C:\User\Public\Script              (you can also omit the file extension)
   
   Run the interpreter in telemetry/full debugging mode:
       autoit3 -t ~/Documents/my_script.au3
-      autoit3 -vv ~/Documents/my_script.au3
+      autoit3 -v ~/Documents/my_script.au3
   
   Run a script which is not on the local machine:
       autoit3 ""\\192.168.0.1\Public Documents\My Script.au3""
@@ -68,9 +67,6 @@ namespace Unknown6656.AutoIt3.CLI
         [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. The value 'view' will imply the flags '-B -s -v q'.")]
         public ExecutionMode ProgramExecutionMode { get; set; } = ExecutionMode.normal;
 
-        [Option('B', "no-banner", Default = false, HelpText = "Suppress the banner. A verbosity level of 'q' will automatically set this flag.")]
-        public bool HideBanner { set; get; } = false;
-
         [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins/extensions.")]
         public bool DontLoadPlugins { set; get; } = false;
 
@@ -83,8 +79,8 @@ namespace Unknown6656.AutoIt3.CLI
         [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.  NOTE: All telemetry data \x1b[4mstays\x1b[24m on this machine contrary to what this option might suggest. \x1b[4mNo part\x1b[24m of the telemetry will be uploaded to an external (web)server.")]
         public bool PrintTelemetry { set; get; } = false;
 
-        [Option('v', "verbosity", Default = Verbosity.n, HelpText = "The interpreter's verbosity level. (q=quiet, n=normal, v=verbose)")]
-        public Verbosity Verbosity { set; get; } = Verbosity.n;
+        [Option('v', "verbose", Default = false, HelpText = "Indicates that the interpreter should also print debug messages.")]
+        public bool Verbose { set; get; } = false;
 
         [Option('u', "check-for-update", Default = UpdaterMode.release, HelpText = "Specifies how the interpreter should check for software updates. Updates will be downloaded from the GitHub repository (\x1b[4m" + __module__.RepositoryURL + "/releases\x1b[24m).")]
         public UpdaterMode UpdaterMode { set; get; } = UpdaterMode.release;
@@ -141,7 +137,7 @@ namespace Unknown6656.AutoIt3.CLI
 #nullable disable
         public static string[] RawCMDLineArguments { get; private set; }
 
-        public static CommandLineOptions CommandLineOptions { get; private set; } = new() { Verbosity = Verbosity.q };
+        public static CommandLineOptions CommandLineOptions { get; private set; }
 #nullable enable
         public static InteractiveShell? InteractiveShell { get; private set; }
 
@@ -268,7 +264,7 @@ namespace Unknown6656.AutoIt3.CLI
 
                             bool success = await updater.FetchReleaseInformationAsync();
 
-                            if (!success && opt.Verbosity > Verbosity.q)
+                            if (!success && opt.Verbose)
                                 ; // warning : not able to update
                             else if (updater.LatestReleaseAvailable is Release latest)
                             {
@@ -285,7 +281,7 @@ namespace Unknown6656.AutoIt3.CLI
 
                         if (opt.ProgramExecutionMode != ExecutionMode.normal)
                         {
-                            opt.Verbosity = Verbosity.q;
+                            opt.Verbose = false;
                             opt.PrintTelemetry = false;
                             opt.DontLoadPlugins = opt.ProgramExecutionMode is ExecutionMode.view;
                         }
@@ -311,8 +307,8 @@ namespace Unknown6656.AutoIt3.CLI
 
                         PrintBanner();
                         PrintDebugMessage(opt.ToString());
-                        PrintInterpreterMessage("general.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
-                        PrintInterpreterMessage("general.loaded_langpack", lang);
+                        PrintfDebugMessage("debug.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
+                        PrintfDebugMessage("debug.loaded_langpack", lang);
                         PrintfDebugMessage("debug.interpreter_loading");
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
@@ -429,9 +425,9 @@ namespace Unknown6656.AutoIt3.CLI
             _finished = true;
         }
 
-        private static void SubmitPrint(Verbosity min_lvl, string prefix, string msg, bool from_script)
+        private static void SubmitPrint(bool requires_verbose, string prefix, string msg, bool from_script)
         {
-            if (CommandLineOptions.Verbosity < min_lvl)
+            if (!CommandLineOptions.Verbose && requires_verbose)
                 return;
 
             DateTime now = DateTime.Now;
@@ -455,13 +451,6 @@ namespace Unknown6656.AutoIt3.CLI
         }
 
         /// <summary>
-        /// Prints the given localized interpreter message asynchronously to STDOUT.
-        /// </summary>
-        /// <param name="key">The language key of the message to be printed.</param>
-        /// <param name="args">The arguments used to format the message to be printed.</param>
-        public static void PrintInterpreterMessage(string key, params object?[] args) => SubmitPrint(Verbosity.n, "Interpreter", LanguageLoader.CurrentLanguage?[key, args] ?? key, false);
-
-        /// <summary>
         /// Prints the given debug message asynchronously to STDOUT.
         /// </summary>
         /// <param name="message">The debug message to be printed.</param>
@@ -474,7 +463,7 @@ namespace Unknown6656.AutoIt3.CLI
         /// <param name="args">The arguments used to format the message to be printed.</param>
         public static void PrintfDebugMessage(string key, params object?[] args) => PrintDebugMessage(LanguageLoader.CurrentLanguage?[key, args] ?? key);
 
-        internal static void PrintChannelMessage(string channel, string message) => SubmitPrint(Verbosity.v, channel, message, false);
+        internal static void PrintChannelMessage(string channel, string message) => SubmitPrint(true, channel, message, false);
 
         /// <summary>
         /// Prints the given message asynchronously to STDOUT.
@@ -487,10 +476,10 @@ namespace Unknown6656.AutoIt3.CLI
                 return;
             else if (InteractiveShell is InteractiveShell shell)
                 shell.SubmitPrint(message);
-            else if (CommandLineOptions.Verbosity < Verbosity.n)
+            else if (!CommandLineOptions.Verbose)
                 Console.Write(message);
             else
-                SubmitPrint(Verbosity.n, file ?? '<' + LanguageLoader.CurrentLanguage?["general.unknown"] + '>', message.Trim(), true);
+                SubmitPrint(true, file ?? '<' + LanguageLoader.CurrentLanguage?["general.unknown"] + '>', message.Trim(), true);
         });
 
         /// <summary>
@@ -500,7 +489,7 @@ namespace Unknown6656.AutoIt3.CLI
         public static void PrintException(this Exception? exception)
         {
             if (exception is { })
-                if (CommandLineOptions.Verbosity < Verbosity.q)
+                if (!CommandLineOptions.Verbose)
                     PrintError(exception.Message);
                 else
                 {
@@ -522,12 +511,10 @@ namespace Unknown6656.AutoIt3.CLI
         /// <param name="message">The error message to be printed.</param>
         public static void PrintError(this string message) => _print_queue.Enqueue(delegate
         {
-            bool extensive = !CommandLineOptions.HideBanner && CommandLineOptions.Verbosity > Verbosity.n;
-
-            if (!extensive && Console.CursorLeft > 0)
+            if (!CommandLineOptions.Verbose && Console.CursorLeft > 0)
                 Console.WriteLine();
 
-            if (extensive)
+            if (CommandLineOptions.Verbose)
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.Orange;
                 Console.WriteLine(@"
@@ -557,7 +544,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             Console.WriteLine(message.TrimEnd());
             Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/new/choose\x1b[24m.");
 
-            if (extensive)
+            if (CommandLineOptions.Verbose)
             {
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                 Console.WriteLine(new string('_', Console.WindowWidth - 1));
@@ -571,7 +558,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         /// <param name="message">The warning message to be printed.</param>
         public static void PrintWarning(SourceLocation location, string message) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
         {
-            if (CommandLineOptions.Verbosity == Verbosity.q)
+            if (!CommandLineOptions.Verbose)
             {
                 if (Console.CursorLeft > 0)
                     Console.WriteLine();
@@ -611,7 +598,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             else if (Console.CursorLeft > 0)
                 Console.WriteLine();
 
-            bool print_telemetry = CommandLineOptions is { Verbosity: > Verbosity.q } or { PrintTelemetry: true };
+            bool print_telemetry = CommandLineOptions is { Verbose: true } or { PrintTelemetry: true };
             int width = Math.Min(Console.WindowWidth, Console.BufferWidth);
 
             if (print_telemetry)
@@ -988,9 +975,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         /// </summary>
         public static void PrintBanner()
         {
-            if (CommandLineOptions.HideBanner || CommandLineOptions.Verbosity < Verbosity.n)
-                return;
-            else
+            if (CommandLineOptions.Verbose)
                 _print_queue.Enqueue(delegate
                 {
                     LanguagePack? lang = LanguageLoader.CurrentLanguage;
@@ -1021,25 +1006,6 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.WriteLine(" This may panic your CPU.\n");
                 });
         }
-    }
-
-    /// <summary>
-    /// An enumeration of different verbosity levels.
-    /// </summary>
-    public enum Verbosity
-    {
-        /// <summary>
-        /// Quiet.
-        /// </summary>
-        q,
-        /// <summary>
-        /// Normal.
-        /// </summary>
-        n,
-        /// <summary>
-        /// Verbose.
-        /// </summary>
-        v,
     }
 
     /// <summary>

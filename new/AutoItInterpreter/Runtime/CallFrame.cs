@@ -503,7 +503,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             line = line.Trim();
 
-            if (Interpreter.CommandLineOptions.Verbosity > Verbosity.n)
+            if (Interpreter.CommandLineOptions.Verbose)
             {
                 ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(line);
 
@@ -1125,7 +1125,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     {
                         string key = ex is ParseException or ParserConfigurationException or LexerException or LexerConstructionException ? "error.unparsable_line" : "error.unprocessable_line";
 
-                        if (Interpreter.CommandLineOptions.Verbosity > Verbosity.q)
+                        if (Interpreter.CommandLineOptions.Verbose)
                             return new InterpreterError(CurrentLocation, $"{Interpreter.CurrentUILanguage[key, line, ex.Message]}\n\nStack trace:\n{ex.StackTrace}");
                         else
                             return WellKnownError(key, line, ex.Message);
