@@ -459,7 +459,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             try
             {
                 string cmd = NativeInterop.DoPlatformDependent($"echo {args[0]} | clip", $"echo \"{args[0]}\" | pbcopy");
-                (_, int code) = NativeInterop.Bash(cmd);
+                (_, int code) = NativeInterop.Exec(cmd);
 
                 return Variant.FromBoolean(code == 0);
             }
@@ -1011,7 +1011,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 return NativeInterop.DoPlatformDependent<Variant>(
                     () => FileSystemExtensions.CreateNTFSHardLink(linkname.FullName, target.FullName),
-                    () => NativeInterop.Bash($"ln -f \"{linkname.FullName}\" \"{target.FullName}\"").code == 0
+                    () => NativeInterop.Exec($"ln -f \"{linkname.FullName}\" \"{target.FullName}\"").code == 0
                 );
             }
             catch
@@ -3801,8 +3801,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 NativeInterop.NtRaiseHardError(0xc0000420u, 0, 0, null, 6, out _);
             }, delegate
             {
-                NativeInterop.Bash("echo 1 > /proc/sys/kernel/sysrq");
-                NativeInterop.Bash("echo c > /proc/sysrq-trigger");
+                NativeInterop.Exec("echo 1 > /proc/sys/kernel/sysrq");
+                NativeInterop.Exec("echo c > /proc/sysrq-trigger");
             });
 
             return Variant.True;

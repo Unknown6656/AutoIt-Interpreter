@@ -242,29 +242,27 @@ namespace Unknown6656.AutoIt3.Runtime.Native
             Environment.SetEnvironmentVariable("PATH", string.Join(separator, path.Distinct()), EnvironmentVariableTarget.Process);
         }
 
-        public static (string stdout, int code) Bash(string command, bool use_shellexec = false) => DoPlatformDependent(
-            delegate
-            {
-                static string escape(char c) => "^[]|()<>&'\"=$".Contains(c, StringComparison.InvariantCulture) ? "^" + c : c.ToString();
-
-                return Run("cmd.exe", $"/c \"{string.Concat(command.Select(escape))}\"", use_shellexec);
-            },
-            () => Run("/bin/bash", $"-c \"{command.Replace("\"", "\\\"", StringComparison.InvariantCulture)}\"", use_shellexec)
+        public static (string stdout, int code) Exec(string command, bool use_shellexec = false) => DoPlatformDependent(
+            () => InternalRun("cmd.exe", new[] { "/c", command }, use_shellexec),
+            () => InternalRun("/bin/bash", new[] { "-c", command }, use_shellexec)
         );
 
-        private static (string stdout, int code) Run(string filename, string arguments, bool use_shexec)
+        private static (string stdout, int code) InternalRun(string filename, string[] arguments, bool use_shexec)
         {
+            static string escape(char c) => "^[]|()<>&'\"=$".Contains(c, StringComparison.InvariantCulture) ? "^" + c : c.ToString();
             using Process process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = filename,
-                    Arguments = arguments,
                     RedirectStandardOutput = true,
                     UseShellExecute = use_shexec,
                     CreateNoWindow = false,
                 }
             };
+
+            foreach (string arg in arguments)
+                process.StartInfo.ArgumentList.Add(arg); // todo : escape ?
 
             process.Start();
 
