@@ -52,7 +52,7 @@ LMAO Bottom Text
 
 ## Enforcement
 
-If you want to be a dick, that's fine by me. I might also be one - but that's to be expected.
+topkek.
 
 ## Attribution
 
