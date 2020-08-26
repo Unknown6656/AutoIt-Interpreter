@@ -25,6 +25,7 @@ using Unknown6656.Common;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
+using Unknown6656.IO;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -147,6 +148,8 @@ namespace Unknown6656.AutoIt3.CLI
 
         public static bool PausePrinter { get; set; }
 
+
+        // TODO : clean up 'Start'-method
 
         /// <summary>
         /// The main entry point for this application.
@@ -273,7 +276,11 @@ namespace Unknown6656.AutoIt3.CLI
                                 success = await updater.TryUpdateToLatestAsync();
 
                                 if (success)
-                                    ; // restart
+                                {
+                                    code = 0;
+
+                                    return;
+                                }
                                 else
                                     ; // error
                             }
@@ -1003,7 +1010,9 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.Write("    ");
                     ConsoleExtensions.WriteUnderlined("WARNING!");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
-                    Console.WriteLine(" This may panic your CPU.\n");
+                    Console.WriteLine(" This may panic your CPU.\n\n");
+                    ConsoleExtensions.RGBForegroundColor = COLOR_DEBUG;
+                    // Console.WriteLine("Visual signature:\n" + From.File(ASM_FILE).To.DrunkBishop());
                 });
         }
     }
