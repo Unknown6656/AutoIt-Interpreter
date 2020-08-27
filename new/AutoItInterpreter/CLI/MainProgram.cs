@@ -19,13 +19,15 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 
+using Unknown6656.Mathematics.Cryptography;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using Unknown6656.IO;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
-using Unknown6656.IO;
+using System.Runtime.CompilerServices;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -987,6 +989,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 {
                     LanguagePack? lang = LanguageLoader.CurrentLanguage;
 
+                    From hash = From.File(ASM_FILE).Hash(HashFunctions.SHA256);
+
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     Console.WriteLine($@"
                         _       _____ _   ____
@@ -1011,8 +1015,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     ConsoleExtensions.WriteUnderlined("WARNING!");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
                     Console.WriteLine(" This may panic your CPU.\n\n");
-                    ConsoleExtensions.RGBForegroundColor = COLOR_DEBUG;
-                    // Console.WriteLine("Visual signature:\n" + From.File(ASM_FILE).To.DrunkBishop());
+
+                    PrintDebugMessage($"Visual signature (used to easily verify whether two AutoIt-versions are equal):\n{hash.To.DrunkBishop()}\n{hash.To.Hex()}");
                 });
         }
     }

@@ -31,7 +31,6 @@ strings:
         plugins_loaded: "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
         interpreter_loading: "Loading interpreter ..."
         interpreter_loaded: "Interpreter loaded. Running script '{0}' ..."
-        plugins_loaded: "{0} plugin files found in ""{1}"" ({2} modules)"
         external:
             starting: "Starting external service connector '{0}' ..."
             started: "External service connector started (file: '{0}', odata: '{1}', idata: '{2}', debug: '{3}', pid: {4:x8})."

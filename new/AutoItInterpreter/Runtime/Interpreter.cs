@@ -141,9 +141,9 @@ namespace Unknown6656.AutoIt3.Runtime
                 PluginLoader.LoadPlugins();
 
             if (PluginLoader.LoadedPluginFiles.Count is int i and > 0)
-                MainProgram.PrintfDebugMessage("general.plugins_loaded", i, PluginLoader.PluginDirectory.FullName, PluginLoader.PluginModuleCount);
+                MainProgram.PrintDebugMessage(PluginLoader.ToString());
             else
-                MainProgram.PrintfDebugMessage("general.no_plugins_loaded");
+                MainProgram.PrintfDebugMessage("debug.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
 
