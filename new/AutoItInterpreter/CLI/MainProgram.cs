@@ -397,31 +397,36 @@ namespace Unknown6656.AutoIt3.CLI
             else if (updater.LatestReleaseAvailable is Release latest)
             {
                 bool handled = false;
+                bool confirmation = false;
 
                 _print_queue.Enqueue(() => Task.Run(async delegate
                 {
-                    Console.WriteLine();
-                    Console.Write('\t');
                     ConsoleExtensions.RGBForegroundColor = COLOR_PREFIX_DEBUG;
+                    Console.WriteLine("\n-------------------------------------------------------------------------------------------------------------\t");
                     ConsoleExtensions.WriteUnderlined(lang["general.update.header"]);
+                    Console.WriteLine("\n-------------------------------------------------------------------------------------------------------------");
                     ConsoleExtensions.RGBForegroundColor = COLOR_DEBUG;
-                    Console.WriteLine(lang["general.update.message", __module__.InterpreterVersion, latest.TagName, latest.PublishedAt, latest.Body]);
+                    Console.WriteLine(lang["general.update.message", __module__.InterpreterVersion, latest.TagName, latest.Body.SplitIntoLines().Select(line => '\t' + line).StringJoin("\n")]);
 
-                    if (Console.ReadKey(true).Key == ConsoleKey.Y)
-                    {
-                        success = await updater.TryUpdateToLatestAsync().ConfigureAwait(true);
+                    confirmation = Console.ReadKey(true).Key == ConsoleKey.Y;
 
-                        if (!success)
-                            PrintError(lang["error.update_failed", latest.TagName, latest.PublishedAt, __module__.RepositoryURL + "/releases"]);
-                    }
-                    else
-                        Console.WriteLine();
+                    Console.WriteLine();
 
                     handled = true;
                 }).GetAwaiter().GetResult());
 
                 while (!handled)
                     await Task.Delay(20).ConfigureAwait(true);
+
+                if (confirmation)
+                {
+                    success = await updater.TryUpdateTo(latest).ConfigureAwait(true);
+
+                    if (!success)
+                        PrintError(lang["error.update_failed", latest.TagName, latest.PublishedAt, __module__.RepositoryURL + "/releases"]);
+                }
+                else
+                    Console.WriteLine(lang["general.update.update_cancelled"]);
             }
 
             return success;

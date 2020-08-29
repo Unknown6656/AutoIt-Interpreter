@@ -82,108 +82,113 @@ namespace Unknown6656.AutoIt3
             }
         }).ConfigureAwait(true);
 
-        public async Task<bool> TryUpdateToLatestAsync() => await Telemetry.MeasureAsync(TelemetryCategory.GithubUpdater, async delegate
+        public async Task<bool> TryUpdateToLatestAsync()
+        {
+            if (LatestReleaseAvailable is Release latest)
+                return await TryUpdateTo(latest).ConfigureAwait(true);
+
+            return false;
+        }
+
+        public async Task<bool> TryUpdateTo(Release release) => await Telemetry.MeasureAsync(TelemetryCategory.GithubUpdater, async delegate
         {
             try
             {
-                if (LatestReleaseAvailable is Release latest)
+                MainProgram.PrintfDebugMessage("debug.update.updating", release.Id, release.Name, release.PublishedAt);
+
+                string prefix = "update-" + release.TagName.Select(c => char.IsLetterOrDigit(c) ? c : '-').StringConcat() + "--";
+                FileInfo download_target = new FileInfo($"{MainProgram.ASM_DIR.FullName}/{prefix}downloaded_asset.zip");
+                IReadOnlyList<ReleaseAsset> assets = release.Assets;
+                ReleaseAsset? asset = assets[0];
+
+                if (assets.Count > 1)
+                    asset = assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase) && a.Name.Contains(release.TagName, StringComparison.InvariantCultureIgnoreCase));
+
+                if (asset is null)
+                    return false;
+
+                MainProgram.PrintfDebugMessage("debug.update.downloading", asset, asset.BrowserDownloadUrl, asset.Size / 1048576d);
+
+                using WebClient wc = new WebClient();
+
+                await wc.DownloadFileTaskAsync(asset.BrowserDownloadUrl, download_target.FullName);
+
+                using FileStream fs = download_target.OpenRead();
+                using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read, false);
+
+                MainProgram.PrintfDebugMessage("debug.update.extracting", download_target);
+
+                foreach (ZipArchiveEntry entry in zip.Entries)
                 {
-                    MainProgram.PrintfDebugMessage("debug.update.updating", latest.Id, latest.Name, latest.PublishedAt);
+                    FileInfo path = new FileInfo(MainProgram.ASM_DIR + "/" + entry.FullName);
 
-                    string prefix = "update-" + latest.TagName.Select(c => char.IsLetterOrDigit(c) ? c : '-').StringConcat() + "--";
-                    FileInfo download_target = new FileInfo($"{MainProgram.ASM_DIR.FullName}/{prefix}downloaded_asset.zip");
-                    IReadOnlyList<ReleaseAsset> assets = latest.Assets;
-                    ReleaseAsset? asset = assets[0];
-
-                    if (assets.Count > 1)
-                        asset = assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase) && a.Name.Contains(latest.TagName, StringComparison.InvariantCultureIgnoreCase));
-
-                    if (asset is null)
-                        return false;
-
-                    MainProgram.PrintfDebugMessage("debug.update.downloading", asset, asset.BrowserDownloadUrl);
-
-                    using WebClient wc = new WebClient();
-
-                    await wc.DownloadFileTaskAsync(asset.BrowserDownloadUrl, download_target.FullName);
-
-                    using FileStream fs = download_target.OpenRead();
-                    using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read, false);
-
-                    MainProgram.PrintfDebugMessage("debug.update.extracting", download_target);
-
-                    foreach (ZipArchiveEntry entry in zip.Entries)
+                    if (entry.FullName[^1] is '/' or '\\')
                     {
-                        FileInfo path = new FileInfo(MainProgram.ASM_DIR + "/" + entry.FullName);
+                        if (!Directory.Exists(path.FullName))
+                            Directory.CreateDirectory(path.FullName);
 
-                        if (entry.FullName[^1] is '/' or '\\')
+                        continue;
+                    }
+
+                    if (path.Exists)
+                    {
+                        byte[] bytes = File.ReadAllBytes(path.FullName);
+                        uint crc32 = CRC32(bytes);
+
+                        if (crc32 == entry.Crc32)
                         {
-                            if (!Directory.Exists(path.FullName))
-                                Directory.CreateDirectory(path.FullName);
+                            MainProgram.PrintfDebugMessage("debug.update.skipping", path);
 
                             continue;
                         }
-
-                        if (path.Exists)
-                        {
-                            byte[] bytes = File.ReadAllBytes(path.FullName);
-                            uint crc32 = CRC32(bytes);
-
-                            if (crc32 == entry.Crc32)
-                            {
-                                MainProgram.PrintfDebugMessage("debug.update.skipping", path);
-
-                                continue;
-                            }
-                            else
-                            {
-                                MainProgram.PrintfDebugMessage("debug.update.replacing", path, crc32, entry.Crc32);
-
-                                File.Move(path.FullName, MainProgram.ASM_DIR + "/" + prefix + path.Name, true);
-                            }
-                        }
                         else
-                            MainProgram.PrintfDebugMessage("debug.update.creating", path);
+                        {
+                            MainProgram.PrintfDebugMessage("debug.update.replacing", path, crc32, entry.Crc32);
 
-                        entry.ExtractToFile(path.FullName, false);
+                            File.Move(path.FullName, MainProgram.ASM_DIR + "/" + prefix + path.Name, true);
+                        }
                     }
+                    else
+                        MainProgram.PrintfDebugMessage("debug.update.creating", path);
 
-                    MainProgram.PrintfDebugMessage("debug.update.finished_extraction");
-
-                    zip.Dispose();
-                    fs.Close();
-
-                    await fs.DisposeAsync().ConfigureAwait(true);
-
-                    MainProgram.PrintfDebugMessage("debug.update.starting_updater");
-
-                    ProcessStartInfo psi = new ProcessStartInfo
-                    {
-                        FileName = "dotnet",
-                        UseShellExecute = true,
-                    };
-
-                    foreach (object obj in new object[]
-                    {
-                        MainProgram.UPDATER.FullName,
-                        true,
-                        MainProgram.ASM_DIR.FullName,
-                        prefix,
-                        Process.GetCurrentProcess().Id,
-                        MainProgram.ASM_FILE.FullName,
-                    }.Concat(MainProgram.RawCMDLineArguments))
-                    {
-                        string arg = obj as string ?? obj.ToString();
-
-                        psi.ArgumentList.Add(arg);
-                    }
-
-                    using Process? process = Process.Start(psi);
-
-                    Environment.Exit(0);
-
-                    return true;
+                    entry.ExtractToFile(path.FullName, false);
                 }
+
+                MainProgram.PrintfDebugMessage("debug.update.finished_extraction");
+
+                zip.Dispose();
+                fs.Close();
+
+                await fs.DisposeAsync().ConfigureAwait(true);
+
+                MainProgram.PrintfDebugMessage("debug.update.starting_updater");
+
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    UseShellExecute = true,
+                };
+
+                foreach (object obj in new object[]
+                {
+                    MainProgram.UPDATER.FullName,
+                    true,
+                    MainProgram.ASM_DIR.FullName,
+                    prefix,
+                    Process.GetCurrentProcess().Id,
+                    MainProgram.ASM_FILE.FullName,
+                }.Concat(MainProgram.RawCMDLineArguments))
+                {
+                    string arg = obj as string ?? obj.ToString();
+
+                    psi.ArgumentList.Add(arg);
+                }
+
+                using Process? process = Process.Start(psi);
+
+                Environment.Exit(0);
+
+                return true;
             }
             catch
             {

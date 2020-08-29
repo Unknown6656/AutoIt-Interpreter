@@ -14,7 +14,8 @@ strings:
         unknown: "unknown"
         update:
             header: "An update is available!"
-            message: "You are currently using version {0} of the AutoIt-Interpreter. The newer version {1} published on {2} is available. The additions/changes are:\n{3}\n\nDo you wish to download and update the AutoIt-Interpreter?\nType [Y] for 'yes', or [N] for 'no'."
+            message: "You are currently using version {0} of the AutoIt-Interpreter. The newer version {1} is available.\nThese are the known additions and changes of the newer version:\n{2}\n\nDo you wish to download and update the AutoIt-Interpreter?\nType [Y] for 'yes', or any other key for 'no'."
+            update_cancelled: "You chose not to update to the newer version."
     debug:
         name: "Name"
         index: "Index"
@@ -39,7 +40,7 @@ strings:
             no_releases: "No newer software updates have been found. You are on the newest version!"
             new_releases: "Found {0} release(s):{1}"
             updating: "Updating to 0x{0:x8}: {1} ({2}) ..."
-            downloading: "Downloading {0} from '{1}' ..."
+            downloading: "Downloading {0} from '{1}' ({2} MB) ..."
             extracting: "Extracting '{0}' ..."
             skipping: "Skipping '{0}', as it already is up-to-date."
             replacing: "Replacing '{0}' (old: 0x{1:x8}, new: 0x{2:x8}) ..."
