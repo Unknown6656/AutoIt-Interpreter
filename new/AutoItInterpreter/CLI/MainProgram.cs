@@ -218,76 +218,11 @@ namespace Unknown6656.AutoIt3.CLI
 
                         ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
-                        result.WithNotParsed(err =>
-                        {
-                            HelpText help = HelpText.AutoBuild(result, h =>
-                            {
-                                h.AdditionalNewLineAfterOption = false;
-                                h.MaximumDisplayWidth = 119;
-                                h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
-                                h.Copyright = __module__.Copyright;
-                                h.AddDashesToOption = true;
-                                h.AutoHelp = true;
-                                h.AutoVersion = true;
-                                h.AddNewLineBetweenHelpSections = true;
-                                h.AddEnumValuesToHelpText = false;
-
-                                return HelpText.DefaultParsingErrorsHandler(result, h);
-                            }, e => e);
-
-                            if (err.FirstOrDefault() is VersionRequestedError or UnknownOptionError { StopsProcessing: false, Token: "version" })
-                            {
-                                Console.WriteLine(help.Heading);
-                                Console.WriteLine(help.Copyright);
-                                Console.WriteLine($"\x1b[4m{__module__.RepositoryURL}/\x1b[24m");
-
-                                help_requested = true;
-                            }
-                            else
-                            {
-                                Console.WriteLine(help + "  --                        All subsequent arguments will be passed to the AutoIt-3 script.");
-
-                                if (err.FirstOrDefault() is HelpRequestedError or HelpVerbRequestedError)
-                                    help_requested = true;
-                                else
-                                    code = -1;
-                            }
-                        });
+                        result.WithNotParsed(err => HandleParserError(result, err, ref code, ref help_requested));
 
                         return result;
                     }).WithParsed(opt =>
                     {
-                        using Task update_task = Task.Run(async delegate
-                        {
-                            if (opt.UpdaterMode is UpdaterMode.none)
-                                return;
-
-                            GithubUpdater updater = new GithubUpdater(Telemetry)
-                            {
-                                UpdaterMode = opt.UpdaterMode is UpdaterMode.beta ? GithubUpdaterMode.IncludeBetaVersions : GithubUpdaterMode.ReleaseOnly
-                            };
-
-                            bool success = await updater.FetchReleaseInformationAsync();
-
-                            if (!success && opt.Verbose)
-                                ; // warning : not able to update
-                            else if (updater.LatestReleaseAvailable is Release latest)
-                            {
-                                // ask if update
-
-                                success = await updater.TryUpdateToLatestAsync();
-
-                                if (success)
-                                {
-                                    code = 0;
-
-                                    return;
-                                }
-                                else
-                                    ; // error
-                            }
-                        });
-
                         if (opt.ProgramExecutionMode != ExecutionMode.normal)
                         {
                             opt.Verbose = false;
@@ -297,6 +232,8 @@ namespace Unknown6656.AutoIt3.CLI
 
                         opt.ScriptArguments = script_args ?? opt.ScriptArguments;
                         CommandLineOptions = opt;
+
+                        using Task<bool> update_task = Task.Run(UpdateTask);
 
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
                         {
@@ -322,9 +259,9 @@ namespace Unknown6656.AutoIt3.CLI
 
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
 
-                        update_task.GetAwaiter().GetResult();
-
-                        if (opt.ProgramExecutionMode is ExecutionMode.interactive)
+                        if (update_task.GetAwaiter().GetResult())
+                            code = 0;
+                        else if (opt.ProgramExecutionMode is ExecutionMode.interactive)
                         {
                             using InteractiveShell shell = new InteractiveShell(interpreter);
 
@@ -404,6 +341,90 @@ namespace Unknown6656.AutoIt3.CLI
             ConsoleExtensions.RestoreConsoleState(state);
 
             return code;
+        }
+
+        private static void HandleParserError(ParserResult<CommandLineOptions> result, IEnumerable<Error> err, ref int code, ref bool help_requested)
+        {
+            HelpText help = HelpText.AutoBuild(result, h =>
+            {
+                h.AdditionalNewLineAfterOption = false;
+                h.MaximumDisplayWidth = 119;
+                h.Heading = $"AutoIt3 Interpreter v.{__module__.InterpreterVersion} ({__module__.GitHash})";
+                h.Copyright = __module__.Copyright;
+                h.AddDashesToOption = true;
+                h.AutoHelp = true;
+                h.AutoVersion = true;
+                h.AddNewLineBetweenHelpSections = true;
+                h.AddEnumValuesToHelpText = false;
+
+                return HelpText.DefaultParsingErrorsHandler(result, h);
+            }, e => e);
+
+            if (err.FirstOrDefault() is VersionRequestedError or UnknownOptionError { StopsProcessing: false, Token: "version" })
+            {
+                Console.WriteLine(help.Heading);
+                Console.WriteLine(help.Copyright);
+                Console.WriteLine($"\x1b[4m{__module__.RepositoryURL}/\x1b[24m");
+
+                help_requested = true;
+            }
+            else
+            {
+                Console.WriteLine(help + "  --                        All subsequent arguments will be passed to the AutoIt-3 script.");
+
+                if (err.FirstOrDefault() is HelpRequestedError or HelpVerbRequestedError)
+                    help_requested = true;
+                else
+                    code = -1;
+            }
+        }
+
+        private static async Task<bool> UpdateTask()
+        {
+            if (CommandLineOptions.UpdaterMode is UpdaterMode.none)
+                return false;
+
+            GithubUpdater updater = new GithubUpdater(Telemetry)
+            {
+                UpdaterMode = CommandLineOptions.UpdaterMode is UpdaterMode.beta ? GithubUpdaterMode.IncludeBetaVersions : GithubUpdaterMode.ReleaseOnly
+            };
+
+            bool success = await updater.FetchReleaseInformationAsync().ConfigureAwait(true);
+            LanguagePack lang = LanguageLoader.CurrentLanguage!;
+
+            if (!success && CommandLineOptions.Verbose)
+                PrintWarning(null, lang["warning.unable_to_update", __module__.RepositoryURL + "/releases"]);
+            else if (updater.LatestReleaseAvailable is Release latest)
+            {
+                bool handled = false;
+
+                _print_queue.Enqueue(() => Task.Run(async delegate
+                {
+                    Console.WriteLine();
+                    Console.Write('\t');
+                    ConsoleExtensions.RGBForegroundColor = COLOR_PREFIX_DEBUG;
+                    ConsoleExtensions.WriteUnderlined(lang["general.update.header"]);
+                    ConsoleExtensions.RGBForegroundColor = COLOR_DEBUG;
+                    Console.WriteLine(lang["general.update.message", __module__.InterpreterVersion, latest.TagName, latest.PublishedAt, latest.Body]);
+
+                    if (Console.ReadKey(true).Key == ConsoleKey.Y)
+                    {
+                        success = await updater.TryUpdateToLatestAsync().ConfigureAwait(true);
+
+                        if (!success)
+                            PrintError(lang["error.update_failed", latest.TagName, latest.PublishedAt, __module__.RepositoryURL + "/releases"]);
+                    }
+                    else
+                        Console.WriteLine();
+
+                    handled = true;
+                }).GetAwaiter().GetResult());
+
+                while (!handled)
+                    await Task.Delay(20).ConfigureAwait(true);
+            }
+
+            return success;
         }
 
         private static async Task PrinterTask()
@@ -518,7 +539,7 @@ namespace Unknown6656.AutoIt3.CLI
         /// Prints the given error message asynchronously to STDOUT.
         /// </summary>
         /// <param name="message">The error message to be printed.</param>
-        public static void PrintError(this string message) => _print_queue.Enqueue(delegate
+        public static void PrintError(this string message) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Exceptions, delegate
         {
             if (!CommandLineOptions.Verbose && Console.CursorLeft > 0)
                 Console.WriteLine();
@@ -558,14 +579,14 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                 Console.WriteLine(new string('_', Console.WindowWidth - 1));
             }
-        });
+        }));
 
         /// <summary>
         /// Prints the given warning message asynchronously to STDOUT.
         /// </summary>
         /// <param name="location">The source location at which the warning occurred.</param>
         /// <param name="message">The warning message to be printed.</param>
-        public static void PrintWarning(SourceLocation location, string message) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
+        public static void PrintWarning(SourceLocation? location, string message) => _print_queue.Enqueue(() => Telemetry.Measure(TelemetryCategory.Warnings, delegate
         {
             if (!CommandLineOptions.Verbose)
             {
@@ -573,7 +594,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     Console.WriteLine();
 
                 ConsoleExtensions.RGBForegroundColor = COLOR_WARNING;
-                Console.WriteLine(LanguageLoader.CurrentLanguage?["warning.warning_in", location] + ":\n    " + message.Trim());
+                Console.WriteLine(LanguageLoader.CurrentLanguage?[location is null ? "warning.warning" : "warning.warning_in", location] + ":\n    " + message.Trim());
             }
             else
             {

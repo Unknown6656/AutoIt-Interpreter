@@ -12,6 +12,9 @@ strings:
         line: "line"
         lines: "lines"
         unknown: "unknown"
+        update:
+            header: "An update is available!"
+            message: "You are currently using version {0} of the AutoIt-Interpreter. The newer version {1} published on {2} is available. The additions/changes are:\n{3}\n\nDo you wish to download and update the AutoIt-Interpreter?\nType [Y] for 'yes', or [N] for 'no'."
     debug:
         name: "Name"
         index: "Index"
@@ -31,6 +34,18 @@ strings:
         plugins_loaded: "{0}+1 plugin files have been loaded from the directory '{1}' ({2} loaded modules)."
         interpreter_loading: "Loading interpreter ..."
         interpreter_loaded: "Interpreter loaded. Running script '{0}' ..."
+        update:
+            searching: "Looking for new GitHub releases..."
+            no_releases: "No newer software updates have been found. You are on the newest version!"
+            new_releases: "Found {0} release(s):{1}"
+            updating: "Updating to 0x{0:x8}: {1} ({2}) ..."
+            downloading: "Downloading {0} from '{1}' ..."
+            extracting: "Extracting '{0}' ..."
+            skipping: "Skipping '{0}', as it already is up-to-date."
+            replacing: "Replacing '{0}' (old: 0x{1:x8}, new: 0x{2:x8}) ..."
+            creating: "Creating new File '{0}' ..."
+            finished_extraction: "Finished extracting all files."
+            starting_updater: "Starting updater executable ..."
         external:
             starting: "Starting external service connector '{0}' ..."
             started: "External service connector started (file: '{0}', odata: '{1}', idata: '{2}', debug: '{3}', pid: {4:x8})."
@@ -122,14 +137,16 @@ strings:
             expression: "Expression:           {0} --> {1} ({2})"
             raw_expr: "Raw expression:       {0}"
     warning:
+        warning: "WARNING"
         warning_in: "WARNING in {0}"
+        unable_to_update: "Unable to check for software updates. Please verify that you have a working Internet connection and that the URL \x1b[4m{0}\x1b[24m is accessible."
         unparsable_dirctive: "The directive '#{0}' is unknown or cannot be parsed. If you have a plugin for that directive, verify whether the .dll can be correctly loaded from the plugin-folder."
         com_unavailable: "Interactions with the COM (Component Object Model) framework are not possible on this platform. Currently, COM is only available to Windows-like platforms."
         deprecated_function: "The function '{0}' is considered to be deprecated and may be removed from future versions of the AutoIt interpreter."
     error:
         error_in: "ERROR in {0}"
         not_yet_implemented: "The functionality '{0}' has not yet been implemented. We're sorry :/"
-
+        update_failed: "The update {0} (published on {1}) could not be downloaded and installed from \x1b[4m{2}\x1b[24m. Please verify that you have a stable Internet connection and that the AutoIt-Interpreter has read/write access to its directory and sub-directories. A failure may indicate a corrupted installation and/or update."
         au3_caller_only: "The execution of the function '{0}' requires an Au3 (non-native) call frame."
         byref_default: "The ByRef-parameter '{0}' cannot have a default value."
         cannot_make_static: "The already existing variable '{0}' (declared at {1}) cannot be made static by a re-definition."

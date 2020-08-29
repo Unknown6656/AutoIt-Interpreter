@@ -58,7 +58,7 @@ namespace Unknown6656.AutoIt3
         {
             try
             {
-                MainProgram.PrintDebugMessage("Looking for new GitHub releases...");
+                MainProgram.PrintfDebugMessage("debug.update.searching");
 
                 _releases = (from release in await Client.Repository.Release.GetAll(__module__.Author, __module__.RepositoryName).ConfigureAwait(true)
                              let date = release.PublishedAt ?? release.CreatedAt
@@ -69,7 +69,10 @@ namespace Unknown6656.AutoIt3
                              orderby date descending
                              select release).ToArray();
 
-                MainProgram.PrintDebugMessage($"Found {_releases.Length} release(s):{_releases.Select(r => $"\n\t- 0x{r.Id:x8}: {r.Name} ({r.PublishedAt})").StringConcat()}");
+                if (_releases.Length == 0)
+                    MainProgram.PrintfDebugMessage("debug.update.no_releases");
+                else
+                    MainProgram.PrintfDebugMessage("debug.update.new_releases", _releases.Length, _releases.Select(r => $"\n\t- 0x{r.Id:x8}: {r.Name} ({r.PublishedAt})").StringConcat());
 
                 return true;
             }
@@ -85,7 +88,7 @@ namespace Unknown6656.AutoIt3
             {
                 if (LatestReleaseAvailable is Release latest)
                 {
-                    MainProgram.PrintDebugMessage($"Updating to 0x{latest.Id:x8}: {latest.Name} ({latest.PublishedAt}) ...");
+                    MainProgram.PrintfDebugMessage("debug.update.updating", latest.Id, latest.Name, latest.PublishedAt);
 
                     string prefix = "update-" + latest.TagName.Select(c => char.IsLetterOrDigit(c) ? c : '-').StringConcat() + "--";
                     FileInfo download_target = new FileInfo($"{MainProgram.ASM_DIR.FullName}/{prefix}downloaded_asset.zip");
@@ -98,7 +101,7 @@ namespace Unknown6656.AutoIt3
                     if (asset is null)
                         return false;
 
-                    MainProgram.PrintDebugMessage($"Downloading {asset} from '{asset.BrowserDownloadUrl}' ...");
+                    MainProgram.PrintfDebugMessage("debug.update.downloading", asset, asset.BrowserDownloadUrl);
 
                     using WebClient wc = new WebClient();
 
@@ -107,7 +110,7 @@ namespace Unknown6656.AutoIt3
                     using FileStream fs = download_target.OpenRead();
                     using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read, false);
 
-                    MainProgram.PrintDebugMessage($"Extracting '{download_target}' ...");
+                    MainProgram.PrintfDebugMessage("debug.update.extracting", download_target);
 
                     foreach (ZipArchiveEntry entry in zip.Entries)
                     {
@@ -128,31 +131,31 @@ namespace Unknown6656.AutoIt3
 
                             if (crc32 == entry.Crc32)
                             {
-                                MainProgram.PrintDebugMessage($"Skipping '{path}', as it already is up-to-date.");
+                                MainProgram.PrintfDebugMessage("debug.update.skipping", path);
 
                                 continue;
                             }
                             else
                             {
-                                MainProgram.PrintDebugMessage($"Replacing '{path}' (old: 0x{crc32:x8}, new: 0x{entry.Crc32:x8}) ...");
+                                MainProgram.PrintfDebugMessage("debug.update.replacing", path, crc32, entry.Crc32);
 
                                 File.Move(path.FullName, MainProgram.ASM_DIR + "/" + prefix + path.Name, true);
                             }
                         }
                         else
-                            MainProgram.PrintDebugMessage($"Creating new File '{path}' ...");
+                            MainProgram.PrintfDebugMessage("debug.update.creating", path);
 
                         entry.ExtractToFile(path.FullName, false);
                     }
 
-                    MainProgram.PrintDebugMessage("Finished extracting all files.");
+                    MainProgram.PrintfDebugMessage("debug.update.finished_extraction");
 
                     zip.Dispose();
                     fs.Close();
 
                     await fs.DisposeAsync().ConfigureAwait(true);
 
-                    MainProgram.PrintDebugMessage("Starting updater executable ...");
+                    MainProgram.PrintfDebugMessage("debug.update.starting_updater");
 
                     ProcessStartInfo psi = new ProcessStartInfo
                     {
