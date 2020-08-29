@@ -50,7 +50,7 @@ All credits go to him for the wonderful LR-Parser-Library!!
 ## Maintainer(s)
 
  - [@Unknown6656](https://github.com/Unknown6656)
- - ([@Zedly](https://github.com/Zedly) in assistive and advisory function)
+ - ([@Zedly](https://github.com/Zedly) / [@wickersoft](https://github.com/wickersoft) in assistive and advisory function)
 
 -----------------
 

@@ -62,4 +62,4 @@ Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/proj
 ## Maintainer(s)
 
  - [@Unknown6656](https://github.com/Unknown6656)
- - ([@Zedly](https://github.com/Zedly) in assistive and advisory function)
+ - ([@Zedly](https://github.com/Zedly) / [@wickersoft](https://github.com/wickersoft) in assistive and advisory function)
