@@ -27,7 +27,6 @@ using Unknown6656.IO;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
-using System.Runtime.CompilerServices;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -769,7 +768,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             #endregion
             #region TIMINGS : PRINT HEADER
 
-            Console.CursorTop -= 2;
+            //Console.CursorTop -= 2;
             ConsoleExtensions.RGBForegroundColor = col_table;
 
             for (int i = 0, l = widths.Length; i < l; i++)
@@ -869,8 +868,8 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 #region PERFORMANCE : FETCH DATA
 
                 const int PADDING = 22;
-                List<(DateTime, double total, double user, double kernel, long ram)> performance_data = new();
-                int width_perf = width - 2 - PADDING;
+                List<(DateTime time, double total, double user, double kernel, long ram)> performance_data = new();
+                int width_perf = width - 3 - PADDING;
                 const int height_perf_cpu = 14;
 
                 performance_data.AddRange(telemetry.PerformanceMeasurements);
@@ -901,7 +900,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
                 int ypos = Console.CursorTop;
 
-                for (int i = 0; i < height_perf_cpu; ++i)
+                for (int i = 0; i < height_perf_cpu + 2; ++i)
                 {
                     Console.CursorLeft = 0;
                     Console.Write('│');
@@ -927,14 +926,43 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 ConsoleExtensions.RGBForegroundColor = col_text;
                 Console.Write("Kernel");
 
+                string grid = "─┼";
+
                 for (int j = 0; j < height_perf_cpu; ++j)
                 {
                     ConsoleExtensions.RGBForegroundColor = col_text;
                     Console.SetCursorPosition(PADDING - 7, ypos + height_perf_cpu - j - 1);
                     Console.Write($"{100 * j / (height_perf_cpu - 1d),3:F0} %");
                     ConsoleExtensions.RGBForegroundColor = col_backg;
-                    Console.Write(new string('─', performance_data.Count + 2));
+                    Console.Write('─' + Enumerable.Repeat(grid, (performance_data.Count + 1) / 2).StringConcat());
+
+                    if (performance_data.Count % 2 == 0)
+                        Console.Write('─');
                 }
+
+                ConsoleExtensions.RGBForegroundColor = col_text;
+                Console.SetCursorPosition(2, ypos + height_perf_cpu + 1);
+                Console.Write("time since start:");
+
+                for (int j = 1; j < performance_data.Count - 8; j += 12)
+                {
+                    ConsoleExtensions.RGBForegroundColor = col_backg;
+                    Console.SetCursorPosition(PADDING + j + 1, ypos + height_perf_cpu);
+                    Console.Write('│');
+                    ConsoleExtensions.RGBForegroundColor = col_text;
+                    Console.SetCursorPosition(PADDING + j - 3, ypos + height_perf_cpu + 1);
+
+                    TimeSpan diff = performance_data[j].time - performance_data[0].time;
+
+                    Console.Write(diff switch
+                    {
+                        _ when diff.TotalSeconds < 1 => $"{diff.TotalMilliseconds,7:F3}ms",
+                        _ when diff.TotalSeconds < 60 => $"{diff.Seconds:D2}:{diff.TotalMilliseconds % 1000,6:F2}ms",
+                        _ when diff.TotalMinutes < 60 => $"{diff.Minutes:D2}:{diff.Seconds:D2}:{diff.Milliseconds:D3}ms",
+                        _ => diff.ToString("HH:mm:ss:f")
+                    });
+                }
+
                 // TODO : smthing with Environment.ProcessorCount?
 
                 #endregion
@@ -985,7 +1013,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 IEnumerable<double> c_kernel = performance_data.Select(p => p.kernel * 100);
                 IEnumerable<double> c_ram = performance_data.Select(p => p.ram / 1024d / 1024d);
 
-                Console.SetCursorPosition(0, ypos + height_perf_cpu - 1);
+                Console.SetCursorPosition(0, ypos + height_perf_cpu + 1);
                 ConsoleExtensions.RGBForegroundColor = col_table;
                 Console.WriteLine($@"
 ├────────────┬──────────────┬──────────────┬

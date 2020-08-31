@@ -649,7 +649,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else
                 return WellKnownError("error.not_yet_implemented", type);
 
-            return depth == 0 ? Variant.True : WellKnownError("error.no_matching_close", type, init);
+            return depth == 0 ? (FunctionReturnValue)Variant.True : WellKnownError("error.no_matching_close", type, init);
         }
 
         private FunctionReturnValue? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
@@ -947,7 +947,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return Variant.True;
                 },
-                [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? Variant.True : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
+                [REGEX_ENDIF] = m => _if_stack.TryPop(out _) ? (FunctionReturnValue)Variant.True : WellKnownError("error.unexpected_close", m.Value, BlockStatementType.If),
                 [REGEX_GOTO] = m =>
                 {
                     if (Interpreter.CommandLineOptions.StrictMode)

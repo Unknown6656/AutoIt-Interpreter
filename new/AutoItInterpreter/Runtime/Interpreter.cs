@@ -273,7 +273,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret)).IsFatal(out error);
 
-                return error is null ? new(ExitCode) : new(-1, error);
+                return error is null ? new InterpreterResult(ExitCode) : new(-1, error);
             }
             finally
             {
