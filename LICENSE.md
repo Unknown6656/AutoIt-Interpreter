@@ -1,5 +1,5 @@
 The Giant Penis License (GPL)
-Copyright (c) 2014 Unknown6656
+Copyright (c) 2017 Unknown6656
 
                 ▄▄██▄██▄▄
               ▄█    █    █▄
