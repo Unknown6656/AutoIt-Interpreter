@@ -63,3 +63,6 @@ Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/proj
 
  - [@Unknown6656](https://github.com/Unknown6656)
  - ([@Zedly](https://github.com/Zedly) / [@wickersoft](https://github.com/wickersoft) in assistive and advisory function)
+
+## License
+The code is licensed under the Giant Penis License (GPL), which is a more restrictive version of the MIT License.
