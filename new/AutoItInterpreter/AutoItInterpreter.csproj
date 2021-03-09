@@ -59,7 +59,7 @@
         <PackageReference Include="CommandLineParser" Version="2.8.0" />
         <PackageReference Include="FSharp.Core" Version="5.0.0-beta" />
         <PackageReference Include="Lokad.ILPack" Version="0.1.4" />
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
+        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
