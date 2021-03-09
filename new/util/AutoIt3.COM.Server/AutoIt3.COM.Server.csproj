@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <!--<OutputType>WinExe</OutputType>-->
+        <TargetFramework>net4.8</TargetFramework>
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Unknown6656.AutoIt3.COM.Server</RootNamespace>
+        <AssemblyName>autoit3.comserver</AssemblyName>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\AutoIt3.Common\AutoIt3.Common.csproj" />
+    </ItemGroup>
+</Project>

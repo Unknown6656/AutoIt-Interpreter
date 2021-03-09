@@ -1,18 +1,19 @@
 ﻿using System.IO;
 using System;
 
+using Unknown6656.AutoIt3.Localization;
+using Unknown6656.AutoIt3.CLI;
+
 namespace Unknown6656.AutoIt3
 {
-    using static MainProgram;
-
-
     public readonly struct SourceLocation
         : IEquatable<SourceLocation>
         , IComparable<SourceLocation>
     {
-        public static SourceLocation Unknown { get; } = new SourceLocation($"<{CurrentLanguage["general.unknown"]}>", -1);
+        private static LanguagePack UILanguage => MainProgram.LanguageLoader.CurrentLanguage!;
+        private static readonly string _unknown_path = $"<{UILanguage["general.unknown"]}>";
+        public static SourceLocation Unknown { get; } = new SourceLocation(_unknown_path, -1);
 
-        private readonly FileInfo _file;
 
         /// <summary>
         /// The zero-based start line number.
@@ -27,7 +28,7 @@ namespace Unknown6656.AutoIt3
         /// </summary>
         // public readonly FileInfo FileName { get; }
 
-        public readonly string FullFileName => Path.GetFullPath(_file.FullName);
+        public readonly string FullFileName { get; }
 
         public bool IsUnknown => Equals(Unknown);
 
@@ -44,7 +45,7 @@ namespace Unknown6656.AutoIt3
             if (start > end)
                 throw new ArgumentException("The end line number must not be smaller than the start line number", nameof(end));
 
-            _file = new FileInfo(file);
+            FullFileName = file.Equals(_unknown_path, StringComparison.InvariantCultureIgnoreCase) ? file : Path.GetFullPath(new FileInfo(file).FullName);
             StartLineNumber = start;
             EndLineNumber = end;
         }
@@ -57,12 +58,15 @@ namespace Unknown6656.AutoIt3
 
         public override string ToString()
         {
+            if (IsUnknown)
+                return _unknown_path;
+
             string s = $"\"{FullFileName}\", ";
 
             if (IsSingleLine)
-                return $"{s}{CurrentLanguage["general.line"]} {StartLineNumber + 1}";
+                return $"{s}{UILanguage["general.line"]} {StartLineNumber + 1}";
             else
-                return $"{s}{CurrentLanguage["general.lines"]} {StartLineNumber + 1}..{EndLineNumber + 1}";
+                return $"{s}{UILanguage["general.lines"]} {StartLineNumber + 1}..{EndLineNumber + 1}";
         }
 
         public int CompareTo(SourceLocation other) =>

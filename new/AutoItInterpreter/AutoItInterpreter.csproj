@@ -24,26 +24,30 @@
         <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
         <AssemblyName>autoit3</AssemblyName>
-    </PropertyGroup>
-    <PropertyGroup>
+        <OutputPath>$(SolutionDir)bin</OutputPath>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+        <PackageProjectUrl>https://github.com/Unknown6656/AutoIt-Interpreter</PackageProjectUrl>
+        <PackageIcon>icon.png</PackageIcon>
+        <RepositoryType>Git</RepositoryType>
+        <PackageTags>unknown6656; AutoIt; AutoIt3; Interpreter; Compiler</PackageTags>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="Localization\lang-en.json" />
+        <None Remove="lang\lang-en.yml" />
+        <None Include="..\artwork\icon.png">
+          <Pack>True</Pack>
+          <PackagePath></PackagePath>
+        </None>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Piglet">
             <HintPath>..\lib\Piglet.dll</HintPath>
         </Reference>
-        <Reference Include="Piglet.FSharp">
-            <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
-        </Reference>
-        <Reference Include="unknown6656.core">
-            <HintPath>..\lib\unknown6656.core.dll</HintPath>
-        </Reference>
     </ItemGroup>
     <ItemGroup>
-        <EmbeddedResource Include="Localization\lang-en.json" />
+        <Content Include="lang\lang-en.yml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\LICENSE.md">
@@ -53,29 +57,19 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommandLineParser" Version="2.8.0" />
-        <PackageReference Include="EnvDTE" Version="8.0.2" />
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0">
+        <PackageReference Include="FSharp.Core" Version="5.0.1" />
+        <PackageReference Include="Lokad.ILPack" Version="0.1.4" />
+        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="Octokit" Version="0.48.0" />
+        <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+        <PackageReference Include="Unknown6656.Core" Version="1.0.14" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\AutoItExpressionParser\AutoItExpressionParser.fsproj" />
-        <ProjectReference Include="..\util\COMInterop\COMInterop.csproj" />
-    </ItemGroup>
-    <ItemGroup>
-        <Compile Update="Properties\Resources.Designer.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Resources.resx</DependentUpon>
-        </Compile>
-    </ItemGroup>
-    <ItemGroup>
-        <EmbeddedResource Update="Properties\Resources.resx">
-            <Generator>ResXFileCodeGenerator</Generator>
-            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-        </EmbeddedResource>
+        <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />
+        <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Folder Include="include\" />
@@ -84,6 +78,11 @@
         <None Update="include\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+    </ItemGroup>
+    <ItemGroup>
+      <None Update="autoit3">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
         <Exec Command="dotnet &quot;$(OutDir)../bin-util/incr.dll&quot; &quot;$(ProjectPath)&quot;" />

@@ -4,7 +4,11 @@ using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility.Plugins.Internals;
+using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.Runtime;
+using Unknown6656.AutoIt3.CLI;
+
+using Unknown6656.Imaging;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
@@ -32,14 +36,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         private IDictionary<string, object?> GetVariantInfo(Variant value)
         {
-            string s = value.RawData?.ToString()?.Trim() ?? "";
-            string ts = value.RawData?.GetType().ToString() ?? "<void>";
-
             IDictionary<string, object?> dic = new Dictionary<string, object?>
             {
                 ["value"] = value.ToDebugString(Interpreter),
                 ["type"] = value.Type,
-                ["raw"] = s != ts ? $"\"{s}\" ({ts})" : ts
+                ["NETtype"] = value.RawType,
             };
 
             if (value.AssignedTo is Variable variable)
@@ -55,7 +56,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
             ["name"] = variable,
             ["constant"] = variable.IsConst,
-            ["global"] = variable.IsGlobal,
             ["location"] = variable.DeclaredLocation,
             ["scope"] = variable.DeclaredScope,
             ["value"] = GetVariantInfo(variable.Value)
@@ -130,6 +130,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         private string SerializeDictionary(IDictionary<string, object?> dic, string title)
         {
             StringBuilder sb = new StringBuilder();
+            string indent = $"{RGBAColor.DarkSlateGray.ToVT100ForegroundString()}│{MainProgram.COLOR_SCRIPT.ToVT100ForegroundString()}   ";
 
             sb.AppendLine(title + ": {");
 
@@ -139,7 +140,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 foreach (string key in dic.Keys)
                 {
-                    sb.Append($"{new string(' ', level * 4)}{(key + ':').PadRight(w + 1)} ");
+                    if (level > 0)
+                        sb.Append(Enumerable.Repeat(indent, level).StringConcat());
+
+                    sb.Append((key + ':').PadRight(w + 1))
+                      .Append(' ');
 
                     switch (dic[key])
                     {
@@ -149,7 +154,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                             break;
                         case Array { Length: 0 }:
-                            sb.Append($"(0)");
+                            sb.Append("(0)");
 
                             break;
                         case Array arr:
@@ -160,7 +165,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                             foreach (object? elem in arr)
                             {
-                                sb.Append($"{new string(' ', (level + 1) * 4)}[{index.ToString().PadLeft(rad, '0')}]: ");
+                                sb.Append($"{Enumerable.Repeat(indent, level + 1).StringConcat()}[{index.ToString().PadLeft(rad, '0')}]: ");
 
                                 if (elem is IDictionary<string, object?> d)
                                 {
@@ -168,7 +173,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                     serialize(d, level + 2);
                                 }
                                 else
-                                    sb.Append(elem?.ToString());
+                                    sb.AppendLine(elem?.ToString());
 
                                 ++index;
                             }
@@ -180,7 +185,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                             break;
                     }
 
-                    if (!sb.ToString().EndsWith(Environment.NewLine))
+                    if (!sb.ToString().EndsWith(Environment.NewLine, StringComparison.InvariantCultureIgnoreCase))
                         sb.AppendLine();
                 }
             }
@@ -224,11 +229,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 int c_width = widths.Sum();
                 int diff = c_width - max_width;
 
-                if (diff > 0 || r >= widths.Length)
+                if (diff > 0 && r <= widths.Length)
                 {
-                    (int w, int i) = widths.WithIndex().OrderByDescending(Generics.fst).FirstOrDefault();
+                    (int w, int i) = widths.WithIndex().OrderByDescending(LINQ.fst).FirstOrDefault();
 
-                    widths[i] = Math.Max(w - diff, w / 2) + 3;
+                    widths[i] = new[] { w - diff, w / 2, 3 }.Max();
                     ++r;
                 }
                 else
@@ -236,7 +241,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             }
 
             if (print_row_count)
-                sb.AppendLine($"{data.GetLength(1)} rows:");
+                sb.AppendLine(Interpreter.CurrentUILanguage["debug.rows", data.GetLength(1)]);
 
             sb.Append('┌');
 
@@ -312,6 +317,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
             List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            LanguagePack lang = Interpreter.CurrentUILanguage;
             int count;
 
             do
@@ -328,23 +334,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             object? netobj = null;
             StringBuilder sb = new StringBuilder();
-            IEnumerable<(string, string, string, string)> iterators = from kvp in InternalsFunctionProvider._iterators
-                                                                      let index = kvp.Value.index
-                                                                      let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
-                                                                      select (
-                                                                          $"/iter/{kvp.Key}",
-                                                                          MainProgram.ASM_FILE.Name,
-                                                                          "Iterator",
-                                                                          $"Index:{index}, Length:{kvp.Value.collection.Length}, Key:{tuple.key.ToDebugString(Interpreter)}, Value:{tuple.value.ToDebugString(Interpreter)}"
-                                                                      );
-            IEnumerable<(string, string, string, string)> global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
-                                                                        where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
-                                                                        select (
-                                                                            $"/objs/{id:x8}",
-                                                                            MainProgram.ASM_FILE.Name,
-                                                                            ".NET Object",
-                                                                            netobj?.ToString() ?? "<null>"
-                                                                        );
+            var iterators = from kvp in InternalsFunctionProvider._iterators
+                            let index = kvp.Value.index
+                            let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
+                            select (
+                                $"/iter/{kvp.Key}",
+                                MainProgram.ASM_FILE.Name,
+                                lang["debug.iterator"],
+                                $"{lang["debug.index"]}:{index}, {lang["debug.length"]}:{kvp.Value.collection.Length}, {lang["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {lang["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}"
+                            );
+            var global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
+                              where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
+                              select (
+                                  $"/obj/{(uint)id:x8}",
+                                  MainProgram.ASM_FILE.Name,
+                                  lang["debug.netobj"],
+                                  netobj?.ToString() ?? "<null>"
+                              );
             (string name, string loc, string type, string value)[] variables = (from scope in scopes
                                                                                 from variable in scope.LocalVariables
                                                                                 let name = scope.InternalName + '$' + variable.Name
@@ -364,23 +370,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 for (int i = 0, l = Math.Min(pathx.Length, pathy.Length); i < l; ++i)
                 {
-                    bool varx = pathx[i].StartsWith("$");
-                    int cmp = varx ^ pathy[i].StartsWith("$") ? varx ? -1 : 1 : pathx[i].CompareTo(pathy[i]);
+                    bool varx = pathx[i].StartsWith('$');
+                    int cmp = varx ^ pathy[i].StartsWith('$') ? varx ? -1 : 1 : string.Compare(pathx[i], pathy[i], StringComparison.InvariantCultureIgnoreCase);
 
                     if (cmp != 0)
                         return cmp;
                 }
 
-                return string.Compare(x.name, y.name);
+                return string.Compare(x.name, y.name, StringComparison.InvariantCultureIgnoreCase);
             });
 
             string table = GenerateTable(variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value })
                                                   .Transpose()
                                                   .Zip(new[] {
-                                                      ("Name", false),
-                                                      ("Location", false),
-                                                      ("Type", false),
-                                                      ("Value", true),
+                                                      (lang["debug.name"], false),
+                                                      (lang["debug.location"], false),
+                                                      (lang["debug.type"], false),
+                                                      (lang["debug.value"], true),
                                                   })
                                                   .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth), true);
 
@@ -391,20 +397,20 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
         {
-            if (frame.Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
+            if (Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
             {
                 var values = objects.Select(t => new string?[]
                 {
                     $"/com/{t.id:x8}",
                     t.type,
                     t.clsid,
-                    t.value.ToDebugString(frame.Interpreter),
-                }).Transpose().Zip(new []
+                    t.value.ToDebugString(Interpreter),
+                }).Transpose().Zip(new[]
                 {
-                    ("Object", false),
-                    ("Type", false),
+                    (Interpreter.CurrentUILanguage["debug.object"], false),
+                    (Interpreter.CurrentUILanguage["debug.type"], false),
                     ("CLSID", false),
-                    ("Value", true),
+                    (Interpreter.CurrentUILanguage["debug.value"], true),
                 }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
 
                 frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth), true));
@@ -423,9 +429,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
                 string table = GenerateTable(new[]
                 {
-                    ("Line", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
-                    ("Location", false, lines.ToArray(t => t.loc.ToString())),
-                    ("Content", false, lines.ToArray(Generics.snd)),
+                    ("", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
+                    (Interpreter.CurrentUILanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
+                    (Interpreter.CurrentUILanguage["debug.content"], false, lines.ToArray(LINQ.snd)),
                 }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
 
                 frame.Print(table);
@@ -436,14 +442,41 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
-            // TODO
+            AU3Thread[] threads = frame.Interpreter.Threads.Where(t => !t.IsDisposed).OrderBy(t => t.ThreadID).ToArray();
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine($"Overview ({threads.Length} threads):");
+
+            foreach (var ts in threads.Select(t => ($"Thread {t.ThreadID}{(t.IsMainThread ? " (main)" : t.IsRunning ? " (active)" : "")}", true, t.CallStack.ToArray(f => f.CurrentFunction.Name)))
+                                      .PartitionByArraySize(6))
+                sb.Append(GenerateTable(ts!, Math.Min(Console.BufferWidth, Console.WindowWidth), false));
+
+            sb.AppendLine();
+
+            foreach (AU3Thread thread in threads)
+                sb.Append(SerializeDictionary(GetThreadInfo(thread), $"Thread {thread.ThreadID}"));
+
+            frame.Print(sb.ToString());
 
             return Variant.Zero;
         }
 
         public FunctionReturnValue DebugInterpreter(CallFrame frame, Variant[] _)
         {
-            // TODO
+            Interpreter interpreter = frame.Interpreter;
+            Dictionary<string, object?> dic = new()
+            {
+                ["CurrentLang"] = interpreter.CurrentUILanguage,
+                ["LoadedLangs"] = interpreter.LanguageLoader.LoadedLanguageCodes,
+                ["Threads"] = interpreter.Threads,
+                ["Scripts"] = interpreter.ScriptScanner.ActiveScripts,
+                ["Plugins"] = interpreter.PluginLoader.LoadedPlugins,
+                ["CommandLine"] = interpreter.CommandLineOptions,
+                ["GlobalObjects"] = interpreter.GlobalObjectStorage.Objects.ToArray(),
+                ["GlobalVariables"] = interpreter.VariableResolver.LocalVariables,
+            };
+
+            frame.Print(SerializeDictionary(dic, "Interpreter"));
 
             return Variant.Zero;
         }
@@ -451,7 +484,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)
         {
             DebugCodeLines(frame, args);
-            DebugCallFrame(frame, args);
+            // DebugCallFrame(frame, args);
             DebugAllVarsCompact(frame, args);
             DebugAllCOM(frame, args);
             DebugAllThreads(frame, args);

@@ -1,25 +1,31 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Diagnostics;
+using System.Globalization;
+using System.Threading.Tasks;
 using System.Threading;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net;
-using System.Linq;
+using System.Text.RegularExpressions;
 using System.Text;
+using System.Linq;
 using System.IO;
 using System;
+
+using Piglet.Parser.Configuration.Generic;
 
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.COM;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
+    using static Unknown6656.AutoIt3.Parser.DLLStructParser.AST;
+
     using TCPHandle = Union<TcpListener, TcpClient>;
 
     public sealed class FrameworkFunctions
@@ -31,6 +37,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
             ProvidedNativeFunction.Create(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle),
+            // ProvidedNativeFunction.Create(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default),
+            // ProvidedNativeFunction.Create("Opt", 1, 2, AutoItSetOption, Variant.Default),
             ProvidedNativeFunction.Create(nameof(BlockInput), 1, BlockInput),
             ProvidedNativeFunction.Create(nameof(CDTray), 2, CDTray),
             ProvidedNativeFunction.Create(nameof(ClipPut), 1, ClipPut),
@@ -52,7 +60,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(AscW), 1, AscW),
             ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
             ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
-            ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, 500m, 1000m),
+            ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, FunctionMetadata.WindowsOnly, 500m, 1000m),
             ProvidedNativeFunction.Create(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
             ProvidedNativeFunction.Create(nameof(BitOR), 2, 256, BitOR),
             ProvidedNativeFunction.Create(nameof(BitXOR), 2, 256, BitXOR),
@@ -78,6 +86,18 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(DllCall), 3, 255, DllCall),
+            ProvidedNativeFunction.Create(nameof(DllCallAddress), 2, 254, DllCallAddress),
+            ProvidedNativeFunction.Create(nameof(DllCallbackFree), 1, DllCallbackFree),
+            ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), 1, DllCallbackGetPtr),
+            ProvidedNativeFunction.Create(nameof(DllCallbackRegister), 3, DllCallbackRegister),
+            ProvidedNativeFunction.Create(nameof(DllClose), 1, DllClose),
+            ProvidedNativeFunction.Create(nameof(DllOpen), 1, DllOpen),
+            //ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetData), , DllStructGetData),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetPtr), , DllStructGetPtr),
+            //ProvidedNativeFunction.Create(nameof(DllStructGetSize), , DllStructGetSize),
+            //ProvidedNativeFunction.Create(nameof(DllStructSetData), , DllStructSetData),
             ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
             ProvidedNativeFunction.Create(nameof(DriveGetFileSystem), 1, DriveGetFileSystem),
             ProvidedNativeFunction.Create(nameof(DriveGetLabel), 1, DriveGetLabel),
@@ -86,7 +106,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(DriveSpaceFree), 1, DriveSpaceFree),
             ProvidedNativeFunction.Create(nameof(DriveSpaceTotal), 1, DriveSpaceTotal),
             ProvidedNativeFunction.Create(nameof(DriveStatus), 1, DriveStatus),
-            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox),
+            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox, Variant.Zero, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
             ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
             ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
@@ -157,13 +177,22 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             //ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
             ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
+            ProvidedNativeFunction.Create(nameof(OnAutoItExitRegister), 1, OnAutoItExitRegister),
+            ProvidedNativeFunction.Create(nameof(OnAutoItExitUnRegister), 1, OnAutoItExitUnRegister),
             ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
+            ProvidedNativeFunction.Create(nameof(ProcessClose), 1, ProcessClose),
+            ProvidedNativeFunction.Create(nameof(ProcessExists), 1, ProcessExists),
+            ProvidedNativeFunction.Create(nameof(ProcessGetStats), 1, 2, ProcessGetStats, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(ProcessList), 0, 1, ProcessList, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(ProcessSetPriority), 2, ProcessSetPriority),
+            ProvidedNativeFunction.Create(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
-            //ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete),
-            //ProvidedNativeFunction.Create(nameof(RegEnumKey), , RegEnumKey),
-            //ProvidedNativeFunction.Create(nameof(RegEnumVal), , RegEnumVal),
-            //ProvidedNativeFunction.Create(nameof(RegRead), , RegRead),
-            //ProvidedNativeFunction.Create(nameof(RegWrite), , RegWrite),
+            ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete, FunctionMetadata.WindowsOnly, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RegEnumKey), 2, RegEnumKey, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegEnumVal), 2, RegEnumVal, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegRead), 2, RegRead, FunctionMetadata.WindowsOnly),
+            ProvidedNativeFunction.Create(nameof(RegWrite), 1, 4, RegWrite, FunctionMetadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -231,134 +260,106 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
         }
 
-        private static Union<InterpreterError, AU3CallFrame> GetAu3Caller(CallFrame? frame, string funcname)
-        {
-            AU3CallFrame? caller = null;
+        #region FRAMEWORK FUNCTIONS
+        #region A...
 
-            while (frame is { })
-                if (frame is AU3CallFrame au3)
-                    caller = au3;
+        internal static FunctionReturnValue Abs(CallFrame frame, Variant[] args) => (Variant)Math.Abs(args[0].ToNumber());
+
+        internal static FunctionReturnValue ACos(CallFrame frame, Variant[] args) => (Variant)Math.Acos((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue Asc(CallFrame frame, Variant[] args) => (Variant)(byte)args[0].ToString().FirstOrDefault();
+
+        internal static FunctionReturnValue AscW(CallFrame frame, Variant[] args) => (Variant)(int)args[0].ToString().FirstOrDefault();
+
+        internal static FunctionReturnValue ASin(CallFrame frame, Variant[] args) => (Variant)Math.Asin((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue Assign(CallFrame frame, Variant[] args) =>
+            GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
+            {
+                string name = args[0].ToString();
+                Variant data = args[1];
+                AssignFlags flags = (AssignFlags)(int)args[2];
+                VariableScope scope = flags.HasFlag(AssignFlags.ForceGlobal) ? au3.VariableResolver.GlobalRoot : au3.VariableResolver;
+                Variable variable;
+
+                if (flags.HasFlag(AssignFlags.ForceGlobal) && flags.HasFlag(AssignFlags.ForceLocal))
+                    return Variant.False;
+                else if (scope.TryGetVariable(name, flags.HasFlag(AssignFlags.ForceLocal) ? VariableSearchScope.Local : VariableSearchScope.Global, out variable!))
+                {
+                    if (variable.IsConst || flags.HasFlag(AssignFlags.ExistFail))
+                        return Variant.False;
+                }
+                else if (flags.HasFlag(AssignFlags.Create))
+                    variable = scope.CreateVariable(au3.CurrentLocation, name, false);
                 else
-                    frame = frame.CallerFrame;
+                    return Variant.False;
 
-            if (caller is { })
-                return caller;
-            else
-                return InterpreterError.WellKnown(null, "error.au3_caller_only", funcname);
-        }
+                variable.Value = data;
 
-        public static FunctionReturnValue AutoItWinGetTitle(CallFrame frame, Variant[] args) => (Variant)Console.Title;
+                return Variant.True;
+            });
 
-        public static FunctionReturnValue AutoItWinSetTitle(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue ATan(CallFrame frame, Variant[] args) => (Variant)Math.Atan((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue AutoItWinGetTitle(CallFrame frame, Variant[] args) => (Variant)Console.Title;
+
+        internal static FunctionReturnValue AutoItWinSetTitle(CallFrame frame, Variant[] args)
         {
             Console.Title = args[0].ToString();
 
             return Variant.Null;
         }
 
-        public static FunctionReturnValue BlockInput(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent<Variant>(() => NativeInterop.BlockInput(args[0].ToBoolean()), () => false);
+        #endregion
+        #region B...
 
-        public static unsafe FunctionReturnValue CDTray(CallFrame frame, Variant[] args)
-        {
-            try
-            {
-                return NativeInterop.DoPlatformDependent<Variant>(delegate
-                {
-                    int dwbytes = 0;
-                    void* cdrom = NativeInterop.CreateFile($"\\\\.\\{args[0]}", 0xc0000000u, 0, null, 3, 0, null);
-
-                    return args[1].ToString().ToLower() switch
-                    {
-                        "open" => NativeInterop.DeviceIoControl(cdrom, 0x2d4808, null, 0, null, 0, &dwbytes, null),
-                        "closed" => NativeInterop.DeviceIoControl(cdrom, 0x2d480c, null, 0, null, 0, &dwbytes, null),
-                        _ => false
-                    };
-                }, delegate
-                {
-                    int cdrom = NativeInterop.open(args[0].ToString(), 0x0800);
-
-                    return args[1].ToString().ToLower() switch
-                    {
-                        "open" or "closed" => NativeInterop.ioctl(cdrom, 0x5309, __arglist()), // TODO ?
-                        _ => false
-                    };
-                });
-            }
-            catch
-            {
-                return Variant.False;
-            }
-        }
-
-        public static FunctionReturnValue ClipPut(CallFrame frame, Variant[] args)
-        {
-            try
-            {
-                string cmd = NativeInterop.DoPlatformDependent($"echo {args[0]} | clip", $"echo \"{args[0]}\" | pbcopy");
-                (_, int code) = NativeInterop.Bash(cmd);
-
-                return Variant.FromBoolean(code == 0);
-            }
-            catch
-            {
-                return Variant.False;
-            }
-        }
-
-        public static FunctionReturnValue Abs(CallFrame frame, Variant[] args) => (Variant)Math.Abs(args[0].ToNumber());
-
-        public static FunctionReturnValue ACos(CallFrame frame, Variant[] args) => (Variant)Math.Acos((double)args[0].ToNumber());
-
-        public static FunctionReturnValue ASin(CallFrame frame, Variant[] args) => (Variant)Math.Asin((double)args[0].ToNumber());
-
-        public static FunctionReturnValue ATan(CallFrame frame, Variant[] args) => (Variant)Math.Atan((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Cos(CallFrame frame, Variant[] args) => (Variant)Math.Cos((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Sin(CallFrame frame, Variant[] args) => (Variant)Math.Sin((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Tan(CallFrame frame, Variant[] args) => (Variant)Math.Tan((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Exp(CallFrame frame, Variant[] args) => (Variant)Math.Exp((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Log(CallFrame frame, Variant[] args) => (Variant)Math.Log((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Mod(CallFrame frame, Variant[] args) => args[0] % args[1];
-
-        public static FunctionReturnValue Sqrt(CallFrame frame, Variant[] args) => (Variant)Math.Sqrt((double)args[0].ToNumber());
-
-        public static FunctionReturnValue Floor(CallFrame frame, Variant[] args) => (Variant)Math.Floor(args[0].ToNumber());
-
-        public static FunctionReturnValue Ceiling(CallFrame frame, Variant[] args) => (Variant)Math.Ceiling(args[0].ToNumber());
-
-        public static FunctionReturnValue Round(CallFrame frame, Variant[] args) => (Variant)Math.Round(args[0].ToNumber(), (int)args[1]);
-
-        public static FunctionReturnValue Asc(CallFrame frame, Variant[] args) => (Variant)(byte)args[0].ToString().FirstOrDefault();
-
-        public static FunctionReturnValue AscW(CallFrame frame, Variant[] args) => (Variant)(int)args[0].ToString().FirstOrDefault();
-
-        public static FunctionReturnValue Chr(CallFrame frame, Variant[] args) => (Variant)((char)(int)args[0]).ToString();
-
-        public static FunctionReturnValue ChrW(CallFrame frame, Variant[] args) => (Variant)((char)(byte)args[0]).ToString();
-
-        public static FunctionReturnValue Beep(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue Beep(CallFrame frame, Variant[] args)
         {
             Console.Beep((int)args[0], (int)args[1]);
 
             return Variant.True;
         }
 
-        public static FunctionReturnValue BitAND(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseAnd);
+        internal static FunctionReturnValue Binary(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary();
 
-        public static FunctionReturnValue BitOR(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseOr);
+        internal static FunctionReturnValue BinaryLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary().Length;
 
-        public static FunctionReturnValue BitNOT(CallFrame frame, Variant[] args) => ~args[0];
+        internal static FunctionReturnValue BinaryMid(CallFrame frame, Variant[] args)
+        {
+            byte[] bytes = args[0].ToBinary();
+            int start = (int)args[1] - 1;
+            int count = (int)args[2];
 
-        public static FunctionReturnValue BitXOR(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseOr);
+            if (start < 0 || start >= bytes.Length)
+                return Variant.EmptyBinary;
+            else if (args[2].IsDefault)
+                return (Variant)bytes[start..];
+            else if (start + count > bytes.Length)
+                return Variant.EmptyBinary;
+            else
+                return (Variant)bytes[start..(start + count)];
+        }
 
-        public static FunctionReturnValue BitShift(CallFrame frame, Variant[] args) => args[0] >> (int)args[1];
+        internal static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String((int)args[1] switch
+        {
+            1 => Encoding.GetEncoding(1252),
+            2 => Encoding.Unicode,
+            3 => Encoding.BigEndianUnicode,
+            4 => Encoding.UTF8,
+            _ => BytewiseEncoding.Instance,
+        });
 
-        public static FunctionReturnValue BitRotate(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue BitAND(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseAnd);
+
+        internal static FunctionReturnValue BitOR(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseOr);
+
+        internal static FunctionReturnValue BitNOT(CallFrame frame, Variant[] args) => ~args[0];
+
+        internal static FunctionReturnValue BitXOR(CallFrame frame, Variant[] args) => args.Aggregate(Variant.BitwiseOr);
+
+        internal static FunctionReturnValue BitShift(CallFrame frame, Variant[] args) => args[0] >> (int)args[1];
+
+        internal static FunctionReturnValue BitRotate(CallFrame frame, Variant[] args)
         {
             Variant rotate(int size)
             {
@@ -385,7 +386,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             };
         }
 
-        public static FunctionReturnValue Call(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue BlockInput(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent<Variant>(() => NativeInterop.BlockInput(args[0].ToBoolean()), () => false);
+
+        #endregion
+        #region C...
+
+        internal static FunctionReturnValue Call(CallFrame frame, Variant[] args)
         {
             Variant[] call_args = frame.PassedArguments.Length == 2 &&
                                   args[1] is { Type: VariantType.Array } arr &&
@@ -402,15 +408,68 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             else if (call_args.Length > func.ParameterCount.MaximumCount)
                 Array.Resize(ref call_args, func.ParameterCount.MaximumCount);
 
-            Union<InterpreterError, Variant> result = frame.Call(func, call_args);
+            FunctionReturnValue result = frame.Call(func, call_args);
 
-            if (result.Is(out Variant @return))
-                return @return;
-            else
-                return FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+            if (result.IsFatal(out _))
+                result = FunctionReturnValue.Error(0xDEAD, 0xBEEF);
+
+            return result;
         }
 
-        public static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args) =>
+        internal static unsafe FunctionReturnValue CDTray(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                return NativeInterop.DoPlatformDependent<Variant>(delegate
+                {
+                    int dwbytes = 0;
+                    void* cdrom = NativeInterop.CreateFile($"\\\\.\\{args[0]}", 0xc0000000u, 0, null, 3, 0, null);
+
+                    return args[1].ToString().ToLower() switch
+                    {
+                        "open" => NativeInterop.DeviceIoControl(cdrom, 0x2d4808, null, 0, null, 0, &dwbytes, null),
+                        "closed" => NativeInterop.DeviceIoControl(cdrom, 0x2d480c, null, 0, null, 0, &dwbytes, null),
+                        _ => false
+                    };
+                }, delegate
+                {
+                    int cdrom = NativeInterop.Linux__open(args[0].ToString(), 0x0800);
+
+                    return args[1].ToString().ToLower() switch
+                    {
+                        "open" or "closed" => NativeInterop.Linux__ioctl(cdrom, 0x5309, __arglist()), // TODO ?
+                        _ => false
+                    };
+                });
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        internal static FunctionReturnValue Ceiling(CallFrame frame, Variant[] args) => (Variant)Math.Ceiling(args[0].ToNumber());
+
+        internal static FunctionReturnValue Chr(CallFrame frame, Variant[] args) => (Variant)((char)(int)args[0]).ToString();
+
+        internal static FunctionReturnValue ChrW(CallFrame frame, Variant[] args) => (Variant)((char)(byte)args[0]).ToString();
+
+        internal static FunctionReturnValue ClipPut(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                string cmd = NativeInterop.DoPlatformDependent($"echo {args[0]} | clip", $"echo \"{args[0]}\" | pbcopy");
+                (_, int code) = NativeInterop.Exec(cmd);
+
+                return Variant.FromBoolean(code == 0);
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        internal static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args) =>
             frame.Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.ScriptConsoleOut, delegate
             {
                 string s = args[0].ToString();
@@ -420,7 +479,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return Variant.FromNumber(s.Length);
             });
 
-        public static FunctionReturnValue ConsoleWrite(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue ConsoleWrite(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
@@ -429,7 +488,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(s.Length);
         }
 
-        public static FunctionReturnValue ConsoleRead(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue ConsoleRead(CallFrame frame, Variant[] args) =>
             frame.Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.ScriptConsoleIn, delegate
             {
                 bool peek = args[0].ToBoolean();
@@ -440,71 +499,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 throw new NotImplementedException();
             });
 
-        public static FunctionReturnValue String(CallFrame frame, Variant[] args) => (Variant)args[0].ToString();
+        internal static FunctionReturnValue Cos(CallFrame frame, Variant[] args) => (Variant)Math.Cos((double)args[0].ToNumber());
 
-        public static FunctionReturnValue Binary(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary();
+        #endregion
+        #region D...
 
-        public static FunctionReturnValue BinaryLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToBinary().Length;
+        internal static FunctionReturnValue Dec(CallFrame frame, Variant[] args) => (Variant)(long.TryParse(args[0].ToString(), NumberStyles.HexNumber, null, out long l) ? l : 0L);
 
-        public static FunctionReturnValue BinaryMid(CallFrame frame, Variant[] args)
-        {
-            byte[] bytes = args[0].ToBinary();
-            int start = (int)args[1] - 1;
-            int count = (int)args[2];
+        #endregion
+        #region DIR...
 
-            if (start < 0 || start >= bytes.Length)
-                return Variant.EmptyBinary;
-            else if (args[2].IsDefault)
-                return (Variant)bytes[start..];
-            else if (start + count > bytes.Length)
-                return Variant.EmptyBinary;
-            else
-                return (Variant)bytes[start..(start + count)];
-        }
-
-        public static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(decimal)args[0];
-
-        public static FunctionReturnValue Int(CallFrame frame, Variant[] args) => (Variant)(long)args[0];
-
-        public static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String((int)args[1] switch
-        {
-            1 => Encoding.GetEncoding(1252),
-            2 => Encoding.Unicode,
-            3 => Encoding.BigEndianUnicode,
-            4 => Encoding.UTF8,
-            _ => BytewiseEncoding.Instance,
-        });
-
-        public static FunctionReturnValue StringToBinary(CallFrame frame, Variant[] args) => (Variant)From.String(args[0].ToString(), (int)args[1] switch
-        {
-            1 => Encoding.GetEncoding(1252),
-            2 => Encoding.Unicode,
-            3 => Encoding.BigEndianUnicode,
-            4 => Encoding.UTF8,
-            _ => BytewiseEncoding.Instance,
-        }).To.Bytes;
-
-        public static FunctionReturnValue Hex(CallFrame frame, Variant[] args)
-        {
-            byte[] bytes = args[0].ToBinary();
-            int length = (int)args[1];
-
-            if (args[0].Type is VariantType.Binary)
-                return (Variant)From.Bytes(bytes).To.Hex();
-            else if (!args[1].IsDefault && length < 1)
-                return Variant.EmptyString;
-
-            length = Math.Max(4, Math.Min(length, 16));
-
-            if (bytes.Length < length)
-                bytes = new byte[length - bytes.Length].Concat(bytes).ToArray();
-
-            return (Variant)From.Bytes(bytes).To.Hex();
-        }
-
-        public static FunctionReturnValue Dec(CallFrame frame, Variant[] args) => (Variant)(long.TryParse(args[0].ToString(), NumberStyles.HexNumber, null, out long l) ? l : 0L);
-
-        public static FunctionReturnValue DirCreate(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DirCreate(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -522,7 +527,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue DirCopy(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DirCopy(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -550,7 +555,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue DirMove(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DirMove(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -580,7 +585,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue DirRemove(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DirRemove(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -608,7 +613,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue DirGetSize(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DirGetSize(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -642,21 +647,177 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        private static DriveInfo? GetDriveByPath(string path)
+        #endregion
+        #region DLL...
+
+        private static FunctionReturnValue InternalDllCall(Interpreter interpreter, nint funcptr, string raw_signature, Variant[] args)
         {
             try
             {
-                string dir = Path.GetFullPath(path);
+                if (interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
+                    DelegateBuilder.Instance.CreateNativeDelegateType(result!.ParsedValue) is NativeDelegateWrapper @delegate)
+                {
+                    return @delegate.CallCPPfromAutoit(funcptr, interpreter, args);
+                }
+            }
+            catch (Exception ex)
+            {
+                MainProgram.PrintDebugMessage(ex.ToString());
+            }
 
-                return DriveInfo.GetDrives().FirstOrDefault(d => Path.GetFullPath(d.RootDirectory.FullName).Equals(dir));
+            return FunctionReturnValue.Error(3);
+        }
+
+        internal static FunctionReturnValue DllCall(CallFrame frame, Variant[] args)
+        {
+            if (!args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? dllhandle))
+                try
+                {
+                    dllhandle = new LibraryHandle(args[0].ToString());
+                }
+                catch
+                {
+                }
+
+            if (dllhandle?.IsLoaded is false)
+                dllhandle.LoadLibrary();
+
+            if (dllhandle?.IsLoaded is null or false)
+                return FunctionReturnValue.Error(1);
+
+            nint funcptr = NativeInterop.DoPlatformDependent<Func<nint, string, nint>>(
+                NativeInterop.GetProcAddress,
+                NativeInterop.Linux__dlsym,
+                NativeInterop.MacOS__dlsym
+            )(dllhandle.Handle, args[2].ToString());
+
+            if (funcptr == default)
+                return FunctionReturnValue.Error(3);
+
+            int argc = frame.PassedArguments.Length - 3;
+
+            if ((argc % 2) != 0)
+                return FunctionReturnValue.Error(4);
+
+            Variant[] arguments = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
+            string raw_signature = args.Skip(3).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[1]).StringJoin(", ");
+
+            return InternalDllCall(frame.Interpreter, funcptr, raw_signature, arguments);
+        }
+
+        // TODO : DllGetAddress ?
+
+        internal static FunctionReturnValue DllCallAddress(CallFrame frame, Variant[] args)
+        {
+            int argc = frame.PassedArguments.Length - 2;
+
+            if ((argc % 2) != 0)
+                return FunctionReturnValue.Error(4);
+
+            Variant[] arguments = args.Skip(2).Take(argc).Where((_, i) => (i % 2) == 1).ToArray();
+            string raw_signature = args.Skip(2).Take(argc).Where((_, i) => (i % 2) == 0).Prepend(args[0]).StringJoin(", ");
+            nint funcptr = (nint)(long)args[1];
+
+            // TODO ?
+
+            return InternalDllCall(frame.Interpreter, funcptr, raw_signature, arguments);
+        }
+
+        internal static FunctionReturnValue DllCallbackFree(CallFrame frame, Variant[] args)
+        {
+            if (args[0].TryResolveHandle(frame.Interpreter, out UserFunctionCallback? _))
+                frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue DllCallbackGetPtr(CallFrame frame, Variant[] args)
+        {
+            if (args[0].TryResolveHandle(frame.Interpreter, out UserFunctionCallback? callback))
+                return (Variant)(long)callback.FunctionPointer;
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue DllCallbackRegister(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (!args[0].IsFunction(out ScriptFunction? function))
+                    function = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
+
+                if (function is { })
+                {
+                    var callback = UserFunctionCallback.CreateNativeCallback(function, frame.Interpreter);
+                    string raw_signature = args[1].ToString() + ", " + args[2].ToString().Replace(';', ',');
+
+                    if (frame.Interpreter.ParserProvider.DLLStructParser.TryParse(raw_signature, out ParserResult<SIGNATURE>? result) &&
+                        DelegateBuilder.Instance.CreateUserFunctionCallback(result!.ParsedValue, callback) is UserFunctionCallback @delegate)
+                    {
+                        return frame.Interpreter.GlobalObjectStorage.Store(@delegate);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MainProgram.PrintDebugMessage(ex.ToString());
+            }
+
+            return Variant.False;
+        }
+
+        internal static FunctionReturnValue DllClose(CallFrame frame, Variant[] args)
+        {
+            if (args[0].TryResolveHandle(frame.Interpreter, out LibraryHandle? _))
+                frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue DllOpen(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                return frame.Interpreter.GlobalObjectStorage.Store(new LibraryHandle(args[0].ToString()));
             }
             catch
             {
-                return null;
             }
+
+            return Variant.FromNumber(-1);
         }
 
-        public static FunctionReturnValue DriveGetDrive(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue DllStructCreate(CallFrame frame, Variant[] args)
+        // {
+        //     string struct_type = args[0].ToString();
+        //     long pointer = args[1]
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetData(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetPtr(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructGetSize(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+        // 
+        // internal static FunctionReturnValue DllStructSetData(CallFrame frame, Variant[] args)
+        // {
+        // 
+        // }
+
+        #endregion
+        #region DRIVE...
+
+        internal static FunctionReturnValue DriveGetDrive(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -683,7 +844,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue DriveGetFileSystem(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveGetFileSystem(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString())?.DriveFormat is string format)
                 return Variant.FromString(format);
@@ -691,7 +852,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
         }
 
-        public static FunctionReturnValue DriveGetLabel(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveGetLabel(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString())?.VolumeLabel is string label)
                 return Variant.FromString(label);
@@ -699,17 +860,18 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
         }
 
-        // public static FunctionReturnValue DriveGetSerial(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue DriveGetSerial(CallFrame frame, Variant[] args)
         // {
         //     // WMI
         // }
 
-        public static FunctionReturnValue DriveGetType(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveGetType(CallFrame frame, Variant[] args)
         {
             int mode = (int)args[1];
 
             if (mode == 1 && GetDriveByPath(args[0].ToString())?.DriveType is DriveType type)
-                return Variant.FromString(type switch {
+                return Variant.FromString(type switch
+                {
                     DriveType.Removable or DriveType.Fixed or DriveType.Network => type.ToString(),
                     DriveType.CDRom => "CDROM",
                     DriveType.Ram => "RAMDisk",
@@ -719,7 +881,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
         }
 
-        public static FunctionReturnValue DriveSpaceFree(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveSpaceFree(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
                 return Variant.FromNumber(drive.TotalFreeSpace / 1048576m);
@@ -727,7 +889,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue DriveSpaceTotal(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveSpaceTotal(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
                 return Variant.FromNumber(drive.TotalSize / 1048576m);
@@ -735,7 +897,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue DriveStatus(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue DriveStatus(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
                 return Variant.FromString(drive.IsReady ? "READY" : "NOTREADY");
@@ -743,44 +905,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromString("INVALID");
         }
 
-        public static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
-        {
-            decimal flag = args[0].ToNumber();
-            string title = args[1].ToString();
-            string text = args[2].ToString();
-            decimal timeout = args[3].ToNumber();
-            decimal hwnd = args[4].ToNumber();
+        #endregion
+        #region E...
 
-            // TODO
-            Console.ReadLine();
-            return Variant.Zero;
+        internal static FunctionReturnValue EnvGet(CallFrame frame, Variant[] args) => Variant.FromString(Environment.GetEnvironmentVariable(args[0].ToString()));
 
-            throw new NotImplementedException();
-        }
-
-        public static FunctionReturnValue FuncName(CallFrame frame, Variant[] args)
-        {
-            if (args[0].RawData is ScriptFunction func)
-                return (Variant)func.Name;
-            else
-                return FunctionReturnValue.Error("", 1, 0);
-        }
-
-        public static FunctionReturnValue EnvGet(CallFrame frame, Variant[] args) => Variant.FromString(Environment.GetEnvironmentVariable(args[0].ToString()));
-
-        public static FunctionReturnValue EnvSet(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue EnvSet(CallFrame frame, Variant[] args)
         {
             Environment.SetEnvironmentVariable(args[0].ToString(), args[1].IsDefault || args[1].IsNull ? null : args[1].ToString(), EnvironmentVariableTarget.Process);
 
             return Variant.True;
         }
 
-        public static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args) => Variant.False;
+        internal static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args) => Variant.False;
 
-        public static FunctionReturnValue Execute(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue Execute(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 => au3.ProcessAsVariant(args[0].ToString()));
 
-        public static FunctionReturnValue Eval(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue Eval(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
                 if (au3.VariableResolver.TryGetVariable(args[0].ToString(), VariableSearchScope.Global, out Variable? variable))
@@ -789,7 +931,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return InterpreterError.WellKnown(au3.CurrentLocation, "error.undeclared_variable", args[0]);
             });
 
-        public static FunctionReturnValue FileChangeDir(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue Exp(CallFrame frame, Variant[] args) => (Variant)Math.Exp((double)args[0].ToNumber());
+
+        #endregion
+        #region F...
+
+        internal static FunctionReturnValue Floor(CallFrame frame, Variant[] args) => (Variant)Math.Floor(args[0].ToNumber());
+
+        internal static FunctionReturnValue FuncName(CallFrame frame, Variant[] args)
+        {
+            if (args[0].IsFunction(out ScriptFunction? func))
+                return (Variant)func.Name;
+            else
+                return FunctionReturnValue.Error("", 1, 0);
+        }
+
+        #endregion
+        #region FILE...
+
+        internal static FunctionReturnValue FileChangeDir(CallFrame frame, Variant[] args)
         {
             string curr = Directory.GetCurrentDirectory();
 
@@ -798,7 +958,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromBoolean(Directory.GetCurrentDirectory() != curr);
         }
 
-        public static FunctionReturnValue FileClose(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileClose(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -817,7 +977,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.False;
         }
 
-        public static FunctionReturnValue FileCopy(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileCopy(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -838,7 +998,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileCreateNTFSLink(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileCreateNTFSLink(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -851,7 +1011,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 return NativeInterop.DoPlatformDependent<Variant>(
                     () => FileSystemExtensions.CreateNTFSHardLink(linkname.FullName, target.FullName),
-                    () => NativeInterop.Bash($"ln -f \"{linkname.FullName}\" \"{target.FullName}\"").code == 0
+                    () => NativeInterop.Exec($"ln -f \"{linkname.FullName}\" \"{target.FullName}\"").code == 0
                 );
             }
             catch
@@ -860,11 +1020,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        // public static FunctionReturnValue FileCreateShortcut(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileCreateShortcut(CallFrame frame, Variant[] args)
         // {
         // }
 
-        public static FunctionReturnValue FileDelete(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileDelete(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
 
@@ -885,10 +1045,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileExists(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue FileExists(CallFrame frame, Variant[] args) =>
             Variant.FromBoolean(File.Exists(args[0].ToString()) || Directory.Exists(args[0].ToString()));
 
-        public static FunctionReturnValue FileFindFirstFile(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileFindFirstFile(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -900,7 +1060,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileFindNextFile(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileFindNextFile(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -922,7 +1082,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue FileFlush(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileFlush(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -941,7 +1101,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.False;
         }
 
-        public static FunctionReturnValue FileGetAttrib(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileGetAttrib(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -953,7 +1113,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileGetEncoding(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileGetEncoding(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1000,7 +1160,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(-1m);
         }
 
-        public static FunctionReturnValue FileGetShortName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
+        internal static FunctionReturnValue FileGetShortName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
             delegate
             {
                 try
@@ -1015,7 +1175,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             () => args[0]
         );
 
-        public static FunctionReturnValue FileGetPos(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileGetPos(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1029,11 +1189,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(0m, 1, 0);
         }
 
-        // public static FunctionReturnValue FileGetShortcut(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileGetShortcut(CallFrame frame, Variant[] args)
         // {
         // }
 
-        public static FunctionReturnValue FileGetLongName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
+        internal static FunctionReturnValue FileGetLongName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
             delegate
             {
                 try
@@ -1048,7 +1208,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             () => args[0]
         );
 
-        public static FunctionReturnValue FileGetSize(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileGetSize(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1060,7 +1220,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileGetTime(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileGetTime(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1096,15 +1256,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        // public static FunctionReturnValue FileGetVersion(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileGetVersion(CallFrame frame, Variant[] args)
         // {
         // }
 
-        // public static FunctionReturnValue FileInstall(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileInstall(CallFrame frame, Variant[] args)
         // {
         // }
 
-        public static FunctionReturnValue FileMove(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileMove(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1125,7 +1285,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileOpen(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileOpen(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1150,11 +1310,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        // public static FunctionReturnValue FileOpenDialog(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileOpenDialog(CallFrame frame, Variant[] args)
         // {
         // }
 
-        public static FunctionReturnValue FileRead(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileRead(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1193,7 +1353,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileReadLine(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileReadLine(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1245,7 +1405,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileReadToArray(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileReadToArray(CallFrame frame, Variant[] args)
         {
             string[] lines = Array.Empty<string>();
             bool error = false;
@@ -1265,7 +1425,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.FromArray(frame.Interpreter, lines.Select(Variant.FromString)), error ? 1 : lines.Length == 0 ? 2 : 0, lines.Length);
         }
 
-        public static FunctionReturnValue FileRecycle(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileRecycle(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1312,7 +1472,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static unsafe FunctionReturnValue FileRecycleEmpty(CallFrame frame, Variant[] args)
+        internal static unsafe FunctionReturnValue FileRecycleEmpty(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1347,15 +1507,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        // public static FunctionReturnValue FileSaveDialog(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileSaveDialog(CallFrame frame, Variant[] args)
         // {
         // }
 
-        // public static FunctionReturnValue FileSelectFolder(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue FileSelectFolder(CallFrame frame, Variant[] args)
         // {
         // }
 
-        public static FunctionReturnValue FileSetAttrib(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileSetAttrib(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1405,7 +1565,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileSetEnd(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileSetEnd(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1423,7 +1583,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.False;
         }
 
-        public static FunctionReturnValue FileSetPos(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileSetPos(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1441,7 +1601,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.False;
         }
 
-        public static FunctionReturnValue FileSetTime(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileSetTime(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1474,7 +1634,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileWrite(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileWrite(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1493,7 +1653,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue FileWriteLine(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue FileWriteLine(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1520,33 +1680,31 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue Assign(CallFrame frame, Variant[] args) =>
-            GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
-            {
-                string name = args[0].ToString();
-                Variant data = args[1];
-                AssignFlags flags = (AssignFlags)(int)args[2];
-                VariableScope scope = flags.HasFlag(AssignFlags.ForceGlobal) ? au3.VariableResolver.GlobalRoot : au3.VariableResolver;
-                Variable variable;
+        #endregion
+        #region G, H
 
-                if (flags.HasFlag(AssignFlags.ForceGlobal) && flags.HasFlag(AssignFlags.ForceLocal))
-                    return Variant.False;
-                else if (scope.TryGetVariable(name, flags.HasFlag(AssignFlags.ForceLocal) ? VariableSearchScope.Local : VariableSearchScope.Global, out variable!))
-                {
-                    if (variable.IsConst || flags.HasFlag(AssignFlags.ExistFail))
-                        return Variant.False;
-                }
-                else if (flags.HasFlag(AssignFlags.Create))
-                    variable = scope.CreateVariable(au3.CurrentLocation, name, false);
-                else
-                    return Variant.False;
+        internal static FunctionReturnValue Hex(CallFrame frame, Variant[] args)
+        {
+            byte[] bytes = args[0].ToBinary();
+            int length = (int)args[1];
 
-                variable.Value = data;
+            if (args[0].Type is VariantType.Binary)
+                return (Variant)From.Bytes(bytes).To.Hex();
+            else if (!args[1].IsDefault && length < 1)
+                return Variant.EmptyString;
 
-                return Variant.True;
-            });
+            length = Math.Max(4, Math.Min(length, 16));
 
-        public static FunctionReturnValue InetClose(CallFrame frame, Variant[] args)
+            if (bytes.Length < length)
+                bytes = new byte[length - bytes.Length].Concat(bytes).ToArray();
+
+            return (Variant)From.Bytes(bytes).To.Hex();
+        }
+
+        #endregion
+        #region INET...
+
+        internal static FunctionReturnValue InetClose(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1567,7 +1725,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.False;
         }
 
-        public static FunctionReturnValue InetGet(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue InetGet(CallFrame frame, Variant[] args)
         {
             string uri = args[0].ToString();
             string filename = args[1].ToString();
@@ -1596,7 +1754,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return handle;
         }
 
-        public static FunctionReturnValue InetGetInfo(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue InetGetInfo(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -1625,7 +1783,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
         }
 
-        public static FunctionReturnValue InetGetSize(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue InetGetSize(CallFrame frame, Variant[] args)
         {
             string uri = args[0].ToString();
 
@@ -1641,7 +1799,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue InetRead(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue InetRead(CallFrame frame, Variant[] args)
         {
             string uri = args[0].ToString();
 
@@ -1657,7 +1815,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniDelete(CallFrame frame, Variant[] args)
+        #endregion
+        #region INI...
+
+        internal static FunctionReturnValue IniDelete(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
             string section = args[1].ToString();
@@ -1683,7 +1844,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniRead(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniRead(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
             string section = args[1].ToString();
@@ -1699,7 +1860,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniReadSection(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniReadSection(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
             string section = args[1].ToString();
@@ -1714,7 +1875,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniReadSectionNames(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniReadSectionNames(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
 
@@ -1728,7 +1889,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniRenameSection(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniRenameSection(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
             string old_sec = args[1].ToString();
@@ -1760,7 +1921,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniWrite(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniWrite(CallFrame frame, Variant[] args)
         {
             string section = args[1].ToString();
             string key = args[2].ToString();
@@ -1789,7 +1950,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IniWriteSection(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IniWriteSection(CallFrame frame, Variant[] args)
         {
             string section = args[1].ToString();
             Variant data = args[2];
@@ -1824,7 +1985,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue IsDeclared(CallFrame frame, Variant[] args) =>
+        #endregion
+        #region IS...
+
+        internal static FunctionReturnValue IsDeclared(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
             {
                 if (au3.VariableResolver.TryGetVariable(args[0].ToString(), VariableSearchScope.Global, out Variable? variable))
@@ -1833,7 +1997,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     return Variant.Zero;
             });
 
-        public static unsafe FunctionReturnValue IsAdmin(CallFrame frame, Variant[] args) => (Variant)NativeInterop.DoPlatformDependent<bool>(delegate
+        internal static unsafe FunctionReturnValue IsAdmin(CallFrame frame, Variant[] args) => (Variant)NativeInterop.DoPlatformDependent<bool>(delegate
         {
             void* processHandle = NativeInterop.GetCurrentProcess();
             void* token;
@@ -1852,29 +2016,96 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 }
 
             return false;
-        }, () => NativeInterop.geteuid() == 0);
+        }, () => NativeInterop.Linux__geteuid() == 0);
 
-        public static FunctionReturnValue IsArray(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Array);
+        internal static FunctionReturnValue IsArray(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Array);
 
-        public static FunctionReturnValue IsBinary(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Binary);
+        internal static FunctionReturnValue IsBinary(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Binary);
 
-        public static FunctionReturnValue IsBool(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Boolean);
+        internal static FunctionReturnValue IsBool(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Boolean);
 
-        public static FunctionReturnValue IsFloat(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d != d);
+        internal static FunctionReturnValue IsFloat(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d != d);
 
-        public static FunctionReturnValue IsFunc(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Function);
+        internal static FunctionReturnValue IsFunc(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Function);
 
-        public static FunctionReturnValue IsInt(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d == d);
+        internal static FunctionReturnValue IsInt(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d == d);
 
-        public static FunctionReturnValue IsKeyword(CallFrame frame, Variant[] args) => (Variant)(args[0].IsDefault ? 1m : args[0].IsNull ? 2m : 0m);
+        internal static FunctionReturnValue IsKeyword(CallFrame frame, Variant[] args) => (Variant)(args[0].IsDefault ? 1m : args[0].IsNull ? 2m : 0m);
 
-        public static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
+        internal static FunctionReturnValue IsNumber(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Number);
 
-        public static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)args[0].IsObject;
+        internal static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)args[0].IsObject;
 
-        public static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
+        internal static FunctionReturnValue IsPtr(CallFrame frame, Variant[] args) => (Variant)args[0].IsPtr;
 
-        public static FunctionReturnValue ObjCreate(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
+
+        #endregion
+        #region I, J, K
+
+        internal static FunctionReturnValue Int(CallFrame frame, Variant[] args) => (Variant)(long)args[0];
+
+        #endregion
+        #region L, M, N
+
+        internal static FunctionReturnValue Log(CallFrame frame, Variant[] args) => (Variant)Math.Log((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue Mod(CallFrame frame, Variant[] args) => args[0] % args[1];
+
+        internal static FunctionReturnValue MsgBox(CallFrame frame, Variant[] args)
+        {
+            uint flags = (uint)args[0];
+            string title = args[1].ToString();
+            string text = args[2].ToString();
+            decimal timeout = args[3].ToNumber();
+            int hwnd = (int)args[4];
+
+            // TODO : timeout
+            // TODO : other platforms
+
+            return NativeInterop.DoPlatformDependent(delegate
+            {
+                return (Variant)NativeInterop.MessageBox(hwnd, text, title, flags);
+            }, () => throw new NotImplementedException());
+        }
+
+        internal static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(decimal)args[0];
+
+        #endregion
+        #region ONAUTOIT...
+
+        internal static FunctionReturnValue OnAutoItExitRegister(CallFrame frame, Variant[] args)
+        {
+            Union<InterpreterError, AU3CallFrame> caller = GetAu3Caller(frame, nameof(OnAutoItExitRegister));
+
+            if (caller.Is(out AU3CallFrame? au3fame))
+            {
+                string func = args[0].IsFunction(out ScriptFunction? f) ? f.Name : args[0].ToString();
+
+                return (Variant)au3fame.CurrentFunction.Script.AddExitFunction(func, au3fame.CurrentLocation);
+            }
+            else
+                return Variant.False;
+        }
+
+        internal static FunctionReturnValue OnAutoItExitUnRegister(CallFrame frame, Variant[] args)
+        {
+            Union<InterpreterError, AU3CallFrame> caller = GetAu3Caller(frame, nameof(OnAutoItExitUnRegister));
+
+            if (caller.Is(out AU3CallFrame? au3fame))
+            {
+                string func = args[0].IsFunction(out ScriptFunction? f) ? f.Name : args[0].ToString();
+
+                return (Variant)au3fame.CurrentFunction.Script.RemoveExitFunction(func);
+            }
+            else
+                return Variant.False;
+        }
+
+        #endregion
+        #region OBJ...
+
+        internal static FunctionReturnValue ObjCreate(CallFrame frame, Variant[] args)
         {
             if (!frame.Interpreter.IsCOMAvailable)
                 frame.IssueWarning("warning.com_unavailable");
@@ -1893,17 +2124,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.Null, 1, Variant.Null);
         }
 
-        // public static FunctionReturnValue ObjCreateInterface(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue ObjCreateInterface(CallFrame frame, Variant[] args)
         // {
         // 
         // }
         // 
-        // public static FunctionReturnValue ObjEvent(CallFrame frame, Variant[] args)
+        // internal static FunctionReturnValue ObjEvent(CallFrame frame, Variant[] args)
         // {
         // 
         // }
 
-        public static FunctionReturnValue ObjGet(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue ObjGet(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
 
@@ -1911,13 +2142,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             throw new NotImplementedException();
         }
 
-        public static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue ObjName(CallFrame frame, Variant[] args)
         {
-            if (args[0] is { Type: VariantType.COMObject, RawData: uint id })
+            if (args[0] is { Type: VariantType.COMObject } handle)
             {
                 string? info = null;
 
-                frame.Interpreter.COMConnector?.TryGetCOMObjectInfo(id, (COMObjectInfoMode)(int)args[1], out info);
+                frame.Interpreter.COMConnector?.TryGetCOMObjectInfo((uint)handle, (COMObjectInfoMode)(int)args[1], out info);
 
                 if (info is string s)
                     return (Variant)s;
@@ -1926,7 +2157,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Null);
         }
 
-        public static unsafe FunctionReturnValue Ping(CallFrame frame, Variant[] args)
+        #endregion
+        #region P...
+
+        internal static unsafe FunctionReturnValue Ping(CallFrame frame, Variant[] args)
         {
             int err = 4;
 
@@ -1953,7 +2187,120 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(err);
         }
 
-        public static unsafe FunctionReturnValue Random(CallFrame frame, Variant[] args)
+        #endregion
+        #region PROCESS...
+
+        internal static FunctionReturnValue ProcessClose(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                try
+                {
+                    proc.Kill();
+
+                    return Variant.True;
+                }
+                catch
+                {
+                    return FunctionReturnValue.Error(3);
+                }
+            else
+                return FunctionReturnValue.Error(4);
+        }
+
+        internal static FunctionReturnValue ProcessExists(CallFrame frame, Variant[] args) => GetProcess(args[0]) is Process proc ? proc.Id : Variant.Zero;
+
+        internal static FunctionReturnValue ProcessGetStats(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                return (int)args[1] switch
+                {
+                    0 => Variant.FromArray(frame.Interpreter, proc.WorkingSet64, proc.PeakWorkingSet64),
+                    // TODO : 1 => Variant.FromArray(frame.Interpreter, ),
+                    _ => FunctionReturnValue.Error(1),
+                };
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        internal static FunctionReturnValue ProcessList(CallFrame frame, Variant[] args)
+        {
+            Variant[] items = Process.GetProcesses()
+                                     .Where(proc => args[0].IsDefault ? true : proc.ProcessName == args[0].ToString())
+                                     .ToArray(proc => Variant.FromArray(frame.Interpreter, proc.ProcessName, proc.Id));
+
+            return Variant.FromArray(frame.Interpreter, items.Prepend(Variant.FromArray(frame.Interpreter, items.Length)));
+        }
+
+        internal static FunctionReturnValue ProcessSetPriority(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+                try
+                {
+                    proc.PriorityClass = (int)args[1] switch
+                    {
+                        0 => ProcessPriorityClass.Idle,
+                        1 => ProcessPriorityClass.BelowNormal,
+                        2 => ProcessPriorityClass.Normal,
+                        3 => ProcessPriorityClass.AboveNormal,
+                        4 => ProcessPriorityClass.High,
+                        5 => ProcessPriorityClass.RealTime,
+                        _ => (ProcessPriorityClass)(-1)
+                    };
+
+                    return Variant.True;
+                }
+                catch
+                {
+                    return FunctionReturnValue.Error(2);
+                }
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        internal static FunctionReturnValue ProcessWait(CallFrame frame, Variant[] args)
+        {
+            string procname = args[0].ToString();
+            long timeout = (long)args[1] * 1000;
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            while (timeout <= 0 || sw.ElapsedMilliseconds < timeout)
+            {
+                try
+                {
+                    if (Process.GetProcessesByName(procname).FirstOrDefault()?.Id is int pid)
+                        return (Variant)pid;
+                }
+                catch
+                {
+                }
+
+                Thread.Sleep(250);
+            }
+
+            return Variant.Zero;
+        }
+
+        internal static FunctionReturnValue ProcessWaitClose(CallFrame frame, Variant[] args)
+        {
+            if (GetProcess(args[0]) is Process proc)
+            {
+                if ((int)args[1] <= 0)
+                    proc.WaitForExit();
+                else
+                    proc.WaitForExit((int)args[0]);
+
+                return (Variant)proc.HasExited;
+            }
+            else
+                return Variant.False;
+        }
+
+        #endregion
+        #region R...
+
+        internal static unsafe FunctionReturnValue Random(CallFrame frame, Variant[] args)
         {
             decimal min = (decimal)args[0];
             decimal max = (decimal)args[1];
@@ -1972,34 +2319,214 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromNumber(val);
         }
 
-        // public static unsafe FunctionReturnValue RegDelete(CallFrame frame, Variant[] args)
-        // {
-        //     string key = args[0].ToString();
-        //     string val = args[1].ToString();
-        // 
-        // }
-        // 
-        // public static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
-        // 
-        // public static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
-        // {
-        // 
-        // }
+        internal static FunctionReturnValue Round(CallFrame frame, Variant[] args) => (Variant)Math.Round(args[0].ToNumber(), (int)args[1]);
 
-        public static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
+        #endregion
+        #region REG...
+
+        internal static unsafe FunctionReturnValue RegDelete(CallFrame frame, Variant[] args)
+        {
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            int res = args[1].IsDefault ? NativeInterop.RegDeleteKeyEx(hk_base, key, RegSAM.WOW64_64Key, null)
+                                        : NativeInterop.RegDeleteKeyValue(hk_base, key, args[1].ToString());
+
+            return Variant.FromBoolean(res is 0);
+        }
+
+        internal static unsafe FunctionReturnValue RegEnumKey(CallFrame frame, Variant[] args)
+        {
+            void* hkey = null;
+            int err = 0;
+
+            try
+            {
+                GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
+                {
+                    int max_size = 512;
+                    StringBuilder sb = new StringBuilder(max_size);
+
+                    if ((err = NativeInterop.RegEnumKeyEx(hkey, (int)args[1], sb, &max_size, null, null, null, out _)) is 0)
+                        return (Variant)sb;
+                }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
+        }
+
+        internal static unsafe FunctionReturnValue RegEnumVal(CallFrame frame, Variant[] args)
+        {
+            void* hkey = null;
+            int err = 0;
+
+            try
+            {
+                GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
+                {
+                    int max_size = 512;
+                    StringBuilder sb = new StringBuilder(max_size);
+
+                    if ((err = NativeInterop.RegEnumValue(hkey, (int)args[1], sb, &max_size, null, out RegKeyType type, null, out _)) is 0)
+                        return FunctionReturnValue.Success(sb, type.ToString());
+                }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
+        }
+
+        internal static unsafe FunctionReturnValue RegRead(CallFrame frame, Variant[] args)
+        {
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            void* hkey = null;
+            int err;
+
+            try
+            {
+                if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Write, out hkey)) != 0)
+                    return FunctionReturnValue.Error(err);
+                else if ((err = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), 0xffff, out RegKeyType type, null, out int size)) != 0)
+                    return FunctionReturnValue.Error(err);
+                else
+                {
+                    void* data = (void*)Marshal.AllocHGlobal(size);
+
+                    err = NativeInterop.RegGetValue(hk_base, key, args[1].ToString(), type switch
+                    {
+                        RegKeyType.REG_SZ => 0x0002,
+                        RegKeyType.REG_MULTI_SZ => 0x0020,
+                        RegKeyType.REG_EXPAND_SZ => 0x0004,
+                        RegKeyType.REG_DWORD => 0x0018,
+                        RegKeyType.REG_QWORD => 0x0048,
+                        RegKeyType.REG_BINARY => 0x0008,
+                        RegKeyType.REG_UNKNOWN or _ => 0xffff,
+                    }, out type, data, out size);
+
+                    if (err is 0)
+                        switch (type)
+                        {
+                            case RegKeyType.REG_SZ or RegKeyType.REG_EXPAND_SZ or RegKeyType.REG_MULTI_SZ:
+                                string s = From.Pointer(data, size - 1).To.String();
+
+                                if (type is RegKeyType.REG_MULTI_SZ)
+                                    s = s.Replace('\0', '\n');
+
+                                return FunctionReturnValue.Success(s, type.ToString());
+                            case RegKeyType.REG_DWORD or RegKeyType.REG_DWORD_LITTLE_ENDIAN:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<int>(), "REG_DWORD");
+                            case RegKeyType.REG_DWORD_BIG_ENDIAN:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().To.Unmanaged<int>(), "REG_DWORD");
+                            case RegKeyType.REG_QWORD:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<long>(), type.ToString());
+                            case RegKeyType.REG_LINK:
+                                return FunctionReturnValue.Error(-2);
+                            case RegKeyType.REG_NONE or RegKeyType.REG_UNKNOWN or RegKeyType.REG_BINARY:
+                            default:
+                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Bytes, type.ToString());
+                        }
+                }
+            }
+            finally
+            {
+                NativeInterop.RegCloseKey(hkey);
+            }
+
+            return FunctionReturnValue.Error(err);
+        }
+
+        internal static unsafe FunctionReturnValue RegWrite(CallFrame frame, Variant[] args)
+        {
+            string name = args[1].ToString();
+            Variant value = args[3];
+
+            RegKeyType type = args[2].ToString().ToUpperInvariant() switch
+            {
+                "REG_SZ" => RegKeyType.REG_SZ,
+                "REG_MULTI_SZ" => RegKeyType.REG_MULTI_SZ,
+                "REG_EXPAND_SZ" => RegKeyType.REG_EXPAND_SZ,
+                "REG_DWORD" => RegKeyType.REG_DWORD,
+                "REG_QWORD" => RegKeyType.REG_QWORD,
+                "REG_BINARY" => RegKeyType.REG_BINARY,
+                _ => RegKeyType.REG_UNKNOWN,
+            };
+
+            GetRegistryPath(args[0].ToString(), out void* hk_base, out string key);
+
+            if (args[1].IsDefault)
+            {
+                int res = NativeInterop.RegCreateKeyEx(hk_base, key, null, null, RegOption.NonVolatile, RegSAM.Write, null, out void* hkey, out _);
+
+                NativeInterop.RegCloseKey(hkey);
+
+                return Variant.FromBoolean(res is 0);
+            }
+            else
+            {
+                int retVal = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Write, out void* hkey);
+
+                if (retVal is 0)
+                {
+                    nint pData;
+                    int size;
+
+                    switch (type)
+                    {
+                        case RegKeyType.REG_SZ or RegKeyType.REG_MULTI_SZ or RegKeyType.REG_EXPAND_SZ:
+                            if (type is RegKeyType.REG_MULTI_SZ)
+                                value = value.ToString().Replace('\n', '\0') + '\0';
+
+                            size = value.Length + 1;
+                            pData = Marshal.StringToHGlobalUni(value.ToString());
+
+                            break;
+                        case RegKeyType.REG_DWORD:
+                            pData = Marshal.AllocHGlobal(size = sizeof(int));
+                            *(int*)pData = (int)value;
+
+                            break;
+                        case RegKeyType.REG_QWORD:
+                            pData = Marshal.AllocHGlobal(size = sizeof(long));
+                            *(long*)pData = (long)value;
+
+                            break;
+                        case RegKeyType.REG_BINARY:
+                        case RegKeyType.REG_UNKNOWN:
+                        default:
+                            pData = Marshal.AllocHGlobal(size = value.Length);
+
+                            Marshal.Copy(value.ToBinary(), 0, pData, size);
+
+                            break;
+                    }
+
+                    retVal = NativeInterop.RegSetValueEx(hkey, name, null, type, (void*)pData, size);
+                }
+
+                NativeInterop.RegCloseKey(hkey);
+
+                if (retVal is 0)
+                    return Variant.True;
+                else
+                    return FunctionReturnValue.Error(retVal);
+            }
+        }
+
+        #endregion
+        #region S...
+
+        internal static unsafe FunctionReturnValue Shutdown(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2056,7 +2583,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     else if (mode is ShutdownMode.SD_STANDBY or ShutdownMode.SD_HIBERNATE)
                         code = 0xD000FCE2;
 
-                    return code is uint msg && NativeInterop.reboot(0xfee1dead, 0x28121969, msg, null) == 0;
+                    return code is uint msg && NativeInterop.Linux__reboot(0xfee1dead, 0x28121969, msg, null) == 0;
                 });
 
                 return Variant.FromBoolean(success);
@@ -2067,25 +2594,54 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static unsafe FunctionReturnValue SRandom(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue Sin(CallFrame frame, Variant[] args) => (Variant)Math.Sin((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue String(CallFrame frame, Variant[] args) => (Variant)args[0].ToString();
+
+        internal static FunctionReturnValue StringToBinary(CallFrame frame, Variant[] args) => (Variant)From.String(args[0].ToString(), (int)args[1] switch
+        {
+            1 => Encoding.GetEncoding(1252),
+            2 => Encoding.Unicode,
+            3 => Encoding.BigEndianUnicode,
+            4 => Encoding.UTF8,
+            _ => BytewiseEncoding.Instance,
+        }).To.Bytes;
+
+        internal static FunctionReturnValue Sqrt(CallFrame frame, Variant[] args) => (Variant)Math.Sqrt((double)args[0].ToNumber());
+
+        internal static unsafe FunctionReturnValue SRandom(CallFrame frame, Variant[] args)
         {
             frame.Interpreter.ResetRandom((int)args[0]);
 
             return Variant.Null;
         }
 
-        public static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n", StringComparison.InvariantCultureIgnoreCase);
+        internal static FunctionReturnValue SetExtended(CallFrame frame, Variant[] args) => frame.SetExtended((int)args[0], args[1]);
 
-        public static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant) string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
+        internal static FunctionReturnValue SetError(CallFrame frame, Variant[] args) => frame.SetError((int)args[0], (int)args[1], args[2]);
+
+        internal static FunctionReturnValue Sleep(CallFrame frame, Variant[] args)
+        {
+            Thread.Sleep((int)args[0]);
+
+            return Variant.Null;
+        }
+
+        #endregion
+        #region STRING...
+
+        internal static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n", StringComparison.InvariantCultureIgnoreCase);
+
+        internal static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant)string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
         {
             1 => StringComparison.CurrentCulture,
             2 => StringComparison.InvariantCultureIgnoreCase,
             _ => StringComparison.CurrentCultureIgnoreCase,
         });
 
-        public static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args) => (Variant)StringFormatter.FormatString(args[0].ToString(), args[1..]);
+        internal static FunctionReturnValue StringFormat(CallFrame frame, Variant[] args) => (Variant)StringFormatter.FormatString(args[0].ToString(), args[1..]);
 
-        public static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringFromASCIIArray(CallFrame frame, Variant[] args)
         {
             if (args[0].Type is not VariantType.Array)
                 return FunctionReturnValue.Error(1, 0, Variant.EmptyString);
@@ -2115,7 +2671,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringInStr(CallFrame frame, Variant[] args)
         {
             string input = args[0].ToString();
             string substr = args[1].ToString();
@@ -2160,7 +2716,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue StringLeft(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringLeft(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
             int c = Math.Max(0, (int)args[1]);
@@ -2168,11 +2724,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return c < s.Length ? s[..c] : Variant.EmptyString;
         }
 
-        public static FunctionReturnValue StringLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Length;
+        internal static FunctionReturnValue StringLen(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Length;
 
-        public static FunctionReturnValue StringLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToLowerInvariant();
+        internal static FunctionReturnValue StringLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToLowerInvariant();
 
-        public static FunctionReturnValue StringMid(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringMid(CallFrame frame, Variant[] args)
         {
             string str = args[0].ToString();
             int start = (int)args[1] - 1;
@@ -2180,13 +2736,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             if (start < 0 || start >= str.Length)
                 return Variant.EmptyString;
-            
+
             len = str.Length - start;
 
             return (Variant)(len < 0 ? "" : str.Substring(start, len));
         }
 
-        public static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringRegExp(CallFrame frame, Variant[] args)
         {
             Regex regex;
             string input = args[0].ToString();
@@ -2232,7 +2788,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return (Variant)regex.IsMatch(input);
         }
 
-        public static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringRegExpReplace(CallFrame frame, Variant[] args)
         {
             Regex regex;
             string input = args[0].ToString();
@@ -2250,7 +2806,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(2, 0);
             }
 
-            while (i < count || all)
+            while (i < count || all)
                 if (input.Match(regex, out Match m))
                 {
                     input = input[..m.Index] + replacement + input[(m.Index + m.Length)..];
@@ -2265,7 +2821,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Success(input, i);
         }
 
-        public static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringReplace(CallFrame frame, Variant[] args)
         {
             string input = args[0].ToString();
             string search = args[1].ToString();
@@ -2310,9 +2866,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Success(input, count);
         }
 
-        public static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args) => (Variant)new string(args[0].ToString().Reverse().ToArray());
+        internal static FunctionReturnValue StringReverse(CallFrame frame, Variant[] args) => (Variant)new string(args[0].ToString().Reverse().ToArray());
 
-        public static FunctionReturnValue StringRight(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringRight(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
@@ -2324,7 +2880,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             });
         }
 
-        public static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringSplit(CallFrame frame, Variant[] args)
         {
             string input = args[0].ToString();
             string delim = args[1].ToString();
@@ -2343,9 +2899,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.FromArray(frame.Interpreter, array);
         }
 
-        public static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "", StringComparison.InvariantCulture);
+        internal static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "", StringComparison.InvariantCulture);
 
-        public static FunctionReturnValue StringStripWS(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringStripWS(CallFrame frame, Variant[] args)
         {
             string str = args[0].ToString();
             StringStripFlags flags = (StringStripFlags)(int)args[1];
@@ -2365,7 +2921,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)str;
         }
 
-        public static FunctionReturnValue StringToASCIIArray(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringToASCIIArray(CallFrame frame, Variant[] args)
         {
             string str = args[0].ToString();
             int start = (int)args[1];
@@ -2391,7 +2947,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.EmptyString;
         }
 
-        public static FunctionReturnValue StringTrimLeft(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringTrimLeft(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
             int c = Math.Max(0, (int)args[1]);
@@ -2399,7 +2955,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return c < s.Length ? s[c..] : Variant.EmptyString;
         }
 
-        public static FunctionReturnValue StringTrimRight(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue StringTrimRight(CallFrame frame, Variant[] args)
         {
             string s = args[0].ToString();
 
@@ -2411,36 +2967,28 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             });
         }
 
-        public static FunctionReturnValue StringUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToUpperInvariant();
+        internal static FunctionReturnValue StringUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().ToUpperInvariant();
 
-        public static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
+        internal static FunctionReturnValue StringIsDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsDigit);
 
-        public static FunctionReturnValue StringIsAlNum(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetterOrDigit);
+        internal static FunctionReturnValue StringIsAlNum(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetterOrDigit);
 
-        public static FunctionReturnValue StringIsAlpha(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetter);
+        internal static FunctionReturnValue StringIsAlpha(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLetter);
 
-        public static FunctionReturnValue StringIsASCII(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(c => c < 0x80);
+        internal static FunctionReturnValue StringIsASCII(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(c => c < 0x80);
 
-        public static FunctionReturnValue StringIsLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLower);
+        internal static FunctionReturnValue StringIsLower(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsLower);
 
-        public static FunctionReturnValue StringIsSpace(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsWhiteSpace);
+        internal static FunctionReturnValue StringIsSpace(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsWhiteSpace);
 
-        public static FunctionReturnValue StringIsUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsUpper);
+        internal static FunctionReturnValue StringIsUpper(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All(char.IsUpper);
 
-        public static FunctionReturnValue StringIsXDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All("0123456789abcdefABCDEF".Contains);
+        internal static FunctionReturnValue StringIsXDigit(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().All("0123456789abcdefABCDEF".Contains);
 
-        public static FunctionReturnValue SetExtended(CallFrame frame, Variant[] args) => frame.SetExtended((int)args[0], args[1]);
+        #endregion
+        #region TCP...
 
-        public static FunctionReturnValue SetError(CallFrame frame, Variant[] args) => frame.SetError((int)args[0], (int)args[1], args[2]);
-
-        public static FunctionReturnValue Sleep(CallFrame frame, Variant[] args)
-        {
-            Thread.Sleep((int)args[0]);
-
-            return Variant.Null;
-        }
-
-        public static FunctionReturnValue TCPAccept(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPAccept(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2464,7 +3012,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(-1, 1, Variant.Zero);
         }
 
-        public static FunctionReturnValue TCPCloseSocket(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPCloseSocket(CallFrame frame, Variant[] args)
         {
 
             try
@@ -2489,7 +3037,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue TCPConnect(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPConnect(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2510,7 +3058,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue TCPListen(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPListen(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2530,7 +3078,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue TCPNameToIP(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPNameToIP(CallFrame frame, Variant[] args)
         {
             string addr = args[0].ToString();
 
@@ -2539,7 +3087,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)addr;
         }
 
-        public static FunctionReturnValue TCPRecv(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPRecv(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2577,7 +3125,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.EmptyString, -1, 1);
         }
 
-        public static FunctionReturnValue TCPSend(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue TCPSend(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2600,11 +3148,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return FunctionReturnValue.Error(Variant.Zero, 1, Variant.Zero);
         }
 
-        public static FunctionReturnValue TCPShutdown(CallFrame frame, Variant[] args) => Variant.True;
+        internal static FunctionReturnValue TCPShutdown(CallFrame frame, Variant[] args) => Variant.True;
 
-        public static FunctionReturnValue TCPStartup(CallFrame frame, Variant[] args) => Variant.True;
+        internal static FunctionReturnValue TCPStartup(CallFrame frame, Variant[] args) => Variant.True;
 
-        public static FunctionReturnValue TimerInit(CallFrame frame, Variant[] args)
+        #endregion
+        #region T...
+
+        internal static FunctionReturnValue Tan(CallFrame frame, Variant[] args) => (Variant)Math.Tan((double)args[0].ToNumber());
+
+        internal static FunctionReturnValue TimerInit(CallFrame frame, Variant[] args)
         {
             Stopwatch sw = new Stopwatch();
 
@@ -2613,10 +3166,30 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return frame.Interpreter.GlobalObjectStorage.Store(sw);
         }
 
-        public static FunctionReturnValue TimerDiff(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue TimerDiff(CallFrame frame, Variant[] args) =>
             (Variant)(args[0].TryResolveHandle(frame.Interpreter, out Stopwatch? sw) ? sw.ElapsedMilliseconds : -1);
 
-        public static FunctionReturnValue UDPListen(CallFrame frame, Variant[] args)
+        #endregion
+        #region U...
+
+        internal static FunctionReturnValue UBound(CallFrame frame, Variant[] args)
+        {
+            Variant obj = args[0];
+            int count = (int)args[1] - 1;
+
+            while (count > 0 && obj.Type is VariantType.Array)
+            {
+                obj = obj.ToArray(frame.Interpreter).FirstOrDefault();
+                --count;
+            }
+
+            return (Variant)obj.Length;
+        }
+
+        #endregion
+        #region UDP...
+
+        internal static FunctionReturnValue UDPListen(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2645,7 +3218,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue UDPCloseSocket(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue UDPCloseSocket(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2668,7 +3241,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue UDPOpen(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue UDPOpen(CallFrame frame, Variant[] args)
         {
             string addr = args[0].ToString();
             int port = (int)args[1];
@@ -2698,7 +3271,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue UDPRecv(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue UDPRecv(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2739,7 +3312,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue UDPSend(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue UDPSend(CallFrame frame, Variant[] args)
         {
             try
             {
@@ -2766,25 +3339,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        public static FunctionReturnValue UDPShutdown(CallFrame frame, Variant[] args) => Variant.True;
+        internal static FunctionReturnValue UDPShutdown(CallFrame frame, Variant[] args) => Variant.True;
 
-        public static FunctionReturnValue UDPStartup(CallFrame frame, Variant[] args) => Variant.True;
+        internal static FunctionReturnValue UDPStartup(CallFrame frame, Variant[] args) => Variant.True;
 
-        public static FunctionReturnValue UBound(CallFrame frame, Variant[] args)
-        {
-            Variant obj = args[0];
-            int count = (int)args[1] - 1;
+        #endregion
+        #region V, W, X, Y, Z
 
-            while (count > 0 && obj.Type is VariantType.Array)
-            {
-                obj = obj.ToArray(frame.Interpreter).FirstOrDefault();
-                --count;
-            }
-
-            return (Variant)obj.Length;
-        }
-
-        public static FunctionReturnValue VarGetType(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue VarGetType(CallFrame frame, Variant[] args)
         {
             string gettype(Variant var) => var.Type switch
             {
@@ -2800,6 +3362,68 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             };
 
             return (Variant)gettype(args[0]);
+        }
+        #endregion
+        #endregion
+        #region HELPER FUNCTIONS
+
+        private static Union<InterpreterError, AU3CallFrame> GetAu3Caller(CallFrame? frame, string funcname)
+        {
+            AU3CallFrame? caller = null;
+
+            while (frame is { })
+                if (frame is AU3CallFrame au3)
+                    caller = au3;
+                else
+                    frame = frame.CallerFrame;
+
+            if (caller is { })
+                return caller;
+            else
+                return InterpreterError.WellKnown(null, "error.au3_caller_only", funcname);
+        }
+
+        private static DriveInfo? GetDriveByPath(string path)
+        {
+            try
+            {
+                string dir = Path.GetFullPath(path);
+
+                return DriveInfo.GetDrives().FirstOrDefault(d => Path.GetFullPath(d.RootDirectory.FullName).Equals(dir));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Process? GetProcess(Variant variant)
+        {
+            try
+            {
+                return Process.GetProcessById((int)variant);
+            }
+            catch
+            {
+                return Process.GetProcessesByName(variant.ToString()).OrderByDescending(p => p.Id)?.FirstOrDefault();
+            }
+        }
+
+        private static unsafe void GetRegistryPath(string key, out void* hk_base, out string path)
+        {
+            string[] tokens = key.Split('\\');
+            hk_base = (void*)(int)(tokens[0].ToUpperInvariant() switch
+            {
+                "HKEY_LOCAL_MACHINE" or "HKLM" => RegPredefinedkeys.HKEY_LOCAL_MACHINE,
+                "HKEY_USERS" or "HKU" => RegPredefinedkeys.HKEY_USERS,
+                "HKEY_CURRENT_USER" or "HKCU" => RegPredefinedkeys.HKEY_CURRENT_USER,
+                "HKEY_CLASSES_ROOT" or "HKCR" => RegPredefinedkeys.HKEY_CLASSES_ROOT,
+                "HKEY_CURRENT_CONFIG" or "HKCC" => RegPredefinedkeys.HKEY_CURRENT_CONFIG,
+                "HKEY_DYN_DATA" or "HKDD" => RegPredefinedkeys.HKEY_DYN_DATA,
+                "HKEY_PERFORMANCE_DATA" or "HKPD" => RegPredefinedkeys.HKEY_PERFORMANCE_DATA,
+                _ => default,
+            });
+            path = tokens.Skip(1).StringJoin("\\");
         }
 
         private static string GetAttributeString(FileSystemInfo info)
@@ -2832,57 +3456,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return sb.ToString();
         }
 
-        [Flags]
-        public enum ShutdownMode
-        {
-            SD_LOGOFF =0,
-            SD_SHUTDOWN=1,
-            SD_REBOOT = 2,
-            SD_FORCE = 4,
-            SD_POWERDOWN = 8,
-            SD_FORCEHUNG = 16,
-            SD_STANDBY = 32,
-            SD_HIBERNATE = 64,
-        }
-
-        [Flags]
-        private enum AssignFlags
-            : int
-        {
-            Create = 0,
-            ForceLocal = 1,
-            ForceGlobal = 2,
-            ExistFail = 4
-        }
-
-        [Flags]
-        private enum FileOpenFlags
-        {
-            FO_READ = 0,
-            FO_APPEND = 1,
-            FO_OVERWRITE = 2,
-            FO_CREATEPATH = 8,
-            FO_BINARY = 16,
-            FO_UNICODE = 32,
-            FO_UTF16_LE = FO_UNICODE,
-            FO_UTF16_BE = 64,
-            FO_UTF8 = 128,
-            FO_UTF8_NOBOM =256,
-            FO_ANSI = 512,
-            FO_UTF16_LE_NOBOM = 1024,
-            FO_UTF16_BE_NOBOM = 2048,
-            FO_FULLFILE_DETECT = 16384,
-        }
-
-        [Flags]
-        private enum StringStripFlags
-            : int
-        {
-            STR_STRIPLEADING = 1,
-            STR_STRIPTRAILING = 2,
-            STR_STRIPSPACES = 4,
-            STR_STRIPALL = 8,
-        }
+        #endregion
+        #region HELPER CLASSES
 
         private sealed class FileSearchHandle
         {
@@ -2890,6 +3465,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
 
             public FileSearchHandle(FileSystemInfo[] files) => Enumerator = (IEnumerator<FileSystemInfo>)files.GetEnumerator();
+
+            public override string ToString() => Enumerator.Current?.ToString();
         }
 
         private sealed class FileHandle
@@ -2929,6 +3506,52 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 FileStream.Close();
                 FileStream.Dispose();
             }
+
+            public override string ToString() => $"{FileStream} ({Flags}, {Encoding})";
+        }
+
+        private sealed unsafe class LibraryHandle
+            : IDisposable
+        {
+            public bool IsDisposed { get; private set; }
+            public nint Handle { get; private set; }
+            public string Path { get; }
+            public bool IsLoaded => Handle != 0;
+
+
+            public LibraryHandle(string path) => Path = path;
+
+            ~LibraryHandle() => Dispose(false);
+
+            private void Dispose(bool _)
+            {
+                if (!IsDisposed)
+                {
+                    if (IsLoaded)
+                        NativeInterop.DoPlatformDependent(
+                            () => NativeInterop.FreeLibrary(Handle),
+                            () => NativeInterop.Linux__dlclose(Handle),
+                            () => NativeInterop.MacOS__dlclose(Handle)
+                        );
+
+                    Handle = default;
+                    IsDisposed = true;
+                }
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            public void LoadLibrary() => Handle = NativeInterop.DoPlatformDependent(
+                () => NativeInterop.LoadLibrary(Path),
+                () => NativeInterop.Linux__dlopen(Path),
+                () => NativeInterop.MacOS__dlopen(Path)
+            );
+
+            public override string ToString() => $"0x{(long)Handle:x16}: {Path}";
         }
 
         private sealed class InetHandle
@@ -3009,6 +3632,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                 return data;
             }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+            public override string ToString() => $"uri={_uri}, file={_file}, running={_running}, error={_error}";
         }
 
         private abstract class UDPBase
@@ -3040,11 +3665,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             private readonly IPEndPoint _listenon; // TODO : ??
 
 
-            public UDPServer()
-                : this(new IPEndPoint(IPAddress.Any, 31488))
-            {
-            }
-
             public UDPServer(IPEndPoint endpoint)
             {
                 _listenon = endpoint;
@@ -3073,6 +3693,63 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return connection;
             }
         }
+
+        #endregion
+        #region HELPER ENUMS
+
+        [Flags]
+        public enum ShutdownMode
+        {
+            SD_LOGOFF = 0,
+            SD_SHUTDOWN = 1,
+            SD_REBOOT = 2,
+            SD_FORCE = 4,
+            SD_POWERDOWN = 8,
+            SD_FORCEHUNG = 16,
+            SD_STANDBY = 32,
+            SD_HIBERNATE = 64,
+        }
+
+        [Flags]
+        private enum AssignFlags
+            : int
+        {
+            Create = 0,
+            ForceLocal = 1,
+            ForceGlobal = 2,
+            ExistFail = 4
+        }
+
+        [Flags]
+        private enum FileOpenFlags
+        {
+            FO_READ = 0,
+            FO_APPEND = 1,
+            FO_OVERWRITE = 2,
+            FO_CREATEPATH = 8,
+            FO_BINARY = 16,
+            FO_UNICODE = 32,
+            FO_UTF16_LE = FO_UNICODE,
+            FO_UTF16_BE = 64,
+            FO_UTF8 = 128,
+            FO_UTF8_NOBOM = 256,
+            FO_ANSI = 512,
+            FO_UTF16_LE_NOBOM = 1024,
+            FO_UTF16_BE_NOBOM = 2048,
+            FO_FULLFILE_DETECT = 16384,
+        }
+
+        [Flags]
+        private enum StringStripFlags
+            : int
+        {
+            STR_STRIPLEADING = 1,
+            STR_STRIPTRAILING = 2,
+            STR_STRIPSPACES = 4,
+            STR_STRIPALL = 8,
+        }
+
+        #endregion
     }
 
     public sealed class AdditionalFunctions
@@ -3096,27 +3773,27 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
         }
 
-        public static FunctionReturnValue ATan2(CallFrame frame, Variant[] args) => (Variant)Math.Atan2((double)args[0].ToNumber(), (double)args[1].ToNumber());
+        internal static FunctionReturnValue ATan2(CallFrame frame, Variant[] args) => (Variant)Math.Atan2((double)args[0].ToNumber(), (double)args[1].ToNumber());
 
-        public static FunctionReturnValue ACosh(CallFrame frame, Variant[] args) => (Variant)Math.Acosh((double)args[0].ToNumber());
+        internal static FunctionReturnValue ACosh(CallFrame frame, Variant[] args) => (Variant)Math.Acosh((double)args[0].ToNumber());
 
-        public static FunctionReturnValue ASinh(CallFrame frame, Variant[] args) => (Variant)Math.Asinh((double)args[0].ToNumber());
+        internal static FunctionReturnValue ASinh(CallFrame frame, Variant[] args) => (Variant)Math.Asinh((double)args[0].ToNumber());
 
-        public static FunctionReturnValue ATanh(CallFrame frame, Variant[] args) => (Variant)Math.Atanh((double)args[0].ToNumber());
+        internal static FunctionReturnValue ATanh(CallFrame frame, Variant[] args) => (Variant)Math.Atanh((double)args[0].ToNumber());
 
-        public static FunctionReturnValue ConsoleClear(CallFrame frame, Variant[] args)
+        internal static FunctionReturnValue ConsoleClear(CallFrame frame, Variant[] args)
         {
             Console.Clear();
 
             return Variant.Zero;
         }
 
-        public static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) =>
+        internal static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) =>
             FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
 
-        public static FunctionReturnValue ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
+        internal static FunctionReturnValue ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
 
-        public static unsafe FunctionReturnValue KernelPanic(CallFrame frame, Variant[] args)
+        internal static unsafe FunctionReturnValue KernelPanic(CallFrame frame, Variant[] args)
         {
             NativeInterop.DoPlatformDependent(delegate
             {
@@ -3124,8 +3801,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 NativeInterop.NtRaiseHardError(0xc0000420u, 0, 0, null, 6, out _);
             }, delegate
             {
-                NativeInterop.Bash("echo 1 > /proc/sys/kernel/sysrq");
-                NativeInterop.Bash("echo c > /proc/sysrq-trigger");
+                NativeInterop.Exec("echo 1 > /proc/sys/kernel/sysrq");
+                NativeInterop.Exec("echo c > /proc/sysrq-trigger");
             });
 
             return Variant.True;

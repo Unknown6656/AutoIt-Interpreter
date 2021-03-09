@@ -1,30 +1,34 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Linq;
 using System.IO;
 using System;
 
-using Unknown6656.AutoIt3.ExpressionParser;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 using Unknown6656.IO;
-using System.Collections;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
     using static AST;
 
+    /// <summary>
+    /// Represents an AutoIt3 script scanning and caching module.
+    /// </summary>
     public sealed class ScriptScanner
     {
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
         private static readonly Regex REGEX_COMMENT = new Regex(@"\;[^\""\']*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new Regex(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new Regex(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
         private static readonly Regex REGEX_REGION = new Regex(@"^#(end-?)?region\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_PRAGMA = new Regex(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LINECONT = new Regex(@"(\s|^)_$", _REGEX_OPTIONS);
@@ -45,31 +49,39 @@ namespace Unknown6656.AutoIt3.Runtime
             ResolveHTTP,
             ResolveFTP,
         };
-        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new ConcurrentDictionary<string, ScriptFunction>();
-        private readonly ConcurrentDictionary<string, ScannedScript> _cached_scripts = new ConcurrentDictionary<string, ScannedScript>();
-        private readonly ScannedScript _system_script;
+        private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
+        private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
 
 
         public ScannedScript[] ActiveScripts => (from thread in Interpreter.Threads
                                                  from frame in thread.CallStack
-                                                 select frame.CurrentFunction.Script).Distinct().ToArray();
+                                                 select frame.CurrentFunction.Script).Append(SystemScript).Distinct().ToArray();
+
+        internal ScannedScript SystemScript { get; }
+
+        internal AU3Function AnonymousFunction { get; }
 
         public Interpreter Interpreter { get; }
+
+        public IEnumerable<ScriptFunction> CachedFunctions => _cached_functions.Values;
+
+        public IEnumerable<ScannedScript> CachedScripts => _cached_scripts.Values;
 
 
         public ScriptScanner(Interpreter interpreter)
         {
             Interpreter = interpreter;
-            _system_script = new ScannedScript(MainProgram.ASM_FILE);
+            SystemScript = new ScannedScript(MainProgram.ASM_FILE, "");
+            AnonymousFunction = new AU3Function(SystemScript, "", null);
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    _system_script.AddFunction(new NativeFunction(_system_script, function.Name, function.ParameterCount, function.Execute));
+                    SystemScript.AddFunction(new NativeFunction(Interpreter, function.Name, function.ParameterCount, function.Execute, function.Metadata));
 
-            foreach (KeyValuePair<string, ScriptFunction> func in _system_script.Functions)
+            foreach (KeyValuePair<string, ScriptFunction> func in SystemScript.Functions)
                 _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
         });
 
@@ -132,17 +144,15 @@ namespace Unknown6656.AutoIt3.Runtime
         private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, ScannedScript>>(TelemetryCategory.ScanScript, delegate
             {
-                string key = Path.GetFullPath(file.FullName);
-
-                if (!_cached_scripts.TryGetValue(key, out ScannedScript? script))
+                if (!_cached_scripts.TryGetValue(ScannedScript.GetHashCode(file, content), out ScannedScript? script))
                 {
-                    script = new ScannedScript(file);
+                    script = new ScannedScript(file, content);
 
                     AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
                     List<(string line, SourceLocation loc)> lines = From.String(content)
                                                                         .To
                                                                         .Lines()
-                                                                        .Select((l, i) => (l, new SourceLocation(key, i)))
+                                                                        .Select((l, i) => (l, new SourceLocation(file.FullName, i)))
                                                                         .ToList();
                     int comment_lvl = 0;
                     Match m;
@@ -289,10 +299,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (!curr_func.IsMainFunction)
                         return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
 
-                    _cached_scripts.TryAdd(key, script);
+                    _cached_scripts.TryAdd(script.GetHashCode(), script);
 
                     if (file.Directory is { Exists: true, FullName: string dir })
-                        Interpreter.AddFolderToEnvPath(Path.GetFullPath(dir));
+                        NativeInterop.AddFolderToEnvPath(Path.GetFullPath(dir));
                 }
 
                 return script;
@@ -374,18 +384,30 @@ namespace Unknown6656.AutoIt3.Runtime
                     fi = new FileInfo(path + ext);
 
             if (fi is { Exists: true })
-                return (fi, From.File(fi).To.String());
+            {
+                using FileStream stream = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using StreamReader reader = new StreamReader(stream);
+                string content = reader.ReadToEnd();
+
+                reader.Close();
+                stream.Close();
+
+                return (fi, content);
+            }
 
             return null;
         }
 
-        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(path).To.String());
+        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(new Uri(path)).To.String());
 
         private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).To.String());
 
         private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).To.String());
     }
 
+    /// <summary>
+    /// Represents a scanned AutoIt3 script.
+    /// </summary>
     public sealed class ScannedScript
         : IEquatable<ScannedScript>
     {
@@ -404,70 +426,101 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsLoaded => State == ScannedScriptState.Loaded;
 
+        public string OriginalContent { get; }
+
         public FileInfo Location { get; }
 
 
-        public ScannedScript(FileInfo location) => Location = location;
+        public ScannedScript(FileInfo location, string original_content)
+        {
+            Location = location;
+            OriginalContent = original_content;
+        }
 
-        internal AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
+        public AU3Function GetOrCreateAU3Function(string name, IEnumerable<PARAMETER_DECLARATION>? @params)
         {
             _functions.TryGetValue(name.ToUpperInvariant(), out ScriptFunction? func);
 
             return func as AU3Function ?? AddFunction(new AU3Function(this, name, @params));
         }
 
-        internal T AddFunction<T>(T function) where T : ScriptFunction
+        public T AddFunction<T>(T function)
+            where T : ScriptFunction
         {
             _functions[function.Name.ToUpperInvariant()] = function;
 
             return function;
         }
 
-        internal void AddStartupFunction(string name, SourceLocation decl) => _startup.Add((name.ToUpperInvariant(), decl));
+        public bool AddStartupFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
 
-        internal void AddExitFunction(string name, SourceLocation decl) => _exit.Add((name.ToUpperInvariant(), decl));
+        public bool AddExitFunction(string name, SourceLocation decl) => AddFunction(name, decl, in _startup);
 
-        public InterpreterError? LoadScript(CallFrame frame) => HandleLoading(frame, false);
+        public bool RemoveStartupFunction(string name) => RemoveFunction(name, in _startup);
 
-        public InterpreterError? UnLoadScript(CallFrame frame) => HandleLoading(frame, true);
+        public bool RemoveExitFunction(string name) => RemoveFunction(name, in _startup);
 
-        private InterpreterError? HandleLoading(CallFrame frame, bool unloading)
+        private bool AddFunction(string name, SourceLocation decl, in List<(string, SourceLocation)> list)
         {
-            (ScannedScriptState state, List<(string, SourceLocation)>? funcs) = unloading ? (ScannedScriptState.Unloaded, _exit) : (ScannedScriptState.Loaded, _startup);
-            InterpreterError? result = null;
+            if (!list.Any(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                list.Add((name.ToUpperInvariant(), decl));
 
-            if (State == state)
-                return null;
-
-            State = state;
-
-            foreach ((string name, SourceLocation loc) in funcs)
-                if (!_functions.TryGetValue(name, out ScriptFunction? func))
-                    return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
-                else if (func.ParameterCount.MinimumCount > 0)
-                    return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
-                else
-                    result ??= (InterpreterError?)frame.Call(func, Array.Empty<Variant>());
-
-            return result;
+                return true;
+            }
+            else
+                return false;
         }
 
-        public override int GetHashCode() => Path.GetFullPath(Location.FullName).GetHashCode(StringComparison.CurrentCulture);
+        private bool RemoveFunction(string name, in List<(string, SourceLocation)> list) => list.RemoveAll(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)) != 0;
 
+        public FunctionReturnValue LoadScript(CallFrame frame) => HandleLoading(frame, false);
+
+        public FunctionReturnValue UnLoadScript(CallFrame frame) => HandleLoading(frame, true);
+
+        private FunctionReturnValue HandleLoading(CallFrame frame, bool unloading)
+        {
+            (ScannedScriptState state, List<(string, SourceLocation)>? funcs) = unloading ? (ScannedScriptState.Unloaded, _exit) : (ScannedScriptState.Loaded, _startup);
+
+            if (State != state)
+            {
+                State = state;
+
+                foreach ((string name, SourceLocation loc) in funcs)
+                    if (!_functions.TryGetValue(name, out ScriptFunction? func))
+                        return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
+                    else if (func.ParameterCount.MinimumCount > 0)
+                        return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
+                    else if (frame.Call(func, Array.Empty<Variant>()).IsFatal(out InterpreterError? error))
+                        return error;
+            }
+
+            return Variant.True;
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => GetHashCode(Location, OriginalContent);
+
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScannedScript);
 
+        /// <inheritdoc/>
         public override string ToString() => Location.ToString();
 
         public bool Equals(ScannedScript? other) => other is ScannedScript script && GetHashCode() == script.GetHashCode();
 
         public bool HasFunction(string name) => _functions.ContainsKey(name.ToUpperInvariant());
 
+        public static int GetHashCode(FileInfo location, string content) => HashCode.Combine(Path.GetFullPath(location.FullName), content);
 
         public static bool operator ==(ScannedScript? s1, ScannedScript? s2) => s1?.Equals(s2) ?? s2 is null;
 
         public static bool operator !=(ScannedScript? s1, ScannedScript? s2) => !(s1 == s2);
     }
 
+    /// <summary>
+    /// Represents an abstract script function. This could be an AutoIt3 or a native function.
+    /// </summary>
     public abstract class ScriptFunction
         : IEquatable<ScriptFunction>
     {
@@ -475,15 +528,18 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static string[] RESERVED_NAMES =
         {
-            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN", "NEXT", "DEFAULT", "NULL",
-            "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT", "CASE", "SWITCH", "ENDSWITCH",
-            "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE"
+            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
+            "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT",
+            "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE", "TRUE",
+            "FALSE", "DEFAULT", "NULL",
         };
 
 
         public string Name { get; }
 
         public ScannedScript Script { get; }
+
+        public FunctionMetadata Metadata { get; init; } = FunctionMetadata.Default;
 
         public abstract SourceLocation Location { get; }
 
@@ -499,12 +555,16 @@ namespace Unknown6656.AutoIt3.Runtime
             Script.AddFunction(this);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
 
+        /// <inheritdoc/>
         public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
 
+        /// <inheritdoc/>
         public override string ToString() => $"[{Script}] Func {Name}";
 
 
@@ -530,10 +590,13 @@ namespace Unknown6656.AutoIt3.Runtime
             Name = name;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as JumpLabel);
 
+        /// <inheritdoc/>
         public bool Equals(JumpLabel? other) => other != null && EqualityComparer<AU3Function>.Default.Equals(Function, other.Function) && Name == other.Name;
 
+        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Function, Name);
 
         public static bool operator ==(JumpLabel? left, JumpLabel? right) => EqualityComparer<JumpLabel>.Default.Equals(left, right);
@@ -554,7 +617,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             get
             {
-                SourceLocation[] lines = _lines.Keys.OrderBy(Generics.id).ToArray();
+                SourceLocation[] lines = _lines.Keys.OrderBy(LINQ.id).ToArray();
 
                 return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
             }
@@ -600,10 +663,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return l;
         });
 
+        /// <inheritdoc/>
         public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
     }
 
-    public sealed class NativeFunction
+    public class NativeFunction
         : ScriptFunction
     {
         private readonly Func<NativeCallFrame, Variant[], FunctionReturnValue> _execute;
@@ -613,81 +677,66 @@ namespace Unknown6656.AutoIt3.Runtime
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        internal NativeFunction(ScannedScript script, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute)
-            : base(script, name)
+        internal NativeFunction(Interpreter interpreter, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, FunctionMetadata metadata)
+            : base(interpreter.ScriptScanner.SystemScript, name)
         {
             _execute = execute;
             ParameterCount = param_count;
+            Metadata = metadata;
         }
 
         public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
+        /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
     }
 
-    public sealed class FunctionReturnValue
+    public sealed class NETFrameworkFunction
+        : NativeFunction
     {
-        private readonly Union<InterpreterError, (Variant @return, int? error, Variant? extended)> _result;
-
-
-        private FunctionReturnValue(InterpreterError error) => _result = error;
-
-        private FunctionReturnValue(Variant @return, int? error = null, Variant? extended = null)
+        internal NETFrameworkFunction(Interpreter interpreter, MethodInfo method, object? instance)
+            : this(interpreter, method, method.GetParameters(), instance)
         {
-            if (extended is int && error is null)
-                error = -1;
-
-            _result = (@return, error, extended);
         }
 
-        public bool IsSuccess(out Variant value, out Variant? extended) => Is(out value, out int? err, out extended) && err is null;
-
-        public bool IsFatal([MaybeNullWhen(false), NotNullWhen(true)] out InterpreterError? error) => _result.Is(out error);
-
-        public bool IsError(out int error) => IsError(out _, out error, out _);
-
-        public bool IsError(out int error, out Variant? extended) => IsError(out _, out error, out extended);
-
-        public bool IsError(out Variant value, out int error) => IsError(out value, out error, out _);
-
-        public bool IsError(out Variant value, out int error, out Variant? extended)
+        private NETFrameworkFunction(Interpreter interpreter, MethodInfo method, ParameterInfo[] parameters, object? instance)
+            : base(
+                interpreter,
+                $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", parameters.Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}",
+                (parameters.Count(p => !p.HasDefaultValue), parameters.Length),
+                (frame, args) =>
+                {
+                    if (interpreter.GlobalObjectStorage.TryInvokeNETMember(instance, method, args, out Variant result))
+                        return result;
+                    else
+                        return FunctionReturnValue.Fatal(InterpreterError.WellKnown(null, "error.net_execution_error", method));
+                },
+                FunctionMetadata.Default
+            )
         {
-            bool res = Is(out value, out int? err, out extended);
-
-            if (err is null)
-                res = false;
-
-            error = err ?? 0;
-
-            return res;
         }
 
-        private bool Is(out Variant @return, out int? error, out Variant? extended)
+        /// <inheritdoc/>
+        public override string ToString() => $"[.NET] {Name}";
+    }
+
+    public record FunctionMetadata(OS SupportedPlatforms, bool IsDeprecated)
+    {
+        public static FunctionMetadata Default { get; } = new();
+
+        public static FunctionMetadata WindowsOnly { get; } = new(OS.Windows, false);
+
+        public static FunctionMetadata MacOSOnly { get; } = new(OS.MacOS, false);
+
+        public static FunctionMetadata LinuxOnly { get; } = new(OS.Linux, false);
+
+        public static FunctionMetadata UnixOnly { get; } = new(OS.UnixLike, false);
+
+
+        public FunctionMetadata()
+            : this(OS.Any, false)
         {
-            bool res = _result.Is(out (Variant @return, int? error, Variant? extended) tuple);
-
-            (@return, error, extended) = tuple;
-
-            return res;
         }
-
-        public static FunctionReturnValue Success(Variant value) => new FunctionReturnValue(value);
-
-        public static FunctionReturnValue Success(Variant value, Variant extended) => new FunctionReturnValue(value, null, extended);
-
-        public static FunctionReturnValue Fatal(InterpreterError error) => new FunctionReturnValue(error);
-
-        public static FunctionReturnValue Error(int error) => new FunctionReturnValue(Variant.False, error);
-
-        public static FunctionReturnValue Error(int error, Variant extended) => new FunctionReturnValue(Variant.False, error, extended);
-
-        public static FunctionReturnValue Error(Variant value, int error, Variant extended) => new FunctionReturnValue(value, error, extended);
-
-        public static implicit operator FunctionReturnValue(Variant v) => Success(v);
-
-        public static implicit operator FunctionReturnValue(InterpreterError err) => Fatal(err);
-
-        public static implicit operator FunctionReturnValue(Union<InterpreterError, Variant> union) => union.Match(Fatal, Success);
     }
 
     public enum ScannedScriptState

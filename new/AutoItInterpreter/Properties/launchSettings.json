@@ -2,7 +2,8 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": "-vv -t ../test/unittest-vartypes"
+      "commandLineArgs": "-v -u beta ../test/testi",
+      "nativeDebugging": false
     }
   }
 }

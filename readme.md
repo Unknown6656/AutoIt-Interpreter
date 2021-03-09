@@ -1,14 +1,19 @@
 ![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
 ![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
 ![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
+![repo size](https://img.shields.io/github/repo-size/unknown6656/AutoIt-Interpreter)
+![downloads](https://img.shields.io/github/downloads/unknown6656/AutoIt-Interpreter/total)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
 
-![Banner image](new/artwork/banner.png)
+![Banner image](new/artwork/banner.png)<br/>
+![Banner image](new/artwork/banner-features.png)
 
-# Platform-Independent AutoIt3 Intepreter
+# Platform-Independent AutoIt3 Interpreter
+
+### [TL;DR: Take a look at the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
 
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
-The aim of this repository is to provide an AutoIt3 interpteter for other platforms, such as Linux/Unix and MacOS.
+The aim of this repository is to provide an AutoIt3 Interpreter for other platforms, such as Linux/Unix and MacOS.
 
 This repository contains _two_ AutoIt-Interpreters:
 
@@ -19,9 +24,9 @@ This repository contains _two_ AutoIt-Interpreters:
 
  1. [The "old" **AutoIt++ Interpiler** written in 2018 (discontinued).](old/readme.md)
     <br/>
-    This interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be executed on any platform supporting .NET.
+    This Interpiler compiles AutoIt++-Code (a superset of AutoIt3) into CIL-code, which can be executed on any platform supporting .NET.
     <br/>
-    Truth be told, the interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
+    Truth be told, the Interpiler is not super stable on non-Windows platforms, and has therefore been discontinued.
 
 
 #### Comparison:
@@ -36,7 +41,6 @@ Works on Windows | Hell yeah | Yup
 Works on Linux | Yes, but not tested thoroughly | Kinda
 Works on MacOs | Yes, but not tested thoroughly | Kinda
 Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
-
 
 ## Links
 
@@ -58,4 +62,7 @@ Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/proj
 ## Maintainer(s)
 
  - [@Unknown6656](https://github.com/Unknown6656)
- - ([@Zedly](https://github.com/Zedly) in assistive and advisory function)
+ - ([@Zedly](https://github.com/Zedly) / [@wickersoft](https://github.com/wickersoft) in assistive and advisory function)
+
+## License
+The code is licensed under the Giant Penis License (GPL), which is a more restrictive version of the MIT License. [Click here](https://github.com/Unknown6656/AutoIt-Interpreter/blob/daddy/LICENSE.md) for more information.

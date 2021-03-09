@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System;
+
+using Unknown6656.AutoIt3.Localization;
+using Unknown6656.AutoIt3.CLI;
 
 using Unknown6656.Mathematics.LinearAlgebra;
 using Unknown6656.Common;
@@ -14,6 +18,7 @@ namespace Unknown6656.AutoIt3
         ProgramRuntimeAndPrinting,
         ProgramRuntime,
         ParseCommandLine,
+        GithubUpdater,
         LoadLanguage,
         PerformanceMonitor,
         Printing,
@@ -44,7 +49,7 @@ namespace Unknown6656.AutoIt3
         EvaluateExpression,
         ExternalProcessor,
         ExpressionCleanup,
-        VariableResolution,
+        VariableResolving,
         VariableCreation,
         COMConnection,
     }
@@ -76,7 +81,31 @@ namespace Unknown6656.AutoIt3
 
         // TODO : other stuff, such as exceptions, mem usage, cpu usage, etc.
 
-        public void SubmitTimings(TelemetryCategory category, long ticks) => _recorded_timings.Add((category, new TimeSpan(ticks)));
+        public void SubmitTimings(TelemetryCategory category, in TimeSpan span) => _recorded_timings.Add((category, span));
+
+        public async Task MeasureAsync(TelemetryCategory category, Func<Task> function) => await MeasureAsync<__empty>(category, async delegate
+        {
+            await function();
+
+            return default;
+        });
+
+        public async Task<T> MeasureAsync<T>(TelemetryCategory category, Func<Task<T>> function) => await Task.Factory.StartNew(delegate
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+
+            Task<T> task = function();
+            TaskAwaiter<T> awaiter = task.GetAwaiter();
+            T result = awaiter.GetResult();
+
+            sw.Stop();
+
+            SubmitTimings(category, sw.Elapsed);
+
+            return result;
+        });
 
         public void Measure(TelemetryCategory category, Action function) => Measure<__empty>(category, delegate
         {
@@ -94,7 +123,7 @@ namespace Unknown6656.AutoIt3
             result = function();
             sw.Stop();
 
-            SubmitTimings(category, sw.ElapsedTicks);
+            SubmitTimings(category, sw.Elapsed);
 
             return result;
         }
@@ -218,54 +247,56 @@ namespace Unknown6656.AutoIt3
         public static TelemetryTimingsNode FromTelemetry(Telemetry telemetry)
         {
             TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();
-            TelemetryTimingsNode root = new TelemetryTimingsNode(null, "Total", get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
+            LanguagePack pack = MainProgram.LanguageLoader.CurrentLanguage!;
+            TelemetryTimingsNode root = new TelemetryTimingsNode(null, pack["debug.telemetry.categories.total"], get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
             TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc, nd_vars;
 
-            nd_interpreter = root.AddChild("Interpreter", get_timings(TelemetryCategory.ProgramRuntime));
-            root.AddChild("Warnings", get_timings(TelemetryCategory.Warnings));
-            root.AddChild("Exceptions", get_timings(TelemetryCategory.Exceptions));
-            root.AddChild("Printing", get_timings(TelemetryCategory.Printing));
-            root.AddChild("Performance Monitoring", get_timings(TelemetryCategory.PerformanceMonitor));
+            nd_interpreter = root.AddChild(pack["debug.telemetry.categories.interpreter"], get_timings(TelemetryCategory.ProgramRuntime));
+            root.AddChild(pack["debug.telemetry.categories.warnings"], get_timings(TelemetryCategory.Warnings));
+            root.AddChild(pack["debug.telemetry.categories.exceptions"], get_timings(TelemetryCategory.Exceptions));
+            root.AddChild(pack["debug.telemetry.categories.printing"], get_timings(TelemetryCategory.Printing));
+            root.AddChild(pack["debug.telemetry.categories.perfmon"], get_timings(TelemetryCategory.PerformanceMonitor));
 
-            nd_interpreter.AddChild("Argument Parsing", get_timings(TelemetryCategory.ParseCommandLine));
-            nd_interpreter.AddChild("Load Language Pack(s)", get_timings(TelemetryCategory.LoadLanguage));
-            nd_init = nd_interpreter.AddChild("Initialization", get_timings(TelemetryCategory.InterpreterInitialization));
-            nd_runtime = nd_interpreter.AddChild("Runtime", get_timings(TelemetryCategory.InterpreterRuntime));
+            nd_interpreter.AddChild(pack["debug.telemetry.categories.argument_parsing"], get_timings(TelemetryCategory.ParseCommandLine));
+            nd_interpreter.AddChild(pack["debug.telemetry.categories.github_updater"], get_timings(TelemetryCategory.GithubUpdater));
+            nd_interpreter.AddChild(pack["debug.telemetry.categories.load_lang_packs"], get_timings(TelemetryCategory.LoadLanguage));
+            nd_init = nd_interpreter.AddChild(pack["debug.telemetry.categories.init"], get_timings(TelemetryCategory.InterpreterInitialization));
+            nd_runtime = nd_interpreter.AddChild(pack["debug.telemetry.categories.runtime"], get_timings(TelemetryCategory.InterpreterRuntime));
 
-            nd_init.AddChild("Load Plugin DLL", get_timings(TelemetryCategory.LoadPluginFile));
-            nd_init.AddChild("Plugin Initialization", get_timings(TelemetryCategory.LoadPlugin));
-            nd_init.AddChild("Parser Construction", get_timings(TelemetryCategory.ParserInitialization));
+            nd_init.AddChild(pack["debug.telemetry.categories.load_plugin"], get_timings(TelemetryCategory.LoadPluginFile));
+            nd_init.AddChild(pack["debug.telemetry.categories.init_plugin"], get_timings(TelemetryCategory.LoadPlugin));
+            nd_init.AddChild(pack["debug.telemetry.categories.build_parser"], get_timings(TelemetryCategory.ParserInitialization));
 
-            nd_runtime.AddChild("Script Resolution", get_timings(TelemetryCategory.ResolveScript));
-            nd_runtime.AddChild("Script Scan", get_timings(TelemetryCategory.ScanScript));
-            nd_codeexec = nd_runtime.AddChild("Script Execution", get_timings(TelemetryCategory.ScriptExecution));
+            nd_runtime.AddChild(pack["debug.telemetry.categories.com_connection"], get_timings(TelemetryCategory.COMConnection));
+            nd_runtime.AddChild(pack["debug.telemetry.categories.script_res"], get_timings(TelemetryCategory.ResolveScript));
+            nd_runtime.AddChild(pack["debug.telemetry.categories.script_scan"], get_timings(TelemetryCategory.ScanScript));
+            nd_codeexec = nd_runtime.AddChild(pack["debug.telemetry.categories.script_exec"], get_timings(TelemetryCategory.ScriptExecution));
 
-            nd_thread = nd_codeexec.AddChild("Run/Start Thread", get_timings(TelemetryCategory.ThreadRun));
-            nd_codeexec.AddChild("On Start", get_timings(TelemetryCategory.OnAutoItStart));
-            nd_codeexec.AddChild("On Exit", get_timings(TelemetryCategory.OnAutoItExit));
-            nd_codeexec.AddChild("COM Connection", get_timings(TelemetryCategory.COMConnection));
+            nd_thread = nd_codeexec.AddChild(pack["debug.telemetry.categories.thread"], get_timings(TelemetryCategory.ThreadRun));
+            nd_codeexec.AddChild(pack["debug.telemetry.categories.start"], get_timings(TelemetryCategory.OnAutoItStart));
+            nd_codeexec.AddChild(pack["debug.telemetry.categories.exit"], get_timings(TelemetryCategory.OnAutoItExit));
 
-            nd_au3 = nd_thread.AddChild("Au3", get_timings(TelemetryCategory.Au3ScriptExecution));
-            nd_native = nd_thread.AddChild("Native", get_timings(TelemetryCategory.NativeScriptExecution));
+            nd_au3 = nd_thread.AddChild(pack["debug.telemetry.categories.au3"], get_timings(TelemetryCategory.Au3ScriptExecution));
+            nd_native = nd_thread.AddChild(pack["debug.telemetry.categories.native"], get_timings(TelemetryCategory.NativeScriptExecution));
 
-            nd_native.AddChild("Console Out", get_timings(TelemetryCategory.ScriptConsoleOut));
-            nd_native.AddChild("Console In", get_timings(TelemetryCategory.ScriptConsoleIn));
+            nd_native.AddChild(pack["debug.telemetry.categories.stdout"], get_timings(TelemetryCategory.ScriptConsoleOut));
+            nd_native.AddChild(pack["debug.telemetry.categories.stdin"], get_timings(TelemetryCategory.ScriptConsoleIn));
 
-            nd_au3.AddChild("Expression Evaluation", get_timings(TelemetryCategory.EvaluateExpression));
-            nd_au3.AddChild("Constant Folding", get_timings(TelemetryCategory.ExpressionCleanup));
-            nd_vars = nd_au3.AddChild("Variables", get_timings(TelemetryCategory.VariableResolution, TelemetryCategory.VariableCreation));
-            nd_proc = nd_au3.AddChild("Line Processing", get_timings(TelemetryCategory.ProcessLine));
+            nd_au3.AddChild(pack["debug.telemetry.categories.expr_eval"], get_timings(TelemetryCategory.EvaluateExpression));
+            nd_au3.AddChild(pack["debug.telemetry.categories.const_folding"], get_timings(TelemetryCategory.ExpressionCleanup));
+            nd_vars = nd_au3.AddChild(pack["debug.telemetry.categories.variables"], get_timings(TelemetryCategory.VariableResolving, TelemetryCategory.VariableCreation));
+            nd_proc = nd_au3.AddChild(pack["debug.telemetry.categories.line_proc"], get_timings(TelemetryCategory.ProcessLine));
 
-            nd_vars.AddChild("Resolution", get_timings(TelemetryCategory.VariableResolution));
-            nd_vars.AddChild("Creation", get_timings(TelemetryCategory.VariableCreation));
+            nd_vars.AddChild(pack["debug.telemetry.categories.resolving"], get_timings(TelemetryCategory.VariableResolving));
+            nd_vars.AddChild(pack["debug.telemetry.categories.creation"], get_timings(TelemetryCategory.VariableCreation));
 
-            nd_proc.AddChild("Directives", get_timings(TelemetryCategory.ProcessDirective));
-            nd_proc.AddChild("Control Statements", get_timings(TelemetryCategory.ProcessStatement));
-            nd_proc.AddChild("Expression Statements", get_timings(TelemetryCategory.ProcessExpressionStatement));
-            nd_proc.AddChild("Declaration Statements", get_timings(TelemetryCategory.ProcessDeclaration));
-            nd_proc.AddChild("Assginment Statements", get_timings(TelemetryCategory.ProcessAssignment));
-            nd_proc.AddChild("Expressions", get_timings(TelemetryCategory.ProcessExpression));
-            nd_proc.AddChild("External Processing", get_timings(TelemetryCategory.ExternalProcessor));
+            nd_proc.AddChild(pack["debug.telemetry.categories.directives"], get_timings(TelemetryCategory.ProcessDirective));
+            nd_proc.AddChild(pack["debug.telemetry.categories.ctrl_statements"], get_timings(TelemetryCategory.ProcessStatement));
+            nd_proc.AddChild(pack["debug.telemetry.categories.expr_statements"], get_timings(TelemetryCategory.ProcessExpressionStatement));
+            nd_proc.AddChild(pack["debug.telemetry.categories.decl_statements"], get_timings(TelemetryCategory.ProcessDeclaration));
+            nd_proc.AddChild(pack["debug.telemetry.categories.assg_statements"], get_timings(TelemetryCategory.ProcessAssignment));
+            nd_proc.AddChild(pack["debug.telemetry.categories.expressions"], get_timings(TelemetryCategory.ProcessExpression));
+            nd_proc.AddChild(pack["debug.telemetry.categories.external_proc"], get_timings(TelemetryCategory.ExternalProcessor));
 
             return root;
         }

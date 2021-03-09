@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <OutDir>$(SolutionDir)bin</OutDir>
+        <LangVersion>preview</LangVersion>
+        <Deterministic>false</Deterministic>
+        <PublishTrimmed>true</PublishTrimmed>
+        <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+        <RootNamespace>Unknown6656.AutoIt3.Parser</RootNamespace>
+        <Authors>Unknown6656</Authors>
+        <Company>Unknown6656</Company>
+        <Copyright>Copyright © 2020, Unknown6656</Copyright>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Product>Unknown6656 AutoIt3 Expression Parser</Product>
+        <PackageId>Unknown6656.AutoIt3.Parser</PackageId>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
+        <AssemblyName>autoit3.exprparser</AssemblyName>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="Util.fs" />
+        <Compile Include="ExpressionParser.AST.fs" />
+        <Compile Include="ExpressionParser.fs" />
+        <Compile Include="DLLStructParser.AST.fs" />
+        <Compile Include="DLLStructParser.fs" />
+        <Compile Include="Cleanup.fs" />
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Include="Piglet">
+        <HintPath>..\lib\Piglet.dll</HintPath>
+      </Reference>
+      <Reference Include="Piglet.FSharp">
+        <HintPath>..\lib\Piglet.FSharp.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+</Project>
