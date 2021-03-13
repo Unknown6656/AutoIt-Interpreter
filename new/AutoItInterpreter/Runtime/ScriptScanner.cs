@@ -150,8 +150,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
                     List<(string line, SourceLocation loc)> lines = From.String(content)
-                                                                        .To
-                                                                        .Lines()
+                                                                        .ToLines()
                                                                         .Select((l, i) => (l, new SourceLocation(file.FullName, i)))
                                                                         .ToList();
                     int comment_lvl = 0;
@@ -297,7 +296,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     }
 
                     if (!curr_func.IsMainFunction)
-                        return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).To.Lines().Length + 1), "error.unexpected_eof");
+                        return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).ToLines().Length + 1), "error.unexpected_eof");
 
                     _cached_scripts.TryAdd(script.GetHashCode(), script);
 
@@ -398,11 +397,11 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(new Uri(path)).To.String());
+        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(new Uri(path)).ToString());
 
-        private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).To.String());
+        private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).ToString());
 
-        private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).To.String());
+        private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).ToString());
     }
 
     /// <summary>

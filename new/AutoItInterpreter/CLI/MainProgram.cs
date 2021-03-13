@@ -1070,7 +1070,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.Salmon;
                     Console.WriteLine(" This may panic your CPU.\n\n");
 
-                    PrintDebugMessage($"Visual signature (used to easily verify whether two AutoIt-versions are equal):\n{hash.To.DrunkBishop()}\n{hash.To.Hex()}");
+                    PrintDebugMessage($"Visual signature (used to easily verify whether two AutoIt-versions are equal):\n{hash.ToDrunkBishop()}\n{hash.ToHexString()}");
                 });
         }
     }

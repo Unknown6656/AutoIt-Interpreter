@@ -340,7 +340,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return (Variant)bytes[start..(start + count)];
         }
 
-        internal static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).To.String((int)args[1] switch
+        internal static FunctionReturnValue BinaryToString(CallFrame frame, Variant[] args) => (Variant)From.Bytes(args[0].ToBinary()).ToString((int)args[1] switch
         {
             1 => Encoding.GetEncoding(1252),
             2 => Encoding.Unicode,
@@ -1328,7 +1328,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                     Array.Resize(ref bytes, i);
 
-                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(bytes) : Variant.FromString(From.Bytes(bytes).To.String(handle.Encoding));
+                    output = handle.Flags.HasFlag(FileOpenFlags.FO_BINARY) ? Variant.FromBinary(bytes) : Variant.FromString(From.Bytes(bytes).ToString(handle.Encoding));
                 }
                 else
                 {
@@ -1413,7 +1413,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             try
             {
                 if (args[0].TryResolveHandle(frame.Interpreter, out FileHandle? handle))
-                    lines = From.Stream(handle.FileStream).To.Lines();
+                    lines = From.Stream(handle.FileStream).ToLines();
                 else
                     lines = File.ReadAllLines(args[0].ToString());
             }
@@ -1638,7 +1638,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                byte[] data = args[1].IsBinary ? args[1].ToBinary() : From.String(args[1].ToString(), Encoding.UTF8).To.Bytes;
+                byte[] data = args[1].IsBinary ? args[1].ToBinary() : From.String(args[1].ToString(), Encoding.UTF8).ToBytes();
 
                 if (args[0].TryResolveHandle(frame.Interpreter, out FileHandle? handle))
                     handle.FileStream.Write(data, 0, data.Length);
@@ -1689,7 +1689,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             int length = (int)args[1];
 
             if (args[0].Type is VariantType.Binary)
-                return (Variant)From.Bytes(bytes).To.Hex();
+                return (Variant)From.Bytes(bytes).ToHexString();
             else if (!args[1].IsDefault && length < 1)
                 return Variant.EmptyString;
 
@@ -1698,7 +1698,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             if (bytes.Length < length)
                 bytes = new byte[length - bytes.Length].Concat(bytes).ToArray();
 
-            return (Variant)From.Bytes(bytes).To.Hex();
+            return (Variant)From.Bytes(bytes).ToHexString();
         }
 
         #endregion
@@ -1737,7 +1737,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 {
                     From source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? From.FTP(uri) : From.HTTP(uri);
 
-                    source.To.File(filename);
+                    source.ToFile(filename);
 
                     return (Variant)source.ByteCount;
                 }
@@ -1807,7 +1807,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 From source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? From.FTP(uri) : From.HTTP(uri);
 
-                return FunctionReturnValue.Success(Variant.FromBinary(source.To.Bytes), source.ByteCount);
+                return FunctionReturnValue.Success(Variant.FromBinary(source.Data), source.ByteCount);
             }
             catch
             {
@@ -1826,7 +1826,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                IDictionary<string, IDictionary<string, string>> ini = From.File(path).To.INI();
+                IDictionary<string, IDictionary<string, string>> ini = From.File(path).ToINI();
 
                 if (ini.TryGetValue(section, out IDictionary<string, string>? sec))
                     if (args[2].IsDefault)
@@ -1834,7 +1834,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     else
                         sec.Remove(key);
 
-                From.INI(ini).To.File(path);
+                From.INI(ini).ToFile(path);
 
                 return Variant.True;
             }
@@ -1852,7 +1852,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                return (Variant)From.File(path).To.INI()[section][key];
+                return (Variant)From.File(path).ToINI()[section][key];
             }
             catch
             {
@@ -1867,7 +1867,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                return Variant.FromArray(frame.Interpreter, From.File(path).To.INI()[section].Select(sec => Variant.FromArray(frame.Interpreter, sec.Key, sec.Value)));
+                return Variant.FromArray(frame.Interpreter, From.File(path).ToINI()[section].Select(sec => Variant.FromArray(frame.Interpreter, sec.Key, sec.Value)));
             }
             catch
             {
@@ -1881,7 +1881,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                return Variant.FromArray(frame.Interpreter, From.File(path).To.INI().Keys.Select(Variant.FromString));
+                return Variant.FromArray(frame.Interpreter, From.File(path).ToINI().Keys.Select(Variant.FromString));
             }
             catch
             {
@@ -1898,7 +1898,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                IDictionary<string, IDictionary<string, string>> ini = From.File(path).To.INI();
+                IDictionary<string, IDictionary<string, string>> ini = From.File(path).ToINI();
 
                 if (old_sec != new_sec)
                     if (ini.TryGetValue(old_sec, out IDictionary<string, string>? section))
@@ -1910,7 +1910,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                         ini[new_sec] = section ?? new Dictionary<string, string>();
                         ini.Remove(old_sec);
 
-                        From.INI(ini).To.File(path);
+                        From.INI(ini).ToFile(path);
                     }
 
                 return Variant.True;
@@ -1933,14 +1933,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
 
                 if (ini_file.Exists)
-                    From.File(ini_file).To.INI();
+                    From.File(ini_file).ToINI();
 
                 if (!ini.ContainsKey(section))
                     ini[section] = new Dictionary<string, string>();
 
                 ini[section][key] = value;
 
-                From.INI(ini).To.File(ini_file);
+                From.INI(ini).ToFile(ini_file);
 
                 return Variant.True;
             }
@@ -1962,7 +1962,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
 
                 if (ini_file.Exists)
-                    From.File(ini_file).To.INI();
+                    From.File(ini_file).ToINI();
 
                 IEnumerable<string> lines;
 
@@ -1973,9 +1973,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                     lines = args[2].ToString().SplitIntoLines();
 
-                ini = ini.Merge(From.Lines(lines).To.INI());
+                ini = ini.Merge(From.Lines(lines).ToINI());
 
-                From.INI(ini).To.File(ini_file);
+                From.INI(ini).ToFile(ini_file);
 
                 return Variant.True;
             }
@@ -2418,23 +2418,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                         switch (type)
                         {
                             case RegKeyType.REG_SZ or RegKeyType.REG_EXPAND_SZ or RegKeyType.REG_MULTI_SZ:
-                                string s = From.Pointer(data, size - 1).To.String();
+                                string s = From.Pointer(data, size - 1).ToString();
 
                                 if (type is RegKeyType.REG_MULTI_SZ)
                                     s = s.Replace('\0', '\n');
 
                                 return FunctionReturnValue.Success(s, type.ToString());
                             case RegKeyType.REG_DWORD or RegKeyType.REG_DWORD_LITTLE_ENDIAN:
-                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<int>(), "REG_DWORD");
+                                return FunctionReturnValue.Success(From.Pointer(data, size).ToUnmanaged<int>(), "REG_DWORD");
                             case RegKeyType.REG_DWORD_BIG_ENDIAN:
-                                return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().To.Unmanaged<int>(), "REG_DWORD");
+                                return FunctionReturnValue.Success(From.Pointer(data, size).Reverse().ToUnmanaged<int>(), "REG_DWORD");
                             case RegKeyType.REG_QWORD:
-                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Unmanaged<long>(), type.ToString());
+                                return FunctionReturnValue.Success(From.Pointer(data, size).ToUnmanaged<long>(), type.ToString());
                             case RegKeyType.REG_LINK:
                                 return FunctionReturnValue.Error(-2);
                             case RegKeyType.REG_NONE or RegKeyType.REG_UNKNOWN or RegKeyType.REG_BINARY:
                             default:
-                                return FunctionReturnValue.Success(From.Pointer(data, size).To.Bytes, type.ToString());
+                                return FunctionReturnValue.Success(From.Pointer(data, size).Data, type.ToString());
                         }
                 }
             }
@@ -2605,7 +2605,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             3 => Encoding.BigEndianUnicode,
             4 => Encoding.UTF8,
             _ => BytewiseEncoding.Instance,
-        }).To.Bytes;
+        }).Data;
 
         internal static FunctionReturnValue Sqrt(CallFrame frame, Variant[] args) => (Variant)Math.Sqrt((double)args[0].ToNumber());
 
@@ -3114,7 +3114,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     bytes = resp.Take(max_length).ToArray();
                     binary |= bytes.Contains(default);
 
-                    return FunctionReturnValue.Success(binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).To.String(), bytes.Length == 0);
+                    return FunctionReturnValue.Success(binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).ToString(), bytes.Length == 0);
                 }
             }
             catch (Exception ex)
@@ -3291,7 +3291,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     bytes = bytes[..max_length];
                     binary |= bytes.Contains(default);
 
-                    Variant response = binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).To.String();
+                    Variant response = binary ? Variant.FromBinary(bytes) : From.Bytes(bytes).ToString();
 
                     if (array)
                         return Variant.FromArray(
@@ -3619,7 +3619,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     data = _wc.DownloadData(_uri);
                     _complete = true;
 
-                    From.Bytes(data).To.File(_file);
+                    From.Bytes(data).ToFile(_file);
                 }
                 catch
                 {

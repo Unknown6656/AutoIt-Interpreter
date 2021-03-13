@@ -38,7 +38,7 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         #endregion
 
         public static OS OperatingSystem { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? OS.Windows
-            : RuntimeInformation.IsOSPlatform(OSPlatform.Browser) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD) ? OS.UnixLike
+            : RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD) ? OS.UnixLike
             : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? OS.Linux
             : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OS.MacOS
             : Environment.OSVersion.Platform switch
