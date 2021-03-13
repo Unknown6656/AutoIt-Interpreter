@@ -28,6 +28,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
     using TCPHandle = Union<TcpListener, TcpClient>;
 
+
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider
     {
@@ -1826,11 +1827,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                IDictionary<string, IDictionary<string, string>> ini = From.File(path).ToINI();
+                INIFile ini = From.File(path).ToINI();
 
-                if (ini.TryGetValue(section, out IDictionary<string, string>? sec))
+                if (ini.TryGetSection(section, out INISection? sec))
                     if (args[2].IsDefault)
-                        ini.Remove(section);
+                        ini.TryDeleteSection(section);
                     else
                         sec.Remove(key);
 
@@ -1881,7 +1882,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                return Variant.FromArray(frame.Interpreter, From.File(path).ToINI().Keys.Select(Variant.FromString));
+                return Variant.FromArray(frame.Interpreter, From.File(path).ToINI().SectionKeys.Select(Variant.FromString));
             }
             catch
             {
@@ -1898,17 +1899,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                IDictionary<string, IDictionary<string, string>> ini = From.File(path).ToINI();
+                INIFile ini = From.File(path).ToINI();
 
                 if (old_sec != new_sec)
-                    if (ini.TryGetValue(old_sec, out IDictionary<string, string>? section))
+                    if (!ini.TryGetSection(old_sec, out INISection? section))
                         return Variant.False;
-                    else if (ini.ContainsKey(new_sec) && !overwrite)
+                    else if (ini.HasSection(new_sec) && !overwrite)
                         return FunctionReturnValue.Error(Variant.False, 1, Variant.Zero);
                     else
                     {
-                        ini[new_sec] = section ?? new Dictionary<string, string>();
-                        ini.Remove(old_sec);
+                        ini[new_sec] = section ?? new INISection();
+                        ini.TryDeleteSection(old_sec);
 
                         From.INI(ini).ToFile(path);
                     }
@@ -1929,14 +1930,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                FileInfo ini_file = new FileInfo(args[0].ToString());
-                IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
+                FileInfo ini_file = new(args[0].ToString());
+                INIFile ini = ini_file.Exists ? From.File(ini_file).ToINI() : new();
 
-                if (ini_file.Exists)
-                    From.File(ini_file).ToINI();
-
-                if (!ini.ContainsKey(section))
-                    ini[section] = new Dictionary<string, string>();
+                if (!ini.HasSection(section))
+                    ini[section] = new();
 
                 ini[section][key] = value;
 
@@ -1958,12 +1956,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                FileInfo ini_file = new FileInfo(args[0].ToString());
-                IDictionary<string, IDictionary<string, string>> ini = new Dictionary<string, IDictionary<string, string>>();
-
-                if (ini_file.Exists)
-                    From.File(ini_file).ToINI();
-
+                FileInfo ini_file = new(args[0].ToString());
+                INIFile ini = ini_file.Exists ? From.File(ini_file).ToINI() : new();
                 IEnumerable<string> lines;
 
                 if (args[2] is { Type: VariantType.Array } arr)
@@ -2992,7 +2986,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case1? handle))
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case0? handle))
                 {
                     TcpListener listener = handle.Item;
 
@@ -3091,10 +3085,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case2? handle))
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case1? handle))
                 {
                     TcpClient client = handle.Item;
-                    List<byte> resp = new List<byte>();
+                    List<byte> resp = new();
 
                     int max_length = (int)args[1];
                     bool binary = args[2].ToBoolean();
@@ -3129,7 +3123,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case2? handle))
+                if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case1? handle))
                 {
                     TcpClient client = handle.Item;
                     byte[] bytes = args[1].ToBinary();
