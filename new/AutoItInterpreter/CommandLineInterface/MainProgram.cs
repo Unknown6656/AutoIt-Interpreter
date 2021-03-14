@@ -161,7 +161,7 @@ namespace Unknown6656.AutoIt3.CLI
         {
             RawCMDLineArguments = argv;
 
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
 
             sw.Start();
 

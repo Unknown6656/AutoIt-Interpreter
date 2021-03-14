@@ -11,19 +11,19 @@ namespace Unknown6656.AutoIt3.CLI
 {
     public static class ScriptVisualizer
     {
-        private static readonly Regex REGEX_WHITESPACE = new Regex(@"^\s+", RegexOptions.Compiled);
-        private static readonly Regex REGEX_DIRECTIVE = new Regex(@"^#[^\W\d]\w*\b", RegexOptions.Compiled);
-        private static readonly Regex REGEX_STRING = new Regex(@"^('[^']*'|""[^""]*"")", RegexOptions.Compiled);
-        private static readonly Regex REGEX_KEYWORD = new Regex(@$"^(->|{ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex REGEX_SYMOBLS = new Regex(@"^[\.,()\[\]{}'""]", RegexOptions.Compiled);
-        private static readonly Regex REGEX_OPERATORS = new Regex(@"^([\^?:]|<>|[+\-\*/&<>=]=?)(?![\^?:=+\-*/&<>])", RegexOptions.Compiled);
-        private static readonly Regex REGEX_OPERATOR_ERROR = new Regex(@"^[\^?:+\-\*/&<>=]+", RegexOptions.Compiled);
-        private static readonly Regex REGEX_VARIABLE = new Regex(@"^\$[^\W\d]\w*\b", RegexOptions.Compiled);
-        private static readonly Regex REGEX_MACRO = new Regex(@"^@[^\W\d]\w*\b", RegexOptions.Compiled);
-        private static readonly Regex REGEX_FUNCCALL = new Regex(@"^[^\W\d]\w*(?=\()", RegexOptions.Compiled);
-        private static readonly Regex REGEX_IDENTIFIER = new Regex(@"^[^\W\d]\w*\b", RegexOptions.Compiled);
-        private static readonly Regex REGEX_COMMENT = new Regex(@"^;.*", RegexOptions.Compiled);
-        private static readonly Regex REGEX_NUMBER = new Regex(@"^(0x[\da-f_]+|[\da-f_]+h|0b[01_]+|0o[0-7_]+|\d+(\.\d+)?(e[+\-]?\d+)?)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex REGEX_WHITESPACE = new(@"^\s+", RegexOptions.Compiled);
+        private static readonly Regex REGEX_DIRECTIVE = new(@"^#[^\W\d]\w*\b", RegexOptions.Compiled);
+        private static readonly Regex REGEX_STRING = new(@"^('[^']*'|""[^""]*"")", RegexOptions.Compiled);
+        private static readonly Regex REGEX_KEYWORD = new(@$"^(->|{ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex REGEX_SYMOBLS = new(@"^[\.,()\[\]{}'""]", RegexOptions.Compiled);
+        private static readonly Regex REGEX_OPERATORS = new(@"^([\^?:]|<>|[+\-\*/&<>=]=?)(?![\^?:=+\-*/&<>])", RegexOptions.Compiled);
+        private static readonly Regex REGEX_OPERATOR_ERROR = new(@"^[\^?:+\-\*/&<>=]+", RegexOptions.Compiled);
+        private static readonly Regex REGEX_VARIABLE = new(@"^\$[^\W\d]\w*\b", RegexOptions.Compiled);
+        private static readonly Regex REGEX_MACRO = new(@"^@[^\W\d]\w*\b", RegexOptions.Compiled);
+        private static readonly Regex REGEX_FUNCCALL = new(@"^[^\W\d]\w*(?=\()", RegexOptions.Compiled);
+        private static readonly Regex REGEX_IDENTIFIER = new(@"^[^\W\d]\w*\b", RegexOptions.Compiled);
+        private static readonly Regex REGEX_COMMENT = new(@"^;.*", RegexOptions.Compiled);
+        private static readonly Regex REGEX_NUMBER = new(@"^(0x[\da-f_]+|[\da-f_]+h|0b[01_]+|0o[0-7_]+|\d+(\.\d+)?(e[+\-]?\d+)?)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 
         public static Dictionary<TokenType, RGBAColor> ColorScheme { get; } = new()
@@ -127,10 +127,21 @@ namespace Unknown6656.AutoIt3.CLI
             return tokens.ToArray();
         }
 
-        public static string ConvertToVT100(this IEnumerable<ScriptToken> tokens, bool print_linebreaks) =>
-            (from t in tokens
-             orderby t.LineIndex, t.CharIndex
-             select ConvertToVT100(t, print_linebreaks)).StringConcat();
+        public static string ConvertToVT100(this IEnumerable<ScriptToken> tokens, bool print_linebreaks_and_line_numbers)
+        {
+            string text = (from t in tokens
+                           orderby t.LineIndex, t.CharIndex
+                           select ConvertToVT100(t, print_linebreaks_and_line_numbers)).StringConcat();
+
+            if (!print_linebreaks_and_line_numbers)
+                return text;
+
+            string[] lines = text.SplitIntoLines();
+            string vt100 = RGBAColor.Gray.ToVT100ForegroundString();
+            int b = (int)Math.Log10(lines.Length) + 1;
+
+            return lines.Select((line, number) => $"{vt100} {(number + 1).ToString().PadLeft(b)} │  {line}").StringJoin("\n");
+        }
 
         public static string ConvertToVT100(this ScriptToken token, bool print_linebreaks)
         {
@@ -166,7 +177,7 @@ namespace Unknown6656.AutoIt3.CLI
             return tokens;
         }
 
-        public static ScriptToken FromString(string text, TokenType type) => new ScriptToken(0, 0, text.Length, text, type);
+        public static ScriptToken FromString(string text, TokenType type) => new(0, 0, text.Length, text, type);
     }
 
     public enum TokenType
