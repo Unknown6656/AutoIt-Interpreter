@@ -387,8 +387,11 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
             Console.Write(" > " + ScriptVisualizer.TokenizeScript(CurrentInput).ConvertToVT100(false));
 
             (int l, int t) cursor = (3 + cursor_pos, height - MARGIN_BOTTOM);
+#pragma warning disable CA1416 // Validate platform compatibility
+            bool cursor_visible = NativeInterop.DoPlatformDependent(() => Console.CursorVisible, () => false);
+#pragma warning restore CA1416
 
-            if (blink && !Console.CursorVisible)
+            if (blink && !cursor_visible)
             {
                 Console.CursorTop = cursor.t;
                 Console.CursorLeft = cursor.l;
@@ -400,7 +403,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
             Console.Write(new string(' ', width - MARGIN_RIGHT - 4));
 
-            string pad_full = new string(' ', width - MARGIN_RIGHT - 1);
+            string pad_full = new(' ', width - MARGIN_RIGHT - 1);
 
             if (Suggestions.Count > 0)
             {
@@ -425,8 +428,8 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
                 Console.CursorTop = height - MARGIN_BOTTOM + 2 + i;
                 Console.CursorLeft = 0;
 
-                string pad_left = new string(' ', sugg_left);
-                string pad_right = new string(' ', WIDTH - MARGIN_RIGHT - sugg_left - 3 - sugg_width);
+                string pad_left = new(' ', sugg_left);
+                string pad_right = new(' ', WIDTH - MARGIN_RIGHT - sugg_left - 3 - sugg_width);
 
                 Console.Write(pad_left + '┌' + new string('─', sugg_width) + '┐' + pad_right);
                 Console.CursorLeft = 0;
@@ -488,7 +491,7 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
             int width = WIDTH;
             string[] history = History.SelectMany(entry =>
             {
-                List<string> lines = new List<string>();
+                List<string> lines = new();
                 string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.stream is InteractiveShellStreamDirection.Input ? " > " : "");
                 int line_width = width - MARGIN_RIGHT - (entry.stream is InteractiveShellStreamDirection.Input ? 4 : 1);
                 int len = 0;
