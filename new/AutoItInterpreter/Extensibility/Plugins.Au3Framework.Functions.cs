@@ -1958,16 +1958,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 FileInfo ini_file = new(args[0].ToString());
                 INIFile ini = ini_file.Exists ? From.File(ini_file).ToINI() : new();
-                IEnumerable<string> lines;
+                INISection sec = ini.GetOrAddSection(section);
 
                 if (args[2] is { Type: VariantType.Array } arr)
-                    lines = arr.ToArray(frame.Interpreter).Select(e => e.ToArray(frame.Interpreter)).Select(a => $"{a[0]}={a[1]}").Prepend($"[{section}]");
-                else if (args[2] is { Type: VariantType.Map } map)
-                    lines = args[2].ToMap(frame.Interpreter).Select(kvp => $"{kvp.Key}={kvp.Value}").Prepend($"[{section}]");
-                else
-                    lines = args[2].ToString().SplitIntoLines();
+                    foreach (Variant element in arr.ToArray(frame.Interpreter))
+                    {
+                        Variant[] kvp = element.ToArray(frame.Interpreter);
 
-                ini = ini.Merge(From.Lines(lines).ToINI());
+                        sec[kvp[0].ToString()] = kvp[1].ToString();
+                    }
+                else if (args[2] is { Type: VariantType.Map } map)
+                    foreach (var kvp in args[2].ToMap(frame.Interpreter))
+                        sec[kvp.Key.ToString()] = kvp.Value.ToString();
+                else
+                    foreach (string line in args[2].ToString().SplitIntoLines())
+                    {
+                        int idx = line.IndexOf('=');
+
+                        sec[line[..idx]] = line[(idx + 1)..];
+                    }
 
                 From.INI(ini).ToFile(ini_file);
 
