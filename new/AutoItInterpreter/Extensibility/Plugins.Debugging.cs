@@ -31,6 +31,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
                 ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
                 ProvidedNativeFunction.Create(nameof(DebugInterpreter), 0, DebugInterpreter),
+                ProvidedNativeFunction.Create(nameof(DebugPlugins), 0, DebugPlugins),
                 ProvidedNativeFunction.Create(nameof(DebugAll), 0, DebugAll),
             };
 
@@ -98,7 +99,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         private IDictionary<string, object?> GetAllVariables(Interpreter interpreter)
         {
             IDictionary<string, object?> dic = new Dictionary<string, object?>();
-            List<VariableScope> scopes = new List<VariableScope> { interpreter.VariableResolver };
+            List<VariableScope> scopes = new() { interpreter.VariableResolver };
             int count;
 
             do
@@ -127,9 +128,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             return dic;
         }
 
-        private string SerializeDictionary(IDictionary<string, object?> dic, string title)
+        private static string SerializeDictionary(IDictionary<string, object?> dic, string title)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             string indent = $"{RGBAColor.DarkSlateGray.ToVT100ForegroundString()}│{MainProgram.COLOR_SCRIPT.ToVT100ForegroundString()}   ";
 
             sb.AppendLine(title + ": {");
@@ -196,16 +197,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                      .ToString();
         }
 
-        private FunctionReturnValue SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
+        private static FunctionReturnValue SerializePrint(CallFrame frame, IDictionary<string, object?> dic, object? title)
         {
             frame.Print(SerializeDictionary(dic, title is string s ? s : title?.ToString() ?? ""));
 
             return FunctionReturnValue.Success(Variant.Zero);
         }
 
+        private string GenerateTable(IEnumerable<string?[]> cells, IEnumerable<(string header, bool align_right)> columns, int max_width, bool print_row_count, Predicate<int>? select = null) =>
+            GenerateTable(cells.Transpose().Zip(columns).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), max_width, print_row_count, select);
+
         private string GenerateTable((string header, bool align_right, string?[] cells)[] columns, int max_width, bool print_row_count, Predicate<int>? select = null)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             string?[,] data = new string?[columns.Length, columns.Max(col => col.cells.Length)];
             int[] widths = columns.ToArray(col => col.header.Length);
 
@@ -316,7 +320,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
         public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
         {
-            List<VariableScope> scopes = new List<VariableScope> { frame.Interpreter.VariableResolver };
+            List<VariableScope> scopes = new() { frame.Interpreter.VariableResolver };
             LanguagePack lang = Interpreter.CurrentUILanguage;
             int count;
 
@@ -333,7 +337,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             while (count != scopes.Count);
 
             object? netobj = null;
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             var iterators = from kvp in InternalsFunctionProvider._iterators
                             let index = kvp.Value.index
                             let tuple = kvp.Value.index < kvp.Value.collection.Length ? kvp.Value.collection[kvp.Value.index] : default
@@ -380,15 +384,17 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 return string.Compare(x.name, y.name, StringComparison.InvariantCultureIgnoreCase);
             });
 
-            string table = GenerateTable(variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value })
-                                                  .Transpose()
-                                                  .Zip(new[] {
-                                                      (lang["debug.name"], false),
-                                                      (lang["debug.location"], false),
-                                                      (lang["debug.type"], false),
-                                                      (lang["debug.value"], true),
-                                                  })
-                                                  .ToArray(t => (t.Second.Item1, t.Second.Item2, t.First)), Math.Min(Console.BufferWidth, Console.WindowWidth), true);
+            string table = GenerateTable(
+                variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value }),
+                new[] {
+                    (lang["debug.name"], false),
+                    (lang["debug.location"], false),
+                    (lang["debug.type"], false),
+                    (lang["debug.value"], true),
+                },
+                Math.Min(Console.BufferWidth, Console.WindowWidth),
+                true
+            );
 
             frame.Print(table);
 
@@ -398,23 +404,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAllCOM(CallFrame frame, Variant[] _)
         {
             if (Interpreter.COMConnector?.GetAllCOMObjectInfos() is { } objects)
-            {
-                var values = objects.Select(t => new string?[]
-                {
-                    $"/com/{t.id:x8}",
-                    t.type,
-                    t.clsid,
-                    t.value.ToDebugString(Interpreter),
-                }).Transpose().Zip(new[]
-                {
-                    (Interpreter.CurrentUILanguage["debug.object"], false),
-                    (Interpreter.CurrentUILanguage["debug.type"], false),
-                    ("CLSID", false),
-                    (Interpreter.CurrentUILanguage["debug.value"], true),
-                }).ToArray(t => (t.Second.Item1, t.Second.Item2, t.First));
-
-                frame.Print(GenerateTable(values, Math.Min(Console.BufferWidth, Console.WindowWidth), true));
-            }
+                frame.Print(GenerateTable(
+                    objects.Select(t => new string?[]
+                    {
+                        $"/com/{t.id:x8}",
+                        t.type,
+                        t.clsid,
+                        t.value.ToDebugString(Interpreter),
+                    }),
+                    new[] {
+                        (Interpreter.CurrentUILanguage["debug.object"], false),
+                        (Interpreter.CurrentUILanguage["debug.type"], false),
+                        ("CLSID", false),
+                        (Interpreter.CurrentUILanguage["debug.value"], true),
+                    },
+                    Math.Min(Console.BufferWidth, Console.WindowWidth),
+                    true
+                ));
 
             return Variant.Zero;
         }
@@ -423,7 +429,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         {
             if (frame.CurrentThread.CallStack.OfType<AU3CallFrame>().FirstOrDefault() is AU3CallFrame au3frame)
             {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
                 (SourceLocation loc, string txt)[] lines = au3frame.CurrentLineCache;
                 int eip = au3frame.CurrentInstructionPointer;
 
@@ -443,7 +449,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
         public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
         {
             AU3Thread[] threads = frame.Interpreter.Threads.Where(t => !t.IsDisposed).OrderBy(t => t.ThreadID).ToArray();
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             sb.AppendLine($"Overview ({threads.Length} threads):");
 
@@ -479,6 +485,26 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             frame.Print(SerializeDictionary(dic, "Interpreter"));
 
             return Variant.Zero;
+        }
+
+        public FunctionReturnValue DebugPlugins(CallFrame frame, Variant[] _)
+        {
+            LanguagePack lang = Interpreter.CurrentUILanguage;
+            PluginLoader loader = frame.Interpreter.PluginLoader;
+
+            string table = GenerateTable(
+                loader.LoadedPlugins.Select(plugin => new string?[] { plugin.TypeName, plugin.Location.FullName }),
+                new[] {
+                    (lang["debug.name"], false),
+                    (lang["debug.location"], false),
+                },
+                Math.Min(Console.BufferWidth, Console.WindowWidth),
+                true
+            );
+
+            frame.Print(table);
+
+            return FunctionReturnValue.Success(Variant.Zero);
         }
 
         public FunctionReturnValue DebugAll(CallFrame frame, Variant[] args)

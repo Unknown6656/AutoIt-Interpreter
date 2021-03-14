@@ -31,6 +31,16 @@ namespace Unknown6656.AutoIt3.Extensibility
         /// </summary>
         public Interpreter Interpreter { get; }
 
+        /// <summary>
+        /// Returns the file location, from which the plugin has been loaded.
+        /// </summary>
+        public FileInfo Location => Interpreter.PluginLoader._plugin_locations[this];
+
+        /// <summary>
+        /// Returns the type name of the plugin.
+        /// </summary>
+        public string TypeName => GetType().Name;
+
 
         /// <summary>
         /// Creates a new instance.

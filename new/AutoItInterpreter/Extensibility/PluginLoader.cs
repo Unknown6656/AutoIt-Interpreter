@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using System.IO;
@@ -7,19 +8,22 @@ using System;
 using Unknown6656.Mathematics.LinearAlgebra;
 using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.CLI;
+using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Extensibility
 {
     public sealed class PluginLoader
     {
-        private readonly List<AbstractLineProcessor> _line_processors = new List<AbstractLineProcessor>();
-        private readonly List<AbstractDirectiveProcessor> _directive_processors = new List<AbstractDirectiveProcessor>();
-        private readonly List<AbstractStatementProcessor> _statement_processors = new List<AbstractStatementProcessor>();
-        private readonly List<AbstractPragmaProcessor> _pragma_processors = new List<AbstractPragmaProcessor>();
-        private readonly List<AbstractFunctionProvider> _func_providers = new List<AbstractFunctionProvider>();
-        private readonly List<AbstractIncludeResolver> _resolvers = new List<AbstractIncludeResolver>();
-        private readonly List<AbstractMacroProvider> _macro_providers = new List<AbstractMacroProvider>();
-        private readonly List<FileInfo> _plugin_files = new List<FileInfo>();
+        internal readonly Dictionary<AbstractInterpreterPlugin, FileInfo> _plugin_locations = new();
+
+        private readonly List<AbstractLineProcessor> _line_processors = new();
+        private readonly List<AbstractDirectiveProcessor> _directive_processors = new();
+        private readonly List<AbstractStatementProcessor> _statement_processors = new();
+        private readonly List<AbstractPragmaProcessor> _pragma_processors = new();
+        private readonly List<AbstractFunctionProvider> _func_providers = new();
+        private readonly List<AbstractIncludeResolver> _resolvers = new();
+        private readonly List<AbstractMacroProvider> _macro_providers = new();
+        private readonly HashSet<FileInfo> _plugin_files = new();
 
 
         public Interpreter Interpreter { get; }
@@ -37,7 +41,7 @@ namespace Unknown6656.AutoIt3.Extensibility
             _macro_providers,
         }.Sum(p => p.Count());
 
-        public IReadOnlyList<FileInfo> LoadedPluginFiles => _plugin_files;
+        public ImmutableHashSet<FileInfo> LoadedPluginFiles => _plugin_files.ToImmutableHashSet();
 
         public AbstractInterpreterPlugin[] LoadedPlugins => _line_processors.Cast<AbstractInterpreterPlugin>()
                                                                             .Concat(_directive_processors)
@@ -88,7 +92,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
             ClearLoadedPlugins();
 
-            List<Type> types = new List<Type>();
+            List<(Type Type, FileInfo PluginLocation)> types = new();
             IEnumerable<FileInfo> assemblies = MainProgram.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
 
             foreach (FileInfo file in assemblies.Append(MainProgram.ASM_FILE))
@@ -101,7 +105,7 @@ namespace Unknown6656.AutoIt3.Extensibility
                         if (asm.GetCustomAttribute<AutoIt3PluginAttribute>() is { })
                         {
                             _plugin_files.Add(file);
-                            types.AddRange(asm.GetTypes());
+                            asm.GetTypes().Do(t => types.Add((t, file)));
                         }
                     });
                 }
@@ -110,39 +114,33 @@ namespace Unknown6656.AutoIt3.Extensibility
                     Interpreter.Telemetry.Measure(TelemetryCategory.Exceptions, delegate { });
                 }
 
-            foreach (Type type in types)
+            foreach ((Type type, FileInfo location) in types)
                 if (!type.IsAbstract && typeof(AbstractInterpreterPlugin).IsAssignableFrom(type))
                     Interpreter.Telemetry.Measure(TelemetryCategory.LoadPlugin, delegate
                     {
-                        TryRegister<AbstractLineProcessor>(type, RegisterLineProcessor);
-                        TryRegister<AbstractDirectiveProcessor>(type, RegisterDirectiveProcessor);
-                        TryRegister<AbstractStatementProcessor>(type, RegisterStatementProcessor);
-                        TryRegister<AbstractPragmaProcessor>(type, RegisterPragmaProcessors);
-                        TryRegister<AbstractIncludeResolver>(type, RegisterIncludeResolver);
-                        TryRegister<AbstractFunctionProvider>(type, RegisterFunctionProvider);
-                        TryRegister<AbstractMacroProvider>(type, RegisterMacroProvider);
+                        TryRegister(type, location, _line_processors);
+                        TryRegister(type, location, _directive_processors);
+                        TryRegister(type, location, _statement_processors);
+                        TryRegister(type, location, _pragma_processors);
+                        TryRegister(type, location, _resolvers);
+                        TryRegister(type, location, _func_providers);
+                        TryRegister(type, location, _macro_providers);
                     });
         }
 
-        private void TryRegister<T>(Type type, Action<T> register_func)
+        private void TryRegister<T>(Type type, FileInfo location, List<T> plugin_list)
             where T : AbstractInterpreterPlugin
         {
             if (typeof(T).IsAssignableFrom(type))
-                register_func((T)Activator.CreateInstance(type, Interpreter)!);
+            {
+                T plugin = (T)Activator.CreateInstance(type, Interpreter)!;
+                _plugin_locations[plugin] = location;
+
+                if (_plugin_files.Contains(location))
+                    _plugin_files.Add(location);
+
+                plugin_list.Add(plugin);
+            }
         }
-
-        public void RegisterLineProcessor(AbstractLineProcessor proc) => _line_processors.Add(proc);
-
-        public void RegisterDirectiveProcessor(AbstractDirectiveProcessor proc) => _directive_processors.Add(proc);
-
-        public void RegisterStatementProcessor(AbstractStatementProcessor proc) => _statement_processors.Add(proc);
-
-        public void RegisterPragmaProcessors(AbstractPragmaProcessor proc) => _pragma_processors.Add(proc);
-
-        public void RegisterIncludeResolver(AbstractIncludeResolver resolver) => _resolvers.Add(resolver);
-
-        public void RegisterFunctionProvider(AbstractFunctionProvider provider) => _func_providers.Add(provider);
-
-        public void RegisterMacroProvider(AbstractMacroProvider provider) => _macro_providers.Add(provider);
     }
 }
