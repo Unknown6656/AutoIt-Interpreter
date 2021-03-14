@@ -19,19 +19,25 @@ namespace Unknown6656.AutoIt3
         /// The zero-based start line number.
         /// </summary>
         public readonly int StartLineNumber { get; }
+
         /// <summary>
         /// The zero-based start end line number.
         /// </summary>
         public readonly int EndLineNumber { get; }
-        /// <summary>
-        /// The source file path.
-        /// </summary>
-        // public readonly FileInfo FileName { get; }
 
+        /// <summary>
+        /// The source file path. This path can also point to a web or remote resource.
+        /// </summary>
         public readonly string FullFileName { get; }
 
+        /// <summary>
+        /// Returns whether the source location is equals to <see cref="Unknown"/>, which represents a unknown source code location.
+        /// </summary>
         public bool IsUnknown => Equals(Unknown);
 
+        /// <summary>
+        /// Indicates whether the current location represents a single line - as opposed to multiple source code lines.
+        /// </summary>
         public bool IsSingleLine => EndLineNumber == StartLineNumber;
 
 
