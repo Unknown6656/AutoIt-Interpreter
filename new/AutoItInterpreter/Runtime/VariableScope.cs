@@ -69,7 +69,7 @@ namespace Unknown6656.AutoIt3.Runtime
             CallFrame = frame;
             Interpreter = interpreter;
             GlobalRoot = parent?.GlobalRoot ?? this;
-            InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction.Name ?? "::"}-{parent._children.Count}";
+            InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction?.Name ?? "::"}-{parent._children.Count}";
         }
 
         /// <inheritdoc/>
