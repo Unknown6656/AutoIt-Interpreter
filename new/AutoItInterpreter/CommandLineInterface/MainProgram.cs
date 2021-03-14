@@ -66,16 +66,16 @@ namespace Unknown6656.AutoIt3.CLI
     /// </summary>
     public sealed class CommandLineOptions
     {
-        [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. The value 'view' will imply the flags '-B -s -v q'.")]
+        [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. Possible values are 'view' (v), 'normal' (n), and 'interactive' (i). The default value is 'normal'. This will run the specified script. The value 'view' implies the flags '-B -s -v q' and indicates that the interpreter shall only display a syntax highlighted version of the script. The value 'interactive' starts the interactive AutoIt shell.")]
         public ExecutionMode ProgramExecutionMode { get; set; } = ExecutionMode.normal;
 
-        [Option('N', "no-plugins", Default = false, HelpText = "Prevent the loading of interpreter plugins/extensions.")]
+        [Option('N', "no-plugins", Default = false, HelpText = "Prevents the loading of interpreter plugins/extensions.")]
         public bool DontLoadPlugins { set; get; } = false;
 
-        [Option('s', "strict", Default = false, HelpText = "Support only strict Au3-features and -syntax.")]
+        [Option('s', "strict", Default = false, HelpText = "Indicates that only strict Au3-features and -syntaxes should be be supported (Extensions to the AutoIt language will be interpreted as errors).")]
         public bool StrictMode { set; get; } = false;
 
-        [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!).")]
+        [Option('e', "ignore-errors", Default = false, HelpText = "Ignores syntax and evaluation errors during parsing (unsafe!). This can lead to undefined and non-deterministic behaviour.")]
         public bool IgnoreErrors { set; get; } = false;
 
         [Option('t', "telemetry", Default = false, HelpText = "Prints the interpreter telemetry. A verbosity level of 'n' or 'v' will automatically set this flag.  NOTE: All telemetry data \x1b[4mstays\x1b[24m on this machine contrary to what this option might suggest. \x1b[4mNo part\x1b[24m of the telemetry will be uploaded to an external (web)server.")]
@@ -84,13 +84,13 @@ namespace Unknown6656.AutoIt3.CLI
         [Option('v', "verbose", Default = false, HelpText = "Indicates that the interpreter should also print debug messages.")]
         public bool Verbose { set; get; } = false;
 
-        [Option('u', "check-for-update", Default = UpdaterMode.release, HelpText = "Specifies how the interpreter should check for software updates. Updates will be downloaded from the GitHub repository (\x1b[4m" + __module__.RepositoryURL + "/releases\x1b[24m).")]
+        [Option('u', "check-for-update", Default = UpdaterMode.release, HelpText = "Specifies how the interpreter should check for software updates. Possible values are 'release' (default), 'beta', and 'none'. 'none' indicates that no updates shall be downloaded; 'beta' indicates that beta-releases should be included in the search for the newest update. Updates will be downloaded from the GitHub repository (\x1b[4m" + __module__.RepositoryURL + "/releases\x1b[24m).")]
         public UpdaterMode UpdaterMode { set; get; } = UpdaterMode.release;
 
-        [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler.")]
+        [Option('l', "lang", Default = "en", HelpText = "The CLI language code to be used by the compiler shell. The default value is 'en' for the English language.")]
         public string Language { set; get; } = "en";
 
-        [Value(0, HelpText = "The file path to the AutoIt-3 script.")]
+        [Value(0, HelpText = "The AutoIt-3 script path. This can be a local file or a web resource (HTTP/HTTPS/SMB/FTP/SFTP/SCP/SSH/...).")]
         public string? FilePath { set; get; } = null;
 
 #pragma warning disable CA1819 // Properties should not return arrays
