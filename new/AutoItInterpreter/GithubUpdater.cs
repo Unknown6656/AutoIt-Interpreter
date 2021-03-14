@@ -164,7 +164,7 @@ namespace Unknown6656.AutoIt3
 
                 MainProgram.PrintfDebugMessage("debug.update.starting_updater");
 
-                ProcessStartInfo psi = new ProcessStartInfo
+                ProcessStartInfo psi = new()
                 {
                     FileName = "dotnet",
                     UseShellExecute = true,

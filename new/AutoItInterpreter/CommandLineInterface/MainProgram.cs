@@ -209,7 +209,7 @@ namespace Unknown6656.AutoIt3.CLI
                             argv = argv[..idx];
                         }
 
-                        using CLParser parser = new CLParser(p =>
+                        using CLParser parser = new(p =>
                         {
                             p.HelpWriter = null;
                             p.IgnoreUnknownArguments = false;
@@ -232,8 +232,6 @@ namespace Unknown6656.AutoIt3.CLI
                         opt.ScriptArguments = script_args ?? opt.ScriptArguments;
                         CommandLineOptions = opt;
 
-                        using Task<bool> update_task = Task.Run(UpdateTask);
-
                         Telemetry.Measure(TelemetryCategory.LoadLanguage, delegate
                         {
                             LanguageLoader.LoadLanguagePacksFromDirectory(LANG_DIR);
@@ -250,6 +248,8 @@ namespace Unknown6656.AutoIt3.CLI
                             return;
                         }
 
+                        Task<bool> update_task = UpdateTask();
+
                         PrintBanner();
                         PrintDebugMessage(opt.ToString());
                         PrintfDebugMessage("debug.langpack_found", LanguageLoader.LoadedLanguageCodes.Length);
@@ -259,10 +259,10 @@ namespace Unknown6656.AutoIt3.CLI
                         using Interpreter interpreter = Telemetry.Measure(TelemetryCategory.InterpreterInitialization, () => new Interpreter(opt, Telemetry, LanguageLoader));
 
                         if (update_task.GetAwaiter().GetResult())
-                            code = 0;
+                            code = 0; // update has been performed
                         else if (opt.ProgramExecutionMode is ExecutionMode.interactive)
                         {
-                            using InteractiveShell shell = new InteractiveShell(interpreter);
+                            using InteractiveShell shell = new(interpreter);
 
                             if (shell.Initialize())
                             {
@@ -383,7 +383,7 @@ namespace Unknown6656.AutoIt3.CLI
             if (CommandLineOptions.UpdaterMode is UpdaterMode.none)
                 return false;
 
-            GithubUpdater updater = new GithubUpdater(Telemetry)
+            GithubUpdater updater = new(Telemetry)
             {
                 UpdaterMode = CommandLineOptions.UpdaterMode is UpdaterMode.beta ? GithubUpdaterMode.IncludeBetaVersions : GithubUpdaterMode.ReleaseOnly
             };
@@ -392,13 +392,20 @@ namespace Unknown6656.AutoIt3.CLI
             LanguagePack lang = LanguageLoader.CurrentLanguage!;
 
             if (!success && CommandLineOptions.Verbose)
+            {
                 PrintWarning(null, lang["warning.unable_to_update", __module__.RepositoryURL + "/releases"]);
-            else if (updater.LatestReleaseAvailable is Release latest)
+
+                return false;
+            }
+            else
+                success = false;
+
+            if (updater.LatestReleaseAvailable is Release latest)
             {
                 bool handled = false;
                 bool confirmation = false;
 
-                _print_queue.Enqueue(() => Task.Run(async delegate
+                _print_queue.Enqueue(() => Task.Run(delegate
                 {
                     ConsoleExtensions.RGBForegroundColor = COLOR_PREFIX_DEBUG;
                     Console.WriteLine("\n-------------------------------------------------------------------------------------------------------------\t");
