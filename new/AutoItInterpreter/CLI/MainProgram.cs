@@ -114,15 +114,15 @@ namespace Unknown6656.AutoIt3.CLI
     public static class MainProgram
     {
         public static readonly Assembly ASM = typeof(MainProgram).Assembly;
-        public static readonly FileInfo ASM_FILE = new FileInfo(ASM.Location);
+        public static readonly FileInfo ASM_FILE = new(ASM.Location);
         public static readonly DirectoryInfo ASM_DIR = ASM_FILE.Directory!;
         public static readonly DirectoryInfo PLUGIN_DIR = ASM_DIR.CreateSubdirectory("plugins/");
         public static readonly DirectoryInfo LANG_DIR = ASM_DIR.CreateSubdirectory("lang/");
         public static readonly DirectoryInfo INCLUDE_DIR = ASM_DIR.CreateSubdirectory("include/");
-        public static readonly FileInfo WINAPI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.win32apiserver.exe"));
-        public static readonly FileInfo COM_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
-        public static readonly FileInfo GUI_CONNECTOR = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
-        public static readonly FileInfo UPDATER = new FileInfo(Path.Combine(ASM_DIR.FullName, "autoit3.updater.dll"));
+        public static readonly FileInfo WINAPI_CONNECTOR = new(Path.Combine(ASM_DIR.FullName, "autoit3.win32apiserver.exe"));
+        public static readonly FileInfo COM_CONNECTOR = new(Path.Combine(ASM_DIR.FullName, "autoit3.comserver.exe"));
+        public static readonly FileInfo GUI_CONNECTOR = new(Path.Combine(ASM_DIR.FullName, "autoit3.guiserver.dll"));
+        public static readonly FileInfo UPDATER = new(Path.Combine(ASM_DIR.FullName, "autoit3.updater.dll"));
 
         internal static readonly RGBAColor COLOR_TIMESTAMP = RGBAColor.Gray;
         internal static readonly RGBAColor COLOR_PREFIX_SCRIPT = RGBAColor.Cyan;
@@ -132,7 +132,7 @@ namespace Unknown6656.AutoIt3.CLI
         internal static readonly RGBAColor COLOR_ERROR = RGBAColor.Salmon;
         internal static readonly RGBAColor COLOR_WARNING = RGBAColor.Orange;
 
-        private static readonly ConcurrentQueue<Action> _print_queue = new ConcurrentQueue<Action>();
+        private static readonly ConcurrentQueue<Action> _print_queue = new();
         private static volatile bool _isrunning = true;
         private static volatile bool _finished;
 
@@ -1092,3 +1092,4 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         none,
     }
 }
+
