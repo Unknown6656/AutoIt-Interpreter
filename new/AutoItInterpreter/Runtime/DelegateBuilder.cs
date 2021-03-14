@@ -113,7 +113,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return new UserFunctionCallback(ptr);
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
 
@@ -217,7 +217,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return new NativeDelegateWrapper(@delegate, @params!, rettype, inv);
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
 

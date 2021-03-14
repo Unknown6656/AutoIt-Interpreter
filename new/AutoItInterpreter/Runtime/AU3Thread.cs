@@ -15,7 +15,7 @@ namespace Unknown6656.AutoIt3.Runtime
         , IEquatable<AU3Thread>
     {
         private static volatile int _tid = 0;
-        private readonly ConcurrentStack<CallFrame> _callstack = new ConcurrentStack<CallFrame>();
+        private readonly ConcurrentStack<CallFrame> _callstack = new();
         private volatile bool _running = false;
         private int? _override_exitcode = null;
 
@@ -175,7 +175,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal AU3CallFrame PushAnonymousCallFrame()
         {
-            AU3CallFrame frame = new AU3CallFrame(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>());
+            AU3CallFrame frame = new(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>());
 
             _callstack.Push(frame);
 
