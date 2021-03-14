@@ -502,6 +502,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                 true
             );
 
+            // TODO : detailed report on each plugin or plugin category
+
             frame.Print(table);
 
             return FunctionReturnValue.Success(Variant.Zero);
