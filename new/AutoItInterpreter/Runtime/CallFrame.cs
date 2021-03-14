@@ -217,10 +217,11 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class NativeCallFrame
         : CallFrame
     {
+        public override NativeFunction CurrentFunction { get; }
+
+
         internal NativeCallFrame(AU3Thread thread, CallFrame? caller, NativeFunction function, Variant[] args)
-            : base(thread, caller, function, args)
-        {
-        }
+            : base(thread, caller, function, args) => CurrentFunction = function;
 
         /// <inheritdoc/>
         protected override FunctionReturnValue InternalExec(Variant[] args)
@@ -289,6 +290,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
 
+        public override AU3Function CurrentFunction { get; }
+
         /// <summary>
         /// The current instruction pointer.
         /// <para/>
@@ -301,7 +304,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         public (SourceLocation LineLocation, string LineContent)[] CurrentLineCache => _line_cache.ToArray();
 
-        /// <inheritdoc/>
         public override SourceLocation CurrentLocation => _instruction_pointer < 0 ? CurrentFunction.Location : _line_cache[_instruction_pointer].LineLocation;
 
         /// <summary>
@@ -318,6 +320,7 @@ namespace Unknown6656.AutoIt3.Runtime
         internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
             : base(thread, caller, function, args)
         {
+            CurrentFunction = function;
             _line_cache = function.Lines.ToList();
             _instruction_pointer = 0;
         }
@@ -490,8 +493,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _instruction_pointer = eip;
         }
-
-        // TODO: CHANGE EVERYTHING TO FUNCTIONRETURNVALUE
 
         /// <summary>
         /// Parses the current line and returns the execution result without moving the current instruction pointer (except when processing loops, branches, or explicit jump instructions).
