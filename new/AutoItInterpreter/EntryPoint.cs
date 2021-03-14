@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System;
 
 using Unknown6656.AutoIt3.CLI;
@@ -6,7 +7,7 @@ using Unknown6656.AutoIt3.CLI;
 
 /*
  The application's entry point. The actual code logic can be found in the file
-    ./CLI/MainProgram.cs
+    ./CommandLineInterface/MainProgram.cs
  */
 try
 {
@@ -14,9 +15,10 @@ try
 }
 #pragma warning disable CA1031 // WARNING: Do not catch general exception types
 catch (Exception? ex)
+when (!Debugger.IsAttached)
 #pragma warning restore
 {
-    StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new();
     int code = ex.HResult;
 
     while (ex is { })

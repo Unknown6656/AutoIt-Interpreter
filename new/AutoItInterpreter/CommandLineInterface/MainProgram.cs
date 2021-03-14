@@ -309,7 +309,7 @@ namespace Unknown6656.AutoIt3.CLI
                     });
                 }
                 catch (Exception ex)
-                // when (!Debugger.IsAttached)
+                when (!Debugger.IsAttached)
                 {
                     Telemetry.Measure(TelemetryCategory.Exceptions, delegate
                     {
@@ -534,7 +534,7 @@ namespace Unknown6656.AutoIt3.CLI
                     PrintError(exception.Message);
                 else
                 {
-                    StringBuilder sb = new StringBuilder();
+                    StringBuilder sb = new();
 
                     while (exception is { })
                     {
@@ -583,7 +583,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
 
             ConsoleExtensions.RGBForegroundColor = COLOR_ERROR;
             Console.WriteLine(message.TrimEnd());
-            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/new/choose\x1b[24m.");
+            Console.WriteLine($"\nIf you believe that this is a bug, please report it to \x1b[4m{__module__.RepositoryURL}/issues/new?template=bug_report.md\x1b[24m.");
 
             if (CommandLineOptions.Verbose)
             {
