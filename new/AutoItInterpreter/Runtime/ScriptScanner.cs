@@ -618,7 +618,10 @@ namespace Unknown6656.AutoIt3.Runtime
             {
                 SourceLocation[] lines = _lines.Keys.OrderBy(LINQ.id).ToArray();
 
-                return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
+                if (lines.Length > 0)
+                    return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
+                else
+                    return new SourceLocation(Script.Location.FullName, 0);
             }
         }
 
