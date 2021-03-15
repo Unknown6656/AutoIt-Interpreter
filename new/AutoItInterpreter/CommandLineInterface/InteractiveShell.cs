@@ -33,11 +33,12 @@ namespace Unknown6656.AutoIt3.CLI
         private static readonly RGBAColor COLOR_PROMPT = 0xffff;
         private static readonly string HELP_TEXT = $@"
 Commands and keyboard shortcuts:
-                                              [PAGE UP/DOWN]     Scroll history up/down
-  [F5]    Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text
-  [F6]    Repeat next line                    [ARROW UP/DOWN]    Select code suggestion
-  [ENTER] Execute current input               [TAB]              Insert selected code suggestion
-  ""EXIT""  Exit the interactive environment    ""CLEAR""            Clear the history window
+                                                       [PAGE UP/DOWN]     Scroll history up/down
+  [F5]             Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text. Use
+  [F6]             Repeat next line                                       the [CTRL]-key to jump by words
+  [ENTER]          Execute current input               [ARROW UP/DOWN]    Select code suggestion
+  [SHIFT]+[ENTER]  Enter a line break                  [TAB]              Insert selected code suggestion
+  ""EXIT""           Exit the interactive environment    ""CLEAR""            Clear the history window
 ".Trim();
         private static readonly int MAX_SUGGESTIONS = 8;
         private static readonly int MARGIN_RIGHT = 50;
@@ -158,6 +159,7 @@ Commands and keyboard shortcuts:
                 int hist_count = 0;
                 int width = 0;
                 int height = 0;
+                int input_y = -1;
 
                 while (IsRunning)
                 {
@@ -174,17 +176,18 @@ Commands and keyboard shortcuts:
                         hist_count = -1;
                     }
 
-                    if (hist_count != History.Count)
+                    (int Left, int Top, int InputAreaYOffset) cursor = RedrawInputArea(false);
+
+                    if (hist_count != History.Count || cursor.InputAreaYOffset != input_y)
                     {
-                        RedrawHistoryArea();
+                        RedrawHistoryArea(cursor.InputAreaYOffset);
                         RedrawThreadAndVariableWatchers();
 
                         hist_count = History.Count;
+                        input_y = cursor.InputAreaYOffset;
                     }
                     else if (Interpreter.Threads.Length > 1)
                         RedrawThreadAndVariableWatchers();
-
-                    (int Left, int Top) cursor = RedrawInputArea(false);
 
                     Console.CursorLeft = cursor.Left;
                     Console.CursorTop = cursor.Top;
@@ -383,22 +386,46 @@ Commands and keyboard shortcuts:
             Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┬' + new string('─', MARGIN_RIGHT));
         }
 
-        private (int Left, int Top) RedrawInputArea(bool blink)
+        private (int Left, int Top, int InputAreaYOffset) RedrawInputArea(bool blink)
         {
             int width = WIDTH;
             int height = HEIGHT;
-            int cursor_pos = Math.Min(width - MARGIN_RIGHT - 1, CurrentCursorPosition.GetOffset(CurrentInput.Length));
+            int input_area_width = width - MARGIN_RIGHT - 1;
+            string[] input_lines = CurrentInput.PartitionByArraySize(input_area_width - 3).ToArray(c => new string(c));
 
-            Console.CursorLeft = 0;
-            Console.CursorTop = height - MARGIN_BOTTOM - 1;
+            if (input_lines.Length == 0)
+                input_lines = new[] { "" };
+
+            int cursor_pos_x = Math.Min(input_area_width, CurrentCursorPosition.GetOffset(CurrentInput.Length) % (input_area_width - 3));
+            int input_area_height = height - MARGIN_BOTTOM + 1 - input_lines.Length;
+
+            ConsoleExtensions.WriteBlock(new string(' ', input_area_width * (MARGIN_BOTTOM + input_lines.Length - 1)), 0, input_area_height - 1, input_area_width, MARGIN_BOTTOM + input_lines.Length - 1, true);
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
-            ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
             Console.CursorLeft = 0;
-            Console.CursorTop = height - MARGIN_BOTTOM;
-            Console.Write(" > " + ScriptVisualizer.TokenizeScript(CurrentInput).ConvertToVT100(false));
+            Console.CursorTop = input_area_height - 1;
+            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
 
-            (int l, int t) cursor = (3 + cursor_pos, height - MARGIN_BOTTOM);
+            int line_no = 0;
+
+            foreach (string line in input_lines)
+            {
+                string txt = (line_no == 0 ? " > " : "   ") + ScriptVisualizer.TokenizeScript(line).ConvertToVT100(false);
+
+                Console.CursorLeft = 0;
+                Console.CursorTop = input_area_height + line_no;
+                ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
+                Console.Write(txt);
+
+                if (Console.CursorLeft < input_area_width)
+                    Console.Write(new string(' ', input_area_width - Console.CursorLeft));
+
+                ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
+                Console.Write('│');
+
+                ++line_no;
+            }
+
+            (int l, int t) cursor = (3 + cursor_pos_x, input_area_height + CurrentCursorPosition.GetOffset(CurrentInput.Length) / (input_area_width - 4));
 #pragma warning disable CA1416 // Validate platform compatibility
             bool cursor_visible = NativeInterop.DoPlatformDependent(() => Console.CursorVisible, () => false);
 #pragma warning restore CA1416
@@ -413,9 +440,7 @@ Commands and keyboard shortcuts:
                 Console.Write($"\x1b[7m{(idx < CurrentInput.Length ? CurrentInput[idx] : ' ')}\x1b[27m");
             }
 
-            Console.Write(new string(' ', width - MARGIN_RIGHT - 4));
-
-            string pad_full = new(' ', width - MARGIN_RIGHT - 1);
+            string pad_full = new(' ', input_area_width);
 
             if (Suggestions.Count > 0)
             {
@@ -433,30 +458,39 @@ Commands and keyboard shortcuts:
                 ScriptToken[][] suggestions = Suggestions.Skip(start_index).Take(MAX_SUGGESTIONS).ToArray();
 
                 int sugg_width = suggestions.Select(s => s.Sum(t => t.TokenLength)).Append(0).Max() + 2;
-                int sugg_left = Math.Min(width - MARGIN_RIGHT - sugg_width - 2, cursor_pos + 3);
+                int sugg_left = Math.Min(input_area_width - 2 - sugg_width, cursor_pos_x + 3);
                 int i = 0;
 
                 ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-                Console.CursorTop = height - MARGIN_BOTTOM + 2 + i;
+                Console.CursorTop = cursor.t + 2 + i;
                 Console.CursorLeft = 0;
 
                 string pad_left = new(' ', sugg_left);
-                string pad_right = new(' ', WIDTH - MARGIN_RIGHT - sugg_left - 3 - sugg_width);
+                string pad_right = new(' ', input_area_width - 2 - sugg_left - sugg_width);
 
                 Console.Write(pad_left + '┌' + new string('─', sugg_width) + '┐' + pad_right);
                 Console.CursorLeft = 0;
-                Console.CursorTop = height - MARGIN_BOTTOM + 1;
+                Console.CursorTop = cursor.t + 1;
 
-                string indicator = $"│ {CurrentSuggestionIndex + 1}/{Suggestions.Count}";
+                string indicator = $" {CurrentSuggestionIndex + 1}/{Suggestions.Count} ";
 
-                Console.Write(new string(' ', 3 + cursor_pos) + indicator + new string(' ', WIDTH - MARGIN_RIGHT - cursor_pos - 4 - indicator.Length));
+                if (input_area_width - 4 - cursor_pos_x - indicator.Length > 0)
+                    indicator = new string(' ', 3 + cursor_pos_x) + '│' + indicator;
+                else
+                    indicator = new string(' ', cursor_pos_x - indicator.Length + 3) + indicator + '│';
+
+                Console.Write(indicator);
+
+                if (Console.CursorLeft < input_area_width - 1)
+                    Console.Write(new string(' ', input_area_width - Console.CursorLeft - 1));
+
                 Console.CursorTop++;
-                Console.CursorLeft = 3 + cursor_pos;
-                Console.Write(cursor_pos + 3 == sugg_left ? '├' : cursor_pos + 2 == sugg_left + sugg_width ? '┤' : '┴');
+                Console.CursorLeft = 3 + cursor_pos_x;
+                Console.Write(cursor_pos_x + 3 == sugg_left ? '├' : cursor_pos_x + 2 == sugg_left + sugg_width ? '┤' : '┴');
 
                 foreach (ScriptToken[] suggestion in suggestions)
                 {
-                    Console.CursorTop = height - MARGIN_BOTTOM + 3 + i;
+                    Console.CursorTop = cursor.t + 3 + i;
                     Console.CursorLeft = 0;
                     Console.Write(pad_left + '│');
 
@@ -475,12 +509,12 @@ Commands and keyboard shortcuts:
                 }
 
                 Console.CursorLeft = 0;
-                Console.CursorTop = height - MARGIN_BOTTOM + 3 + i;
+                Console.CursorTop = cursor.t + 3 + i;
                 Console.Write(pad_left + '└' + new string('─', sugg_width) + '┘' + pad_right);
 
                 while (i < MAX_SUGGESTIONS)
                 {
-                    Console.CursorTop = height - MARGIN_BOTTOM + 4 + i;
+                    Console.CursorTop = cursor.t + 4 + i;
                     Console.CursorLeft = 0;
                     Console.Write(pad_full);
 
@@ -490,15 +524,15 @@ Commands and keyboard shortcuts:
             else
                 for (int i = 1; i < MAX_SUGGESTIONS + 4; ++i)
                 {
-                    Console.CursorTop = height - MARGIN_BOTTOM + i;
+                    Console.CursorTop = cursor.t + i;
                     Console.CursorLeft = 0;
                     Console.Write(pad_full);
                 }
 
-            return cursor;
+            return (cursor.l, cursor.t, input_area_height);
         }
 
-        private void RedrawHistoryArea()
+        private void RedrawHistoryArea(int input_area_y)
         {
             int width = WIDTH;
             string[] history = History.SelectMany(entry =>
@@ -536,7 +570,7 @@ Commands and keyboard shortcuts:
                 return lines;
             }).Where(line => !string.IsNullOrEmpty(line)).ToArray();
 
-            int height = Console.WindowHeight - MARGIN_BOTTOM - MARGIN_TOP - 2;
+            int height = input_area_y - MARGIN_TOP - 2;
 
             if (history.Length > height)
             {
@@ -576,12 +610,12 @@ Commands and keyboard shortcuts:
             }
 
             ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
-            ConsoleExtensions.WriteBlock(sb.ToString(), left + 1, top, MARGIN_RIGHT, MARGIN_TOP);
+            ConsoleExtensions.WriteBlock(sb.ToString(), left + 1, top, MARGIN_RIGHT - 1, MARGIN_TOP);
 
             top += sb.ToString().CountOccurences("\n");
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-            ConsoleExtensions.Write('├' + new string('─', WIDTH - left - 2), left - 1, top);
+            ConsoleExtensions.Write('├' + new string('─', WIDTH - left), left - 1, top);
         }
 
         private void ProcessInput()
