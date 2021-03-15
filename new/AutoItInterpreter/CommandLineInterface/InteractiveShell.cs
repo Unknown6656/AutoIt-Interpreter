@@ -7,6 +7,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.Text;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -558,19 +559,29 @@ Commands and keyboard shortcuts:
         private void RedrawThreadAndVariableWatchers()
         {
             AU3Thread[] threads = Interpreter.Threads;
-            int left = Console.WindowWidth - MARGIN_RIGHT;
+            int left = WIDTH - MARGIN_RIGHT;
             int top = MARGIN_TOP + 1;
+            StringBuilder sb = new();
 
-            Console.CursorTop = top;
-            Console.CursorLeft = left;
+            sb.AppendLine($"Active threads ({threads.Length}):");
+
+            foreach (AU3Thread thread in threads)
+            {
+                sb.Append((thread.IsRunning ? RGBAColor.DarkGreen : RGBAColor.Red).ToVT100ForegroundString());
+                sb.AppendLine($"•Thread {thread.ThreadID} ({(thread.IsRunning ? "Active" : "Paused/Stopped")}");
+                sb.AppendLine($"   TID:  0x{thread.ThreadID:x8}{(thread.IsMainThread ? " (Main)" : "")}");
+                sb.AppendLine($"   Func: {thread.CurrentFunction}");
+                sb.AppendLine($"   Location: {thread.CurrentLocation}");
+                sb.AppendLine($"   Stack frames ({thread.CallStack.Length}):");
+            }
+
             ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
-            Console.Write($"Active threads ({threads.Length}):");
-            Console.CursorTop++;
-            Console.CursorLeft = left;
+            ConsoleExtensions.WriteBlock(sb.ToString(), left + 1, top, MARGIN_RIGHT, MARGIN_TOP);
 
-            //ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-            //Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
+            top += sb.ToString().CountOccurences("\n");
 
+            ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
+            ConsoleExtensions.Write('├' + new string('─', WIDTH - left - 2), left - 1, top);
         }
 
         private void ProcessInput()
