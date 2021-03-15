@@ -31,14 +31,15 @@ namespace Unknown6656.AutoIt3.CLI
         private static readonly RGBAColor COLOR_SEPARATOR = 0xfaaa;
         private static readonly RGBAColor COLOR_PROMPT = 0xffff;
         private static readonly string HELP_TEXT = $@"
-Keyboard shortcuts:                                                 [PAGE UP/DOWN]     Scroll history up/down
-                        [F5]    Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text
-                        [F6]    Repeat next line                    [ARROW UP/DOWN]    Select code suggestion
-                        [ENTER] Execute current input               [TAB]              Insert selected code suggestion
-                        ""EXIT""  Exit the interactive environment    ""CLEAR""            Clear the history window
+Commands and keyboard shortcuts:
+                                              [PAGE UP/DOWN]     Scroll history up/down
+  [F5]    Repeat previous line                [ARROW LEFT/RIGHT] Navigate inside the text
+  [F6]    Repeat next line                    [ARROW UP/DOWN]    Select code suggestion
+  [ENTER] Execute current input               [TAB]              Insert selected code suggestion
+  ""EXIT""  Exit the interactive environment    ""CLEAR""            Clear the history window
 ".Trim();
         private static readonly int MAX_SUGGESTIONS = 8;
-        private static readonly int MARGIN_RIGHT = 40;
+        private static readonly int MARGIN_RIGHT = 50;
         private static readonly int MARGIN_TOP = HELP_TEXT.Count(c => c is '\n') + 1;
         private int MARGIN_BOTTOM => MAX_SUGGESTIONS + 5; // Suggestions.Count == 0 ? 2 : 5 + Math.Min(MAX_SUGGESTIONS, Suggestions.Count);
         private static int WIDTH => Console.WindowWidth;
@@ -164,21 +165,23 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
                     if (width != WIDTH || height != HEIGHT)
                     {
+                        Console.Clear();
                         RedrawHelp();
 
                         width = WIDTH;
                         height = HEIGHT;
-                        //sugg_count = 0;
-                        hist_count = 0;
+                        hist_count = -1;
                     }
 
-                    if (/*sugg_count != Suggestions.Count ||*/ hist_count != History.Count)
+                    if (hist_count != History.Count)
                     {
                         RedrawHistoryArea();
+                        RedrawThreadAndVariableWatchers();
 
-                        //sugg_count = Suggestions.Count;
                         hist_count = History.Count;
                     }
+                    else if (Interpreter.Threads.Length > 1)
+                        RedrawThreadAndVariableWatchers();
 
                     (int Left, int Top) cursor = RedrawInputArea(false);
 
@@ -204,6 +207,14 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
         private void HandleKeyPress()
         {
+            int w = WIDTH, h = HEIGHT;
+
+            while (!Console.KeyAvailable)
+                if (w != WIDTH || h != HEIGHT)
+                    return;
+                else
+                    System.Threading.Thread.Sleep(10);
+
             ConsoleKeyInfo k = Console.ReadKey(true);
             int cursor_pos = CurrentCursorPosition.GetOffset(CurrentInput.Length);
 
@@ -358,17 +369,17 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
             int width = WIDTH;
             int height = HEIGHT;
 
-            foreach (string line in HELP_TEXT.Split('\n'))
+            foreach (string line in HELP_TEXT.SplitIntoLines())
             {
                 Console.Write(line.TrimEnd());
                 Console.WriteLine(new string(' ', width - Console.CursorLeft - 1));
             }
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-            ConsoleExtensions.WriteVertical(new string('│', height), (width - MARGIN_RIGHT - 1, 0));
+            ConsoleExtensions.WriteVertical(new string('│', height - MARGIN_TOP), (width - MARGIN_RIGHT - 1, MARGIN_TOP));
             Console.CursorTop = MARGIN_TOP;
             Console.CursorLeft = 0;
-            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
+            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┬' + new string('─', MARGIN_RIGHT));
         }
 
         private (int Left, int Top) RedrawInputArea(bool blink)
@@ -542,6 +553,24 @@ Keyboard shortcuts:                                                 [PAGE UP/DOW
 
                 Console.Write(new string(' ', width - MARGIN_RIGHT - 1 - Console.CursorLeft));
             }
+        }
+
+        private void RedrawThreadAndVariableWatchers()
+        {
+            AU3Thread[] threads = Interpreter.Threads;
+            int left = Console.WindowWidth - MARGIN_RIGHT;
+            int top = MARGIN_TOP + 1;
+
+            Console.CursorTop = top;
+            Console.CursorLeft = left;
+            ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
+            Console.Write($"Active threads ({threads.Length}):");
+            Console.CursorTop++;
+            Console.CursorLeft = left;
+
+            //ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
+            //Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
+
         }
 
         private void ProcessInput()
