@@ -192,7 +192,7 @@ strings:
         thread_already_running: "The thread 0x{0:x4} is already executing a function."
         too_many_args: "The function '{0}' expects at a maximum of {1} arguments, however, {2} arguments were given."
         too_many_array_items: "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization."
-        undeclared_variable: "The variable '{0}' has not been declared previously to this line and can therefore not be used in this expression."
+        undeclared_variable: "The variable '{0}' has not been declared prior to this line and can therefore not be used in this expression."
         unexpected_case: "Unexpected 'Case'-statement outside a 'Switch'- or 'Select'-block."
         unexpected_close: "Unexpected statement '{0}': A '{1}'-statement must be opened before it can be closed."
         unexpected_continuecase: "Unexpected 'ContinueCase'-statement outside a 'Switch'- or 'Select'-block."
