@@ -32,6 +32,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VersionIncrementer", "util\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "~", "~", "{621B4FD7-F769-44C2-916C-A4939A583E5E}"
 	ProjectSection(SolutionItems) = preProject
+		generate_docs.bat = generate_docs.bat
 		readme.md = readme.md
 	EndProjectSection
 EndProject
