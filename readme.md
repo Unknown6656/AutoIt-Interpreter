@@ -10,6 +10,8 @@
 
 # Platform-Independent AutoIt3 Interpreter
 
+[![Download](https://1.bp.blogspot.com/-xGKUeWbY4QM/XUT0SkEHA2I/AAAAAAAAMDw/ZqiiVJahC34FYVc-02AhH0M0cqkNuT3EwCEwYBhgL/s1600/Free%2BDownload%2BButtons%2BPNG%2B%25288%2529.png)](https://github.com/Unknown6656/AutoIt-Interpreter/releases)
+
 ### [TL;DR: Take a look at the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
 
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
