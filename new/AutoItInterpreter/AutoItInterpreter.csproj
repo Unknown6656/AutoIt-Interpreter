@@ -61,7 +61,7 @@
         <PackageReference Include="Lokad.ILPack" Version="0.1.6" />
         <PackageReference Include="Octokit" Version="0.50.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.0.19" />
+        <PackageReference Include="Unknown6656.Core" Version="1.0.19.2" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />
