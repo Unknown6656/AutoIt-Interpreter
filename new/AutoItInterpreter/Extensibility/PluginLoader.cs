@@ -126,6 +126,10 @@ namespace Unknown6656.AutoIt3.Extensibility
                         TryRegister(type, location, _func_providers);
                         TryRegister(type, location, _macro_providers);
                     });
+
+            foreach (AbstractMacroProvider plugin in _macro_providers)
+                if (plugin is AbstractKnownMacroProvider provider)
+                    provider.RegisterAllMacros();
         }
 
         private void TryRegister<T>(Type type, FileInfo location, List<T> plugin_list)

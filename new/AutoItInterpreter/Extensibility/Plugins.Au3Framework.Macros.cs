@@ -20,7 +20,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         : AbstractMacroProvider
     {
         internal const string MACRO_DISCARD = "DISCARD";
-        private static readonly Regex REGEX_IPADDRESS = new Regex(@"ipaddress(?<num>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex REGEX_IPADDRESS = new(@"ipaddress(?<num>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly OperatingSystem _os = Environment.OSVersion;
 
 
@@ -167,26 +167,26 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     }
 
     public sealed class AdditionalMacros
-        : AbstractMacroProvider
+        : AbstractKnownMacroProvider
     {
+        public override Dictionary<string, Func<Interpreter, Variant>> KnownMacros { get; } = new()
+        {
+            ["ESC"] = _ => "\x1b",
+            ["VTAB"] = _ => "\v",
+            ["NUL"] = _ => "\0",
+            ["DATE"] = _ => DateTime.Now.ToString("yyyy-MM-dd", null),
+            ["DATE_TIME"] = _ => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff", null),
+            ["E"] = _ => Math.E,
+            ["NL"] = _ => Environment.NewLine,
+            ["PHI"] = _ => 1.618033988749894848204586834m,
+            ["PI"] = _ => Math.PI,
+            ["TAU"] = _ => Math.Tau,
+        };
+
+
         public AdditionalMacros(Interpreter interpreter)
             : base(interpreter)
         {
         }
-
-        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value) => (value = name.ToUpperInvariant() switch
-        {
-            "ESC" => "\x1b",
-            "VTAB" => "\v",
-            "NUL" => "\0",
-            "DATE" => DateTime.Now.ToString("yyyy-MM-dd", null),
-            "DATE_TIME" => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff", null),
-            "E" => Math.E,
-            "NL" => Environment.NewLine,
-            "PHI" => 1.618033988749894848204586834m,
-            "PI" => Math.PI,
-            "TAU" => Math.Tau,
-            _ => (Variant?)null,
-        }) is Variant;
     }
 }

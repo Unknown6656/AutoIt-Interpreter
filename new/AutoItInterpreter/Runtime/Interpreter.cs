@@ -60,6 +60,11 @@ namespace Unknown6656.AutoIt3.Runtime
         public VariableScope VariableResolver { get; }
 
         /// <summary>
+        /// The interpreter's macro resolver.
+        /// </summary>
+        public MacroResolver MacroResolver { get; }
+
+        /// <summary>
         /// The command line options used to launch this interpreter.
         /// </summary>
         public CommandLineOptions CommandLineOptions { get; }
@@ -146,6 +151,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 MainProgram.PrintfDebugMessage("debug.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
+            MacroResolver = new MacroResolver(this);
 
             ScriptScanner.ScanNativeFunctions();
 

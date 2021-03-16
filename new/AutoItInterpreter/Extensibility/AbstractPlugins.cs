@@ -215,4 +215,38 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         public abstract bool ProvideMacroValue(CallFrame frame, string name, out Variant? value);
     }
+
+    public abstract class AbstractKnownMacroProvider
+        : AbstractMacroProvider
+    {
+        public abstract Dictionary<string, Func<Interpreter, Variant>> KnownMacros { get; }
+
+
+        public AbstractKnownMacroProvider(Interpreter interpreter)
+            : base(interpreter)
+        {
+        }
+
+        internal void RegisterAllMacros()
+        {
+            foreach ((string name, Func<Interpreter, Variant> provider) in KnownMacros)
+                Interpreter.MacroResolver.AddKnownMacro(new KnownMacro(Interpreter, name, provider));
+        }
+
+        public sealed override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
+        {
+            value = null;
+            name = name.TrimStart('@');
+
+            foreach ((string key, Func<Interpreter, Variant> provider) in KnownMacros)
+                if (key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    value = provider(Interpreter);
+
+                    return true;
+                }
+
+            return false;
+        }
+    }
 }
