@@ -32,7 +32,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     public sealed class FrameworkFunctions
         : AbstractFunctionProvider
     {
-        private static readonly Regex REGEX_WS = new Regex(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
+        private static readonly Regex REGEX_WS = new(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
+        private static readonly Regex REGEX_RUN = new(@"^(?<file>""[^""]*""|[^""]+)(\s+(?<args>.*))?$", RegexOptions.Compiled);
 
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
@@ -194,6 +195,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(RegEnumVal), 2, RegEnumVal, FunctionMetadata.WindowsOnly),
             ProvidedNativeFunction.Create(nameof(RegRead), 2, RegRead, FunctionMetadata.WindowsOnly),
             ProvidedNativeFunction.Create(nameof(RegWrite), 1, 4, RegWrite, FunctionMetadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(Run), 1, 4, Run, Variant.EmptyString, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RunAs), 5, 8, RunAs, FunctionMetadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RunWait), 1, 4, RunWait, Variant.EmptyString, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(RunAsWait), 5, 8, RunAsWait, FunctionMetadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
@@ -2323,6 +2328,71 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         }
 
         internal static FunctionReturnValue Round(CallFrame frame, Variant[] args) => (Variant)Math.Round(args[0].ToNumber(), (int)args[1]);
+
+        internal static FunctionReturnValue Run(CallFrame frame, Variant[] args) => Run(args[0].ToString(), args[0].ToString(), (int)args[2], (int)args[3], false);
+
+        internal static FunctionReturnValue RunWait(CallFrame frame, Variant[] args) => Run(args[0].ToString(), args[0].ToString(), (int)args[2], (int)args[3], true);
+
+        internal static FunctionReturnValue RunAs(CallFrame frame, Variant[] args) =>
+            RunAs(args[0].ToString(), args[1].ToString(), args[2].ToString(), (int)args[3], args[4].ToString(), args[5].ToString(), (int)args[6], (int)args[7], false);
+
+        internal static FunctionReturnValue RunAsWait(CallFrame frame, Variant[] args) =>
+            RunAs(args[0].ToString(), args[1].ToString(), args[2].ToString(), (int)args[3], args[4].ToString(), args[5].ToString(), (int)args[6], (int)args[7], true);
+
+        private static FunctionReturnValue Run(string program, string workingdir, int sw_state, int opt_flag, bool wait) =>
+            RunAs(null, null, null, 0, program, workingdir, sw_state, opt_flag, wait);
+
+        private static FunctionReturnValue RunAs(string? user, string? domain, string? passwd, int logon_flags, string program, string workingdir, int sw_state, int opt_flag, bool wait)
+        {
+            if (program.Match(REGEX_RUN, out ReadOnlyIndexer<string, string>? groups))
+                try
+                {
+                    ProcessStartInfo psi = new()
+                    {
+                        UserName = user!,
+                        FileName = groups["file"],
+                        Arguments = groups["args"],
+                        WorkingDirectory = workingdir,
+                        UseShellExecute = true,
+                        WindowStyle = sw_state switch
+                        {
+                            0 => ProcessWindowStyle.Hidden,
+                            3 => ProcessWindowStyle.Maximized,
+                            2 or 6 => ProcessWindowStyle.Minimized,
+                            _ => ProcessWindowStyle.Normal,
+                        },
+                        CreateNoWindow = (opt_flag & 0x10000) == 0,
+                        RedirectStandardInput = (opt_flag & 0x01) != 0,
+                        RedirectStandardOutput = (opt_flag & 0x0a) != 0,
+                        RedirectStandardError = (opt_flag & 0x0c) != 0,
+                    };
+
+                    NativeInterop.DoPlatformDependent(delegate
+                    {
+                        psi.Domain = domain!;
+                        psi.PasswordInClearText = passwd!;
+                        // TODO : use the logon_flags
+                    }, OS.Windows);
+
+                    if (Process.Start(psi) is Process process)
+                        using (process)
+                        {
+                            if ((opt_flag & 0x10) != 0)
+                                throw new NotImplementedException(); // TODO : redirect stdin/stdout/stderr to console
+
+                            if ((opt_flag & 0x8) != 0)
+                                throw new NotImplementedException(); // TODO : stderr = stdout
+
+                            if (wait)
+                                process.WaitForExit();
+                        }
+                }
+                catch
+                {
+                }
+
+            return FunctionReturnValue.Error(1);
+        }
 
         #endregion
         #region REG...

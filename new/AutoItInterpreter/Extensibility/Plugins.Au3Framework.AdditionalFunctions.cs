@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Unknown6656.AutoIt3.Runtime;
+
 using Unknown6656.AutoIt3.Runtime.Native;
+using Unknown6656.AutoIt3.Runtime;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
