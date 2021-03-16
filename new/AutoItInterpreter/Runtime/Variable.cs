@@ -4,11 +4,12 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     /// <summary>
     /// Represents a variable capable of holding a value of the type <see cref="Variant"/>.
+    /// Variables are identified using their case-insensitive name and a '$'-prefix.
     /// </summary>
     public sealed class Variable
         : IEquatable<Variable>
     {
-        private readonly object _mutex = new object();
+        private readonly object _mutex = new();
         private Variant _value;
 
         /// <summary>
