@@ -16,6 +16,9 @@ strings:
             header: "An update is available!"
             message: "You are currently using version {0} of the AutoIt-Interpreter. The newer version {1} is available.\nThese are the known additions and changes of the newer version:\n{2}\n\nDo you wish to download and update the AutoIt-Interpreter?\nType [Y] for 'yes', or any other key for 'no'."
             update_cancelled: "You chose not to update to the newer version."
+    interactive:
+        unsupported_platform: "[unsupported on {0}]"
+        argument_count: "min: {0}, max: {1}"
     debug:
         name: "Name"
         index: "Index"
@@ -215,7 +218,6 @@ strings:
         unresolved_script: "The script or include file '{0}' could not be resolved. Verify that the path is correct and the file in question is accessible. If you have an include resolver plugin, verify whether the .dll can be correctly loaded from the plugin-folder."
         unsupported_operator: "The operator '{0}' is not supported."
         unsupported_platform: "The function '{0}' is not supported on the current operating system '{1}'. Supported system(s) is/are: '{2}'."
-        unsupported_platform_interactive: "[unsupported on {0}]"
 
         experimental:
             one_liner: "One-liner functions can only be used if the interpreter is started without the '--strict' option."

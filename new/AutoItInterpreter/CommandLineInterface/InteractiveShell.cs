@@ -746,7 +746,7 @@ Commands and keyboard shortcuts:
             //     ; // TODO
 
             if (suggest_all || curr_token?.Type is TokenType.Keyword or TokenType.Identifier or TokenType.FunctionCall)
-                add_suggs(ScriptFunction.RESERVED_NAMES, TokenType.Keyword);
+                add_suggs(ScriptFunction.RESERVED_NAMES.Except(new[] { "_", "$_", "$GLOBAL" }), TokenType.Keyword);
 
             if (suggest_all || curr_token?.Type is TokenType.Operator)
                 add_suggs(KNOWN_OPERATORS, TokenType.Operator);
@@ -755,45 +755,57 @@ Commands and keyboard shortcuts:
                 KNOWN_MACROS.Select(macro =>
                 {
                     if (CallFrame.TryFetchMacroValue(macro, out Variant? value) && value is Variant v)
-                        return (ScriptVisualizer.TokenizeScript($"{macro} : {to_dbg_str(v)}"), macro);
+                        return (ScriptVisualizer.TokenizeScript($"{macro.PadRight(KNOWN_MACROS.Max(m => m.Length))} : {to_dbg_str(v)}"), macro);
                     else
                         return (new[] { ScriptToken.FromString(macro, TokenType.Macro) }, macro);
                 }).AppendToList(suggestions);
 
-
-            (string name, string type)[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray(v => ('$' + v.Name, v.Value.Type.ToString()));
-
             if (suggest_all || curr_token?.Type is TokenType.Variable)
-                Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).Select(variable =>
-                {
-                    string name = '$' + variable.Name;
-                    string type = variable.Value.Type.ToString();
-                    string value = to_dbg_str(variable.Value);
+            {
+                Variable[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray();
+                int name_length = vars.Max(v => v.Name.Length);
 
-                    return (new[] {
+                vars.Select(variable =>
+                {
+                    string name = '$' + variable.Name.PadRight(name_length);
+                    string type = variable.Value.Type.ToString().PadRight(9);
+                    string value = to_dbg_str(variable.Value);
+                    IEnumerable<ScriptToken> tokens = new[] {
                         ScriptToken.FromString(name, TokenType.Variable),
                         ScriptToken.FromString(" : ", TokenType.Operator),
                         ScriptToken.FromString(type, TokenType.Identifier),
                         ScriptToken.FromString(" = ", TokenType.Operator),
-                    }.Concat(ScriptVisualizer.TokenizeScript(value)).ToArray(), name);
+                    };
+
+                    if (variable.IsConst)
+                        tokens = tokens.Append(ScriptToken.FromString("CONST ", TokenType.Keyword));
+
+                    return (tokens.Concat(ScriptVisualizer.TokenizeScript(value)).ToArray(), name);
                 }).AppendToList(suggestions);
+            }
 
             if (suggest_all || curr_token?.Type is TokenType.Identifier or TokenType.FunctionCall)
-                Interpreter.ScriptScanner.CachedFunctions.Select(function =>
+            {
+                ScriptFunction[] functions = Interpreter.ScriptScanner.CachedFunctions.Where(f => !string.IsNullOrWhiteSpace(f.Name)).ToArray();
+                int name_length = functions.Max(f => f.Name.Length);
+
+                functions.Select(function =>
                 {
                     bool supported = function.Metadata.SupportedPlatforms.HasFlag(os);
-                    ScriptToken[] tokens =
-                        supported ? ScriptVisualizer.TokenizeScript($"{function.Name} ({function.ParameterCount.MinimumCount}, {function.ParameterCount.MaximumCount})")
-                                  : new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["error.unsupported_platform_interactive", os]} {function.Name}", TokenType.UNKNOWN) };
 
-                    return (tokens, function.Name);
+                    if (supported)
+                        return (ScriptVisualizer.TokenizeScript(
+                            $"{function.Name.PadRight(name_length)} ({Interpreter.CurrentUILanguage["interactive.argument_count", function.ParameterCount.MinimumCount, function.ParameterCount.MaximumCount]})"
+                        ), function.Name);
+                    else
+                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
                 }).AppendToList(suggestions);
+            }
 
             Suggestions.Clear();
             Suggestions.AddRange(from s in suggestions.Distinctby(s => s.content)
                                  where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
-                                 // orderby s.tokens.FirstOrDefault()?.Type, text ascending
-                                 orderby s.content ascending
+                                 orderby s.tokens[0].Type, s.content ascending
                                  select s);
         }
 
