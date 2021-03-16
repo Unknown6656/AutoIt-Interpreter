@@ -203,6 +203,24 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="value">The value to be printed.</param>
         public void Print(object? value) => Interpreter.Print(this, value);
 
+        /// <summary>
+        /// Tries to resolve the given macro and return its value.
+        /// </summary>
+        /// <param name="name">The macro to be resolved.</param>
+        /// <param name="value">The macro's value (or <see langword="null"/> if the macro could not be found).</param>
+        /// <returns>Indicates whether the macro has been found.</returns>
+        public bool TryFetchMacroValue(string name, out Variant? value)
+        {
+            name = name.StartsWith('@') ? name[1..] : name;
+            value = null;
+
+            foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
+                if ((provider.ProvideMacroValue(this, name, out value) || provider.ProvideMacroValue(this, '@' + name, out value)) && value.HasValue)
+                    return true;
+
+            return false;
+        }
+
         /// <inheritdoc/>
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
 
@@ -1668,9 +1686,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             string name = macro.Name;
 
-            foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
-                if (provider.ProvideMacroValue(this, name, out Variant? value) && value.HasValue)
-                    return value.Value;
+            if (TryFetchMacroValue(name, out Variant? value) && value.HasValue)
+                return value.Value;
 
             return WellKnownError("error.unknown_macro", macro.Name);
         }
