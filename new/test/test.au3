@@ -1,3 +1,6 @@
+
+exit
+
 $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "int:cdecl", "add", "int", 20, "int", 400)
 ; $res = DllCall("L:\Projects.VisualStudio\AutoItInterpreter\new\test\cpp-interop-test\bin\cpp-interop-test.exe", "void:cdecl", "say_hello")
 ConsoleWrite("ERR:" & @error & @CRLF)
