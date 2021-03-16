@@ -79,6 +79,8 @@ Commands and keyboard shortcuts:
 
         public AU3Thread Thread { get; }
 
+        public VariableScope Variables { get; }
+
         public AU3CallFrame CallFrame { get; }
 
         public ScriptToken? CurrentlyTypedToken
@@ -98,6 +100,7 @@ Commands and keyboard shortcuts:
             Interpreter = interpreter;
             Thread = interpreter.CreateNewThread();
             CallFrame = Thread.PushAnonymousCallFrame();
+            Variables = Thread.CurrentVariableResolver;
         }
 
         ~InteractiveShell() => Dispose(disposing: false);
@@ -597,25 +600,58 @@ Commands and keyboard shortcuts:
             int top = MARGIN_TOP + 1;
             StringBuilder sb = new();
 
-            sb.AppendLine($"Active threads ({threads.Length}):");
+            sb.AppendLine($"Threads ({threads.Length}):");
 
             foreach (AU3Thread thread in threads)
             {
-                sb.Append((thread.IsRunning ? RGBAColor.DarkGreen : RGBAColor.Red).ToVT100ForegroundString());
-                sb.AppendLine($"•Thread {thread.ThreadID} ({(thread.IsRunning ? "Active" : "Paused/Stopped")}");
-                sb.AppendLine($"   TID:  0x{thread.ThreadID:x8}{(thread.IsMainThread ? " (Main)" : "")}");
-                sb.AppendLine($"   Func: {thread.CurrentFunction}");
-                sb.AppendLine($"   Location: {thread.CurrentLocation}");
-                sb.AppendLine($"   Stack frames ({thread.CallStack.Length}):");
+                sb.AppendLine($" - Thread {thread.ThreadID} (0x{thread.ThreadID:x8})");
+                sb.AppendLine($"   Status: {(thread.IsRunning ? "Active" : "Paused/Stopped/Interactive")} {(thread.IsMainThread ? " (Main)" : "")}");
+                sb.AppendLine($"   Stack frames ({thread.CallStack.Length}):   <TODO>");
+
+                //sb.AppendLine($"  Func: {thread.CurrentFunction}");
             }
 
             ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
-            ConsoleExtensions.WriteBlock(sb.ToString(), left + 1, top, MARGIN_RIGHT - 1, MARGIN_TOP);
+            ConsoleExtensions.WriteBlock(sb.ToString(), left, top, MARGIN_RIGHT, MARGIN_TOP);
 
-            top += sb.ToString().CountOccurences("\n");
+            top = Console.CursorTop + 1;
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
-            ConsoleExtensions.Write('├' + new string('─', WIDTH - left), left - 1, top);
+            ConsoleExtensions.Write('├' + new string('─', MARGIN_RIGHT), left - 1, top);
+            ++top;
+
+            string[] variables = Variables.LocalVariables
+                                .Concat(Interpreter.VariableResolver.GlobalVariables)
+                                .Select(v => ScriptVisualizer.ConvertToVT100(ScriptVisualizer.TokenizeScript($"${v.Name} = {v.Value.ToDebugString(Interpreter)}"), false))
+                                .Take(HEIGHT - top - 2)
+                                .ToArray();
+
+            ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
+            ConsoleExtensions.Write($"Variables ({variables.Length}):", left, top);
+
+            foreach (string line in variables)
+            {
+                ++top;
+
+                Console.SetCursorPosition(left, top);
+
+                foreach (char c in line)
+                    if (Console.CursorLeft < WIDTH - 4)
+                        Console.Write(c);
+                    else
+                    {
+                        ConsoleExtensions.RGBForegroundColor = COLOR_PROMPT;
+                        Console.Write(" ...");
+
+                        break;
+                    }
+
+                if (Console.CursorLeft < WIDTH)
+                    Console.Write(new string(' ', WIDTH - Console.CursorLeft));
+            }
+
+            //while (top < HEIGHT)
+
         }
 
         private void ProcessInput()
@@ -685,7 +721,7 @@ Commands and keyboard shortcuts:
             Suggestions.Clear();
 
             string[] ops = KNOWN_OPERATORS;
-            string[] vars = Thread.CurrentVariableResolver.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray(v => '$' + v.Name);
+            string[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray(v => '$' + v.Name);
             string[] funcs = Interpreter.ScriptScanner.CachedFunctions.ToArray(f => f.Name);
             ScriptToken? curr_token = CurrentlyTypedToken;
             IEnumerable<string> suggestions = string.IsNullOrEmpty(CurrentInput)
