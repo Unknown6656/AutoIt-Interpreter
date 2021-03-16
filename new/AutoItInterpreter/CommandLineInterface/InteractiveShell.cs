@@ -16,7 +16,7 @@ namespace Unknown6656.AutoIt3.CLI
     {
         public const int MIN_WIDTH = 120;
 
-        internal static readonly string[] KNOWN_MACROS =
+        internal readonly string[] KNOWN_MACROS =
         {
             "@APPDATACOMMONDIR", "@APPDATADIR", "@AUTOITEXE", "@AUTOITPID", "@AUTOITVERSION", "@AUTOITX64", "@COMMONFILESDIR", "@COMPILED", "@COMPUTERNAME", "@COMSPEC", "@CR", "@CRLF",
             "@CPUARCH", "@DESKTOPCOMMONDIR", "@DESKTOPDIR", "@DOCUMENTSCOMMONDIR", "@EXITCODE", "@ERROR", "@EXTENDED", "@FAVORITESCOMMONDIR", "@FAVORITESDIR", "@HOMEDRIVE", "@HOMEPATH",
@@ -52,9 +52,9 @@ Commands and keyboard shortcuts:
         private bool _isdisposed;
 
 
-        public List<(ScriptToken[] content, InteractiveShellStreamDirection stream)> History { get; } = new();
+        public List<(ScriptToken[] Content, InteractiveShellStreamDirection Stream)> History { get; } = new();
 
-        public List<ScriptToken[]> Suggestions { get; } = new();
+        public List<(ScriptToken[] Display, string Content)> Suggestions { get; } = new();
 
         public string CurrentInput { get; private set; } = "";
 
@@ -326,9 +326,9 @@ Commands and keyboard shortcuts:
 
                     break;
                 case ConsoleKey.F5:
-                    CurrentInput = History.Where(t => t.stream is InteractiveShellStreamDirection.Input)
+                    CurrentInput = History.Where(t => t.Stream is InteractiveShellStreamDirection.Input)
                                           .LastOrDefault()
-                                          .content
+                                          .Content
                                           ?.Select(t => t.Content)
                                           .StringJoin("")
                                           ?? CurrentInput;
@@ -341,7 +341,7 @@ Commands and keyboard shortcuts:
 
                     break;
                 case ConsoleKey.Tab:
-                    string insertion = Suggestions[CurrentSuggestionIndex].Select(t => t.Content).StringConcat();
+                    string insertion = Suggestions[CurrentSuggestionIndex].Content;
                     ScriptToken? curr_token = CurrentlyTypedToken;
                     int insertion_index = curr_token?.CharIndex ?? cursor_pos;
                     int deletion_index = curr_token is null ? cursor_pos : curr_token.CharIndex + curr_token.TokenLength;
@@ -458,7 +458,7 @@ Commands and keyboard shortcuts:
 
                 start_index = Math.Max(0, Math.Min(start_index, Suggestions.Count - MAX_SUGGESTIONS));
 
-                ScriptToken[][] suggestions = Suggestions.Skip(start_index).Take(MAX_SUGGESTIONS).ToArray();
+                ScriptToken[][] suggestions = Suggestions.Skip(start_index).Take(MAX_SUGGESTIONS).ToArray(s => s.Display);
 
                 int sugg_width = suggestions.Select(s => s.Sum(t => t.TokenLength)).Append(0).Max() + 2;
                 int sugg_left = Math.Min(input_area_width - 2 - sugg_width, cursor_pos_x + 3);
@@ -541,11 +541,11 @@ Commands and keyboard shortcuts:
             string[] history = History.SelectMany(entry =>
             {
                 List<string> lines = new();
-                string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.stream is InteractiveShellStreamDirection.Input ? " > " : "");
-                int line_width = width - MARGIN_RIGHT - (entry.stream is InteractiveShellStreamDirection.Input ? 4 : 1);
+                string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.Stream is InteractiveShellStreamDirection.Input ? " > " : "");
+                int line_width = width - MARGIN_RIGHT - (entry.Stream is InteractiveShellStreamDirection.Input ? 4 : 1);
                 int len = 0;
 
-                foreach (ScriptToken token in entry.content.SelectMany(c => c.SplitByLineBreaks()))
+                foreach (ScriptToken token in entry.Content.SelectMany(c => c.SplitByLineBreaks()))
                     if (token.Type is TokenType.NewLine)
                     {
                         lines.Add(line);
@@ -555,10 +555,10 @@ Commands and keyboard shortcuts:
                     else if (len + token.TokenLength > line_width)
                         foreach (string partial in token.Content.PartitionByArraySize(line_width).ToArray(cs => new string(cs)))
                         {
-                            if (line.Length > (entry.stream is InteractiveShellStreamDirection.Input ? 3 : 0))
+                            if (line.Length > (entry.Stream is InteractiveShellStreamDirection.Input ? 3 : 0))
                                 lines.Add(line);
 
-                            line = (entry.stream is InteractiveShellStreamDirection.Input ? "   " : "")
+                            line = (entry.Stream is InteractiveShellStreamDirection.Input ? "   " : "")
                                  + ScriptToken.FromString(partial, token.Type).ConvertToVT100(false);
                             len = token.TokenLength;
                         }
@@ -718,42 +718,83 @@ Commands and keyboard shortcuts:
 
         public void UpdateSuggestions()
         {
-            Suggestions.Clear();
-
-            string[] ops = KNOWN_OPERATORS;
-            string[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray(v => '$' + v.Name);
-            string[] funcs = Interpreter.ScriptScanner.CachedFunctions.ToArray(f => f.Name);
+            OS os = NativeInterop.OperatingSystem;
             ScriptToken? curr_token = CurrentlyTypedToken;
-            IEnumerable<string> suggestions = string.IsNullOrEmpty(CurrentInput)
-                ? KNOWN_MACROS.Concat(vars).Concat(funcs).Concat(ScriptFunction.RESERVED_NAMES) // TODO : suggest all funcs, variables, macros, directives, and statements
-                : curr_token switch
-                {
-                    { Type: TokenType.Keyword } => ScriptFunction.RESERVED_NAMES,
-                    { Type: TokenType.Identifier or TokenType.FunctionCall } => funcs.Concat(ScriptFunction.RESERVED_NAMES),
-                    { Type: TokenType.Directive } => new string[0], // suggest directive
-                    { Type: TokenType.DirectiveOption } => new string[0], // suggest directive option
-                    { Type: TokenType.Operator } => ops,
-                    { Type: TokenType.Symbol or TokenType.Comment or TokenType.Number or TokenType.String } => Array.Empty<string>(), // suggest nothing
-                    { Type: TokenType.Variable } => vars,
-                    { Type: TokenType.Macro } => KNOWN_MACROS,
-                    { Type: TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine } or null or _ =>
-                        KNOWN_MACROS.Concat(vars).Concat(ops).Concat(funcs),
-                        // suggest all functions, variables, and macros
-                };
-
             string? filter = curr_token?.Content[..(CurrentCursorPosition.GetOffset(CurrentInput.Length) - curr_token.CharIndex)];
 
             if (string.IsNullOrWhiteSpace(filter))
                 filter = null;
 
-            Suggestions.AddRange(from s in suggestions.Append("CLEAR").Distinct()
-                                 let text = s.Trim() + ' '
-                                 where text.Length > 1
-                                 let tokens = ScriptVisualizer.TokenizeScript(text)[..^1]
-                                 let first = tokens[0]
-                                 where filter is null || first.Content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
-                                 orderby first.Type, text ascending
-                                 select tokens);
+            List<(ScriptToken[] tokens, string content)> suggestions = new()
+            {
+                (new[] { ScriptToken.FromString("CLEAR", TokenType.Keyword) }, "clear"),
+            };
+
+            void add_suggs(IEnumerable<string> suggs, TokenType type) => suggs.Select(s => (new[] { ScriptToken.FromString(s, type) }, s)).AppendToList(suggestions);
+            bool suggest_all = string.IsNullOrEmpty(CurrentInput) || curr_token?.Type is TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine;
+            string to_dbg_str(Variant value)
+            {
+                string str = value.ToDebugString(Interpreter);
+
+                return str.Length > WIDTH - MARGIN_RIGHT - 30 ? str[..(WIDTH - MARGIN_RIGHT - 33)] + " ..." : str;
+            }
+
+            // if (suggest_all || curr_token?.Type is TokenType.Directive)
+            //     ; // TODO
+            //
+            // if (suggest_all || curr_token?.Type is TokenType.DirectiveOption)
+            //     ; // TODO
+
+            if (suggest_all || curr_token?.Type is TokenType.Keyword or TokenType.Identifier or TokenType.FunctionCall)
+                add_suggs(ScriptFunction.RESERVED_NAMES, TokenType.Keyword);
+
+            if (suggest_all || curr_token?.Type is TokenType.Operator)
+                add_suggs(KNOWN_OPERATORS, TokenType.Operator);
+
+            if (suggest_all || curr_token?.Type is TokenType.Macro)
+                KNOWN_MACROS.Select(macro =>
+                {
+                    if (CallFrame.TryFetchMacroValue(macro, out Variant? value) && value is Variant v)
+                        return (ScriptVisualizer.TokenizeScript($"{macro} : {to_dbg_str(v)}"), macro);
+                    else
+                        return (new[] { ScriptToken.FromString(macro, TokenType.Macro) }, macro);
+                }).AppendToList(suggestions);
+
+
+            (string name, string type)[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray(v => ('$' + v.Name, v.Value.Type.ToString()));
+
+            if (suggest_all || curr_token?.Type is TokenType.Variable)
+                Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).Select(variable =>
+                {
+                    string name = '$' + variable.Name;
+                    string type = variable.Value.Type.ToString();
+                    string value = to_dbg_str(variable.Value);
+
+                    return (new[] {
+                        ScriptToken.FromString(name, TokenType.Variable),
+                        ScriptToken.FromString(" : ", TokenType.Operator),
+                        ScriptToken.FromString(type, TokenType.Identifier),
+                        ScriptToken.FromString(" = ", TokenType.Operator),
+                    }.Concat(ScriptVisualizer.TokenizeScript(value)).ToArray(), name);
+                }).AppendToList(suggestions);
+
+            if (suggest_all || curr_token?.Type is TokenType.Identifier or TokenType.FunctionCall)
+                Interpreter.ScriptScanner.CachedFunctions.Select(function =>
+                {
+                    bool supported = function.Metadata.SupportedPlatforms.HasFlag(os);
+                    ScriptToken[] tokens =
+                        supported ? ScriptVisualizer.TokenizeScript($"{function.Name} ({function.ParameterCount.MinimumCount}, {function.ParameterCount.MaximumCount})")
+                                  : new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["error.unsupported_platform_interactive", os]} {function.Name}", TokenType.UNKNOWN) };
+
+                    return (tokens, function.Name);
+                }).AppendToList(suggestions);
+
+            Suggestions.Clear();
+            Suggestions.AddRange(from s in suggestions.Distinctby(s => s.content)
+                                 where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
+                                 // orderby s.tokens.FirstOrDefault()?.Type, text ascending
+                                 orderby s.content ascending
+                                 select s);
         }
 
         public void SubmitPrint(string message) => History.Add((new[] { ScriptToken.FromString(message, TokenType.Comment) }, InteractiveShellStreamDirection.Output));
