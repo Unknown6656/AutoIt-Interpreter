@@ -129,6 +129,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterMacro("STARTUPCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup));
             RegisterMacro("STARTUPDIR", Environment.GetFolderPath(Environment.SpecialFolder.Startup));
             RegisterMacro("SYSTEMDIR", Environment.GetFolderPath(Environment.SpecialFolder.SystemX86));
+            RegisterMacro("TRAY_ID", Variant.Null);
+            RegisterMacro("TRAYICONFLASHING", Variant.False);
+            RegisterMacro("TRAYICONVISIBLE", Variant.False);
             RegisterMacro("WINDOWSDIR", Environment.GetFolderPath(Environment.SpecialFolder.Windows));
             RegisterMacro("SEC", _ => DateTime.Now.ToString("ss", null));
             RegisterMacro("USERNAME", _ => Environment.UserName);
@@ -169,6 +172,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         public AdditionalMacros(Interpreter interpreter)
             : base(interpreter)
         {
+            Random random = new();
+
             RegisterMacro("ESC", "\x1b");
             RegisterMacro("VTAB", "\v");
             RegisterMacro("NUL", "\0");
@@ -179,6 +184,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterMacro("PHI", 1.618033988749894848204586834m);
             RegisterMacro("PI", Math.PI);
             RegisterMacro("TAU", Math.Tau);
+            RegisterMacro("RANDOM", _ => random.NextDouble());
         }
     }
 }

@@ -201,6 +201,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(RunAsWait), 5, 8, RunAsWait, Metadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
+            ProvidedNativeFunction.Create(nameof(ShellExecute), 1, 5, ShellExecute, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(ShellExecuteWait), 1, 5, ShellExecuteWait, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
@@ -2329,9 +2331,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue Round(CallFrame frame, Variant[] args) => (Variant)Math.Round(args[0].ToNumber(), (int)args[1]);
 
-        internal static FunctionReturnValue Run(CallFrame frame, Variant[] args) => Run(args[0].ToString(), args[0].ToString(), (int)args[2], (int)args[3], false);
+        #endregion
+        #region RUN + SHELL_EXEC
 
-        internal static FunctionReturnValue RunWait(CallFrame frame, Variant[] args) => Run(args[0].ToString(), args[0].ToString(), (int)args[2], (int)args[3], true);
+        internal static FunctionReturnValue Run(CallFrame frame, Variant[] args) =>
+            Run(args[0].ToString(), args[1].ToString(), (int)args[2], (int)args[3], false);
+
+        internal static FunctionReturnValue RunWait(CallFrame frame, Variant[] args) =>
+            Run(args[0].ToString(), args[1].ToString(), (int)args[2], (int)args[3], true);
 
         internal static FunctionReturnValue RunAs(CallFrame frame, Variant[] args) =>
             RunAs(args[0].ToString(), args[1].ToString(), args[2].ToString(), (int)args[3], args[4].ToString(), args[5].ToString(), (int)args[6], (int)args[7], false);
@@ -2339,53 +2346,71 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue RunAsWait(CallFrame frame, Variant[] args) =>
             RunAs(args[0].ToString(), args[1].ToString(), args[2].ToString(), (int)args[3], args[4].ToString(), args[5].ToString(), (int)args[6], (int)args[7], true);
 
+        internal static FunctionReturnValue ShellExecute(CallFrame frame, Variant[] args) =>
+            Run(args[0].ToString(), args[1].ToString(), true, args[3].ToString(), args[2].ToString(), (int)args[3], 0, false);
+
+        internal static FunctionReturnValue ShellExecuteWait(CallFrame frame, Variant[] args) =>
+            Run(args[0].ToString(), args[1].ToString(), true, args[3].ToString(), args[2].ToString(), (int)args[3], 0, true);
+
         private static FunctionReturnValue Run(string program, string workingdir, int sw_state, int opt_flag, bool wait) =>
             RunAs(null, null, null, 0, program, workingdir, sw_state, opt_flag, wait);
 
+        private static FunctionReturnValue Run(string file, string args, bool shell_exec, string verb, string workingdir, int sw_state, int opt_flag, bool wait) =>
+            RunAs(null, null, null, 0, file, args, shell_exec, workingdir, verb, sw_state, opt_flag, wait);
+
         private static FunctionReturnValue RunAs(string? user, string? domain, string? passwd, int logon_flags, string program, string workingdir, int sw_state, int opt_flag, bool wait)
         {
-            if (program.Match(REGEX_RUN, out ReadOnlyIndexer<string, string>? groups))
-                try
+            (string file, string args) = program.Match(REGEX_RUN, out ReadOnlyIndexer<string, string>? groups) ? (groups["file"], groups["args"]) : (program, "");
+
+            return RunAs(user, domain, passwd, logon_flags, file, args, false, workingdir, null, sw_state, opt_flag, wait);
+        }
+
+        private static FunctionReturnValue RunAs(string? user, string? domain, string? passwd, int logon_flags, string file, string args, bool shell_exec, string workingdir, string? verb, int sw_state, int opt_flag, bool wait)
+        {
+            try
+            {
+                ProcessStartInfo psi = new()
                 {
-                    ProcessStartInfo psi = new()
+                    UserName = user!,
+                    FileName = file,
+                    Arguments = args,
+                    WorkingDirectory = workingdir,
+                    UseShellExecute = shell_exec,
+                    WindowStyle = sw_state switch
                     {
-                        UserName = user!,
-                        FileName = groups["file"],
-                        Arguments = groups["args"],
-                        WorkingDirectory = workingdir,
-                        UseShellExecute = true,
-                        WindowStyle = sw_state switch
-                        {
-                            0 => ProcessWindowStyle.Hidden,
-                            3 => ProcessWindowStyle.Maximized,
-                            2 or 6 => ProcessWindowStyle.Minimized,
-                            _ => ProcessWindowStyle.Normal,
-                        },
-                        CreateNoWindow = (opt_flag & 0x10000) == 0,
-                        RedirectStandardInput = (opt_flag & 0x01) != 0,
-                        RedirectStandardOutput = (opt_flag & 0x0a) != 0,
-                        RedirectStandardError = (opt_flag & 0x0c) != 0,
-                    };
+                        0 => ProcessWindowStyle.Hidden,
+                        3 => ProcessWindowStyle.Maximized,
+                        2 or 6 => ProcessWindowStyle.Minimized,
+                        _ => ProcessWindowStyle.Normal,
+                    },
+                    CreateNoWindow = (opt_flag & 0x10000) == 0,
+                    RedirectStandardInput = (opt_flag & 0x01) != 0,
+                    RedirectStandardOutput = (opt_flag & 0x0a) != 0,
+                    RedirectStandardError = (opt_flag & 0x0c) != 0,
+                };
 
-                    NativeInterop.DoPlatformDependent(delegate
+                if (verb is string)
+                    psi.Verb = verb;
+
+                NativeInterop.DoPlatformDependent(delegate
+                {
+                    psi.Domain = domain!;
+                    psi.PasswordInClearText = passwd!;
+                    // TODO : use the logon_flags
+                }, OS.Windows);
+
+                if (Process.Start(psi) is Process process)
+                    using (process)
                     {
-                        psi.Domain = domain!;
-                        psi.PasswordInClearText = passwd!;
-                        // TODO : use the logon_flags
-                    }, OS.Windows);
+                        if ((opt_flag & 0x10) != 0)
+                            throw new NotImplementedException(); // TODO : redirect stdin/stdout/stderr to console
 
-                    if (Process.Start(psi) is Process process)
-                        using (process)
-                        {
-                            if ((opt_flag & 0x10) != 0)
-                                throw new NotImplementedException(); // TODO : redirect stdin/stdout/stderr to console
+                        if ((opt_flag & 0x8) != 0)
+                            throw new NotImplementedException(); // TODO : stderr = stdout
 
-                            if ((opt_flag & 0x8) != 0)
-                                throw new NotImplementedException(); // TODO : stderr = stdout
-
-                            if (wait)
-                                process.WaitForExit();
-                        }
+                        if (wait)
+                            process.WaitForExit();
+                    }
                 }
                 catch
                 {
