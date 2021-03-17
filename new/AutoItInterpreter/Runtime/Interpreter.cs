@@ -29,7 +29,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly ConcurrentHashSet<Interpreter> _instances = new();
 
         private readonly ConcurrentHashSet<AU3Thread> _threads = new();
-        private readonly object _main_thread_mutex = new object();
+        private readonly object _main_thread_mutex = new();
         private volatile int _error;
 
 
@@ -140,6 +140,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Telemetry = telemetry;
             LanguageLoader = lang_loader;
             ScriptScanner = new ScriptScanner(this);
+            MacroResolver = new MacroResolver(this);
             PluginLoader = new PluginLoader(this, MainProgram.PLUGIN_DIR);
 
             if (!opt.DontLoadPlugins)
@@ -151,7 +152,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 MainProgram.PrintfDebugMessage("debug.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
-            MacroResolver = new MacroResolver(this);
 
             ScriptScanner.ScanNativeFunctions();
 

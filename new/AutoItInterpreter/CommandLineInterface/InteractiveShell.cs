@@ -752,13 +752,12 @@ Commands and keyboard shortcuts:
                 add_suggs(KNOWN_OPERATORS, TokenType.Operator);
 
             if (suggest_all || curr_token?.Type is TokenType.Macro)
-                KNOWN_MACROS.Select(macro =>
-                {
-                    if (CallFrame.TryFetchMacroValue(macro, out Variant? value) && value is Variant v)
-                        return (ScriptVisualizer.TokenizeScript($"{macro.PadRight(KNOWN_MACROS.Max(m => m.Length))} : {to_dbg_str(v)}"), macro);
-                    else
-                        return (new[] { ScriptToken.FromString(macro, TokenType.Macro) }, macro);
-                }).AppendToList(suggestions);
+            {
+                KnownMacro[] macros = Interpreter.MacroResolver.KnownMacros.ToArray();
+                int name_length = macros.Max(m => m.Name.Length);
+
+                macros.Select(macro => (ScriptVisualizer.TokenizeScript($"@{macro.Name.PadRight(name_length)} : {to_dbg_str(macro.GetValue(CallFrame))}"), macro.ToString())).AppendToList(suggestions);
+            }   
 
             if (suggest_all || curr_token?.Type is TokenType.Variable)
             {
