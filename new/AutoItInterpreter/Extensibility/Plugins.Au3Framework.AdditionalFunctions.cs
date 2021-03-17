@@ -18,6 +18,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(ConsoleReadLine), 0, ConsoleReadLine),
             ProvidedNativeFunction.Create(nameof(ConsoleClear), 0, ConsoleClear),
             ProvidedNativeFunction.Create(nameof(KernelPanic), 0, KernelPanic),
+
+
+            ProvidedNativeFunction.Create("__test__windows_only", 0, (_, _) => Variant.Zero, Metadata.WindowsOnly),
+            ProvidedNativeFunction.Create("__test__unix_only", 0, (_, _) => Variant.Zero, Metadata.UnixOnly),
+            ProvidedNativeFunction.Create("__test__linux_only", 0, (_, _) => Variant.Zero, Metadata.LinuxOnly),
+            ProvidedNativeFunction.Create("__test__macos_only", 0, (_, _) => Variant.Zero, Metadata.MacOSOnly),
+            ProvidedNativeFunction.Create("__test__deprecated", 0, (_, _) => Variant.Zero, Metadata.Deprecated),
         };
 
 
