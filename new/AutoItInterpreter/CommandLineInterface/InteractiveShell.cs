@@ -756,7 +756,20 @@ Commands and keyboard shortcuts:
                 KnownMacro[] macros = Interpreter.MacroResolver.KnownMacros.ToArray();
                 int name_length = macros.Max(m => m.Name.Length);
 
-                macros.Select(macro => (ScriptVisualizer.TokenizeScript($"@{macro.Name.PadRight(name_length)} : {to_dbg_str(macro.GetValue(CallFrame))}"), macro.ToString())).AppendToList(suggestions);
+                macros.Select(macro =>
+                {
+                    bool supported = macro.Metadata.SupportsPlatfrom(os);
+                    bool deprecated = macro.Metadata.IsDeprecated;
+                    string name = macro.ToString();
+
+                    if (deprecated)
+                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.deprecated", os]} {name}", TokenType.UNKNOWN) }, name);
+                    else if (!supported)
+                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {name}", TokenType.UNKNOWN) }, name);
+                    else
+                        return (ScriptVisualizer.TokenizeScript($"@{macro.Name.PadRight(name_length)} : {to_dbg_str(macro.GetValue(CallFrame))}"), name);
+
+                }).AppendToList(suggestions);
             }   
 
             if (suggest_all || curr_token?.Type is TokenType.Variable)
@@ -790,14 +803,17 @@ Commands and keyboard shortcuts:
 
                 functions.Select(function =>
                 {
-                    bool supported = function.Metadata.SupportedPlatforms.HasFlag(os);
+                    bool supported = function.Metadata.SupportsPlatfrom(os);
+                    bool deprecated = function.Metadata.IsDeprecated;
 
-                    if (supported)
+                    if (deprecated)
+                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.deprecated", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
+                    else if (!supported)
+                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
+                    else
                         return (ScriptVisualizer.TokenizeScript(
                             $"{function.Name.PadRight(name_length)} ({Interpreter.CurrentUILanguage["interactive.argument_count", function.ParameterCount.MinimumCount, function.ParameterCount.MaximumCount]})"
                         ), function.Name);
-                    else
-                        return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
                 }).AppendToList(suggestions);
             }
 

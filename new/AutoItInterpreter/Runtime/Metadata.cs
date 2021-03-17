@@ -19,5 +19,7 @@ namespace Unknown6656.AutoIt3.Runtime
             : this(OS.Any, false)
         {
         }
+
+        public bool SupportsPlatfrom(OS platform) => SupportedPlatforms.HasFlag(platform);
     }
 }
