@@ -51,19 +51,15 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class KnownMacro
         : Macro
     {
-        private readonly Func<Interpreter, Variant> _value_provider;
+        private readonly Func<CallFrame, Variant> _value_provider;
+
+        public MacroMetadata Metadata { get; init; } = MacroMetadata.Default;
 
 
-        /// <summary>
-        /// Returns the value stored inside the current macro.
-        /// </summary>
-        public Variant Value => _value_provider(Interpreter);
-
-
-        internal KnownMacro(Interpreter interpreter, string name, Func<Interpreter, Variant> value_provider)
+        internal KnownMacro(Interpreter interpreter, string name, Func<CallFrame, Variant> value_provider)
             : base(interpreter, name) => _value_provider = value_provider;
 
-        public override Variant GetValue(CallFrame frame) => Value;
+        public override Variant GetValue(CallFrame frame) => _value_provider(frame);
     }
 
     public sealed class MacroResolver
@@ -96,7 +92,7 @@ namespace Unknown6656.AutoIt3.Runtime
             foreach (KnownMacro macro in _macros)
                 if (macro.Name.Equals(macro_name, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    value = macro.Value;
+                    value = macro.GetValue(frame);
 
                     return true;
                 }

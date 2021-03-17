@@ -219,7 +219,7 @@ namespace Unknown6656.AutoIt3.Extensibility
     public abstract class AbstractKnownMacroProvider
         : AbstractMacroProvider
     {
-        public abstract Dictionary<string, Func<Interpreter, Variant>> KnownMacros { get; }
+        public abstract Dictionary<string, Func<CallFrame, Variant>> KnownMacros { get; }
 
 
         public AbstractKnownMacroProvider(Interpreter interpreter)
@@ -229,19 +229,19 @@ namespace Unknown6656.AutoIt3.Extensibility
 
         internal void RegisterAllMacros()
         {
-            foreach ((string name, Func<Interpreter, Variant> provider) in KnownMacros)
+            foreach ((string name, Func<CallFrame, Variant> provider) in KnownMacros)
                 Interpreter.MacroResolver.AddKnownMacro(new KnownMacro(Interpreter, name, provider));
         }
 
-        public sealed override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
+        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
         {
             value = null;
             name = name.TrimStart('@');
 
-            foreach ((string key, Func<Interpreter, Variant> provider) in KnownMacros)
+            foreach ((string key, Func<CallFrame, Variant> provider) in KnownMacros)
                 if (key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    value = provider(Interpreter);
+                    value = provider(frame);
 
                     return true;
                 }
