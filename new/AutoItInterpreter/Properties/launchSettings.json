@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": " ../test/test -minteractive",
+      "commandLineArgs": " ../test/test -minteractive -- arg0 arg1 arg2",
       "nativeDebugging": false
     }
   }
