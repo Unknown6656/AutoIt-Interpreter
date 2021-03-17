@@ -23,69 +23,70 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         private static readonly OperatingSystem _os = Environment.OSVersion;
 
 
-        public override unsafe Dictionary<string, Func<CallFrame, Variant>> KnownMacros { get; } = new()
+        public unsafe FrameworkMacros(Interpreter interpreter)
+            : base(interpreter)
         {
-            [MACRO_DISCARD] = f => f.VariableResolver.TryGetVariable(VARIABLE.Discard, VariableSearchScope.Global, out Variable? discard) ? discard.Value : Variant.Null,
-            ["APPDATACOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            ["APPDATADIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            ["AUTOITEXE"] = _ => MainProgram.ASM_FILE.FullName,
-            ["AUTOITPID"] = _ => Environment.ProcessId,
-            ["AUTOITVERSION"] = _ => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0",
-            ["AUTOITX64"] = _ => sizeof(void*) > 4,
-            ["COMMONFILESDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
-            ["COMPILED"] = _ => false,
-            ["COMPUTERNAME"] = _ => Environment.MachineName,
-            ["COMSPEC"] = _ => Environment.GetEnvironmentVariable(NativeInterop.DoPlatformDependent("comspec", "SHELL")),
-            ["CR"] = _ => "\r",
-            ["CRLF"] = _ => Environment.NewLine,
-            ["CPUARCH"] = _ => Environment.Is64BitOperatingSystem ? "X64" : "X86",
-            ["osarch"] = _ => Environment.Is64BitOperatingSystem ? "X64" : "X86",
-            ["DESKTOPCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-            ["DESKTOPDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            ["DOCUMENTSCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments),
-            ["EXITCODE"] = f => f.Interpreter.ExitCode,
-            ["ERROR"] = f => f.Interpreter.ErrorCode,
-            ["EXTENDED"] = f => f.Interpreter.ExtendedValue,
-            ["FAVORITESCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
-            ["FAVORITESDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.Favorites),
-            ["HOMEDRIVE"] = _ => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName,
-            ["HOMEPATH"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ["USERPROFILEDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ["HOUR"] = _ => DateTime.Now.ToString("HH", null),
-            ["LF"] = _ => "\n",
-            ["LOCALAPPDATADIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ["LOGONDOMAIN"] = _ => Environment.UserDomainName,
-            ["LOGONSERVER"] = _ => @"\\" + Environment.UserDomainName,
-            ["MDAY"] = _ => DateTime.Now.ToString("dd", null),
-            ["MIN"] = _ => DateTime.Now.ToString("mm", null),
-            ["MON"] = _ => DateTime.Now.ToString("MM", null),
-            ["MSEC"] = _ => DateTime.Now.ToString("fff", null),
-            ["MYDOCUMENTSDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            ["NUMPARAMS"] = f => (f as AU3CallFrame)?.PassedArguments.Length ?? 0,
-            ["MUILANG"] = _ => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default),
-            ["OSLANG"] = _ => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default),
-            ["TAB"] = _ => "\t",
-            ["SW_DISABLE"] = _ => 65,
-            ["SW_ENABLE"] = _ => 64,
-            ["SW_HIDE"] = _ => 0,
-            ["SW_LOCK"] = _ => 66,
-            ["SW_MAXIMIZE"] = _ => 3,
-            ["SW_MINIMIZE"] = _ => 6,
-            ["SW_RESTORE"] = _ => 9,
-            ["SW_SHOW"] = _ => 5,
-            ["SW_SHOWDEFAULT"] = _ => 10,
-            ["SW_SHOWMAXIMIZED"] = _ => 3,
-            ["SW_SHOWMINIMIZED"] = _ => 2,
-            ["SW_SHOWMINNOACTIVE"] = _ => 7,
-            ["SW_SHOWNA"] = _ => 8,
-            ["SW_SHOWNOACTIVATE"] = _ => 4,
-            ["SW_SHOWNORMAL"] = _ => 1,
-            ["SW_UNLOCK"] = _ => 67,
-            ["TEMPDIR"] = _ => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"),
-            ["OSSERVICEPACK"] = _ => _os.ServicePack,
-            ["OSBUILD"] = _ => _os.Version.Build,
-            ["OSTYPE"] = _ => NativeInterop.DoPlatformDependent("WIN32_NT", "LINUX", "MACOS_X"),
-            ["OSVERSION"] = _ => NativeInterop.OperatingSystem switch
+            RegisterMacro(MACRO_DISCARD, f => f.VariableResolver.TryGetVariable(VARIABLE.Discard, VariableSearchScope.Global, out Variable? discard) ? discard.Value : Variant.Null);
+            RegisterMacro("APPDATACOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData));
+            RegisterMacro("APPDATADIR", Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            RegisterMacro("AUTOITEXE", _ => MainProgram.ASM_FILE.FullName);
+            RegisterMacro("AUTOITPID", _ => Environment.ProcessId);
+            RegisterMacro("AUTOITVERSION", _ => __module__.InterpreterVersion?.ToString() ?? "0.0.0.0");
+            RegisterMacro("AUTOITX64", _ => sizeof(void*) > 4);
+            RegisterMacro("COMMONFILESDIR", _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles));
+            RegisterMacro("COMPILED", false);
+            RegisterMacro("COMPUTERNAME", _ => Environment.MachineName);
+            RegisterMacro("COMSPEC", _ => Environment.GetEnvironmentVariable(NativeInterop.DoPlatformDependent("comspec", "SHELL")));
+            RegisterMacro("CR", "\r");
+            RegisterMacro("CRLF", Environment.NewLine);
+            RegisterMacro("CPUARCH", Environment.Is64BitOperatingSystem ? "X64" : "X86");
+            RegisterMacro("osarch", Environment.Is64BitOperatingSystem ? "X64" : "X86");
+            RegisterMacro("DESKTOPCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory));
+            RegisterMacro("DESKTOPDIR", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+            RegisterMacro("DOCUMENTSCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments));
+            RegisterMacro("EXITCODE", f => f.Interpreter.ExitCode);
+            RegisterMacro("ERROR", f => f.Interpreter.ErrorCode);
+            RegisterMacro("EXTENDED", f => f.Interpreter.ExtendedValue);
+            RegisterMacro("FAVORITESCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.Favorites));
+            RegisterMacro("FAVORITESDIR", Environment.GetFolderPath(Environment.SpecialFolder.Favorites));
+            RegisterMacro("HOMEDRIVE", _ => new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)).Root.FullName);
+            RegisterMacro("HOMEPATH", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            RegisterMacro("USERPROFILEDIR", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            RegisterMacro("HOUR", _ => DateTime.Now.ToString("HH", null));
+            RegisterMacro("LF", "\n");
+            RegisterMacro("LOCALAPPDATADIR", Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+            RegisterMacro("LOGONDOMAIN", _ => Environment.UserDomainName);
+            RegisterMacro("LOGONSERVER", _ => @"\\" + Environment.UserDomainName);
+            RegisterMacro("MDAY", _ => DateTime.Now.ToString("dd", null));
+            RegisterMacro("MIN", _ => DateTime.Now.ToString("mm", null));
+            RegisterMacro("MON", _ => DateTime.Now.ToString("MM", null));
+            RegisterMacro("MSEC", _ => DateTime.Now.ToString("fff", null));
+            RegisterMacro("MYDOCUMENTSDIR", _ => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
+            RegisterMacro("NUMPARAMS", f => (f as AU3CallFrame)?.PassedArguments.Length ?? 0);
+            RegisterMacro("MUILANG", _ => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default));
+            RegisterMacro("OSLANG", _ => NativeInterop.DoPlatformDependent(NativeInterop.GetUserDefaultUILanguage, () => default));
+            RegisterMacro("TAB", "\t");
+            RegisterMacro("SW_DISABLE", 65);
+            RegisterMacro("SW_ENABLE", 64);
+            RegisterMacro("SW_HIDE", 0);
+            RegisterMacro("SW_LOCK", 66);
+            RegisterMacro("SW_MAXIMIZE", 3);
+            RegisterMacro("SW_MINIMIZE", 6);
+            RegisterMacro("SW_RESTORE", 9);
+            RegisterMacro("SW_SHOW", 5);
+            RegisterMacro("SW_SHOWDEFAULT", 10);
+            RegisterMacro("SW_SHOWMAXIMIZED", 3);
+            RegisterMacro("SW_SHOWMINIMIZED", 2);
+            RegisterMacro("SW_SHOWMINNOACTIVE", 7);
+            RegisterMacro("SW_SHOWNA", 8);
+            RegisterMacro("SW_SHOWNOACTIVATE", 4);
+            RegisterMacro("SW_SHOWNORMAL", 1);
+            RegisterMacro("SW_UNLOCK", 67);
+            RegisterMacro("TEMPDIR", _ => NativeInterop.DoPlatformDependent(Environment.GetEnvironmentVariable("temp"), "/tmp"));
+            RegisterMacro("OSSERVICEPACK", _os.ServicePack);
+            RegisterMacro("OSBUILD", _os.Version.Build);
+            RegisterMacro("OSTYPE", NativeInterop.DoPlatformDependent("WIN32_NT", "LINUX", "MACOS_X"));
+            RegisterMacro("OSVERSION", NativeInterop.OperatingSystem switch
             {
                 OS.Windows => (_os.Platform, _os.Version.Major, _os.Version.Minor, NativeInterop.IsWindowsServer()) switch
                 {
@@ -115,39 +116,33 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 OS.Linux => "LINUX",
                 OS.MacOS => "MACOS_X",
                 OS.Unknown or _ => "UNKNOWN",
-            },
-            ["PROGRAMFILESDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            ["PROGRAMSCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
-            ["PROGRAMSDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-            ["SCRIPTDIR"] = f => Path.GetDirectoryName(GetLocation(f).FullFileName),
-            ["SCRIPTFULLPATH"] = f => GetLocation(f).FullFileName,
-            ["SCRIPTLINENUMBER"] = f => GetLocation(f).StartLineNumber,
-            ["SCRIPTNAME"] = f => Path.GetFileName(GetLocation(f).FullFileName),
-            ["STARTMENUCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
-            ["STARTMENUDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-            ["STARTUPCOMMONDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup),
-            ["STARTUPDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.Startup),
-            ["SYSTEMDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.SystemX86),
-            ["WINDOWSDIR"] = _ => Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            ["SEC"] = _ => DateTime.Now.ToString("ss", null),
-            ["USERNAME"] = _ => Environment.UserName,
-            ["YDAY"] = _ => DateTime.Now.DayOfYear.ToString("D3", null),
-            ["YEAR"] = _ => DateTime.Now.ToString("yyyy", null),
-            ["WDAY"] = _ => (int)DateTime.Now.DayOfWeek + 1,
-            ["WORKINGDIR"] = _ => Directory.GetCurrentDirectory(),
-        };
-
-
-        public FrameworkMacros(Interpreter interpreter)
-            : base(interpreter)
-        {
+            });
+            RegisterMacro("PROGRAMFILESDIR", Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
+            RegisterMacro("PROGRAMSCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles));
+            RegisterMacro("PROGRAMSDIR", Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+            RegisterMacro("SCRIPTDIR", f => Path.GetDirectoryName(GetLocation(f).FullFileName));
+            RegisterMacro("SCRIPTFULLPATH", f => GetLocation(f).FullFileName);
+            RegisterMacro("SCRIPTLINENUMBER", f => GetLocation(f).StartLineNumber);
+            RegisterMacro("SCRIPTNAME", f => Path.GetFileName(GetLocation(f).FullFileName));
+            RegisterMacro("STARTMENUCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu));
+            RegisterMacro("STARTMENUDIR", Environment.GetFolderPath(Environment.SpecialFolder.StartMenu));
+            RegisterMacro("STARTUPCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup));
+            RegisterMacro("STARTUPDIR", Environment.GetFolderPath(Environment.SpecialFolder.Startup));
+            RegisterMacro("SYSTEMDIR", Environment.GetFolderPath(Environment.SpecialFolder.SystemX86));
+            RegisterMacro("WINDOWSDIR", Environment.GetFolderPath(Environment.SpecialFolder.Windows));
+            RegisterMacro("SEC", _ => DateTime.Now.ToString("ss", null));
+            RegisterMacro("USERNAME", _ => Environment.UserName);
+            RegisterMacro("YDAY", _ => DateTime.Now.DayOfYear.ToString("D3", null));
+            RegisterMacro("YEAR", _ => DateTime.Now.ToString("yyyy", null));
+            RegisterMacro("WDAY", _ => (int)DateTime.Now.DayOfWeek + 1);
+            RegisterMacro("WORKINGDIR", _ => Directory.GetCurrentDirectory());
         }
 
         private static SourceLocation GetLocation(CallFrame frame) => frame.CurrentThread.CurrentLocation ?? frame.Interpreter.MainThread?.CurrentLocation ?? SourceLocation.Unknown;
 
-        public unsafe override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
+        public unsafe override bool ProvideMacroValue(CallFrame frame, string name, out (Variant value, Metadata metadata)? macro)
         {
-            if (base.ProvideMacroValue(frame, name, out value))
+            if (base.ProvideMacroValue(frame, name, out macro))
                 return true;
             else if (name.Match(REGEX_IPADDRESS, out ReadOnlyIndexer<string, string>? g))
             {
@@ -159,7 +154,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     if (ip.AddressFamily is AddressFamily.InterNetwork)
                         ips.Add(ip.ToString());
 
-                value = idx < ips.Count ? ips[idx] : "0.0.0.0";
+                macro = (idx < ips.Count ? ips[idx] : "0.0.0.0", Metadata.Default);
 
                 return true;
             }
@@ -171,24 +166,19 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     public sealed class AdditionalMacros
         : AbstractKnownMacroProvider
     {
-        public override Dictionary<string, Func<CallFrame, Variant>> KnownMacros { get; } = new()
-        {
-            ["ESC"] = _ => "\x1b",
-            ["VTAB"] = _ => "\v",
-            ["NUL"] = _ => "\0",
-            ["DATE"] = _ => DateTime.Now.ToString("yyyy-MM-dd", null),
-            ["DATE_TIME"] = _ => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff", null),
-            ["E"] = _ => Math.E,
-            ["NL"] = _ => Environment.NewLine,
-            ["PHI"] = _ => 1.618033988749894848204586834m,
-            ["PI"] = _ => Math.PI,
-            ["TAU"] = _ => Math.Tau,
-        };
-
-
         public AdditionalMacros(Interpreter interpreter)
             : base(interpreter)
         {
+            RegisterMacro("ESC", "\x1b");
+            RegisterMacro("VTAB", "\v");
+            RegisterMacro("NUL", "\0");
+            RegisterMacro("DATE", _ => DateTime.Now.ToString("yyyy-MM-dd", null));
+            RegisterMacro("DATE_TIME", _ => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.ffffff", null));
+            RegisterMacro("E", Math.E);
+            RegisterMacro("NL", Environment.NewLine);
+            RegisterMacro("PHI", 1.618033988749894848204586834m);
+            RegisterMacro("PI", Math.PI);
+            RegisterMacro("TAU", Math.Tau);
         }
     }
 }
