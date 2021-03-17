@@ -65,6 +65,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Updater", "util\Aut
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{A2DBA5B3-BBA2-4FCA-8D21-E27A00844ED1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugin.Au3Framework.WindowsSpecific", "plugins\Plugin.Au3Framework.WindowsSpecific\Plugin.Au3Framework.WindowsSpecific.csproj", "{9834FD38-4E03-4ED5-98F0-0360508F1391}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -190,6 +192,18 @@ Global
 		{50EFBED8-3F8D-4B94-919A-99F748FB3A8C}.Release|x64.Build.0 = Release|Any CPU
 		{50EFBED8-3F8D-4B94-919A-99F748FB3A8C}.Release|x86.ActiveCfg = Release|Any CPU
 		{50EFBED8-3F8D-4B94-919A-99F748FB3A8C}.Release|x86.Build.0 = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|x64.Build.0 = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Debug|x86.Build.0 = Debug|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|x64.ActiveCfg = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|x64.Build.0 = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|x86.ActiveCfg = Release|Any CPU
+		{9834FD38-4E03-4ED5-98F0-0360508F1391}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -203,6 +217,7 @@ Global
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}
 		{7B511104-4D4E-4B2E-9276-095A4D476F11} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}
 		{50EFBED8-3F8D-4B94-919A-99F748FB3A8C} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
+		{9834FD38-4E03-4ED5-98F0-0360508F1391} = {A2DBA5B3-BBA2-4FCA-8D21-E27A00844ED1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC63CA64-CCD2-471E-8DB3-72D91D747EA9}
