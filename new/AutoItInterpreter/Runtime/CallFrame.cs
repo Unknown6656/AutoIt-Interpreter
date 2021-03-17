@@ -1666,7 +1666,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private FunctionReturnValue ProcessMacro(MACRO macro)
         {
-            if (Interpreter.MacroResolver.GetTryValue(this, macro.Name, out Variant value))
+            if (Interpreter.MacroResolver.GetTryValue(this, macro.Name, out Variant value, out _))
                 return value;
             else
                 return WellKnownError("error.unknown_macro", macro.Name);

@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -34,7 +35,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public virtual Variant GetValue(CallFrame frame)
         {
-            Interpreter.MacroResolver.GetTryValue(frame, this, out Variant value);
+            Interpreter.MacroResolver.GetTryValue(frame, this, out Variant value, out _);
 
             return value;
         }
@@ -78,29 +79,32 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void AddKnownMacro(KnownMacro macro) => _macros.Add(macro);
 
-        public bool HasMacro(CallFrame frame, string macro_name) => GetTryValue(frame, macro_name, out _);
+        public bool HasMacro(CallFrame frame, string macro_name) => GetTryValue(frame, macro_name, out _, out _);
 
-        public bool HasMacro(CallFrame frame, Macro macro) => GetTryValue(frame, macro, out _);
+        public bool HasMacro(CallFrame frame, Macro macro) => GetTryValue(frame, macro, out _, out _);
  
-        public bool GetTryValue(CallFrame frame, Macro macro, out Variant value) => GetTryValue(frame, macro.Name, out value);
+        public bool GetTryValue(CallFrame frame, Macro macro, out Variant value, [NotNullWhen(true)] out Metadata? metadata) =>
+            GetTryValue(frame, macro.Name, out value, out metadata);
 
-        public bool GetTryValue(CallFrame frame, string macro_name, out Variant value)
+        public bool GetTryValue(CallFrame frame, string macro_name, out Variant value, [NotNullWhen(true)] out Metadata? metadata)
         {
             value = Variant.Null;
+            metadata = null;
             macro_name = macro_name.TrimStart('@');
 
             foreach (KnownMacro macro in _macros)
                 if (macro.Name.Equals(macro_name, StringComparison.InvariantCultureIgnoreCase))
                 {
                     value = macro.GetValue(frame);
+                    metadata = macro.Metadata;
 
                     return true;
                 }
 
             foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
-                if (provider.ProvideMacroValue(frame, macro_name, out Variant? v) && v.HasValue)
+                if (provider.ProvideMacroValue(frame, macro_name, out (Variant value, Metadata meta)? v) && v.HasValue)
                 {
-                    value = v.Value;
+                    (value, metadata) = v.Value;
 
                     return true;
                 }

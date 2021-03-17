@@ -146,35 +146,35 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract bool ProvideMacroValue(CallFrame frame, string name, out Variant? value);
+        public abstract bool ProvideMacroValue(CallFrame frame, string name, out (Variant value, Metadata metadata)? macro);
     }
 
     public abstract class AbstractKnownMacroProvider
         : AbstractMacroProvider
     {
-        public abstract Dictionary<string, Func<CallFrame, Variant>> KnownMacros { get; }
+        internal readonly Dictionary<string, (Func<CallFrame, Variant> function, Metadata metadata)> _known_macros;
 
 
         public AbstractKnownMacroProvider(Interpreter interpreter)
-            : base(interpreter)
-        {
-        }
+            : base(interpreter) => _known_macros = new();
 
-        internal void RegisterAllMacros()
-        {
-            foreach ((string name, Func<CallFrame, Variant> provider) in KnownMacros)
-                Interpreter.MacroResolver.AddKnownMacro(new KnownMacro(Interpreter, name, provider));
-        }
+        protected void RegisterMacro(string name, Variant value) => RegisterMacro(name, _ => value);
 
-        public override bool ProvideMacroValue(CallFrame frame, string name, out Variant? value)
+        protected void RegisterMacro(string name, Variant value, Metadata metadata) => RegisterMacro(name, _ => value, metadata);
+
+        protected void RegisterMacro(string name, Func<CallFrame, Variant> provider) => RegisterMacro(name, provider, Metadata.Default);
+
+        protected void RegisterMacro(string name, Func<CallFrame, Variant> provider, Metadata metadata) => _known_macros[name] = (provider, metadata);
+
+        public override bool ProvideMacroValue(CallFrame frame, string name, out (Variant value, Metadata metadata)? macro)
         {
-            value = null;
+            macro = null;
             name = name.TrimStart('@');
 
-            foreach ((string key, Func<CallFrame, Variant> provider) in KnownMacros)
+            foreach ((string key, (Func<CallFrame, Variant> provider, Metadata metadata)) in _known_macros)
                 if (key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    value = provider(frame);
+                    macro = (provider(frame), metadata);
 
                     return true;
                 }
