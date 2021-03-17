@@ -53,7 +53,7 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly Func<CallFrame, Variant> _value_provider;
 
-        public MacroMetadata Metadata { get; init; } = MacroMetadata.Default;
+        public Metadata Metadata { get; init; } = Metadata.Default;
 
 
         internal KnownMacro(Interpreter interpreter, string name, Func<CallFrame, Variant> value_provider)

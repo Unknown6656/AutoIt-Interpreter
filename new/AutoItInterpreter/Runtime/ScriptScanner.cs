@@ -537,7 +537,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ScannedScript Script { get; }
 
-        public FunctionMetadata Metadata { get; init; } = FunctionMetadata.Default;
+        public Metadata Metadata { get; init; } = Metadata.Default;
 
         public abstract SourceLocation Location { get; }
 

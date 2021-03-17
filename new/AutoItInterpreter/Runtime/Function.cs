@@ -89,7 +89,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        internal NativeFunction(Interpreter interpreter, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, FunctionMetadata metadata)
+        internal NativeFunction(Interpreter interpreter, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, Metadata metadata)
             : base(interpreter.ScriptScanner.SystemScript, name)
         {
             _execute = execute;
@@ -123,7 +123,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         return FunctionReturnValue.Fatal(InterpreterError.WellKnown(null, "error.net_execution_error", method));
                 },
-                FunctionMetadata.Default
+                Metadata.Default
             )
         {
         }
@@ -136,7 +136,7 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         public abstract string Name { get; }
 
-        public FunctionMetadata Metadata { get; init; } = FunctionMetadata.Default;
+        public Metadata Metadata { get; init; } = Metadata.Default;
 
         public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
@@ -151,13 +151,13 @@ namespace Unknown6656.AutoIt3.Runtime
         public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
             Create(name, min_param_count, max_param_count, @delegate, null, default_values);
 
-        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, FunctionMetadata? metadata) =>
+        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, Metadata? metadata) =>
             Create(name, param_count, param_count, @delegate, metadata);
 
-        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, FunctionMetadata? metadata, params Variant[] default_values) =>
+        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, Metadata? metadata, params Variant[] default_values) =>
             new FromDelegate(@delegate, name, min_param_count, max_param_count, default_values)
             {
-                Metadata = metadata ?? FunctionMetadata.Default
+                Metadata = metadata ?? Metadata.Default
             };
 
 
@@ -196,25 +196,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return _exec(frame, a.ToArray());
             }
-        }
-    }
-
-    public record FunctionMetadata(OS SupportedPlatforms, bool IsDeprecated)
-    {
-        public static FunctionMetadata Default { get; } = new();
-
-        public static FunctionMetadata WindowsOnly { get; } = new(OS.Windows, false);
-
-        public static FunctionMetadata MacOSOnly { get; } = new(OS.MacOS, false);
-
-        public static FunctionMetadata LinuxOnly { get; } = new(OS.Linux, false);
-
-        public static FunctionMetadata UnixOnly { get; } = new(OS.UnixLike, false);
-
-
-        public FunctionMetadata()
-            : this(OS.Any, false)
-        {
         }
     }
 }
