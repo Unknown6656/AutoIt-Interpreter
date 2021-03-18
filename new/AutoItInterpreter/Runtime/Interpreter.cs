@@ -96,6 +96,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public ParserProvider ParserProvider { get; }
 
+        public TimerManager TimerManager { get; }
+
         /// <summary>
         /// The interpreter's telemetry logger.
         /// </summary>
@@ -152,6 +154,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 MainProgram.PrintfDebugMessage("debug.no_plugins_loaded");
 
             ParserProvider = new ParserProvider(this);
+            TimerManager = new TimerManager(this);
 
             ScriptScanner.ScanNativeFunctions();
 
@@ -161,7 +164,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLineRaw", true).Value = Variant.FromString(opt.ScriptArguments.StringJoin(" "));
             VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLine", true).Value = Variant.FromArray(this, opt.ScriptArguments.Select(Variant.FromString).Prepend(Variant.FromNumber(opt.ScriptArguments.Length)));
 
-            if (NativeInterop.OperatingSystem is Native.OS.Windows)
+            if (NativeInterop.OperatingSystem is OS.Windows)
             {
                 COMConnector = new COMConnector(this);
                 //Win32APIConnector = new WinAPIConnector(this);
@@ -191,6 +194,8 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <inheritdoc/>
         public void Dispose()
         {
+            TimerManager.Dispose();
+
             foreach (AU3Thread thread in Threads)
             {
                 thread.Dispose();
@@ -223,7 +228,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Creates a new thread. Use <see cref="AU3Thread.Start(ScriptFunction, Variant[])"/> on the returned thread to invoke a method asynchronously from the current thread.
         /// </summary>
         /// <returns>The newly created thread.</returns>
-        public AU3Thread CreateNewThread() => new AU3Thread(this);
+        public AU3Thread CreateNewThread() => new(this);
 
         internal void AddThread(AU3Thread thread) => _threads.Add(thread);
 
