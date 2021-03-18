@@ -4,6 +4,7 @@ using System;
 
 using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -101,6 +102,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return result;
         });
+
+        public Task<FunctionReturnValue> StartAsync(ScriptFunction function, Variant[] args) => Task.Factory.StartNew(() => Start(function, args));
 
         /// <summary>
         /// <b>[UNSAFE!]</b>
