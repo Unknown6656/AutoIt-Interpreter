@@ -51,7 +51,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else
             {
                 AU3Thread thread = Interpreter.CreateNewThread();
-                NETDelegateFunction loop = NETDelegateFunction.Create(Interpreter, frame =>
+                NativeFunction loop = NativeFunction.FromDelegate(Interpreter, frame =>
                 {
                     FunctionReturnValue result = Variant.Zero;
 
