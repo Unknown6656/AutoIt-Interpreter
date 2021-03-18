@@ -4,26 +4,26 @@ open Unknown6656.AutoIt3.Parser
 
 
 type IDENTIFIER = Identifier of string
-    with override x.ToString() = match x with | Identifier i -> i
+    with override x.ToString() = match x with Identifier i -> i
 
 type VARIABLE (name : string) =
     member _.Name = if name.StartsWith('$') then name.Substring 1 else name
     override x.ToString() = "$" + x.Name
     override x.GetHashCode() = x.Name.ToLower().GetHashCode()
-    override x.Equals o =
-        match o with
-        | As (m : VARIABLE) -> m.GetHashCode() = x.GetHashCode()
-        | _ -> false
+    override x.Equals o = function
+                          | As (m : VARIABLE) -> m.GetHashCode() = x.GetHashCode()
+                          | _ -> false
+                         <| o
     static member Discard = VARIABLE "_"
 
 type MACRO (name : string) =
-    member x.Name = if name.StartsWith('@') then name.Substring 1 else name
+    member _.Name = if name.StartsWith('@') then name.Substring 1 else name
     override x.ToString() = "@" + x.Name
     override x.GetHashCode() = x.Name.ToLower().GetHashCode()
-    override x.Equals o =
-        match o with
-        | As (m : MACRO) -> m.GetHashCode() = x.GetHashCode()
-        | _ -> false
+    override x.Equals o = function
+                          | As (m : MACRO) -> m.GetHashCode() = x.GetHashCode()
+                          | _ -> false
+                         <| o
 
 type LITERAL =
     | Null
@@ -106,6 +106,7 @@ type OPERATOR_UNARY =
     | Negate
     | Not
     | Cast of CAST_OPERATOR
+    | ByRef of VARIABLE
     with
         override x.ToString() =
             match x with
@@ -113,6 +114,7 @@ type OPERATOR_UNARY =
             | Negate -> "-"
             | Not -> "!"
             | Cast c -> sprintf "(:%O)" c
+            | ByRef v -> sprintf "Byref %O" v
 
 type EXPRESSION =
     | Literal of LITERAL
