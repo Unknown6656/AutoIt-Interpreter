@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
-using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

@@ -186,32 +186,39 @@ namespace Unknown6656.AutoIt3.Runtime
         public override string ToString() => "[native] " + base.ToString();
     }
 
+    /// <summary>
+    /// Represents an unmanaged .NET function provided by a delegate.
+    /// </summary>
     public sealed class NETDelegateFunction
         : NativeFunction
     {
         private static volatile int _id = 1;
 
 
-        private NETDelegateFunction(Interpreter interpreter, (int min, int max) param_count, Variant[] default_params, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os)
-            : base(interpreter, $".NET delegate 0x{++_id:x8}", param_count, execute, new Metadata(os, false))
+        private NETDelegateFunction(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os)
+            : base(interpreter, $".NET delegate 0x{++_id:x8}", (param_count, param_count), execute, new Metadata(os, false))
         {
-            if (param_count.max < param_count.min)
-                throw;
-            else if (default_params.Length < param_count.max - param_count.min)
-                throw;
-
         }
 
+        /// <summary>
+        /// Creates a new instance of <see cref="NETDelegateFunction"/> using the given delegate.
+        /// The function internally gets assigned an unique name, but will <b>not</b> be registered in the function resolver.
+        /// </summary>
+        /// <param name="interpreter">The interpreter instance.</param>
+        /// <param name="execute">The delegate representing the function's internal logic.</param>
+        /// <param name="os">The operating systems supported by the given delegate.</param>
+        /// <returns>The newly created function.</returns>
         public static NETDelegateFunction Create(Interpreter interpreter, Func<NativeCallFrame, FunctionReturnValue> execute, OS os = OS.Any) =>
             Create(interpreter, 0, (f, _) => execute(f), os);
 
         public static NETDelegateFunction Create(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
-            Create(interpreter, (param_count, param_count), Array.Empty<Variant>(), execute, os);
-
-        public static NETDelegateFunction Create(Interpreter interpreter, (int min, int max) param_count, Variant[] default_params, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
-            new NETDelegateFunction(interpreter, param_count, default_params, execute, os);
+            new(interpreter, param_count, execute, os);
     }
 
+    /// <summary>
+    /// Represents an unmanaged .NET framework function.
+    /// The refrence to the .NET function is provided via an instance of <see cref="MethodInfo"/>.
+    /// </summary>
     public sealed class NETFrameworkFunction
         : NativeFunction
     {
