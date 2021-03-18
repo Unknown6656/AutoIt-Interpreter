@@ -21,6 +21,18 @@ namespace Unknown6656.AutoIt3.Extensibility
     {
     }
 
+    public enum PluginCategory
+    {
+        Unkown,
+        DirectiveProcessor,
+        StatementProcessor,
+        LineProcessor,
+        IncludeResolver,
+        PragmaProcessor,
+        FunctionProvider,
+        MacroProvider,
+    }
+
     /// <summary>
     /// The base class for all interpreter plugins.
     /// </summary>
@@ -30,6 +42,11 @@ namespace Unknown6656.AutoIt3.Extensibility
         /// The interpreter which has loaded the current plugin instance.
         /// </summary>
         public Interpreter Interpreter { get; }
+
+        /// <summary>
+        /// Returns the semantic category of this plugin.
+        /// </summary>
+        public PluginCategory PluginCategory { get; }
 
         /// <summary>
         /// Returns the file location, from which the plugin has been loaded.
@@ -46,21 +63,20 @@ namespace Unknown6656.AutoIt3.Extensibility
         /// Creates a new instance.
         /// </summary>
         /// <param name="interpreter">The interpreter which has loaded the current plugin instance.</param>
-        protected AbstractInterpreterPlugin(Interpreter interpreter) => Interpreter = interpreter;
-
-        /// <inheritdoc/>
-        public override string ToString()
+        protected AbstractInterpreterPlugin(Interpreter interpreter, PluginCategory category)
         {
-            Type t = GetType();
-
-            return $"{t.Assembly.Location}: {t.Name}";
+            Interpreter = interpreter;
+            PluginCategory = category;
         }
+
+        public override string ToString() => $"{GetType().Assembly.Location}: {TypeName} ({PluginCategory})";
     }
 
     public abstract class AbstractDirectiveProcessor
         : AbstractInterpreterPlugin
     {
-        protected AbstractDirectiveProcessor(Interpreter interpreter) : base(interpreter)
+        protected AbstractDirectiveProcessor(Interpreter interpreter)
+            : base(interpreter, PluginCategory.DirectiveProcessor)
         {
         }
 
@@ -73,7 +89,8 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract Regex Regex { get; }
 
 
-        protected AbstractStatementProcessor(Interpreter interpreter) : base(interpreter)
+        protected AbstractStatementProcessor(Interpreter interpreter)
+            : base(interpreter, PluginCategory.StatementProcessor)
         {
         }
 
@@ -83,7 +100,8 @@ namespace Unknown6656.AutoIt3.Extensibility
     public abstract class AbstractLineProcessor
         : AbstractInterpreterPlugin
     {
-        protected AbstractLineProcessor(Interpreter interpreter) : base(interpreter)
+        protected AbstractLineProcessor(Interpreter interpreter)
+            : base(interpreter, PluginCategory.LineProcessor)
         {
         }
 
@@ -101,7 +119,8 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract float RelativeImportance { get; }
 
 
-        protected AbstractIncludeResolver(Interpreter interpreter) : base(interpreter)
+        protected AbstractIncludeResolver(Interpreter interpreter)
+            : base(interpreter, PluginCategory.IncludeResolver)
         {
         }
 
@@ -114,7 +133,8 @@ namespace Unknown6656.AutoIt3.Extensibility
         public abstract string PragmaName { get; }
 
 
-        protected AbstractPragmaProcessor(Interpreter interpreter) : base(interpreter)
+        protected AbstractPragmaProcessor(Interpreter interpreter)
+            : base(interpreter, PluginCategory.PragmaProcessor)
         {
         }
 
@@ -130,7 +150,7 @@ namespace Unknown6656.AutoIt3.Extensibility
 
 
         protected AbstractFunctionProvider(Interpreter interpreter)
-            : base(interpreter)
+            : base(interpreter, PluginCategory.FunctionProvider)
         {
         }
 
@@ -142,7 +162,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         : AbstractInterpreterPlugin
     {
         protected AbstractMacroProvider(Interpreter interpreter)
-            : base(interpreter)
+            : base(interpreter, PluginCategory.MacroProvider)
         {
         }
 

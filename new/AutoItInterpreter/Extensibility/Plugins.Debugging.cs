@@ -493,9 +493,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             PluginLoader loader = frame.Interpreter.PluginLoader;
 
             string table = GenerateTable(
-                loader.LoadedPlugins.Select(plugin => new string?[] { plugin.TypeName, plugin.Location.FullName }),
+                loader.LoadedPlugins.Select(plugin => new string?[] { plugin.TypeName, plugin.PluginCategory.ToString(), plugin.Location.FullName }),
                 new[] {
                     (lang["debug.name"], false),
+                    (lang["debug.type"], false),
                     (lang["debug.location"], false),
                 },
                 Math.Min(Console.BufferWidth, Console.WindowWidth),
