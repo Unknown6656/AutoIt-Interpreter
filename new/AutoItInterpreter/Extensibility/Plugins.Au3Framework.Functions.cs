@@ -37,7 +37,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
         {
-            ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle),
+            ProvidedNativeFunction.Create(nameof(AdlibRegister), 1, 2, AdlibRegister),
+            ProvidedNativeFunction.Create(nameof(AdlibUnRegister), 0, 1, AdlibUnRegister),
+            ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle, Metadata.WindowsOnly),
             ProvidedNativeFunction.Create(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle),
             // ProvidedNativeFunction.Create(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default),
             // ProvidedNativeFunction.Create("Opt", 1, 2, AutoItSetOption, Variant.Default),
@@ -270,6 +272,34 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         #region FRAMEWORK FUNCTIONS
         #region A...
+
+        internal static FunctionReturnValue AdlibRegister(CallFrame frame, Variant[] args)
+        {
+            if (!args[0].IsFunction(out ScriptFunction? function))
+                function = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
+
+            int interval = (int)args[1];
+
+            if (function is { })
+                frame.Interpreter.TimerManager.RegisterOrUpdateTimer(function, interval);
+
+            return Variant.FromBoolean(function is { });
+        }
+
+        internal static FunctionReturnValue AdlibUnRegister(CallFrame frame, Variant[] args)
+        {
+            ScriptFunction? function = null;
+
+            if (args[0].IsDefault)
+                function = frame.Interpreter.TimerManager.MostRecentRegistration;
+            else if (!args[0].IsFunction(out function))
+                function = frame.Interpreter.ScriptScanner.TryResolveFunction(args[0].ToString());
+
+            if (function is { })
+                frame.Interpreter.TimerManager.UnregisterTimer(function);
+
+            return (Variant)frame.Interpreter.TimerManager.ActiveTimerCount;
+        }
 
         internal static FunctionReturnValue Abs(CallFrame frame, Variant[] args) => (Variant)Math.Abs(args[0].ToNumber());
 

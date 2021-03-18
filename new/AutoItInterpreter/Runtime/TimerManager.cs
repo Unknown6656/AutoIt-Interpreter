@@ -14,11 +14,16 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private readonly ConcurrentDictionary<ScriptFunction, (int Interval, AU3Thread Thread, Task<FunctionReturnValue> Task)> _timers = new();
         private volatile bool _active = false;
+        private ScriptFunction? _last = null;
 
 
         public Interpreter Interpreter { get; }
 
         public bool IsActive => _active;
+
+        public ScriptFunction? MostRecentRegistration => _last;
+
+        public int ActiveTimerCount => _timers.Count;
 
         public ImmutableDictionary<ScriptFunction, int> ActiveTimers => _timers.ToImmutableDictionary(t => t.Key, t => t.Value.Interval);
 
@@ -69,6 +74,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 tuple.Task = thread.StartAsync(loop, Array.Empty<Variant>());
                 _timers[function] = tuple;
             }
+
+            _last = function;
         }
 
         public bool UnregisterTimer(ScriptFunction function)
