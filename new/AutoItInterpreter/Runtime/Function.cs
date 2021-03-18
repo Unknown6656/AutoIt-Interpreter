@@ -5,7 +5,6 @@ using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
-using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
@@ -13,6 +12,64 @@ namespace Unknown6656.AutoIt3.Runtime
     using static AST;
 
 
+    /// <summary>
+    /// Represents an abstract script function. This could be an AutoIt3 or a native function.
+    /// </summary>
+    public abstract class ScriptFunction
+        : IEquatable<ScriptFunction>
+    {
+        internal const string GLOBAL_FUNC = "$global";
+
+        public static readonly string[] RESERVED_NAMES =
+        {
+            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
+            "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT",
+            "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE", "TRUE",
+            "FALSE", "DEFAULT", "NULL",
+        };
+
+
+        public string Name { get; }
+
+        public ScannedScript Script { get; }
+
+        public Metadata Metadata { get; init; } = Metadata.Default;
+
+        public abstract SourceLocation Location { get; }
+
+        public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
+        public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
+
+
+        internal ScriptFunction(ScannedScript script, string name)
+        {
+            Name = name;
+            Script = script;
+            Script.AddFunction(this);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
+
+        /// <inheritdoc/>
+        public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
+
+        /// <inheritdoc/>
+        public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => $"[{Script}] Func {Name}";
+
+
+        public static bool operator ==(ScriptFunction? s1, ScriptFunction? s2) => s1?.Equals(s2) ?? s2 is null;
+
+        public static bool operator !=(ScriptFunction? s1, ScriptFunction? s2) => !(s1 == s2);
+    }
+
+    /// <summary>
+    /// Represents an AutoIt3 function. This is a function defined in a .au3 (user) script.
+    /// </summary>
     public sealed class AU3Function
         : ScriptFunction
     {
@@ -20,8 +77,14 @@ namespace Unknown6656.AutoIt3.Runtime
         private readonly ConcurrentDictionary<string, JumpLabel> _jumplabels = new();
 
 
+        /// <summary>
+        /// The abstract syntax tree representing the declaration of each function parameter.
+        /// </summary>
         public PARAMETER_DECLARATION[] Parameters { get; }
 
+        /// <summary>
+        /// The source code location, at which the function has been defined.
+        /// </summary>
         public override SourceLocation Location
         {
             get
@@ -35,12 +98,27 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
+        /// <summary>
+        /// Indicates whether the function has been declared as '<see langword="volatile"/>'.
+        /// </summary>
         public bool IsVolatile { get; internal set; }
 
+        /// <summary>
+        /// Returns the number of source code lines in the function definition.
+        /// </summary>
         public int LineCount => _lines.Values.Select(l => l.Count).Append(0).Sum();
 
+        /// <summary>
+        /// Returns the minimum and maximum parameter count of the function.
+        /// When calling the function, a minimum of '<see cref="MinimumCount"/>' parameters is expected.
+        /// The function accepts a maximum of '<see cref="MaximumCount"/>' parameters.
+        /// The difference between the two integers is the count of optional function parameters.
+        /// </summary>
         public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
+        /// <summary>
+        /// Returns an array of the individual source code lines contained in the function definition.
+        /// </summary>
         public (SourceLocation LineLocation, string LineContent)[] Lines => (from loc in _lines.Keys
                                                                              orderby loc ascending
                                                                              from line in _lines[loc]
@@ -79,6 +157,10 @@ namespace Unknown6656.AutoIt3.Runtime
         public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
     }
 
+    /// <summary>
+    /// Represents an unmanaged (native) function.
+    /// A native function can either be a built-in function, provided by plugins, external libraries, or a .NET function fetched using reflection.
+    /// </summary>
     public class NativeFunction
         : ScriptFunction
     {

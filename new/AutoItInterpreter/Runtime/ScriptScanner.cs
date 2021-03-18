@@ -23,24 +23,24 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class ScriptScanner
     {
         private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
-        private static readonly Regex REGEX_COMMENT = new Regex(@"\;[^\""\']*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new Regex(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new Regex(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        internal static readonly Regex REGEX_CS = new Regex(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
-        internal static readonly Regex REGEX_CE = new Regex(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_REGION = new Regex(@"^#(end-?)?region\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_PRAGMA = new Regex(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_LINECONT = new Regex(@"(\s|^)_$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1L_IF = new Regex(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1L_FUNC = new Regex(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FUNC = new Regex(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDFUNC = new Regex(@"^endfunc$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_LABEL = new Regex(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_INCLUDEONCE = new Regex(@" ^#include-once(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_AUSTARTREGISTER = new Regex(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_AUEXITREGISTER = new Regex(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_REQADMIN = new Regex(@"^#requireadmin\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_NOTRYICON = new Regex(@"^#notrayicon\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT = new(@"\;[^\""\']*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CS = new(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CE = new(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REGION = new(@"^#(end-?)?region\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_PRAGMA = new(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_LINECONT = new(@"(\s|^)_$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_IF = new(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_FUNC = new(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC = new(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDFUNC = new(@"^endfunc$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_LABEL = new(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDEONCE = new(@" ^#include-once(\b|$)", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUSTARTREGISTER = new(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUEXITREGISTER = new(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_REQADMIN = new(@"^#requireadmin\b", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_NOTRYICON = new(@"^#notrayicon\b", _REGEX_OPTIONS);
 
         private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
         {
@@ -80,8 +80,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
                     SystemScript.AddFunction(new NativeFunction(Interpreter, function.Name, function.ParameterCount, function.Execute, function.Metadata));
 
-            foreach (KeyValuePair<string, ScriptFunction> func in SystemScript.Functions)
-                _cached_functions.TryAdd(func.Key.ToUpperInvariant(), func.Value);
+            foreach ((string name, ScriptFunction func) in SystemScript.Functions)
+                _cached_functions.TryAdd(name.ToUpperInvariant(), func);
         });
 
         public ScriptFunction? TryResolveFunction(string name)
@@ -239,7 +239,7 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
                             IEnumerable<PARAMETER_DECLARATION> @params;
-                            HashSet<VARIABLE> parnames = new HashSet<VARIABLE>();
+                            HashSet<VARIABLE> parnames = new();
                             bool optional = false;
 
                             try
@@ -383,8 +383,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             if (fi is { Exists: true })
             {
-                using FileStream stream = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                using StreamReader reader = new StreamReader(stream);
+                using FileStream stream = new(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using StreamReader reader = new(stream);
                 string content = reader.ReadToEnd();
 
                 reader.Close();
@@ -410,8 +410,8 @@ namespace Unknown6656.AutoIt3.Runtime
         : IEquatable<ScannedScript>
     {
         private readonly Dictionary<string, ScriptFunction> _functions = new(new CustomEqualityComparer<string>((s1, s2) => s1.Equals(s2, StringComparison.InvariantCultureIgnoreCase)));
-        private readonly List<(string func, SourceLocation decl)> _startup = new List<(string, SourceLocation)>();
-        private readonly List<(string func, SourceLocation decl)> _exit = new List<(string, SourceLocation)>();
+        private readonly List<(string func, SourceLocation decl)> _startup = new();
+        private readonly List<(string func, SourceLocation decl)> _exit = new();
 
 
         public ImmutableDictionary<string, ScriptFunction> Functions => _functions.ToImmutableDictionary();
@@ -514,61 +514,6 @@ namespace Unknown6656.AutoIt3.Runtime
         public static bool operator ==(ScannedScript? s1, ScannedScript? s2) => s1?.Equals(s2) ?? s2 is null;
 
         public static bool operator !=(ScannedScript? s1, ScannedScript? s2) => !(s1 == s2);
-    }
-
-    /// <summary>
-    /// Represents an abstract script function. This could be an AutoIt3 or a native function.
-    /// </summary>
-    public abstract class ScriptFunction
-        : IEquatable<ScriptFunction>
-    {
-        internal const string GLOBAL_FUNC = "$global";
-
-        public static string[] RESERVED_NAMES =
-        {
-            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
-            "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT",
-            "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE", "TRUE",
-            "FALSE", "DEFAULT", "NULL",
-        };
-
-
-        public string Name { get; }
-
-        public ScannedScript Script { get; }
-
-        public Metadata Metadata { get; init; } = Metadata.Default;
-
-        public abstract SourceLocation Location { get; }
-
-        public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
-
-        public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
-
-
-        internal ScriptFunction(ScannedScript script, string name)
-        {
-            Name = name;
-            Script = script;
-            Script.AddFunction(this);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
-
-        /// <inheritdoc/>
-        public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
-
-        /// <inheritdoc/>
-        public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
-
-        /// <inheritdoc/>
-        public override string ToString() => $"[{Script}] Func {Name}";
-
-
-        public static bool operator ==(ScriptFunction? s1, ScriptFunction? s2) => s1?.Equals(s2) ?? s2 is null;
-
-        public static bool operator !=(ScriptFunction? s1, ScriptFunction? s2) => !(s1 == s2);
     }
 
     public sealed class JumpLabel
