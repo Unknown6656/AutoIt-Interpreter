@@ -928,7 +928,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue EnvUpdate(CallFrame frame, Variant[] args) => Variant.False;
 
         internal static FunctionReturnValue Execute(CallFrame frame, Variant[] args) =>
-            GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 => au3.ProcessAsVariant(args[0].ToString()));
+            GetAu3Caller(frame, nameof(Execute)).Match(err => err, au3 => au3.ProcessAsVariant(args[0].ToString()));
 
         internal static FunctionReturnValue Eval(CallFrame frame, Variant[] args) =>
             GetAu3Caller(frame, nameof(Execute)).Match<FunctionReturnValue>(err => err, au3 =>
@@ -2007,7 +2007,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     return Variant.Zero;
             });
 
-        internal static unsafe FunctionReturnValue IsAdmin(CallFrame frame, Variant[] args) => (Variant)NativeInterop.DoPlatformDependent<bool>(delegate
+        internal static unsafe FunctionReturnValue IsAdmin(CallFrame frame, Variant[] args) => (Variant)NativeInterop.DoPlatformDependent(delegate
         {
             void* processHandle = NativeInterop.GetCurrentProcess();
             void* token;
@@ -2629,7 +2629,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             try
             {
                 ShutdownMode mode = (ShutdownMode)(int)args[0];
-                bool success = NativeInterop.DoPlatformDependent<bool>(delegate
+                bool success = NativeInterop.DoPlatformDependent(delegate
                 {
                     uint flags = 0;
 
