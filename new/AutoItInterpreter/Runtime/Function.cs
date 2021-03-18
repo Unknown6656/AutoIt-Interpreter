@@ -5,6 +5,7 @@ using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.Common;
 
 namespace Unknown6656.AutoIt3.Runtime
@@ -183,6 +184,32 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
+    }
+
+    public sealed class NETDelegateFunction
+        : NativeFunction
+    {
+        private static volatile int _id = 1;
+
+
+        private NETDelegateFunction(Interpreter interpreter, (int min, int max) param_count, Variant[] default_params, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os)
+            : base(interpreter, $".NET delegate 0x{++_id:x8}", param_count, execute, new Metadata(os, false))
+        {
+            if (param_count.max < param_count.min)
+                throw;
+            else if (default_params.Length < param_count.max - param_count.min)
+                throw;
+
+        }
+
+        public static NETDelegateFunction Create(Interpreter interpreter, Func<NativeCallFrame, FunctionReturnValue> execute, OS os = OS.Any) =>
+            Create(interpreter, 0, (f, _) => execute(f), os);
+
+        public static NETDelegateFunction Create(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
+            Create(interpreter, (param_count, param_count), Array.Empty<Variant>(), execute, os);
+
+        public static NETDelegateFunction Create(Interpreter interpreter, (int min, int max) param_count, Variant[] default_params, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
+            new NETDelegateFunction(interpreter, param_count, default_params, execute, os);
     }
 
     public sealed class NETFrameworkFunction
