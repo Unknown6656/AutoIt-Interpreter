@@ -1,29 +1,31 @@
 ﻿module Unknown6656.AutoIt3.Parser.ExpressionParser.AST
 
 open Unknown6656.AutoIt3.Parser
+open System
 
 
 type IDENTIFIER = Identifier of string
     with override x.ToString() = match x with Identifier i -> i
 
 type VARIABLE (name : string) =
-    member _.Name = if name.StartsWith('$') then name.Substring 1 else name
-    override x.ToString() = "$" + x.Name
-    override x.GetHashCode() = x.Name.ToLower().GetHashCode()
-    override x.Equals o = function
-                          | As (m : VARIABLE) -> m.GetHashCode() = x.GetHashCode()
+    let name = name.TrimStart '$'
+    member _.Name = name
+    member _.IsDiscard = name = "_"
+    override _.ToString() = "$" + name
+    override _.GetHashCode() = name.GetHashCode StringComparison.InvariantCultureIgnoreCase
+    override _.Equals o = match o with
+                          | :? VARIABLE as m -> name.Equals(m.Name, StringComparison.InvariantCultureIgnoreCase)
                           | _ -> false
-                         <| o
     static member Discard = VARIABLE "_"
 
 type MACRO (name : string) =
-    member _.Name = if name.StartsWith('@') then name.Substring 1 else name
-    override x.ToString() = "@" + x.Name
-    override x.GetHashCode() = x.Name.ToLower().GetHashCode()
-    override x.Equals o = function
-                          | As (m : MACRO) -> m.GetHashCode() = x.GetHashCode()
+    let name = name.TrimStart '@'
+    member _.Name = name
+    override _.ToString() = "@" + name
+    override _.GetHashCode() = name.GetHashCode StringComparison.InvariantCultureIgnoreCase
+    override _.Equals o = match o with
+                          | :? MACRO as m -> name.Equals(m.Name, StringComparison.InvariantCultureIgnoreCase)
                           | _ -> false
-                         <| o
 
 type LITERAL =
     | Null
@@ -106,7 +108,6 @@ type OPERATOR_UNARY =
     | Negate
     | Not
     | Cast of CAST_OPERATOR
-    | ByRef of VARIABLE
     with
         override x.ToString() =
             match x with
@@ -114,13 +115,13 @@ type OPERATOR_UNARY =
             | Negate -> "-"
             | Not -> "!"
             | Cast c -> sprintf "(:%O)" c
-            | ByRef v -> sprintf "Byref %O" v
 
 type EXPRESSION =
     | Literal of LITERAL
     | Variable of VARIABLE
     | Macro of MACRO
     | FunctionName of IDENTIFIER
+    | ReferenceTo of VARIABLE
     | Unary of UNARY_EXPRESSION
     | Binary of BINARY_EXPRESSION
     | Ternary of TERNARY_EXPRESSION
@@ -140,11 +141,13 @@ type EXPRESSION =
             | Member m -> m.ToString()
             | Indexer (e, i) -> sprintf "%O[%O]" e i
             | FunctionCall f -> f.ToString()
+            | ReferenceTo v -> sprintf "Byref %O" v
         member x.ReferencedVariables =
             match x with
             | Macro _
             | FunctionName _
             | Literal _ -> []
+            | ReferenceTo v
             | Variable v -> [v]
             | FunctionCall e -> e.ReferencedVariables
             | Unary (_, e) -> e.ReferencedVariables

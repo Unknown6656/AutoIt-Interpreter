@@ -72,6 +72,7 @@ type ExpressionParser(mode : ParserMode) =
                           | any-expr "?" any-expr ":" any-expr
                           | any-expr bin-op any-expr
                           | un-op any-expr
+                          | "ByRef" variable
 
                 funccall := identifier "(" args ")"
                           | member-expr "(" args ")"
@@ -97,7 +98,7 @@ type ExpressionParser(mode : ParserMode) =
                 Not
                 + -
         *)
-        
+
         let nt_params_decl_expr     = x.CreateNonTerminal<PARAMETER_DECLARATION list>       "params-decl-expr"
         let nt_param_decl_expr      = x.CreateNonTerminal<PARAMETER_DECLARATION>            "param-decl-expr"
         let nt_assg_target          = x.CreateNonTerminal<ASSIGNMENT_TARGET>                "assg-targ"
@@ -147,7 +148,7 @@ type ExpressionParser(mode : ParserMode) =
      // let t_keyword_new           = x.CreateTerminal  @"new"
         let t_keyword_to            = x.CreateTerminal  @"to"
         let t_keyword_const         = x.CreateTerminal  @"const"
-        let t_keyword_byref         = x.CreateTerminal  @"byref"
+        let t_keyword_byref         = x.CreateTerminal  @"(by)?ref"
         let t_keyword_and           = x.CreateTerminalF @"and"                              (fun _ -> And)
         let t_keyword_or            = x.CreateTerminalF @"or"                               (fun _ -> Or)
         let t_keyword_not           = x.CreateTerminalF @"(not|!)"                          (fun _ -> Not)
@@ -193,17 +194,17 @@ type ExpressionParser(mode : ParserMode) =
         | ParserMode.FunctionParameters ->
             reduce_1i nt_result nt_params_decl_expr ParameterDeclaration
             reduce_ci nt_result (fun () -> ParameterDeclaration [])
-            
+
             reduce_3i nt_params_decl_expr nt_params_decl_expr t_symbol_comma nt_param_decl_expr (fun xs _ x -> xs@[x])
             reduce_1i nt_params_decl_expr nt_param_decl_expr (fun x -> [x])
-            
+
             reduce_3i nt_param_decl_expr t_keyword_const t_keyword_byref nt_named_decl_expr (fun _ _ (v, Scalar e) -> { IsConst = true; IsByRef = true; Variable = v; DefaultValue = e })
             reduce_2i nt_param_decl_expr t_keyword_byref nt_named_decl_expr (fun _ (v, Scalar e) -> { IsConst = false; IsByRef = true; Variable = v; DefaultValue = e })
             reduce_2i nt_param_decl_expr t_keyword_const nt_named_decl_expr (fun _ (v, Scalar e) -> { IsConst = true; IsByRef = false; Variable = v; DefaultValue = e })
             reduce_1i nt_param_decl_expr nt_named_decl_expr (fun (v, Scalar e) -> { IsConst = false; IsByRef = false; Variable = v; DefaultValue = e })
         | ParserMode.MultiDeclaration ->
             reduce_1i nt_result nt_multi_decl_expr MultiDeclarationExpression
-            
+
             reduce_3i nt_multi_decl_expr nt_multi_decl_expr t_symbol_comma nt_named_decl_expr (fun xs _ x -> xs@[x])
             reduce_1i nt_multi_decl_expr nt_named_decl_expr (fun x -> [x])
         | ParserMode.ArbitraryExpression ->
@@ -255,7 +256,7 @@ type ExpressionParser(mode : ParserMode) =
 
         reduce_1i nt_any_expr nt_object_expr id
         reduce_1i nt_any_expr nt_conditional_expr id
-        
+
         //reduce_5i nt_conditional_expr nt_any_expr t_symbol_questionmark nt_any_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
         reduce_5i nt_conditional_expr nt_object_expr t_symbol_questionmark nt_object_expr t_symbol_colon nt_any_expr (fun a _ b _ c -> Ternary(a, b, c))
 
@@ -277,11 +278,12 @@ type ExpressionParser(mode : ParserMode) =
         reduce_binary t_operator_mul Multiply Left
         reduce_binary t_operator_div Divide Left
         reduce_binary t_operator_pow Power Right
-        
+
+        reduce_2i nt_any_expr t_keyword_byref t_variable (fun _ v -> ReferenceTo v)
         reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
         reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
         reduce_2i nt_any_expr t_keyword_not nt_any_expr (fun _ e -> Unary(Not, e))
-        
+
         reduce_0i nt_literal_num t_hex
         reduce_0i nt_literal_num t_bin
         reduce_0i nt_literal_num t_oct
@@ -298,9 +300,9 @@ type ExpressionParser(mode : ParserMode) =
 
         reduce_4i nt_func_call t_identifier t_symbol_oparen nt_args t_symbol_cparen (fun i _ a _ -> DirectFunctionCall(i, a))
         reduce_4i nt_func_call nt_member_expr t_symbol_oparen nt_args t_symbol_cparen (fun m _ a _ -> MemberCall(m, a))
-        
+
         reduce_ci nt_args (fun () -> [])
         reduce_0i nt_args nt_arglist
-        
+
         reduce_1i nt_arglist nt_any_expr (fun x -> [x])
         reduce_3i nt_arglist nt_arglist t_symbol_comma nt_any_expr (fun xs _ x -> xs@[x])
