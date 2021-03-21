@@ -179,7 +179,7 @@ namespace Unknown6656.AutoIt3.CLI
 
             using Task printer_task = Task.Run(PrinterTask);
             using Task telemetry_task = Task.Run(Telemetry.StartPerformanceMonitorAsync);
-            bool help_requested = false;
+            bool print_telemetry = false;
             int code = 0;
 
             Telemetry.Measure(TelemetryCategory.ProgramRuntime, delegate
@@ -217,12 +217,18 @@ namespace Unknown6656.AutoIt3.CLI
 
                         ParserResult<CommandLineOptions> result = parser.ParseArguments<CommandLineOptions>(argv);
 
-                        result.WithNotParsed(err => HandleParserError(result, err, ref code, ref help_requested));
+                        result.WithNotParsed(err =>
+                        {
+                            HandleParserError(result, err, ref code, ref print_telemetry);
+                            print_telemetry ^= true;
+                        });
 
                         return result;
                     }).WithParsed(opt =>
                     {
-                        if (opt.ProgramExecutionMode != ExecutionMode.normal)
+                        if (opt.ProgramExecutionMode == ExecutionMode.normal)
+                            print_telemetry = true;
+                        else
                         {
                             opt.Verbose = false;
                             opt.PrintTelemetry = false;
@@ -328,7 +334,7 @@ namespace Unknown6656.AutoIt3.CLI
             Telemetry.StopPerformanceMonitor();
             telemetry_task.Wait();
 
-            if (!help_requested)
+            if (print_telemetry)
                 PrintReturnCodeAndTelemetry(code, Telemetry);
 
             _isrunning = false;
