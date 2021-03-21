@@ -8,12 +8,9 @@
 ![Banner image](new/artwork/banner.png)<br/>
 ![Banner image](new/artwork/banner-features.png)
 
+[<img height="40px" src="https://1.bp.blogspot.com/-xGKUeWbY4QM/XUT0SkEHA2I/AAAAAAAAMDw/ZqiiVJahC34FYVc-02AhH0M0cqkNuT3EwCEwYBhgL/s1600/Free%2BDownload%2BButtons%2BPNG%2B%25288%2529.png"/>](https://github.com/Unknown6656/AutoIt-Interpreter/releases)
+
 # Platform-Independent AutoIt3 Interpreter
-
-[![Download](https://1.bp.blogspot.com/-xGKUeWbY4QM/XUT0SkEHA2I/AAAAAAAAMDw/ZqiiVJahC34FYVc-02AhH0M0cqkNuT3EwCEwYBhgL/s1600/Free%2BDownload%2BButtons%2BPNG%2B%25288%2529.png)](https://github.com/Unknown6656/AutoIt-Interpreter/releases)
-
-### [TL;DR: Take a look at the Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
-
 AutoIt is a traditionally Windows-only scripting language based on the Visual Basic syntax.
 The aim of this repository is to provide an AutoIt3 Interpreter for other platforms, such as Linux/Unix and MacOS.
 
@@ -66,5 +63,3 @@ Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/proj
  - [@Unknown6656](https://github.com/Unknown6656)
  - ([@Zedly](https://github.com/Zedly) / [@wickersoft](https://github.com/wickersoft) in assistive and advisory function)
 
-## License
-The code is licensed under the Giant Penis License (GPL), which is a more restrictive version of the MIT License. [Click here](https://github.com/Unknown6656/AutoIt-Interpreter/blob/daddy/LICENSE.md) for more information.
