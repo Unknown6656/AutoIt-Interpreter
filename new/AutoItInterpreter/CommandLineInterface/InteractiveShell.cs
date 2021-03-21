@@ -8,6 +8,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.Runtime.InteropServices;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -400,15 +401,37 @@ Commands and keyboard shortcuts:
             int width = WIDTH;
             int height = HEIGHT;
             int input_area_width = width - MARGIN_RIGHT - 1;
-            string[] input_lines = CurrentInput.PartitionByArraySize(input_area_width - 3).ToArray(c => new string(c));
+            int line_max_len = input_area_width - 3;
+            List<(string content, int orig_index)> input_lines = new();
 
-            if (input_lines.Length == 0)
-                input_lines = new[] { "" };
 
-            int cursor_pos_x = Math.Min(input_area_width, CurrentCursorPosition.GetOffset(CurrentInput.Length) % (input_area_width - 3));
-            int input_area_height = height - MARGIN_BOTTOM + 1 - input_lines.Length;
+            int cursor_pos = CurrentCursorPosition.GetOffset(CurrentInput.Length);
+            int cursor_pos_x = -1;
+            int cursor_pos_y = 0;
+            int _tmp_index = 0;
 
-            ConsoleExtensions.WriteBlock(new string(' ', input_area_width * (MARGIN_BOTTOM + input_lines.Length - 1)), 0, input_area_height - 1, input_area_width, MARGIN_BOTTOM + input_lines.Length - 1, true);
+            foreach ((string line, int index) in CurrentInput.SplitIntoLines().WithIndex())
+            {
+                foreach ((char[] sub_line, int sub_index) in line.PartitionByArraySize(line_max_len).WithIndex())
+                {
+                    input_lines.Add((new string(sub_line), _tmp_index));
+                    _tmp_index += sub_line.Length;
+
+                    if (_tmp_index < cursor_pos)
+                        ++cursor_pos_y;
+                    if (cursor_pos >= _tmp_index - sub_line.Length && cursor_pos <= _tmp_index)
+                        cursor_pos_x = cursor_pos - _tmp_index + sub_line.Length;
+                }
+
+                ++_tmp_index;
+            }
+
+            if (input_lines.Count == 0)
+                input_lines.Add(("", 0));
+
+            int input_area_height = height - MARGIN_BOTTOM + 1 - input_lines.Count;
+
+            ConsoleExtensions.WriteBlock(new string(' ', input_area_width * (MARGIN_BOTTOM + input_lines.Count - 1)), 0, input_area_height - 1, input_area_width, MARGIN_BOTTOM + input_lines.Count - 1, true);
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
             Console.CursorLeft = 0;
             Console.CursorTop = input_area_height - 1;
@@ -416,7 +439,7 @@ Commands and keyboard shortcuts:
 
             int line_no = 0;
 
-            foreach (string line in input_lines)
+            foreach ((string line, _) in input_lines)
             {
                 string txt = (line_no == 0 ? " > " : "   ") + ScriptVisualizer.TokenizeScript(line).ConvertToVT100(false);
 
@@ -434,7 +457,7 @@ Commands and keyboard shortcuts:
                 ++line_no;
             }
 
-            (int l, int t) cursor = (3 + cursor_pos_x, input_area_height + CurrentCursorPosition.GetOffset(CurrentInput.Length) / (input_area_width - 4));
+            (int l, int t) cursor = (3 + cursor_pos_x, input_area_height + cursor_pos_y);
 #pragma warning disable CA1416 // Validate platform compatibility
             bool cursor_visible = NativeInterop.DoPlatformDependent(() => Console.CursorVisible, () => false);
 #pragma warning restore CA1416
@@ -448,8 +471,6 @@ Commands and keyboard shortcuts:
 
                 Console.Write($"\x1b[7m{(idx < CurrentInput.Length ? CurrentInput[idx] : ' ')}\x1b[27m");
             }
-
-            string pad_full = new(' ', input_area_width);
 
             if (Suggestions.Count > 0)
             {
@@ -472,27 +493,24 @@ Commands and keyboard shortcuts:
 
                 ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
                 Console.CursorTop = cursor.t + 2 + i;
-                Console.CursorLeft = 0;
-
-                string pad_left = new(' ', sugg_left);
-                string pad_right = new(' ', input_area_width - 2 - sugg_left - sugg_width);
-
-                Console.Write(pad_left + '┌' + new string('─', sugg_width) + '┐' + pad_right);
-                Console.CursorLeft = 0;
+                Console.CursorLeft = sugg_left;
+                Console.Write('┌' + new string('─', sugg_width) + '┐');
                 Console.CursorTop = cursor.t + 1;
 
                 string indicator = $" {CurrentSuggestionIndex + 1}/{Suggestions.Count} ";
 
                 if (input_area_width - 4 - cursor_pos_x - indicator.Length > 0)
-                    indicator = new string(' ', 3 + cursor_pos_x) + '│' + indicator;
+                {
+                    Console.CursorLeft = sugg_left;
+                    indicator = '│' + indicator;
+                }
                 else
-                    indicator = new string(' ', cursor_pos_x - indicator.Length + 3) + indicator + '│';
+                {
+                    Console.CursorLeft = sugg_left - indicator.Length;
+                    indicator += '│';
+                }
 
                 Console.Write(indicator);
-
-                if (Console.CursorLeft < input_area_width - 1)
-                    Console.Write(new string(' ', input_area_width - Console.CursorLeft - 1));
-
                 Console.CursorTop++;
                 Console.CursorLeft = 3 + cursor_pos_x;
                 Console.Write(cursor_pos_x + 3 == sugg_left ? '├' : cursor_pos_x + 2 == sugg_left + sugg_width ? '┤' : '┴');
@@ -500,8 +518,8 @@ Commands and keyboard shortcuts:
                 foreach (ScriptToken[] suggestion in suggestions)
                 {
                     Console.CursorTop = cursor.t + 3 + i;
-                    Console.CursorLeft = 0;
-                    Console.Write(pad_left + '│');
+                    Console.CursorLeft = sugg_left;
+                    Console.Write('│');
 
                     if (i == CurrentSuggestionIndex - start_index)
                         Console.Write("\x1b[7m");
@@ -512,31 +530,15 @@ Commands and keyboard shortcuts:
                     if (i == CurrentSuggestionIndex - start_index)
                         Console.Write("\x1b[27m");
 
-                    Console.Write('│' + pad_right);
+                    Console.Write('│');
 
                     ++i;
                 }
 
-                Console.CursorLeft = 0;
+                Console.CursorLeft = sugg_left;
                 Console.CursorTop = cursor.t + 3 + i;
-                Console.Write(pad_left + '└' + new string('─', sugg_width) + '┘' + pad_right);
-
-                while (i < MAX_SUGGESTIONS)
-                {
-                    Console.CursorTop = cursor.t + 4 + i;
-                    Console.CursorLeft = 0;
-                    Console.Write(pad_full);
-
-                    ++i;
-                }
+                Console.Write('└' + new string('─', sugg_width) + '┘');
             }
-            else
-                for (int i = 1; i < MAX_SUGGESTIONS + 4; ++i)
-                {
-                    Console.CursorTop = cursor.t + i;
-                    Console.CursorLeft = 0;
-                    Console.Write(pad_full);
-                }
 
             return (cursor.l, cursor.t, input_area_height);
         }
