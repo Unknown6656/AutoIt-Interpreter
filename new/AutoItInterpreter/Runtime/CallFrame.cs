@@ -19,13 +19,13 @@ using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.CLI;
+
 using Unknown6656.Common;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
-#pragma warning disable CA1063
     // TODO : covariant return for 'CurrentFunction'
 
     /// <summary>
@@ -208,7 +208,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void IssueWarning(string key, params object?[] args) => MainProgram.PrintWarning(CurrentLocation, Interpreter.CurrentUILanguage[key, args]);
     }
-#pragma warning restore CA1063
 
     /// <summary>
     /// Represents a call frame for native code executions (e.g. framework or interop functions).
@@ -1445,14 +1444,29 @@ namespace Unknown6656.AutoIt3.Runtime
                     EXPRESSION.Macro { Item: MACRO macro } => ProcessMacro(macro),
                     EXPRESSION.FunctionName { Item: { Item: string func_name } } =>
                         Interpreter.ScriptScanner.TryResolveFunction(func_name) is ScriptFunction func
-                        ? (FunctionReturnValue)Variant.FromFunction(func)
-                        : (FunctionReturnValue)WellKnownError("error.unresolved_func", func_name),
+                        ? Variant.FromFunction(func)
+                        : WellKnownError("error.unresolved_func", func_name),
                     EXPRESSION.Unary { Item: Tuple<OPERATOR_UNARY, EXPRESSION> unary } => ProcessUnary(unary.Item1, unary.Item2),
                     EXPRESSION.Binary { Item: Tuple<EXPRESSION, OPERATOR_BINARY, EXPRESSION> binary } => ProcessBinary(binary.Item1, binary.Item2, binary.Item3),
                     EXPRESSION.Ternary { Item: Tuple<EXPRESSION, EXPRESSION, EXPRESSION> ternary } => ProcessTernary(ternary.Item1, ternary.Item2, ternary.Item3),
                     EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member).Match(FunctionReturnValue.Fatal, v => v.MemberValue),
                     EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer } => ProcessIndexer(indexer.Item1, indexer.Item2),
                     EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall } => ProcessFunctionCall(funccall),
+                    EXPRESSION.ReferenceTo { Item: VARIABLE variable } => FunctionExtensions.Do(delegate
+                    {
+                        FunctionReturnValue result = ProcessVariable(variable);
+                        Variable? var = null;
+
+                        if (result.IsFatal(out _))
+                            return result;
+                        else if (result.IsSuccess(out Variant value, out _))
+                            var = value.ReferencedVariable ?? value.AssignedTo;
+
+                        if (var is null)
+                            return WellKnownError("error.byref_invalid_variable", variable);
+                        else
+                            return Variant.FromReference(var);
+                    }),
                     _ => WellKnownError("error.not_yet_implemented", expression),
                 };
 
@@ -1674,10 +1688,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private FunctionReturnValue ProcessVariable(VARIABLE variable)
         {
-            if (variable == VARIABLE.Discard)
+            if (variable.IsDiscard)
                 return WellKnownError("error.invalid_discard_access", VARIABLE.Discard, FrameworkMacros.MACRO_DISCARD);
-
-            if (VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? var))
+            else if (VariableResolver.TryGetVariable(variable, VariableSearchScope.Global, out Variable? var))
             {
                 Variant value = var.Value;
 
