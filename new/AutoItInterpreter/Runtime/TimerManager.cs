@@ -46,6 +46,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public void RegisterOrUpdateTimer(ScriptFunction function, int interval)
         {
+            interval = Math.Max(interval, 1);
+
             if (_timers.TryGetValue(function, out (int, AU3Thread thread, Task<FunctionReturnValue> task) value))
                 _timers[function] = (interval, value.thread, value.task);
             else

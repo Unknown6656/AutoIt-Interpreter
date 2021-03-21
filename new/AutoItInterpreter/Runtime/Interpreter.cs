@@ -155,6 +155,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             ParserProvider = new ParserProvider(this);
             TimerManager = new TimerManager(this);
+            TimerManager.StartAllTimers();
 
             ScriptScanner.ScanNativeFunctions();
 
