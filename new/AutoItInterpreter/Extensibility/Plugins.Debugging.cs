@@ -345,7 +345,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                 $"/iter/{kvp.Key}",
                                 MainProgram.ASM_FILE.Name,
                                 lang["debug.iterator"],
-                                $"{lang["debug.index"]}:{index}, {lang["debug.length"]}:{kvp.Value.collection.Length}, {lang["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {lang["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}"
+                                $"{lang["debug.index"]}:{index}, {lang["debug.length"]}:{kvp.Value.collection.Length}, {lang["debug.key"]}:{tuple.key.ToDebugString(Interpreter)}, {lang["debug.value"]}:{tuple.value.ToDebugString(Interpreter)}",
+                                  "",
+                                  "ITERATOR"
                             );
             var global_objs = from id in frame.Interpreter.GlobalObjectStorage.HandlesInUse
                               where frame.Interpreter.GlobalObjectStorage.TryGet(id, out netobj)
@@ -353,20 +355,25 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                                   $"/obj/{(uint)id:x8}",
                                   MainProgram.ASM_FILE.Name,
                                   lang["debug.netobj"],
-                                  netobj?.ToString() ?? "<null>"
+                                  netobj?.ToString() ?? "<null>",
+                                  "",
+                                  ".NET"
                               );
-            (string name, string loc, string type, string value)[] variables = (from scope in scopes
-                                                                                from variable in scope.LocalVariables
-                                                                                let name = scope.InternalName + '$' + variable.Name
-                                                                                orderby name ascending
-                                                                                select (
-                                                                                    name,
-                                                                                    variable.DeclaredLocation.ToString(),
-                                                                                    variable.Value.Type.ToString(),
-                                                                                    variable.Value.ToDebugString(Interpreter)
-                                                                                )).Concat(iterators)
-                                                                                  .Concat(global_objs)
-                                                                                  .ToArray();
+            var au3_vars = from scope in scopes
+                           from variable in scope.LocalVariables
+                           let name = scope.InternalName + '$' + variable.Name
+                           orderby name ascending
+                           select (
+                               name,
+                               variable.DeclaredLocation.ToString(),
+                               variable.Value.Type.ToString(),
+                               variable.Value.ToDebugString(Interpreter),
+                               variable.ReferencedVariable?.ToString() ?? "",
+                               (variable.IsConst ? "CONST" : "") + 
+                               (variable.IsGlobal ? " GLOBAL" : "")
+                           );
+
+            (string name, string loc, string type, string value, string ref_to, string modifiers)[] variables = new[] { au3_vars, iterators, global_objs }.SelectMany(LINQ.id).ToArray();
             Array.Sort(variables, (x, y) =>
             {
                 string[] pathx = x.name.Split('/');
@@ -385,11 +392,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             });
 
             string table = GenerateTable(
-                variables.Select(row => new string?[] { row.name, row.loc, row.type, row.value }),
+                variables.Select(row => new string?[] { row.name, row.loc, row.type, row.ref_to, row.modifiers, row.value }),
                 new[] {
                     (lang["debug.name"], false),
                     (lang["debug.location"], false),
                     (lang["debug.type"], false),
+                    (lang["debug.reference_to"], true),
+                    (lang["debug.modifiers"], true),
                     (lang["debug.value"], true),
                 },
                 Math.Min(Console.BufferWidth, Console.WindowWidth),
