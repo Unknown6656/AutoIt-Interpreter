@@ -16,16 +16,6 @@ namespace Unknown6656.AutoIt3.CLI
     {
         public const int MIN_WIDTH = 120;
 
-        internal readonly string[] KNOWN_MACROS =
-        {
-            "@APPDATACOMMONDIR", "@APPDATADIR", "@AUTOITEXE", "@AUTOITPID", "@AUTOITVERSION", "@AUTOITX64", "@COMMONFILESDIR", "@COMPILED", "@COMPUTERNAME", "@COMSPEC", "@CR", "@CRLF",
-            "@CPUARCH", "@DESKTOPCOMMONDIR", "@DESKTOPDIR", "@DOCUMENTSCOMMONDIR", "@EXITCODE", "@ERROR", "@EXTENDED", "@FAVORITESCOMMONDIR", "@FAVORITESDIR", "@HOMEDRIVE", "@HOMEPATH",
-            "@HOUR", "@LOCALAPPDATADIR", "@LOGONDOMAIN", "@LOGONSERVER", "@MDAY", "@MIN", "@MON", "@MSEC", "@MYDOCUMENTSDIR", "@NUMPARAMS", "@MUILANG", "@TAB", "@SW_DISABLE", "@SW_ENABLE",
-            "@SW_HIDE", "@SW_LOCK", "@SW_MAXIMIZE", "@SW_MINIMIZE", "@SW_RESTORE", "@SW_SHOW", "@SW_SHOWDEFAULT", "@SW_SHOWMAXIMIZED", "@SW_SHOWMINIMIZED", "@SW_SHOWMINNOACTIVE",
-            "@SW_SHOWNA", "@SW_SHOWNOACTIVATE", "@SW_SHOWNORMAL", "@SW_UNLOCK", "@TEMPDIR", "@OSSERVICEPACK", "@OSBUILD", "@OSTYPE", "@OSVERSION", "@PROGRAMFILESDIR", "@PROGRAMSCOMMONDIR",
-            "@PROGRAMSDIR", "@SCRIPTDIR", "@SCRIPTFULLPATH", "@SCRIPTLINENUMBER", "@SCRIPTNAME", "@STARTMENUCOMMONDIR", "@STARTMENUDIR", "@STARTUPCOMMONDIR", "@STARTUPDIR", "@SYSTEMDIR",
-            "@WINDOWSDIR", "@SEC", "@USERNAME", "@YDAY", "@YEAR", "@WDAY", "@WORKINGDIR", "@ESC", "@VTAB", "@NUL", "@DATE", "@DATE_TIME", "@E", "@NL", "@PHI", "@PI", "@TAU", "@LF", "@DISCARD"
-        };
         internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==" };
 
         private static readonly RGBAColor COLOR_HELP_FG = 0xffff;
@@ -297,24 +287,30 @@ Commands and keyboard shortcuts:
                         --HistoryScrollIndex;
 
                     break;
-                case ConsoleKey.Delete when k.Modifiers.HasFlag(ConsoleModifiers.Control):
-                    break;
                 case ConsoleKey.Delete:
                     if (cursor_pos < CurrentInput.Length)
-                    {
-                        CurrentInput = CurrentInput.Remove(cursor_pos, 1);
-                        UpdateSuggestions();
-                    }
+                        if (k.Modifiers.HasFlag(ConsoleModifiers.Control))
+                        {
+                            // TODO : handle ctrl+del
+                        }
+                        else
+                        {
+                            CurrentInput = CurrentInput.Remove(cursor_pos, 1);
+                            UpdateSuggestions();
+                        }
 
-                    break;
-                case ConsoleKey.Backspace when k.Modifiers.HasFlag(ConsoleModifiers.Control):
                     break;
                 case ConsoleKey.Backspace:
                     if (cursor_pos > 0)
-                    {
-                        CurrentInput = CurrentInput.Remove(cursor_pos - 1, 1);
-                        CurrentCursorPosition = cursor_pos - 1;
-                    }
+                        if (k.Modifiers.HasFlag(ConsoleModifiers.Control))
+                        {
+                            // TODO : handle ctrl+bsp
+                        }
+                        else
+                        {
+                            CurrentInput = CurrentInput.Remove(cursor_pos - 1, 1);
+                            CurrentCursorPosition = cursor_pos - 1;
+                        }
 
                     break;
                 case ConsoleKey.Home:
@@ -335,25 +331,35 @@ Commands and keyboard shortcuts:
                     CurrentCursorPosition = CurrentInput.Length;
 
                     break;
+                case ConsoleKey.Enter when k.Modifiers.HasFlag(ConsoleModifiers.Shift):
+                    {
+                        CurrentInput = CurrentInput[..cursor_pos] + '\n' + CurrentInput[cursor_pos..];
+                        CurrentCursorPosition = cursor_pos + 1;
+                    }
+
+                    break;
                 case ConsoleKey.Enter:
                     ProcessInput();
                     UpdateSuggestions();
 
                     break;
                 case ConsoleKey.Tab:
-                    string insertion = Suggestions[CurrentSuggestionIndex].Content;
-                    ScriptToken? curr_token = CurrentlyTypedToken;
-                    int insertion_index = curr_token?.CharIndex ?? cursor_pos;
-                    int deletion_index = curr_token is null ? cursor_pos : curr_token.CharIndex + curr_token.TokenLength;
+                    if (CurrentSuggestionIndex >= 0 && CurrentSuggestionIndex < Suggestions.Count)
+                    {
+                        string insertion = Suggestions[CurrentSuggestionIndex].Content;
+                        ScriptToken? curr_token = CurrentlyTypedToken;
+                        int insertion_index = curr_token?.CharIndex ?? cursor_pos;
+                        int deletion_index = curr_token is null ? cursor_pos : curr_token.CharIndex + curr_token.TokenLength;
 
-                    while (deletion_index < CurrentInput.Length && CurrentInput[deletion_index] == ' ')
-                        ++deletion_index;
+                        while (deletion_index < CurrentInput.Length && CurrentInput[deletion_index] == ' ')
+                            ++deletion_index;
 
-                    if (deletion_index >= CurrentInput.Length)
-                        insertion = insertion.TrimEnd();
+                        if (deletion_index >= CurrentInput.Length)
+                            insertion = insertion.TrimEnd();
 
-                    CurrentInput = CurrentInput[..insertion_index] + insertion + CurrentInput[deletion_index..];
-                    CurrentCursorPosition = insertion_index + insertion.Length;
+                        CurrentInput = CurrentInput[..insertion_index] + insertion + CurrentInput[deletion_index..];
+                        CurrentCursorPosition = insertion_index + insertion.Length;
+                    }
 
                     break;
                 default:
@@ -822,6 +828,7 @@ Commands and keyboard shortcuts:
                                  where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
                                  orderby s.tokens[0].Type, s.content ascending
                                  select s);
+            CurrentSuggestionIndex = Math.Min(CurrentSuggestionIndex, Suggestions.Count - 1);
         }
 
         public void SubmitPrint(string message) => History.Add((new[] { ScriptToken.FromString(message, TokenType.Comment) }, InteractiveShellStreamDirection.Output));

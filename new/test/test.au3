@@ -1,3 +1,10 @@
+func my_func()
+   ConsoleWriteLine("A")
+endfunc
+AdlibRegister(my_func)
+ConsoleReadLine()
+AdlibUnRegister(my_func)
+
 
 exit
 
