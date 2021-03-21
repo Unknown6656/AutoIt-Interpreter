@@ -380,7 +380,7 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (Type is VariantType.Map)
                 return $"[{string.Join(", ", ToMap(interpreter).Select(pair => $"{pair.Key.ToDebugString(interpreter, forbidden, level + 1)}={pair.Value.ToDebugString(interpreter, forbidden, level + 1)}"))}]";
             else if (RawData is Variable v)
-                return forbidden.Contains(v) ? '$' + v.Name : $"${v.Name}:{v.Value.ToDebugString(interpreter, forbidden, level + 1)}";
+                return forbidden.Contains(v) ? "ByRef$" + v.Name : $"ByRef${v.Name}:{v.Value.ToDebugString(interpreter, forbidden, level + 1)}";
             else
                 return ToString();
         }
