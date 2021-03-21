@@ -49,6 +49,7 @@ namespace Unknown6656.AutoIt3
         EvaluateExpression,
         ExternalProcessor,
         ExpressionCleanup,
+        MacroResolving,
         VariableResolving,
         VariableCreation,
         COMConnection,
@@ -284,6 +285,7 @@ namespace Unknown6656.AutoIt3
 
             nd_au3.AddChild(pack["debug.telemetry.categories.expr_eval"], get_timings(TelemetryCategory.EvaluateExpression));
             nd_au3.AddChild(pack["debug.telemetry.categories.const_folding"], get_timings(TelemetryCategory.ExpressionCleanup));
+            nd_au3.AddChild(pack["debug.telemetry.categories.macros"], get_timings(TelemetryCategory.MacroResolving));
             nd_vars = nd_au3.AddChild(pack["debug.telemetry.categories.variables"], get_timings(TelemetryCategory.VariableResolving, TelemetryCategory.VariableCreation));
             nd_proc = nd_au3.AddChild(pack["debug.telemetry.categories.line_proc"], get_timings(TelemetryCategory.ProcessLine));
 

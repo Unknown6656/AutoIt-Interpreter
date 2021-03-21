@@ -88,28 +88,23 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool GetTryValue(CallFrame frame, string macro_name, out Variant value, [NotNullWhen(true)] out Metadata? metadata)
         {
-            value = Variant.Null;
-            metadata = null;
+            bool result;
             macro_name = macro_name.TrimStart('@');
 
-            foreach (KnownMacro macro in _macros)
-                if (macro.Name.Equals(macro_name, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    value = macro.GetValue(frame);
-                    metadata = macro.Metadata;
+            (value, metadata, result) = Interpreter.Telemetry.Measure(TelemetryCategory.MacroResolving, delegate
+            {
+                foreach (KnownMacro macro in _macros)
+                    if (macro.Name.Equals(macro_name, StringComparison.InvariantCultureIgnoreCase))
+                        return (macro.GetValue(frame), macro.Metadata, true);
 
-                    return true;
-                }
+                foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
+                    if (provider.ProvideMacroValue(frame, macro_name, out (Variant value, Metadata meta)? v) && v.HasValue)
+                        return (v.Value.value, v.Value.meta, true);
 
-            foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)
-                if (provider.ProvideMacroValue(frame, macro_name, out (Variant value, Metadata meta)? v) && v.HasValue)
-                {
-                    (value, metadata) = v.Value;
+                return (Variant.Null, null!, false);
+            });
 
-                    return true;
-                }
-
-            return false;
+            return result;
         }
 
         public override string ToString() => $"{KnownMacroCount} known macros.";

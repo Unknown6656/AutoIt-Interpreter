@@ -121,6 +121,7 @@ strings:
                 stdin: "Console In"
                 expr_eval: "Expression Evaluation"
                 const_folding: "Constant Folding"
+                macros: "Macros"
                 variables: "Variables"
                 line_proc: "Line Processing"
                 resolving: "Resolving"
