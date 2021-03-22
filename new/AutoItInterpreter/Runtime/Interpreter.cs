@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
@@ -28,8 +30,10 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private static readonly ConcurrentHashSet<Interpreter> _instances = new();
 
+        private readonly ConcurrentDictionary<ScriptFunction, int> _exit_functions = new();
         private readonly ConcurrentHashSet<AU3Thread> _threads = new();
         private readonly object _main_thread_mutex = new();
+        private volatile bool _exiting;
         private volatile int _error;
 
 
@@ -192,7 +196,6 @@ namespace Unknown6656.AutoIt3.Runtime
                 Random = new XorShift(seed); // BuiltinRandom
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             TimerManager.Dispose();
@@ -212,17 +215,48 @@ namespace Unknown6656.AutoIt3.Runtime
             _instances.Remove(this);
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"[{_threads.Count} Threads] {CommandLineOptions}";
 
         /// <summary>
         /// Halts the interpreter and all currently running threads with the given exit code.
         /// </summary>
         /// <param name="exitcode">Exit code.</param>
-        public void Stop(int exitcode)
+        public FunctionReturnValue Stop(int exitcode)
         {
+            FunctionReturnValue @return = Variant.FromNumber(exitcode);
+
             foreach (AU3Thread thread in Threads)
                 thread.Stop(exitcode);
+
+            if (_exit_functions.Count > 0 && !_exiting)
+                try
+                {
+                    _exiting = true;
+
+                    using AU3Thread exit_thread = CreateNewThread();
+                    NativeFunction function = NativeFunction.FromDelegate(this, frame =>
+                    {
+                        FunctionReturnValue result = Variant.Zero;
+
+                        foreach ((ScriptFunction function, _) in _exit_functions.OrderBy(kvp => kvp.Value))
+                        {
+                            result = frame.Call(function, Array.Empty<Variant>());
+
+                            if (result.IsFatal(out _))
+                                break;
+                        }
+
+                        return result;
+                    });
+
+                    @return = exit_thread.Start(function, Array.Empty<Variant>());
+                }
+                finally
+                {
+                    _exiting = false;
+                }
+
+            return @return;
         }
 
         /// <summary>
@@ -234,6 +268,30 @@ namespace Unknown6656.AutoIt3.Runtime
         internal void AddThread(AU3Thread thread) => _threads.Add(thread);
 
         internal void RemoveThread(AU3Thread thread) => _threads.Remove(thread);
+
+        public bool RegisterExitFunction(ScriptFunction function)
+        {
+            bool contains = _exit_functions.ContainsKey(function);
+
+            if (!contains)
+                _exit_functions[function] = _exit_functions.Count;
+
+            return !contains;
+        }
+
+        public bool UnregisterExitFunction(ScriptFunction function)
+        {
+            if (_exit_functions.TryRemove(function, out int index))
+            {
+                foreach ((ScriptFunction key, int value) in _exit_functions)
+                    if (value > index)
+                        _exit_functions[key] = value - 1;
+
+                return true;
+            }
+            else
+                return false;
+        }
 
         /// <summary>
         /// Prints the given value to the STDOUT stream.
@@ -255,7 +313,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="value">Value to be printed.</param>
         public void Print(CallFrame current_frame, object? value) => MainProgram.PrintScriptMessage(current_frame.CurrentThread.CurrentLocation?.FullFileName, value?.ToString() ?? "");
 
-        /// <inheritdoc/>
         void IDebugPrintingService.Print(string channel, string message) => MainProgram.PrintChannelMessage(channel, message);
 
         /// <summary>
