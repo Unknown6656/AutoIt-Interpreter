@@ -208,7 +208,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(ShellExecute), 1, 5, ShellExecute, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default);
             RegisterFunction(nameof(ShellExecuteWait), 1, 5, ShellExecuteWait, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default);
             RegisterFunction(nameof(SoundPlay), 1, 2, SoundPlay, Variant.Zero);
-            RegisterFunction(nameof(SoundSetWaveVolume), 1, SoundSetWaveVolume);
+            // RegisterFunction(nameof(SoundSetWaveVolume), 1, SoundSetWaveVolume);
             RegisterFunction(nameof(StringAddCR), 1, StringAddCR);
             RegisterFunction(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero);
             RegisterFunction(nameof(StringFormat), 1, 33, StringFormat);
@@ -529,10 +529,14 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 bool peek = args[0].ToBoolean();
                 bool binary = args[1].ToBoolean();
+                int input = peek ? Console.In.Peek() : Console.In.Read();
 
-                // TODO
-
-                throw new NotImplementedException();
+                if (input < 0)
+                    return FunctionReturnValue.Error(1);
+                else if (binary)
+                    return Variant.FromBinary(new[] { (byte)(input & 0xff) });
+                else
+                    return Variant.FromString(new string(new[] { (char)input }));
             });
 
         internal static FunctionReturnValue Cos(CallFrame frame, Variant[] args) => (Variant)Math.Cos((double)args[0].ToNumber());
@@ -2774,7 +2778,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     bool wait = args[1].ToBoolean();
                     ProcessStartInfo pfi = new(path)
                     {
-                        Arguments = Path.GetFileName(path) + " --play-and-exit",
+                        Arguments = $"-I null --play-and-exit --qt-start-minimized \"{path}\"",
                         UseShellExecute = true,
                         WorkingDirectory = Path.GetDirectoryName(path)!,
                         FileName = NativeInterop.DoPlatformDependent("vlc.exe", "cvlc"),

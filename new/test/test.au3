@@ -1,3 +1,14 @@
+ $sOutput = ""
+ While True
+	 $sOutput &= ConsoleRead()
+	 If @error or StringLen($soutput) > 20 Then ExitLoop
+	 Sleep(25)
+ WEnd
+ ConsoleWrite(@CRLF&@crlf&$sOutput)
+ exit
+
+
+
 func my_func()
    ConsoleWriteLine("A")
 endfunc
