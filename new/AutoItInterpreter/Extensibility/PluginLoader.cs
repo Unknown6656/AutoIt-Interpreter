@@ -127,7 +127,6 @@ namespace Unknown6656.AutoIt3.Extensibility
                         TryRegister(type, location, _macro_providers);
                     });
 
-
             foreach (AbstractMacroProvider plugin in _macro_providers)
                 if (plugin is AbstractKnownMacroProvider provider)
                     foreach ((string name, (Func<CallFrame, Variant> func, Metadata meta)) in provider._known_macros)

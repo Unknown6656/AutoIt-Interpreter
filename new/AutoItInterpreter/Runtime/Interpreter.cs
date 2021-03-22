@@ -269,7 +269,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal void RemoveThread(AU3Thread thread) => _threads.Remove(thread);
 
-        public bool RegisterExitFunction(ScriptFunction function)
+        public bool RegisterGlobalExitFunction(ScriptFunction function)
         {
             bool contains = _exit_functions.ContainsKey(function);
 
@@ -279,7 +279,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return !contains;
         }
 
-        public bool UnregisterExitFunction(ScriptFunction function)
+        public bool UnregisterGlobalExitFunction(ScriptFunction function)
         {
             if (_exit_functions.TryRemove(function, out int index))
             {

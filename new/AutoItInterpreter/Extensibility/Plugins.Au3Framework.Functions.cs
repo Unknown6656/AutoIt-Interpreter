@@ -205,6 +205,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
             ProvidedNativeFunction.Create(nameof(ShellExecute), 1, 5, ShellExecute, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
             ProvidedNativeFunction.Create(nameof(ShellExecuteWait), 1, 5, ShellExecuteWait, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
+            ProvidedNativeFunction.Create(nameof(SoundPlay), 1, 2, SoundPlay, Variant.Zero),
+            ProvidedNativeFunction.Create(nameof(SoundSetWaveVolume), 1, SoundSetWaveVolume),
             ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
             ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
             ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
@@ -2112,7 +2114,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(decimal)args[0];
 
         #endregion
-        #region ONAUTOIT...
+        #region ONAUTOITEXIT...
 
         internal static FunctionReturnValue OnAutoItExitRegister(CallFrame frame, Variant[] args)
         {
@@ -2753,6 +2755,49 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             Thread.Sleep((int)args[0]);
 
             return Variant.Null;
+        }
+
+        internal static FunctionReturnValue SoundPlay(CallFrame frame, Variant[] args)
+        {
+            string path = args[0].ToString();
+
+            if (string.IsNullOrEmpty(path))
+            {
+
+            }
+            else
+                try
+                {
+                    bool wait = args[1].ToBoolean();
+                    ProcessStartInfo pfi = new(path)
+                    {
+                        Arguments = Path.GetFileName(path) + " --play-and-exit",
+                        UseShellExecute = true,
+                        WorkingDirectory = Path.GetDirectoryName(path)!,
+                        FileName = NativeInterop.DoPlatformDependent("vlc.exe", "cvlc"),
+                        Verb = "OPEN",
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+
+                    Process process = new()
+                    {
+                        StartInfo = pfi
+                    };
+                    process.Start();
+
+                    if (wait)
+                    {
+                        process.WaitForExit();
+
+                        return Variant.True;
+                    }
+                    else
+                        return frame.Interpreter.GlobalObjectStorage.Store(process);
+                }
+                catch
+                {
+                    return InterpreterError.WellKnown(frame.CurrentLocation, "error.vlc_required");
+                }
         }
 
         #endregion
