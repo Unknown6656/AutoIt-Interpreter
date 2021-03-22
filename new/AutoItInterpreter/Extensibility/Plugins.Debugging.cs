@@ -16,24 +16,21 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
     public sealed class DebuggingFunctionProvider
         : AbstractFunctionProvider
     {
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; }
-
-
         public DebuggingFunctionProvider(Interpreter interpreter)
-            : base(interpreter) => ProvidedFunctions = new[]
-            {
-                ProvidedNativeFunction.Create(nameof(DebugVar), 1, DebugVar),
-                ProvidedNativeFunction.Create(nameof(DebugCallFrame), 0, DebugCallFrame),
-                ProvidedNativeFunction.Create(nameof(DebugThread), 0, DebugThread),
-                ProvidedNativeFunction.Create(nameof(DebugAllVars), 0, DebugAllVars),
-                ProvidedNativeFunction.Create(nameof(DebugAllCOM), 0, DebugAllCOM),
-                ProvidedNativeFunction.Create(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact),
-                ProvidedNativeFunction.Create(nameof(DebugCodeLines), 0, DebugCodeLines),
-                ProvidedNativeFunction.Create(nameof(DebugAllThreads), 0, DebugAllThreads),
-                ProvidedNativeFunction.Create(nameof(DebugInterpreter), 0, DebugInterpreter),
-                ProvidedNativeFunction.Create(nameof(DebugPlugins), 0, DebugPlugins),
-                ProvidedNativeFunction.Create(nameof(DebugAll), 0, DebugAll),
-            };
+            : base(interpreter)
+        {
+            RegisterFunction(nameof(DebugVar), 1, DebugVar);
+            RegisterFunction(nameof(DebugCallFrame), 0, DebugCallFrame);
+            RegisterFunction(nameof(DebugThread), 0, DebugThread);
+            RegisterFunction(nameof(DebugAllVars), 0, DebugAllVars);
+            RegisterFunction(nameof(DebugAllCOM), 0, DebugAllCOM);
+            RegisterFunction(nameof(DebugAllVarsCompact), 0, DebugAllVarsCompact);
+            RegisterFunction(nameof(DebugCodeLines), 0, DebugCodeLines);
+            RegisterFunction(nameof(DebugAllThreads), 0, DebugAllThreads);
+            RegisterFunction(nameof(DebugInterpreter), 0, DebugInterpreter);
+            RegisterFunction(nameof(DebugPlugins), 0, DebugPlugins);
+            RegisterFunction(nameof(DebugAll), 0, DebugAll);
+        }
 
         private IDictionary<string, object?> GetVariantInfo(Variant value)
         {

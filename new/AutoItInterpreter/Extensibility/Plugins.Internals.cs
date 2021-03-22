@@ -9,20 +9,16 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Internals
     {
         internal static readonly ConcurrentDictionary<string, ((Variant key, Variant value)[] collection, int index)> _iterators = new();
 
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
-        {
-            ProvidedNativeFunction.Create(nameof(__iterator_create), 2, __iterator_create),
-            ProvidedNativeFunction.Create(nameof(__iterator_destroy), 1, __iterator_destroy),
-            ProvidedNativeFunction.Create(nameof(__iterator_canmove), 1, __iterator_canmove),
-            ProvidedNativeFunction.Create(nameof(__iterator_movenext), 1, __iterator_movenext),
-            ProvidedNativeFunction.Create(nameof(__iterator_currentkey), 1, __iterator_currentkey),
-            ProvidedNativeFunction.Create(nameof(__iterator_currentvalue), 1, __iterator_currentvalue),
-        };
-
 
         public InternalsFunctionProvider(Interpreter interpreter)
             : base(interpreter)
         {
+            RegisterFunction(nameof(__iterator_create), 2, __iterator_create);
+            RegisterFunction(nameof(__iterator_destroy), 1, __iterator_destroy);
+            RegisterFunction(nameof(__iterator_canmove), 1, __iterator_canmove);
+            RegisterFunction(nameof(__iterator_movenext), 1, __iterator_movenext);
+            RegisterFunction(nameof(__iterator_currentkey), 1, __iterator_currentkey);
+            RegisterFunction(nameof(__iterator_currentvalue), 1, __iterator_currentvalue);
         }
 
         public static FunctionReturnValue __iterator_create(CallFrame frame, Variant[] args)

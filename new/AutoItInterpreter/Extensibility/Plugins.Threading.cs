@@ -9,19 +9,15 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
     public sealed class ThreadingFunctionProvider
         : AbstractFunctionProvider
     {
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
-        {
-            ProvidedNativeFunction.Create(nameof(ThreadIsRunning), 1, ThreadIsRunning),
-            ProvidedNativeFunction.Create(nameof(ThreadKill), 1, ThreadKill),
-            ProvidedNativeFunction.Create(nameof(ThreadStart), 1, 256, ThreadStart),
-            ProvidedNativeFunction.Create(nameof(ThreadWait), 1, ThreadWait),
-            ProvidedNativeFunction.Create(nameof(ThreadGetID), 0, 1, ThreadGetID, Variant.Default),
-        };
-
-
         public ThreadingFunctionProvider(Interpreter interpreter)
             : base(interpreter)
         {
+            RegisterFunction(nameof(ThreadIsRunning), 1, ThreadIsRunning);
+            RegisterFunction(nameof(ThreadKill), 1, ThreadKill);
+            RegisterFunction(nameof(ThreadStart), 1, 256, ThreadStart);
+            RegisterFunction(nameof(ThreadWait), 1, ThreadWait);
+            RegisterFunction(nameof(ThreadGetID), 0, 1, ThreadGetID, Variant.Default);
+            RegisterFunction(nameof(ThreadList), 0, ThreadList);
         }
 
         public static FunctionReturnValue ThreadIsRunning(CallFrame frame, Variant[] args)
@@ -94,6 +90,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 
             return (Variant)thread.ThreadID;
         }
+
+        public static FunctionReturnValue ThreadList(CallFrame frame, Variant[] args) =>
+            Variant.FromArray(frame.Interpreter, frame.Interpreter.GlobalObjectStorage.GetAllInstancesOfType<ThreadHandle>().ToArray(LINQ.fst));
 
 
         private sealed class ThreadHandle

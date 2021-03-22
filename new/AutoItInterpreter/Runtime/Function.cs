@@ -167,30 +167,48 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         private static volatile int _id = 1;
 
-
         private readonly Func<NativeCallFrame, Variant[], FunctionReturnValue> _execute;
 
+
         public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
+
+        public Variant[] DefaultValues { get; }
 
         public override SourceLocation Location { get; } = SourceLocation.Unknown;
 
 
-        internal NativeFunction(Interpreter interpreter, string name, (int min, int max) param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, Metadata metadata)
-            : base(interpreter.ScriptScanner.SystemScript, name)
+        protected NativeFunction(Interpreter interpreter, (int min, int max) param_count, Variant[] default_values, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os, string? name = null)
+            : base(interpreter.ScriptScanner.SystemScript, name ?? $"$delegate-0x{++_id:x8}")
         {
+            Array.Resize(ref default_values, param_count.max - param_count.min);
+
             _execute = execute;
+            DefaultValues = default_values;
             ParameterCount = param_count;
-            Metadata = metadata;
+            Metadata = new(os, false);
         }
 
-        private NativeFunction(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os)
-            : this(interpreter, $"$delegate-0x{++_id:x8}", (param_count, param_count), execute, new Metadata(os, false))
+        protected NativeFunction(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os, string? name = null)
+            : this(interpreter, (param_count, param_count), Array.Empty<Variant>(), execute, os, name)
         {
         }
 
-        public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
+        public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args)
+        {
+            List<Variant> a = new();
 
-        public override string ToString() => "[native] " + base.ToString();
+            a.AddRange(args);
+            a.AddRange(DefaultValues.Skip(args.Length - ParameterCount.MinimumCount));
+
+            if (a.Count < ParameterCount.MaximumCount)
+                a.AddRange(Enumerable.Repeat(Variant.Default, ParameterCount.MaximumCount - a.Count));
+            else if (a.Count > ParameterCount.MaximumCount)
+                a.RemoveRange(ParameterCount.MaximumCount, a.Count - ParameterCount.MaximumCount);
+
+            return _execute(frame, a.ToArray());
+        }
+
+        public override string ToString() => "[native] Func " + Name;
 
         public override bool Equals(object? obj) => Name.Equals((obj as ScriptFunction)?.Name, StringComparison.InvariantCultureIgnoreCase);
 
@@ -217,7 +235,22 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="os">The operating systems supported by the given delegate.</param>
         /// <returns>The newly created native function.</returns>
         public static NativeFunction FromDelegate(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
-            new(interpreter, param_count, execute, os);
+            FromDelegate(interpreter, null, param_count, execute, os);
+
+        public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
+            new(interpreter, param_count, execute, os, name);
+
+        public static NativeFunction FromDelegate(Interpreter interpreter, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
+            FromDelegate(interpreter, min_param_count, max_param_count, @delegate, OS.Any, default_values);
+
+        public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
+            FromDelegate(interpreter, name, min_param_count, max_param_count, @delegate, OS.Any, default_values);
+
+        public static NativeFunction FromDelegate(Interpreter interpreter, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os, params Variant[] default_values) =>
+            FromDelegate(interpreter, null, min_param_count, max_param_count, @delegate, os, default_values);
+
+        public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os, params Variant[] default_values) =>
+            new(interpreter, (min_param_count, max_param_count), default_values, @delegate, os, name);
     }
 
     /// <summary>
@@ -235,8 +268,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private NETFrameworkFunction(Interpreter interpreter, MethodInfo method, ParameterInfo[] parameters, object? instance)
             : base(
                 interpreter,
-                $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", parameters.Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}",
                 (parameters.Count(p => !p.HasDefaultValue), parameters.Length),
+                new Variant[parameters.Count(p => p.HasDefaultValue)],
                 (frame, args) =>
                 {
                     if (interpreter.GlobalObjectStorage.TryInvokeNETMember(instance, method, args, out Variant result))
@@ -244,79 +277,13 @@ namespace Unknown6656.AutoIt3.Runtime
                     else
                         return FunctionReturnValue.Fatal(InterpreterError.WellKnown(null, "error.net_execution_error", method));
                 },
-                Metadata.Default
+                OS.Any,
+                $"{method.DeclaringType?.FullName}.{method.Name}: {string.Join(", ", parameters.Select(p => p.ParameterType.FullName))} -> {method.ReturnType.FullName}"
             )
         {
         }
 
         /// <inheritdoc/>
         public override string ToString() => $"[.NET] {Name}";
-    }
-
-    public abstract class ProvidedNativeFunction
-    {
-        public abstract string Name { get; }
-
-        public Metadata Metadata { get; init; } = Metadata.Default;
-
-        public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
-
-
-        public override string ToString() => Name;
-
-        public abstract FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args);
-
-        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate) =>
-            Create(name, param_count, @delegate, null);
-
-        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
-            Create(name, min_param_count, max_param_count, @delegate, null, default_values);
-
-        public static ProvidedNativeFunction Create(string name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, Metadata? metadata) =>
-            Create(name, param_count, param_count, @delegate, metadata);
-
-        public static ProvidedNativeFunction Create(string name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, Metadata? metadata, params Variant[] default_values) =>
-            new FromDelegate(@delegate, name, min_param_count, max_param_count, default_values)
-            {
-                Metadata = metadata ?? Metadata.Default
-            };
-
-
-        internal sealed class FromDelegate
-            : ProvidedNativeFunction
-        {
-            private readonly Func<NativeCallFrame, Variant[], FunctionReturnValue> _exec;
-
-
-            public override string Name { get; }
-
-            public Variant[] DefaultValues { get; }
-
-            public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
-
-
-            public FromDelegate(Func<NativeCallFrame, Variant[], FunctionReturnValue> exec, string name, int min_param_count, int max_param_count, params Variant[] default_values)
-            {
-                _exec = exec;
-                Name = name;
-                DefaultValues = default_values;
-                ParameterCount = (min_param_count, max_param_count);
-            }
-
-            public override FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args)
-            {
-                List<Variant> a = new List<Variant>();
-
-                a.AddRange(args);
-                a.AddRange(DefaultValues.Skip(args.Length - ParameterCount.MinimumCount));
-
-                if (a.Count < ParameterCount.MaximumCount)
-                    a.AddRange(Enumerable.Repeat(Variant.Default, ParameterCount.MaximumCount - a.Count));
-                else if (a.Count > ParameterCount.MaximumCount)
-                    a.RemoveRange(ParameterCount.MaximumCount, a.Count - ParameterCount.MaximumCount);
-
-                return _exec(frame, a.ToArray());
-            }
-        }
     }
 }

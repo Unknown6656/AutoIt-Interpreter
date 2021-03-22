@@ -35,241 +35,237 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         private static readonly Regex REGEX_WS = new(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
         private static readonly Regex REGEX_RUN = new(@"^(?<file>""[^""]*""|[^""]+)(\s+(?<args>.*))?$", RegexOptions.Compiled);
 
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
-        {
-            ProvidedNativeFunction.Create(nameof(AdlibRegister), 1, 2, AdlibRegister),
-            ProvidedNativeFunction.Create(nameof(AdlibUnRegister), 0, 1, AdlibUnRegister),
-            ProvidedNativeFunction.Create(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle, Metadata.WindowsOnly),
-            ProvidedNativeFunction.Create(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle),
-            // ProvidedNativeFunction.Create(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default),
-            // ProvidedNativeFunction.Create("Opt", 1, 2, AutoItSetOption, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(BlockInput), 1, BlockInput),
-            ProvidedNativeFunction.Create(nameof(CDTray), 2, CDTray),
-            ProvidedNativeFunction.Create(nameof(ClipPut), 1, ClipPut),
-            ProvidedNativeFunction.Create(nameof(Abs), 1, Abs),
-            ProvidedNativeFunction.Create(nameof(ACos), 1, ACos),
-            ProvidedNativeFunction.Create(nameof(ASin), 1, ASin),
-            ProvidedNativeFunction.Create(nameof(ATan), 1, ATan),
-            ProvidedNativeFunction.Create(nameof(Cos), 1, Cos),
-            ProvidedNativeFunction.Create(nameof(Sin), 1, Sin),
-            ProvidedNativeFunction.Create(nameof(Exp), 1, Exp),
-            ProvidedNativeFunction.Create(nameof(Mod), 2, Mod),
-            ProvidedNativeFunction.Create(nameof(Log), 1, Log),
-            ProvidedNativeFunction.Create(nameof(Sqrt), 1, Sqrt),
-            ProvidedNativeFunction.Create(nameof(Floor), 1, Floor),
-            ProvidedNativeFunction.Create(nameof(Ceiling), 1, Ceiling),
-            ProvidedNativeFunction.Create(nameof(Round), 1, 2, Round),
-            ProvidedNativeFunction.Create(nameof(Tan), 1, Tan),
-            ProvidedNativeFunction.Create(nameof(Asc), 1, Asc),
-            ProvidedNativeFunction.Create(nameof(AscW), 1, AscW),
-            ProvidedNativeFunction.Create(nameof(Chr), 1, Chr),
-            ProvidedNativeFunction.Create(nameof(ChrW), 1, ChrW),
-            ProvidedNativeFunction.Create(nameof(Beep), 0, 2, Beep, Metadata.WindowsOnly, 500m, 1000m),
-            ProvidedNativeFunction.Create(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray()),
-            ProvidedNativeFunction.Create(nameof(BitOR), 2, 256, BitOR),
-            ProvidedNativeFunction.Create(nameof(BitXOR), 2, 256, BitXOR),
-            ProvidedNativeFunction.Create(nameof(BitNOT), 1, BitNOT),
-            ProvidedNativeFunction.Create(nameof(BitShift), 2, BitShift),
-            ProvidedNativeFunction.Create(nameof(BitRotate), 1, 3, BitRotate, 1, "W"),
-            ProvidedNativeFunction.Create(nameof(String), 1, String),
-            ProvidedNativeFunction.Create(nameof(Binary), 1, Binary),
-            ProvidedNativeFunction.Create(nameof(BinaryLen), 1, BinaryLen),
-            ProvidedNativeFunction.Create(nameof(BinaryMid), 2, 3, BinaryMid, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(Number), 1, Number),
-            ProvidedNativeFunction.Create(nameof(Int), 1, Int),
-            ProvidedNativeFunction.Create(nameof(Dec), 1, Dec),
-            ProvidedNativeFunction.Create(nameof(Hex), 1, 2, Hex, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(BinaryToString), 1, 2, BinaryToString, 1),
-            ProvidedNativeFunction.Create(nameof(StringToBinary), 1, 2, StringToBinary, 1),
-            ProvidedNativeFunction.Create(nameof(Call), 1, 256, Call),
-            ProvidedNativeFunction.Create(nameof(ConsoleWrite), 1, ConsoleWrite),
-            ProvidedNativeFunction.Create(nameof(ConsoleWriteError), 1, ConsoleWriteError),
-            ProvidedNativeFunction.Create(nameof(ConsoleRead), 2, ConsoleRead),
-            ProvidedNativeFunction.Create(nameof(DirCreate), 1, DirCreate),
-            ProvidedNativeFunction.Create(nameof(DirCopy), 2, 3, DirCopy, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(DirGetSize), 1, 2, DirGetSize, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(DirMove), 2, 3, DirMove, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(DllCall), 3, 255, DllCall),
-            ProvidedNativeFunction.Create(nameof(DllCallAddress), 2, 254, DllCallAddress),
-            ProvidedNativeFunction.Create(nameof(DllCallbackFree), 1, DllCallbackFree),
-            ProvidedNativeFunction.Create(nameof(DllCallbackGetPtr), 1, DllCallbackGetPtr),
-            ProvidedNativeFunction.Create(nameof(DllCallbackRegister), 3, DllCallbackRegister),
-            ProvidedNativeFunction.Create(nameof(DllClose), 1, DllClose),
-            ProvidedNativeFunction.Create(nameof(DllOpen), 1, DllOpen),
-            //ProvidedNativeFunction.Create(nameof(DllStructCreate), , DllStructCreate),
-            //ProvidedNativeFunction.Create(nameof(DllStructGetData), , DllStructGetData),
-            //ProvidedNativeFunction.Create(nameof(DllStructGetPtr), , DllStructGetPtr),
-            //ProvidedNativeFunction.Create(nameof(DllStructGetSize), , DllStructGetSize),
-            //ProvidedNativeFunction.Create(nameof(DllStructSetData), , DllStructSetData),
-            ProvidedNativeFunction.Create(nameof(DriveGetDrive), 1, DriveGetDrive),
-            ProvidedNativeFunction.Create(nameof(DriveGetFileSystem), 1, DriveGetFileSystem),
-            ProvidedNativeFunction.Create(nameof(DriveGetLabel), 1, DriveGetLabel),
-            //ProvidedNativeFunction.Create(nameof(DriveGetSerial), 1, DriveGetSerial),
-            ProvidedNativeFunction.Create(nameof(DriveGetType), 1, 2, DriveGetType, 1),
-            ProvidedNativeFunction.Create(nameof(DriveSpaceFree), 1, DriveSpaceFree),
-            ProvidedNativeFunction.Create(nameof(DriveSpaceTotal), 1, DriveSpaceTotal),
-            ProvidedNativeFunction.Create(nameof(DriveStatus), 1, DriveStatus),
-            ProvidedNativeFunction.Create(nameof(MsgBox), 3, 5, MsgBox, Variant.Zero, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(EnvGet), 1, EnvGet),
-            ProvidedNativeFunction.Create(nameof(EnvSet), 1, 2, EnvSet, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(EnvUpdate), 0, EnvUpdate),
-            ProvidedNativeFunction.Create(nameof(Execute), 1, Execute),
-            ProvidedNativeFunction.Create(nameof(Eval), 1, Eval),
-            ProvidedNativeFunction.Create(nameof(FileChangeDir), 1, FileChangeDir),
-            ProvidedNativeFunction.Create(nameof(FileClose), 1, FileClose),
-            ProvidedNativeFunction.Create(nameof(FileCopy), 2, 3, FileCopy, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(FileCreateNTFSLink), 2, 3, FileCreateNTFSLink, Variant.False),
-            //ProvidedNativeFunction.Create(nameof(FileCreateShortcut), , FileCreateShortcut,),
-            ProvidedNativeFunction.Create(nameof(FileDelete), 1, FileDelete),
-            ProvidedNativeFunction.Create(nameof(FileExists), 1, FileExists),
-            ProvidedNativeFunction.Create(nameof(FileFindFirstFile), 1, FileFindFirstFile),
-            ProvidedNativeFunction.Create(nameof(FileFindNextFile), 1, 2, FileFindNextFile, Variant.False),
-            ProvidedNativeFunction.Create(nameof(FileFlush), 1, FileFlush),
-            ProvidedNativeFunction.Create(nameof(FileGetAttrib), 1, FileGetAttrib),
-            ProvidedNativeFunction.Create(nameof(FileGetEncoding), 1, 2, FileGetEncoding, 1),
-            ProvidedNativeFunction.Create(nameof(FileGetLongName), 1, FileGetLongName),
-            ProvidedNativeFunction.Create(nameof(FileGetPos), 1, FileGetPos),
-            //ProvidedNativeFunction.Create(nameof(FileGetShortcut), , FileGetShortcut),
-            ProvidedNativeFunction.Create(nameof(FileGetShortName), 1, 2, FileGetShortName, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(FileGetSize), 1, FileGetSize),
-            ProvidedNativeFunction.Create(nameof(FileGetTime), 1, 3, FileGetTime, Variant.Zero, Variant.Zero),
-            //ProvidedNativeFunction.Create(nameof(FileGetVersion), , FileGetVersion),
-            //ProvidedNativeFunction.Create(nameof(FileInstall), , FileInstall),
-            ProvidedNativeFunction.Create(nameof(FileMove), 2, 3, FileMove, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(FileOpen), 1, 2, FileOpen, Variant.Zero),
-            //ProvidedNativeFunction.Create(nameof(FileOpenDialog), , FileOpenDialog),
-            ProvidedNativeFunction.Create(nameof(FileRead), 1, 2, FileRead, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(FileReadLine), 1, 2, FileReadLine, 1),
-            ProvidedNativeFunction.Create(nameof(FileReadToArray), 1, FileReadToArray),
-            ProvidedNativeFunction.Create(nameof(FileRecycle), 1, FileRecycle),
-            ProvidedNativeFunction.Create(nameof(FileRecycleEmpty), 0, 1, FileRecycleEmpty, Variant.Default),
-            //ProvidedNativeFunction.Create(nameof(FileSaveDialog), , FileSaveDialog),
-            //ProvidedNativeFunction.Create(nameof(FileSelectFolder), , FileSelectFolder),
-            ProvidedNativeFunction.Create(nameof(FileSetAttrib), 2, 3 , FileSetAttrib, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(FileSetEnd), 1, FileSetEnd),
-            ProvidedNativeFunction.Create(nameof(FileSetPos), 3, FileSetPos),
-            ProvidedNativeFunction.Create(nameof(FileSetTime), 2, 4, FileSetTime, Variant.Zero, Variant.False),
-            ProvidedNativeFunction.Create(nameof(FileWrite), 2, FileWrite),
-            ProvidedNativeFunction.Create(nameof(FileWriteLine), 2, FileWriteLine),
-            ProvidedNativeFunction.Create(nameof(Assign), 2, 3, Assign),
-            ProvidedNativeFunction.Create(nameof(InetClose), 1, InetClose),
-            ProvidedNativeFunction.Create(nameof(InetGet), 2, 4, InetGet, Variant.Zero, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(InetGetInfo), 0, 2, InetGetInfo, Variant.Null, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(InetGetSize), 1, 2, InetGetSize, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(InetRead), 1, 2, InetRead, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(IniDelete), 2, 3, IniDelete, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(IniRead), 3, 4, IniRead, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(IniReadSection), 2, IniReadSection),
-            ProvidedNativeFunction.Create(nameof(IniReadSectionNames), 1, IniReadSectionNames),
-            ProvidedNativeFunction.Create(nameof(IniRenameSection), 3, 4, IniRenameSection, Variant.False),
-            ProvidedNativeFunction.Create(nameof(IniWrite), 4, IniWrite),
-            ProvidedNativeFunction.Create(nameof(IniWriteSection), 3, 4, IniWriteSection, 1),
-            ProvidedNativeFunction.Create(nameof(IsAdmin), 0, IsAdmin),
-            ProvidedNativeFunction.Create(nameof(IsArray), 1, IsArray),
-            ProvidedNativeFunction.Create(nameof(IsBinary), 1, IsBinary),
-            ProvidedNativeFunction.Create(nameof(IsBool), 1, IsBool),
-            ProvidedNativeFunction.Create(nameof(IsFloat), 1, IsFloat),
-            ProvidedNativeFunction.Create(nameof(IsFunc), 1, IsFunc),
-            ProvidedNativeFunction.Create(nameof(IsInt), 1, IsInt),
-            ProvidedNativeFunction.Create(nameof(IsKeyword), 1, IsKeyword),
-            ProvidedNativeFunction.Create(nameof(IsNumber), 1, IsNumber),
-            //ProvidedNativeFunction.Create(nameof(IsObj), 1, IsObj),
-            ProvidedNativeFunction.Create(nameof(IsString), 1, IsString),
-            ProvidedNativeFunction.Create(nameof(ObjCreate), 1, 4, ObjCreate, Variant.Default, Variant.Default, Variant.Default),
-            //ProvidedNativeFunction.Create(nameof(ObjCreateInterface), , ObjCreateInterface),
-            //ProvidedNativeFunction.Create(nameof(ObjEvent), , ObjEvent),
-            ProvidedNativeFunction.Create(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(ObjName), 1, 2, ObjName, 1),
-            ProvidedNativeFunction.Create(nameof(OnAutoItExitRegister), 1, OnAutoItExitRegister),
-            ProvidedNativeFunction.Create(nameof(OnAutoItExitUnRegister), 1, OnAutoItExitUnRegister),
-            ProvidedNativeFunction.Create(nameof(Ping), 1, 2, Ping, 4_000),
-            ProvidedNativeFunction.Create(nameof(ProcessClose), 1, ProcessClose),
-            ProvidedNativeFunction.Create(nameof(ProcessExists), 1, ProcessExists),
-            ProvidedNativeFunction.Create(nameof(ProcessGetStats), 1, 2, ProcessGetStats, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(ProcessList), 0, 1, ProcessList, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(ProcessSetPriority), 2, ProcessSetPriority),
-            ProvidedNativeFunction.Create(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False),
-            ProvidedNativeFunction.Create(nameof(RegDelete), 1, 2, RegDelete, Metadata.WindowsOnly, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RegEnumKey), 2, RegEnumKey, Metadata.WindowsOnly),
-            ProvidedNativeFunction.Create(nameof(RegEnumVal), 2, RegEnumVal, Metadata.WindowsOnly),
-            ProvidedNativeFunction.Create(nameof(RegRead), 2, RegRead, Metadata.WindowsOnly),
-            ProvidedNativeFunction.Create(nameof(RegWrite), 1, 4, RegWrite, Metadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(Run), 1, 4, Run, Variant.EmptyString, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RunAs), 5, 8, RunAs, Metadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RunWait), 1, 4, RunWait, Variant.EmptyString, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(RunAsWait), 5, 8, RunAsWait, Metadata.WindowsOnly, Variant.Default, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(Shutdown), 1, Shutdown),
-            ProvidedNativeFunction.Create(nameof(SRandom), 1, SRandom),
-            ProvidedNativeFunction.Create(nameof(ShellExecute), 1, 5, ShellExecute, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(ShellExecuteWait), 1, 5, ShellExecuteWait, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(SoundPlay), 1, 2, SoundPlay, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(SoundSetWaveVolume), 1, SoundSetWaveVolume),
-            ProvidedNativeFunction.Create(nameof(StringAddCR), 1, StringAddCR),
-            ProvidedNativeFunction.Create(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringFormat), 1, 33, StringFormat),
-            ProvidedNativeFunction.Create(nameof(StringFromASCIIArray), 1, 4, StringFromASCIIArray, Variant.Zero, -1, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringInStr), 2, 6, StringInStr, Variant.Zero, 1, 1, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(StringLeft), 2, StringLeft),
-            ProvidedNativeFunction.Create(nameof(StringLen), 1, StringLen),
-            ProvidedNativeFunction.Create(nameof(StringLower), 1, StringLower),
-            ProvidedNativeFunction.Create(nameof(StringMid), 2, 3, StringMid, -1),
-            ProvidedNativeFunction.Create(nameof(StringRegExp), 2, 4, StringRegExp, Variant.Zero, 1),
-            ProvidedNativeFunction.Create(nameof(StringRegExpReplace ), 3, 4, StringRegExpReplace, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringReplace), 3, 5, StringReplace, Variant.Zero, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringReverse), 1, 2, StringReverse, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringRight), 2, StringRight),
-            ProvidedNativeFunction.Create(nameof(StringSplit), 2, 3, StringSplit, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringStripCR), 1, StringStripCR),
-            ProvidedNativeFunction.Create(nameof(StringStripWS), 2, StringStripWS),
-            ProvidedNativeFunction.Create(nameof(StringToASCIIArray), 1, 4, StringToASCIIArray, Variant.Zero, Variant.Default, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(StringTrimLeft), 2, StringTrimLeft),
-            ProvidedNativeFunction.Create(nameof(StringTrimRight), 2, StringTrimRight),
-            ProvidedNativeFunction.Create(nameof(StringUpper), 1, StringUpper),
-            ProvidedNativeFunction.Create("StringIsFloat", 1, IsFloat),
-            ProvidedNativeFunction.Create("StringIsInt", 1, IsInt),
-            ProvidedNativeFunction.Create(nameof(StringIsDigit), 1, StringIsDigit),
-            ProvidedNativeFunction.Create(nameof(StringIsAlNum), 1, StringIsAlNum),
-            ProvidedNativeFunction.Create(nameof(StringIsAlpha), 1, StringIsAlpha),
-            ProvidedNativeFunction.Create(nameof(StringIsASCII), 1, StringIsASCII),
-            ProvidedNativeFunction.Create(nameof(StringIsLower), 1, StringIsLower),
-            ProvidedNativeFunction.Create(nameof(StringIsSpace), 1, StringIsSpace),
-            ProvidedNativeFunction.Create(nameof(StringIsUpper), 1, StringIsUpper),
-            ProvidedNativeFunction.Create(nameof(StringIsXDigit), 1, StringIsXDigit),
-            ProvidedNativeFunction.Create(nameof(IsDeclared), 1, IsDeclared),
-            ProvidedNativeFunction.Create(nameof(FuncName), 1, FuncName),
-            ProvidedNativeFunction.Create(nameof(SetError), 1, 3, SetError),
-            ProvidedNativeFunction.Create(nameof(SetExtended), 1, 2, SetExtended),
-            ProvidedNativeFunction.Create(nameof(Sleep), 1, Sleep),
-            ProvidedNativeFunction.Create(nameof(TCPAccept), 1, TCPAccept),
-            ProvidedNativeFunction.Create(nameof(TCPCloseSocket), 1, TCPCloseSocket),
-            ProvidedNativeFunction.Create(nameof(TCPConnect), 2, TCPConnect),
-            ProvidedNativeFunction.Create(nameof(TCPListen), 2, 3, TCPListen, Variant.Default),
-            ProvidedNativeFunction.Create(nameof(TCPNameToIP), 1, TCPNameToIP),
-            ProvidedNativeFunction.Create(nameof(TCPRecv), 2, 3, TCPRecv, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(TCPSend), 2, TCPSend),
-            ProvidedNativeFunction.Create(nameof(TCPShutdown), 0, TCPShutdown),
-            ProvidedNativeFunction.Create(nameof(TCPStartup), 0, TCPStartup),
-            ProvidedNativeFunction.Create(nameof(TimerInit), 0, TimerInit),
-            ProvidedNativeFunction.Create(nameof(TimerDiff), 1, TimerDiff),
-            ProvidedNativeFunction.Create("UDPBind", 2, UDPListen),
-            ProvidedNativeFunction.Create(nameof(UDPListen), 2, UDPListen),
-            ProvidedNativeFunction.Create(nameof(UDPCloseSocket), 1, UDPCloseSocket),
-            ProvidedNativeFunction.Create(nameof(UDPOpen), 2, 3, UDPOpen, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(UDPRecv), 2, 3, UDPRecv, Variant.Zero),
-            ProvidedNativeFunction.Create(nameof(UDPSend), 2, UDPSend),
-            ProvidedNativeFunction.Create(nameof(UDPShutdown), 0, UDPShutdown),
-            ProvidedNativeFunction.Create(nameof(UDPStartup), 0, UDPStartup),
-            ProvidedNativeFunction.Create(nameof(UBound), 1, 2, UBound, 1),
-            ProvidedNativeFunction.Create(nameof(VarGetType), 1, VarGetType),
-        };
-
 
         public FrameworkFunctions(Interpreter interpreter)
             : base(interpreter)
         {
+            RegisterFunction(nameof(AdlibRegister), 1, 2, AdlibRegister);
+            RegisterFunction(nameof(AdlibUnRegister), 0, 1, AdlibUnRegister);
+            RegisterFunction(nameof(AutoItWinGetTitle), 0, AutoItWinGetTitle, OS.Windows);
+            RegisterFunction(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle);
+            // RegisterFunction(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default);
+            // RegisterFunction("Opt", 1, 2, AutoItSetOption, Variant.Default);
+            RegisterFunction(nameof(BlockInput), 1, BlockInput);
+            RegisterFunction(nameof(CDTray), 2, CDTray);
+            RegisterFunction(nameof(ClipPut), 1, ClipPut);
+            RegisterFunction(nameof(Abs), 1, Abs);
+            RegisterFunction(nameof(ACos), 1, ACos);
+            RegisterFunction(nameof(ASin), 1, ASin);
+            RegisterFunction(nameof(ATan), 1, ATan);
+            RegisterFunction(nameof(Cos), 1, Cos);
+            RegisterFunction(nameof(Sin), 1, Sin);
+            RegisterFunction(nameof(Exp), 1, Exp);
+            RegisterFunction(nameof(Mod), 2, Mod);
+            RegisterFunction(nameof(Log), 1, Log);
+            RegisterFunction(nameof(Sqrt), 1, Sqrt);
+            RegisterFunction(nameof(Floor), 1, Floor);
+            RegisterFunction(nameof(Ceiling), 1, Ceiling);
+            RegisterFunction(nameof(Round), 1, 2, Round);
+            RegisterFunction(nameof(Tan), 1, Tan);
+            RegisterFunction(nameof(Asc), 1, Asc);
+            RegisterFunction(nameof(AscW), 1, AscW);
+            RegisterFunction(nameof(Chr), 1, Chr);
+            RegisterFunction(nameof(ChrW), 1, ChrW);
+            RegisterFunction(nameof(Beep), 0, 2, Beep, OS.Windows, 500m, 1000m);
+            RegisterFunction(nameof(BitAND), 2, 256, BitAND, Enumerable.Repeat((Variant)0xffffffff, 255).ToArray());
+            RegisterFunction(nameof(BitOR), 2, 256, BitOR);
+            RegisterFunction(nameof(BitXOR), 2, 256, BitXOR);
+            RegisterFunction(nameof(BitNOT), 1, BitNOT);
+            RegisterFunction(nameof(BitShift), 2, BitShift);
+            RegisterFunction(nameof(BitRotate), 1, 3, BitRotate, 1, "W");
+            RegisterFunction(nameof(String), 1, String);
+            RegisterFunction(nameof(Binary), 1, Binary);
+            RegisterFunction(nameof(BinaryLen), 1, BinaryLen);
+            RegisterFunction(nameof(BinaryMid), 2, 3, BinaryMid, Variant.Default);
+            RegisterFunction(nameof(Number), 1, Number);
+            RegisterFunction(nameof(Int), 1, Int);
+            RegisterFunction(nameof(Dec), 1, Dec);
+            RegisterFunction(nameof(Hex), 1, 2, Hex, Variant.Default);
+            RegisterFunction(nameof(BinaryToString), 1, 2, BinaryToString, 1);
+            RegisterFunction(nameof(StringToBinary), 1, 2, StringToBinary, 1);
+            RegisterFunction(nameof(Call), 1, 256, Call);
+            RegisterFunction(nameof(ConsoleWrite), 1, ConsoleWrite);
+            RegisterFunction(nameof(ConsoleWriteError), 1, ConsoleWriteError);
+            RegisterFunction(nameof(ConsoleRead), 2, ConsoleRead);
+            RegisterFunction(nameof(DirCreate), 1, DirCreate);
+            RegisterFunction(nameof(DirCopy), 2, 3, DirCopy, Variant.Zero);
+            RegisterFunction(nameof(DirGetSize), 1, 2, DirGetSize, Variant.Zero);
+            RegisterFunction(nameof(DirMove), 2, 3, DirMove, Variant.Zero);
+            RegisterFunction(nameof(DirRemove), 1, 2, DirRemove, Variant.Zero);
+            RegisterFunction(nameof(DllCall), 3, 255, DllCall);
+            RegisterFunction(nameof(DllCallAddress), 2, 254, DllCallAddress);
+            RegisterFunction(nameof(DllCallbackFree), 1, DllCallbackFree);
+            RegisterFunction(nameof(DllCallbackGetPtr), 1, DllCallbackGetPtr);
+            RegisterFunction(nameof(DllCallbackRegister), 3, DllCallbackRegister);
+            RegisterFunction(nameof(DllClose), 1, DllClose);
+            RegisterFunction(nameof(DllOpen), 1, DllOpen);
+            // RegisterFunction(nameof(DllStructCreate), , DllStructCreate);
+            // RegisterFunction(nameof(DllStructGetData), , DllStructGetData);
+            // RegisterFunction(nameof(DllStructGetPtr), , DllStructGetPtr);
+            // RegisterFunction(nameof(DllStructGetSize), , DllStructGetSize);
+            // RegisterFunction(nameof(DllStructSetData), , DllStructSetData);
+            RegisterFunction(nameof(DriveGetDrive), 1, DriveGetDrive);
+            RegisterFunction(nameof(DriveGetFileSystem), 1, DriveGetFileSystem);
+            RegisterFunction(nameof(DriveGetLabel), 1, DriveGetLabel);
+            // RegisterFunction(nameof(DriveGetSerial), 1, DriveGetSerial);
+            RegisterFunction(nameof(DriveGetType), 1, 2, DriveGetType, 1);
+            RegisterFunction(nameof(DriveSpaceFree), 1, DriveSpaceFree);
+            RegisterFunction(nameof(DriveSpaceTotal), 1, DriveSpaceTotal);
+            RegisterFunction(nameof(DriveStatus), 1, DriveStatus);
+            RegisterFunction(nameof(MsgBox), 3, 5, MsgBox, Variant.Zero, Variant.Zero);
+            RegisterFunction(nameof(EnvGet), 1, EnvGet);
+            RegisterFunction(nameof(EnvSet), 1, 2, EnvSet, Variant.Default);
+            RegisterFunction(nameof(EnvUpdate), 0, EnvUpdate);
+            RegisterFunction(nameof(Execute), 1, Execute);
+            RegisterFunction(nameof(Eval), 1, Eval);
+            RegisterFunction(nameof(FileChangeDir), 1, FileChangeDir);
+            RegisterFunction(nameof(FileClose), 1, FileClose);
+            RegisterFunction(nameof(FileCopy), 2, 3, FileCopy, Variant.Zero);
+            RegisterFunction(nameof(FileCreateNTFSLink), 2, 3, FileCreateNTFSLink, Variant.False);
+            // RegisterFunction(nameof(FileCreateShortcut), , FileCreateShortcut,);
+            RegisterFunction(nameof(FileDelete), 1, FileDelete);
+            RegisterFunction(nameof(FileExists), 1, FileExists);
+            RegisterFunction(nameof(FileFindFirstFile), 1, FileFindFirstFile);
+            RegisterFunction(nameof(FileFindNextFile), 1, 2, FileFindNextFile, Variant.False);
+            RegisterFunction(nameof(FileFlush), 1, FileFlush);
+            RegisterFunction(nameof(FileGetAttrib), 1, FileGetAttrib);
+            RegisterFunction(nameof(FileGetEncoding), 1, 2, FileGetEncoding, 1);
+            RegisterFunction(nameof(FileGetLongName), 1, FileGetLongName);
+            RegisterFunction(nameof(FileGetPos), 1, FileGetPos);
+            // RegisterFunction(nameof(FileGetShortcut), , FileGetShortcut);
+            RegisterFunction(nameof(FileGetShortName), 1, 2, FileGetShortName, Variant.Zero);
+            RegisterFunction(nameof(FileGetSize), 1, FileGetSize);
+            RegisterFunction(nameof(FileGetTime), 1, 3, FileGetTime, Variant.Zero, Variant.Zero);
+            // RegisterFunction(nameof(FileGetVersion), , FileGetVersion);
+            // RegisterFunction(nameof(FileInstall), , FileInstall);
+            RegisterFunction(nameof(FileMove), 2, 3, FileMove, Variant.Zero);
+            RegisterFunction(nameof(FileOpen), 1, 2, FileOpen, Variant.Zero);
+            // RegisterFunction(nameof(FileOpenDialog), , FileOpenDialog);
+            RegisterFunction(nameof(FileRead), 1, 2, FileRead, Variant.Default);
+            RegisterFunction(nameof(FileReadLine), 1, 2, FileReadLine, 1);
+            RegisterFunction(nameof(FileReadToArray), 1, FileReadToArray);
+            RegisterFunction(nameof(FileRecycle), 1, FileRecycle);
+            RegisterFunction(nameof(FileRecycleEmpty), 0, 1, FileRecycleEmpty, Variant.Default);
+            // RegisterFunction(nameof(FileSaveDialog), , FileSaveDialog);
+            // RegisterFunction(nameof(FileSelectFolder), , FileSelectFolder);
+            RegisterFunction(nameof(FileSetAttrib), 2, 3 , FileSetAttrib, Variant.Zero);
+            RegisterFunction(nameof(FileSetEnd), 1, FileSetEnd);
+            RegisterFunction(nameof(FileSetPos), 3, FileSetPos);
+            RegisterFunction(nameof(FileSetTime), 2, 4, FileSetTime, Variant.Zero, Variant.False);
+            RegisterFunction(nameof(FileWrite), 2, FileWrite);
+            RegisterFunction(nameof(FileWriteLine), 2, FileWriteLine);
+            RegisterFunction(nameof(Assign), 2, 3, Assign);
+            RegisterFunction(nameof(InetClose), 1, InetClose);
+            RegisterFunction(nameof(InetGet), 2, 4, InetGet, Variant.Zero, Variant.Zero);
+            RegisterFunction(nameof(InetGetInfo), 0, 2, InetGetInfo, Variant.Null, Variant.Default);
+            RegisterFunction(nameof(InetGetSize), 1, 2, InetGetSize, Variant.Zero);
+            RegisterFunction(nameof(InetRead), 1, 2, InetRead, Variant.Zero);
+            RegisterFunction(nameof(IniDelete), 2, 3, IniDelete, Variant.Default);
+            RegisterFunction(nameof(IniRead), 3, 4, IniRead, Variant.Default);
+            RegisterFunction(nameof(IniReadSection), 2, IniReadSection);
+            RegisterFunction(nameof(IniReadSectionNames), 1, IniReadSectionNames);
+            RegisterFunction(nameof(IniRenameSection), 3, 4, IniRenameSection, Variant.False);
+            RegisterFunction(nameof(IniWrite), 4, IniWrite);
+            RegisterFunction(nameof(IniWriteSection), 3, 4, IniWriteSection, 1);
+            RegisterFunction(nameof(IsAdmin), 0, IsAdmin);
+            RegisterFunction(nameof(IsArray), 1, IsArray);
+            RegisterFunction(nameof(IsBinary), 1, IsBinary);
+            RegisterFunction(nameof(IsBool), 1, IsBool);
+            RegisterFunction(nameof(IsFloat), 1, IsFloat);
+            RegisterFunction(nameof(IsFunc), 1, IsFunc);
+            RegisterFunction(nameof(IsInt), 1, IsInt);
+            RegisterFunction(nameof(IsKeyword), 1, IsKeyword);
+            RegisterFunction(nameof(IsNumber), 1, IsNumber);
+            // RegisterFunction(nameof(IsObj), 1, IsObj);
+            RegisterFunction(nameof(IsString), 1, IsString);
+            RegisterFunction(nameof(ObjCreate), 1, 4, ObjCreate, Variant.Default, Variant.Default, Variant.Default);
+            // RegisterFunction(nameof(ObjCreateInterface), , ObjCreateInterface);
+            // RegisterFunction(nameof(ObjEvent), , ObjEvent);
+            RegisterFunction(nameof(ObjGet), 1, 3, ObjGet, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(ObjName), 1, 2, ObjName, 1);
+            RegisterFunction(nameof(OnAutoItExitRegister), 1, OnAutoItExitRegister);
+            RegisterFunction(nameof(OnAutoItExitUnRegister), 1, OnAutoItExitUnRegister);
+            RegisterFunction(nameof(Ping), 1, 2, Ping, 4_000);
+            RegisterFunction(nameof(ProcessClose), 1, ProcessClose);
+            RegisterFunction(nameof(ProcessExists), 1, ProcessExists);
+            RegisterFunction(nameof(ProcessGetStats), 1, 2, ProcessGetStats, Variant.Zero);
+            RegisterFunction(nameof(ProcessList), 0, 1, ProcessList, Variant.Default);
+            RegisterFunction(nameof(ProcessSetPriority), 2, ProcessSetPriority);
+            RegisterFunction(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero);
+            RegisterFunction(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero);
+            RegisterFunction(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False);
+            RegisterFunction(nameof(RegDelete), 1, 2, RegDelete, OS.Windows, Variant.Default);
+            RegisterFunction(nameof(RegEnumKey), 2, RegEnumKey, OS.Windows);
+            RegisterFunction(nameof(RegEnumVal), 2, RegEnumVal, OS.Windows);
+            RegisterFunction(nameof(RegRead), 2, RegRead, OS.Windows);
+            RegisterFunction(nameof(RegWrite), 1, 4, RegWrite, OS.Windows, Variant.Default, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(Run), 1, 4, Run, Variant.EmptyString, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(RunAs), 5, 8, RunAs, OS.Windows, Variant.Default, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(RunWait), 1, 4, RunWait, Variant.EmptyString, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(RunAsWait), 5, 8, RunAsWait, OS.Windows, Variant.Default, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(Shutdown), 1, Shutdown);
+            RegisterFunction(nameof(SRandom), 1, SRandom);
+            RegisterFunction(nameof(ShellExecute), 1, 5, ShellExecute, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(ShellExecuteWait), 1, 5, ShellExecuteWait, Variant.EmptyString, Variant.EmptyString, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(SoundPlay), 1, 2, SoundPlay, Variant.Zero);
+            RegisterFunction(nameof(SoundSetWaveVolume), 1, SoundSetWaveVolume);
+            RegisterFunction(nameof(StringAddCR), 1, StringAddCR);
+            RegisterFunction(nameof(StringCompare), 2, 3, StringCompare, Variant.Zero);
+            RegisterFunction(nameof(StringFormat), 1, 33, StringFormat);
+            RegisterFunction(nameof(StringFromASCIIArray), 1, 4, StringFromASCIIArray, Variant.Zero, -1, Variant.Zero);
+            RegisterFunction(nameof(StringInStr), 2, 6, StringInStr, Variant.Zero, 1, 1, Variant.Default);
+            RegisterFunction(nameof(StringLeft), 2, StringLeft);
+            RegisterFunction(nameof(StringLen), 1, StringLen);
+            RegisterFunction(nameof(StringLower), 1, StringLower);
+            RegisterFunction(nameof(StringMid), 2, 3, StringMid, -1);
+            RegisterFunction(nameof(StringRegExp), 2, 4, StringRegExp, Variant.Zero, 1);
+            RegisterFunction(nameof(StringRegExpReplace ), 3, 4, StringRegExpReplace, Variant.Zero);
+            RegisterFunction(nameof(StringReplace), 3, 5, StringReplace, Variant.Zero, Variant.Zero);
+            RegisterFunction(nameof(StringReverse), 1, 2, StringReverse, Variant.Zero);
+            RegisterFunction(nameof(StringRight), 2, StringRight);
+            RegisterFunction(nameof(StringSplit), 2, 3, StringSplit, Variant.Zero);
+            RegisterFunction(nameof(StringStripCR), 1, StringStripCR);
+            RegisterFunction(nameof(StringStripWS), 2, StringStripWS);
+            RegisterFunction(nameof(StringToASCIIArray), 1, 4, StringToASCIIArray, Variant.Zero, Variant.Default, Variant.Zero);
+            RegisterFunction(nameof(StringTrimLeft), 2, StringTrimLeft);
+            RegisterFunction(nameof(StringTrimRight), 2, StringTrimRight);
+            RegisterFunction(nameof(StringUpper), 1, StringUpper);
+            RegisterFunction("StringIsFloat", 1, IsFloat);
+            RegisterFunction("StringIsInt", 1, IsInt);
+            RegisterFunction(nameof(StringIsDigit), 1, StringIsDigit);
+            RegisterFunction(nameof(StringIsAlNum), 1, StringIsAlNum);
+            RegisterFunction(nameof(StringIsAlpha), 1, StringIsAlpha);
+            RegisterFunction(nameof(StringIsASCII), 1, StringIsASCII);
+            RegisterFunction(nameof(StringIsLower), 1, StringIsLower);
+            RegisterFunction(nameof(StringIsSpace), 1, StringIsSpace);
+            RegisterFunction(nameof(StringIsUpper), 1, StringIsUpper);
+            RegisterFunction(nameof(StringIsXDigit), 1, StringIsXDigit);
+            RegisterFunction(nameof(IsDeclared), 1, IsDeclared);
+            RegisterFunction(nameof(FuncName), 1, FuncName);
+            RegisterFunction(nameof(SetError), 1, 3, SetError);
+            RegisterFunction(nameof(SetExtended), 1, 2, SetExtended);
+            RegisterFunction(nameof(Sleep), 1, Sleep);
+            RegisterFunction(nameof(TCPAccept), 1, TCPAccept);
+            RegisterFunction(nameof(TCPCloseSocket), 1, TCPCloseSocket);
+            RegisterFunction(nameof(TCPConnect), 2, TCPConnect);
+            RegisterFunction(nameof(TCPListen), 2, 3, TCPListen, Variant.Default);
+            RegisterFunction(nameof(TCPNameToIP), 1, TCPNameToIP);
+            RegisterFunction(nameof(TCPRecv), 2, 3, TCPRecv, Variant.Zero);
+            RegisterFunction(nameof(TCPSend), 2, TCPSend);
+            RegisterFunction(nameof(TCPShutdown), 0, TCPShutdown);
+            RegisterFunction(nameof(TCPStartup), 0, TCPStartup);
+            RegisterFunction(nameof(TimerInit), 0, TimerInit);
+            RegisterFunction(nameof(TimerDiff), 1, TimerDiff);
+            RegisterFunction("UDPBind", 2, UDPListen);
+            RegisterFunction(nameof(UDPListen), 2, UDPListen);
+            RegisterFunction(nameof(UDPCloseSocket), 1, UDPCloseSocket);
+            RegisterFunction(nameof(UDPOpen), 2, 3, UDPOpen, Variant.Zero);
+            RegisterFunction(nameof(UDPRecv), 2, 3, UDPRecv, Variant.Zero);
+            RegisterFunction(nameof(UDPSend), 2, UDPSend);
+            RegisterFunction(nameof(UDPShutdown), 0, UDPShutdown);
+            RegisterFunction(nameof(UDPStartup), 0, UDPStartup);
+            RegisterFunction(nameof(UBound), 1, 2, UBound, 1);
+            RegisterFunction(nameof(VarGetType), 1, VarGetType);
         }
 
         #region FRAMEWORK FUNCTIONS
@@ -2757,15 +2753,22 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return Variant.Null;
         }
 
-        internal static FunctionReturnValue SoundPlay(CallFrame frame, Variant[] args)
+
+        private Process? _vlc_process = null;
+
+        internal FunctionReturnValue SoundPlay(CallFrame frame, Variant[] args)
         {
             string path = args[0].ToString();
 
-            if (string.IsNullOrEmpty(path))
+            if (_vlc_process is Process process)
             {
-
+                process.Kill();
+                process.WaitForExit();
+                process.Dispose();
+                _vlc_process = null;
             }
-            else
+
+            if (!string.IsNullOrEmpty(path))
                 try
                 {
                     bool wait = args[1].ToBoolean();
@@ -2779,25 +2782,23 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                         WindowStyle = ProcessWindowStyle.Hidden
                     };
 
-                    Process process = new()
-                    {
-                        StartInfo = pfi
-                    };
+                    process = new() { StartInfo = pfi };
                     process.Start();
 
                     if (wait)
                     {
                         process.WaitForExit();
-
-                        return Variant.True;
+                        process.Dispose();
                     }
                     else
-                        return frame.Interpreter.GlobalObjectStorage.Store(process);
+                        _vlc_process = process;
                 }
                 catch
                 {
                     return InterpreterError.WellKnown(frame.CurrentLocation, "error.vlc_required");
                 }
+
+            return Variant.True;
         }
 
         #endregion

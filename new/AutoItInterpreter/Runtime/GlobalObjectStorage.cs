@@ -126,7 +126,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return success;
         }
 
-        /// <inheritdoc/>
+        public (Variant Handle, T Value)[] GetAllInstancesOfType<T>() => (from kvp in _objects.ToArray()
+                                                                          where kvp.Value is T
+                                                                          select (Variant.FromHandle(kvp.Key), (T)kvp.Value)).ToArray();
+
         public void Dispose()
         {
             foreach (Variant handle in HandlesInUse)

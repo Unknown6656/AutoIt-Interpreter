@@ -5,16 +5,11 @@ namespace Unknown6656.AutoIt3.Extensibility
     public sealed class NETInteropFunctionProvider
         : AbstractFunctionProvider
     {
-        public override ProvidedNativeFunction[] ProvidedFunctions { get; } = new[]
-        {
-            ProvidedNativeFunction.Create(nameof(NETNew), 1, 256, NETNew), // <name> [opt-args]
-            ProvidedNativeFunction.Create(nameof(NETClass), 1, NETClass), // <name>
-        };
-
-
         public NETInteropFunctionProvider(Interpreter interpreter)
             : base(interpreter)
         {
+            RegisterFunction(nameof(NETNew), 1, 256, NETNew); // <name> [opt-args]
+            RegisterFunction(nameof(NETClass), 1, NETClass); // <name>
         }
 
         public static FunctionReturnValue NETNew(NativeCallFrame frame, Variant[] args)

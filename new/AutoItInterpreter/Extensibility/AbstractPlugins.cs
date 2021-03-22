@@ -1,12 +1,13 @@
 ﻿using System.Text.RegularExpressions;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
+using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
+using System.Linq;
 
 [assembly: AutoIt3Plugin]
 
@@ -146,16 +147,30 @@ namespace Unknown6656.AutoIt3.Extensibility
     public abstract class AbstractFunctionProvider
         : AbstractInterpreterPlugin
     {
-        public abstract ProvidedNativeFunction[] ProvidedFunctions { get; }
+        private readonly Dictionary<string, NativeFunction> _known_functions;
+
+
+        public NativeFunction[] ProvidedFunctions => _known_functions.Values.ToArray();
 
 
         protected AbstractFunctionProvider(Interpreter interpreter)
-            : base(interpreter, PluginCategory.FunctionProvider)
+            : base(interpreter, PluginCategory.FunctionProvider) => _known_functions = new(StringComparer.InvariantCultureIgnoreCase);
+
+        public FunctionReturnValue? TryExecute(string name, NativeCallFrame frame, Variant[] args)
         {
+            NativeFunction? function = null;
+
+            return _known_functions?.TryGetValue(name, out function) is true ? (function?.Execute(frame, args)) : null;
         }
 
-        public FunctionReturnValue? TryExecute(string name, NativeCallFrame frame, Variant[] args) =>
-            ProvidedFunctions?.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.InvariantCultureIgnoreCase))?.Execute(frame, args);
+        protected void RegisterFunction(string name, int param_count, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, OS os = OS.Any) =>
+            _known_functions[name] = NativeFunction.FromDelegate(Interpreter, name, param_count, @delegate, os);
+
+        protected void RegisterFunction(string name, int min, int max, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] defaults) =>
+            _known_functions[name] = NativeFunction.FromDelegate(Interpreter, name, min, max, @delegate, defaults);
+
+        protected void RegisterFunction(string name, int min, int max, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, OS os, params Variant[] defaults) =>
+            _known_functions[name] = NativeFunction.FromDelegate(Interpreter, name, min, max, @delegate, os, defaults);
     }
 
     public abstract class AbstractMacroProvider
@@ -176,7 +191,7 @@ namespace Unknown6656.AutoIt3.Extensibility
 
 
         public AbstractKnownMacroProvider(Interpreter interpreter)
-            : base(interpreter) => _known_macros = new();
+            : base(interpreter) => _known_macros = new(StringComparer.InvariantCultureIgnoreCase);
 
         protected void RegisterMacro(string name, Variant value) => RegisterMacro(name, _ => value);
 
@@ -191,13 +206,12 @@ namespace Unknown6656.AutoIt3.Extensibility
             macro = null;
             name = name.TrimStart('@');
 
-            foreach ((string key, (Func<CallFrame, Variant> provider, Metadata metadata)) in _known_macros)
-                if (key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    macro = (provider(frame), metadata);
+            if (_known_macros.TryGetValue(name, out (Func<CallFrame, Variant> provider, Metadata metadata) value))
+            {
+                macro = (value.provider(frame), value.metadata);
 
-                    return true;
-                }
+                return true;
+            }
 
             return false;
         }

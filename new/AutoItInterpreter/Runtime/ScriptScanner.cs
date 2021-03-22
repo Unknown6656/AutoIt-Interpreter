@@ -71,14 +71,14 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             Interpreter = interpreter;
             SystemScript = new ScannedScript(MainProgram.ASM_FILE, "");
-            AnonymousFunction = new AU3Function(SystemScript, "<anonymous>", null);
+            AnonymousFunction = new AU3Function(SystemScript, "<anonymous au3>", null);
         }
 
         internal void ScanNativeFunctions() => Interpreter.Telemetry.Measure(TelemetryCategory.ScanScript, delegate
         {
             foreach (AbstractFunctionProvider provider in Interpreter.PluginLoader.FunctionProviders)
-                foreach (ProvidedNativeFunction function in provider.ProvidedFunctions)
-                    SystemScript.AddFunction(new NativeFunction(Interpreter, function.Name, function.ParameterCount, function.Execute, function.Metadata));
+                foreach (NativeFunction function in provider.ProvidedFunctions)
+                    SystemScript.AddFunction(function);
 
             foreach ((string name, ScriptFunction func) in SystemScript.Functions)
                 _cached_functions.TryAdd(name.ToUpperInvariant(), func);
