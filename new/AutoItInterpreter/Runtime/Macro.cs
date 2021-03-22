@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Collections.Immutable;
+using System.Collections.Generic;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
