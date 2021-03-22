@@ -1,10 +1,4 @@
- $sOutput = ""
- While True
-	 $sOutput &= ConsoleRead()
-	 If @error or StringLen($soutput) > 20 Then ExitLoop
-	 Sleep(25)
- WEnd
- ConsoleWrite(@CRLF&@crlf&$sOutput)
+ConsoleWrite(DriveGetSerial("C:\"))
  exit
 
 

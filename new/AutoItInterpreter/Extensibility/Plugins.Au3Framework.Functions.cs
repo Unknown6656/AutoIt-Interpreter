@@ -113,7 +113,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(DriveGetDrive), 1, DriveGetDrive);
             RegisterFunction(nameof(DriveGetFileSystem), 1, DriveGetFileSystem);
             RegisterFunction(nameof(DriveGetLabel), 1, DriveGetLabel);
-            // RegisterFunction(nameof(DriveGetSerial), 1, DriveGetSerial);
+            RegisterFunction(nameof(DriveSetLabel), 2, DriveSetLabel, OS.Windows);
+            RegisterFunction(nameof(DriveGetSerial), 1, DriveGetSerial, OS.Windows);
             RegisterFunction(nameof(DriveGetType), 1, 2, DriveGetType, 1);
             RegisterFunction(nameof(DriveSpaceFree), 1, DriveSpaceFree);
             RegisterFunction(nameof(DriveSpaceTotal), 1, DriveSpaceTotal);
@@ -906,10 +907,31 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return FunctionReturnValue.Error(Variant.EmptyString, 1, Variant.Zero);
         }
 
-        // internal static FunctionReturnValue DriveGetSerial(CallFrame frame, Variant[] args)
-        // {
-        //     // WMI
-        // }
+        internal static FunctionReturnValue DriveSetLabel(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                if (GetDriveByPath(args[0].ToString()) is DriveInfo info)
+                    info.VolumeLabel = args[1].ToString();
+
+                return Variant.True;
+            }
+            catch
+            {
+                return Variant.False;
+            }
+        }
+
+        internal static FunctionReturnValue DriveGetSerial(CallFrame frame, Variant[] args)
+        {
+            StringBuilder sb0 = new(256), sb1 = new(256);
+            NativeInterop.GetVolumeInformation(args[0].ToString(), sb0, sb0.Capacity, out uint serial, out _, out _, sb1, sb1.Capacity);
+
+            if (serial != 0)
+                return (Variant)serial;
+            else
+                return FunctionReturnValue.Error(1);
+        }
 
         internal static FunctionReturnValue DriveGetType(CallFrame frame, Variant[] args)
         {

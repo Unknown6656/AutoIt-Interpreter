@@ -134,6 +134,9 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(KERNEL32_DLL)]
         public static extern unsafe bool VerifyVersionInfo(OSVERSIONINFOEXW* lpVersionInformation, int dwTypeMask, ulong dwlConditionMask);
 
+        [DllImport(KERNEL32_DLL, CharSet = CharSet.Auto)]
+        public static extern bool GetVolumeInformation(string letter, StringBuilder name, int nameSize, out uint serialNumber, out uint maximumComponentLength, out uint flags, StringBuilder systemName, int systemNameSize);
+
         #endregion
         #region NTDLL.DLL
 
