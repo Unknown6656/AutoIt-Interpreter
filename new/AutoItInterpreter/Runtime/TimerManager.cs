@@ -73,7 +73,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 var tuple = _timers[function] = (interval, thread, null)!;
 
-                tuple.Task = thread.StartAsync(loop, Array.Empty<Variant>());
+                tuple.Task = thread.RunAsync(loop, Array.Empty<Variant>());
                 _timers[function] = tuple;
             }
 

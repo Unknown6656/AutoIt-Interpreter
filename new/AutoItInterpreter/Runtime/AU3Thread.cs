@@ -80,13 +80,12 @@ namespace Unknown6656.AutoIt3.Runtime
 
         /// <summary>
         /// Starts the current thread by invoking the given <paramref name="ScriptFunction"/> with the given arguments.
-        /// <para/>
         /// This function is blocking and returns only after the given function has been invoked.
         /// </summary>
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public FunctionReturnValue Start(ScriptFunction function, Variant[] args) => Interpreter.Telemetry.Measure(TelemetryCategory.ThreadRun, delegate
+        public FunctionReturnValue Run(ScriptFunction function, Variant[] args) => Interpreter.Telemetry.Measure(TelemetryCategory.ThreadRun, delegate
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
@@ -103,12 +102,21 @@ namespace Unknown6656.AutoIt3.Runtime
             return result;
         });
 
-        public Task<FunctionReturnValue> StartAsync(ScriptFunction function, Variant[] args) => Task.Factory.StartNew(() => Start(function, args));
+        /// <summary>
+        /// Starts the current thread by invoking the given <paramref name="ScriptFunction"/> with the given arguments.
+        /// This function is non-blocking and returns a <see cref="Task{TResult}"/> which in turn returns the resulting <see cref="FunctionReturnValue"/>.
+        /// Use the following code snippet to obtain the result of the function asynchronously:
+        /// <code><see cref="FunctionReturnValue"/> result = <see langword="await"/> <see cref="RunAsync(ScriptFunction, Variant[])"/>;</code>
+        /// </summary>
+        /// <param name="function">The function to be invoked.</param>
+        /// <param name="args">The arguments to be passed to the function.</param>
+        /// <returns>An async task which returns the functions return value or execution error.</returns>
+        public Task<FunctionReturnValue> RunAsync(ScriptFunction function, Variant[] args) => Task.Factory.StartNew(() => Run(function, args));
 
         /// <summary>
         /// <b>[UNSAFE!]</b>
         /// Invokes the given <paramref name="ScriptFunction"/> with the given arguments. A call to this function is considered to be unsafe, as any non-concurrent call may result into undefined behavior.
-        /// Use <see cref="Start"/> instead.
+        /// Use <see cref="Run"/> instead.
         /// <para/>
         /// This function is blocking and returns only after the given function has been invoked.
         /// </summary>

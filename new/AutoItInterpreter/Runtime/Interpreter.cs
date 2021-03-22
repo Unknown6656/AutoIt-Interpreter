@@ -249,7 +249,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return result;
                     });
 
-                    @return = exit_thread.Start(function, Array.Empty<Variant>());
+                    @return = exit_thread.Run(function, Array.Empty<Variant>());
                 }
                 finally
                 {
@@ -260,7 +260,7 @@ namespace Unknown6656.AutoIt3.Runtime
         }
 
         /// <summary>
-        /// Creates a new thread. Use <see cref="AU3Thread.Start(ScriptFunction, Variant[])"/> on the returned thread to invoke a method asynchronously from the current thread.
+        /// Creates a new thread. Use <see cref="AU3Thread.Run(ScriptFunction, Variant[])"/> on the returned thread to invoke a method asynchronously from the current thread.
         /// </summary>
         /// <returns>The newly created thread.</returns>
         public AU3Thread CreateNewThread() => new(this);
@@ -337,7 +337,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                FunctionReturnValue result = thread.Start(entry_point, args);
+                FunctionReturnValue result = thread.Run(entry_point, args);
                 InterpreterError? error = null;
 
                 result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret)).IsFatal(out error);
