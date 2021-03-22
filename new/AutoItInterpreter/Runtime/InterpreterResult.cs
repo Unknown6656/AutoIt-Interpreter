@@ -43,7 +43,7 @@ namespace Unknown6656.AutoIt3.Runtime
             Message = message;
         }
 
-        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new InterpreterError(loc, MainProgram.LanguageLoader.CurrentLanguage?[key, args] ?? key);
+        public static InterpreterError WellKnown(SourceLocation? loc, string key, params object?[] args) => new(loc, MainProgram.LanguageLoader.CurrentLanguage?[key, args] ?? key);
     }
 
     public delegate FunctionReturnValue FunctionReturnValueDelegate(Variant @return, int? error, Variant? extended);
@@ -100,17 +100,17 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        public static FunctionReturnValue Success(Variant value) => new FunctionReturnValue(value);
+        public static FunctionReturnValue Success(Variant value) => new(value);
 
-        public static FunctionReturnValue Success(Variant value, Variant extended) => new FunctionReturnValue(value, null, extended);
+        public static FunctionReturnValue Success(Variant value, Variant extended) => new(value, null, extended);
 
-        public static FunctionReturnValue Fatal(InterpreterError error) => new FunctionReturnValue(error);
+        public static FunctionReturnValue Fatal(InterpreterError error) => new(error);
 
-        public static FunctionReturnValue Error(int error) => new FunctionReturnValue(Variant.False, error);
+        public static FunctionReturnValue Error(int error) => new(Variant.False, error);
 
-        public static FunctionReturnValue Error(int error, Variant extended) => new FunctionReturnValue(Variant.False, error, extended);
+        public static FunctionReturnValue Error(int error, Variant extended) => new(Variant.False, error, extended);
 
-        public static FunctionReturnValue Error(Variant value, int error, Variant extended) => new FunctionReturnValue(value, error, extended);
+        public static FunctionReturnValue Error(Variant value, int error, Variant extended) => new(value, error, extended);
 
         public static implicit operator FunctionReturnValue(Variant v) => Success(v);
 
