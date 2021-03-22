@@ -190,9 +190,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args) => _execute(frame, args);
 
-        /// <inheritdoc/>
         public override string ToString() => "[native] " + base.ToString();
 
+        public override bool Equals(object? obj) => Name.Equals((obj as ScriptFunction)?.Name, StringComparison.InvariantCultureIgnoreCase);
+
+        public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Creates a new (parameterless) native function using the given delegate.
