@@ -21,6 +21,7 @@ using Unknown6656.AutoIt3.COM;
 using Unknown6656.AutoIt3.CLI;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.Mathematics;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 {
@@ -34,6 +35,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
     {
         private static readonly Regex REGEX_WS = new(@"[\0\x09-\x0d\x20]{2,}", RegexOptions.Compiled);
         private static readonly Regex REGEX_RUN = new(@"^(?<file>""[^""]*""|[^""]+)(\s+(?<args>.*))?$", RegexOptions.Compiled);
+        private static readonly Regex REGEX_DRIVE_ADD = new(@"Drive (?<letter>.:) is now connected to .*The command completed successfully\.", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex REGEX_DRIVE_GET = new(@"Remote name\s+(?<target>.+)", RegexOptions.Compiled);
 
 
         public FrameworkFunctions(Interpreter interpreter)
@@ -104,6 +107,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             // RegisterFunction(nameof(DllStructGetPtr), , DllStructGetPtr);
             // RegisterFunction(nameof(DllStructGetSize), , DllStructGetSize);
             // RegisterFunction(nameof(DllStructSetData), , DllStructSetData);
+            RegisterFunction(nameof(DriveMapAdd), 2, 5, DriveMapAdd, OS.Windows);
+            RegisterFunction(nameof(DriveMapDel), 1, DriveMapDel, OS.Windows);
+            RegisterFunction(nameof(DriveMapGet), 1, DriveMapGet, OS.Windows);
             RegisterFunction(nameof(DriveGetDrive), 1, DriveGetDrive);
             RegisterFunction(nameof(DriveGetFileSystem), 1, DriveGetFileSystem);
             RegisterFunction(nameof(DriveGetLabel), 1, DriveGetLabel);
@@ -943,6 +949,40 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 return Variant.FromString(drive.IsReady ? "READY" : "NOTREADY");
 
             return Variant.FromString("INVALID");
+        }
+
+        internal static FunctionReturnValue DriveMapAdd(CallFrame frame, Variant[] args)
+        {
+            int flags = (int)args[2];
+            string user = args[3].ToString();
+            string pass = args[4].ToString();
+            string cmd = $"net use \"{args[0]}\" \"{args[1]}\"";
+
+            if (flags.HasFlag(1))
+                cmd += " /persistent:Yes";
+
+            if (flags.HasFlag(8))
+                cmd += $" /user:{user} \"{pass}\"";
+
+            (string output, int code) = NativeInterop.Exec(cmd);
+            bool any = args[0].ToString() == "*";
+
+            if (any && output.Match(REGEX_DRIVE_ADD, out Match match))
+                return (Variant)match.Groups["letter"].Value;
+            else if (any)
+                return FunctionReturnValue.Error("", code, code);
+            else
+                return FunctionReturnValue.Error(code == 0, code, code);
+        }
+
+        internal static FunctionReturnValue DriveMapDel(CallFrame frame, Variant[] args) => (Variant)NativeInterop.Exec($"net use /D \"{args[0]}\"").code;
+
+        internal static FunctionReturnValue DriveMapGet(CallFrame frame, Variant[] args)
+        {
+            if (NativeInterop.Exec($"net use \"{args[0]}\"").stdout.Match(REGEX_DRIVE_GET, out Match match))
+                return (Variant)match.Groups["target"].Value;
+            else
+                return FunctionReturnValue.Error(Variant.EmptyString, 1, 0);
         }
 
         #endregion
