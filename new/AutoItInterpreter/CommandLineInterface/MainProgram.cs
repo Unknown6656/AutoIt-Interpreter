@@ -168,11 +168,15 @@ namespace Unknown6656.AutoIt3.CLI
             Console.CancelKeyPress += (_, e) =>
             {
                 Interpreter[] instances = Interpreter.ActiveInstances;
+                List<FunctionReturnValue> return_values = new();
 
                 e.Cancel = instances.Length > 0;
 
                 foreach (Interpreter interpreter in instances)
-                    interpreter.Stop(-1);
+                    return_values.Add(interpreter.Stop(-1));
+
+                // TODO : exit?
+                // TODO : print fatal error
             };
 
             ConsoleState state = ConsoleExtensions.SaveConsoleState();

@@ -663,12 +663,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(code))
                         code = "0";
 
-                    return ProcessAsVariant(code).IfNonFatal(value =>
-                    {
-                        Interpreter.Stop((int)value.ToNumber());
-
-                        return value;
-                    });
+                    return ProcessAsVariant(code).IfNonFatal(value => Interpreter.Stop((int)value.ToNumber()));
                 },
                 [REGEX_RETURN] = m =>
                 {
