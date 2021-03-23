@@ -8,7 +8,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.Runtime.InteropServices;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -401,10 +400,8 @@ Commands and keyboard shortcuts:
             int width = WIDTH;
             int height = HEIGHT;
             int input_area_width = width - MARGIN_RIGHT - 1;
-            int line_max_len = input_area_width - 3;
+            int line_max_len = input_area_width - 4;
             List<(string content, int orig_index)> input_lines = new();
-
-
             int cursor_pos = CurrentCursorPosition.GetOffset(CurrentInput.Length);
             int cursor_pos_x = -1;
             int cursor_pos_y = 0;
@@ -429,7 +426,10 @@ Commands and keyboard shortcuts:
             if (input_lines.Count == 0)
                 input_lines.Add(("", 0));
 
-            int input_area_height = height - MARGIN_BOTTOM + 1 - input_lines.Count;
+            if (cursor_pos_x < 0)
+                cursor_pos_x = 0;
+
+            int input_area_height = height - MARGIN_BOTTOM + 2 - input_lines.Count;
 
             ConsoleExtensions.WriteBlock(new string(' ', input_area_width * (MARGIN_BOTTOM + input_lines.Count - 1)), 0, input_area_height - 1, input_area_width, MARGIN_BOTTOM + input_lines.Count - 1, true);
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
@@ -441,7 +441,7 @@ Commands and keyboard shortcuts:
 
             foreach ((string line, _) in input_lines)
             {
-                string txt = (line_no == 0 ? " > " : "   ") + ScriptVisualizer.TokenizeScript(line).ConvertToVT100(false);
+                string txt = (line_no == 0 ? " > " : " ¦ ") + ScriptVisualizer.TokenizeScript(line).ConvertToVT100(false);
 
                 Console.CursorLeft = 0;
                 Console.CursorTop = input_area_height + line_no;
@@ -496,17 +496,15 @@ Commands and keyboard shortcuts:
                 Console.CursorLeft = sugg_left;
                 Console.Write('┌' + new string('─', sugg_width) + '┐');
                 Console.CursorTop = cursor.t + 1;
+                Console.CursorLeft = cursor_pos_x + 3;
 
                 string indicator = $" {CurrentSuggestionIndex + 1}/{Suggestions.Count} ";
 
-                if (input_area_width - 4 - cursor_pos_x - indicator.Length > 0)
-                {
-                    Console.CursorLeft = sugg_left;
+                if (cursor_pos_x + 2 + indicator.Length < sugg_left + sugg_width)
                     indicator = '│' + indicator;
-                }
                 else
                 {
-                    Console.CursorLeft = sugg_left - indicator.Length;
+                    Console.CursorLeft -= indicator.Length;
                     indicator += '│';
                 }
 
