@@ -33,6 +33,7 @@ namespace Unknown6656.AutoIt3
         ResolveScript,
         ScriptExecution,
         ThreadRun,
+        TimedFunctions,
         OnAutoItStart,
         OnAutoItExit,
         Au3ScriptExecution,
@@ -274,6 +275,7 @@ namespace Unknown6656.AutoIt3
             nd_codeexec = nd_runtime.AddChild(pack["debug.telemetry.categories.script_exec"], get_timings(TelemetryCategory.ScriptExecution));
 
             nd_thread = nd_codeexec.AddChild(pack["debug.telemetry.categories.thread"], get_timings(TelemetryCategory.ThreadRun));
+            nd_codeexec.AddChild(pack["debug.telemetry.categories.timed"], get_timings(TelemetryCategory.TimedFunctions));
             nd_codeexec.AddChild(pack["debug.telemetry.categories.start"], get_timings(TelemetryCategory.OnAutoItStart));
             nd_codeexec.AddChild(pack["debug.telemetry.categories.exit"], get_timings(TelemetryCategory.OnAutoItExit));
 
