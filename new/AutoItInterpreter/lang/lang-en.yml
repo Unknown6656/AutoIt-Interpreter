@@ -113,6 +113,7 @@ strings:
                 script_scan: "Script Scan"
                 script_exec: "Script Execution"
                 thread: "Run/Start Thread"
+                timed: "Interval/Timed Functions"
                 start: "On Start"
                 exit: "On Exit"
                 au3: "AutoIt3"

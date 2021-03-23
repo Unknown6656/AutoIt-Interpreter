@@ -60,7 +60,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     while (_timers.TryGetValue(function, out (int Interval, AU3Thread, Task<FunctionReturnValue>) value))
                     {
                         if (_active)
-                            result = frame.Call(function, Array.Empty<Variant>());
+                            result = frame.Interpreter.Telemetry.Measure(TelemetryCategory.TimedFunctions, () => frame.Call(function, Array.Empty<Variant>()));
 
                         if (result.IsFatal(out _))
                             break;

@@ -824,7 +824,7 @@ Commands and keyboard shortcuts:
             }
 
             Suggestions.Clear();
-            Suggestions.AddRange(from s in suggestions.Distinctby(s => s.content)
+            Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content)
                                  where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
                                  orderby s.tokens[0].Type, s.content ascending
                                  select s);
