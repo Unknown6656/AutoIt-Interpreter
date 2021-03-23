@@ -1,10 +1,5 @@
-﻿using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
-using Unknown6656.AutoIt3.Extensibility;
+﻿using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime;
-using Unknown6656.AutoIt3.Runtime.Native;
 
 [assembly: AutoIt3Plugin]
 
