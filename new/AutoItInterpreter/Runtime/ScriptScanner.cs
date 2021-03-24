@@ -32,8 +32,9 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_PRAGMA = new(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LINECONT = new(@"(\s|^)_$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_1L_IF = new(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1L_FUNC = new(@"^(?<decl>(volatile)?\s*func\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FUNC = new(@"^(?<volatile>volatile)?\s*func\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_FUNC = new(@"^(?<decl>(volatile)?\s*\bfunc\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC_ASSG = new(@"^(?<target>.+)=\s*(?<func>(volatile)?\s*\bfunc)\s*(?<args>\(.*\))$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC = new(@"^(?<volatile>volatile)?\s*\bfunc\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENDFUNC = new(@"^endfunc$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_LABEL = new(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_INCLUDEONCE = new(@" ^#include-once(\b|$)", _REGEX_OPTIONS);
@@ -213,6 +214,19 @@ namespace Unknown6656.AutoIt3.Runtime
                                 (m.Groups["then"].Value, loc),
                                 ("endif", loc),
                             });
+                        else if (line.Match(REGEX_FUNC_ASSG, out m))
+                        {
+                            if (MainProgram.CommandLineOptions.StrictMode)
+                                return InterpreterError.WellKnown(loc, "error.experimental.function_assignment");
+
+                            string name = $"__internal{Interpreter.Random.NextInt() ^ loc.GetHashCode():x8}";
+
+                            lines.InsertRange(i + 1, new[]
+                            {
+                                ($"{m.Groups["target"]} = {name}", loc),
+                                ($"{m.Groups["func"]} {name}{m.Groups["args"]}", loc),
+                            });
+                        }
                         else if (line.Match(REGEX_1L_FUNC, out m))
                         {
                             if (MainProgram.CommandLineOptions.StrictMode)
