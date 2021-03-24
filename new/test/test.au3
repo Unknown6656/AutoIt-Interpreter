@@ -1,5 +1,10 @@
-ConsoleWrite(DriveGetSerial("C:\"))
- exit
+DebugCodeLines()
+$add = Func($a, $b)
+    return $a + $b
+EndFunc
+Func add2($a, $b) -> $a + $b
+
+exit
 
 
 

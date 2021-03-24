@@ -227,3 +227,4 @@ strings:
         experimental:
             one_liner: "One-liner functions can only be used if the interpreter is started without the '--strict' option."
             goto_instructions: "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."
+            function_assignment: "Function assignments can only be used if the interpreter is started without the '--strict' option."

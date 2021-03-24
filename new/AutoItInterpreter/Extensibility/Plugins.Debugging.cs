@@ -444,7 +444,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
                     ("", true, Enumerable.Range(0, lines.Length).ToArray(i => i.ToString())),
                     (Interpreter.CurrentUILanguage["debug.location"], false, lines.ToArray(t => t.loc.ToString())),
                     (Interpreter.CurrentUILanguage["debug.content"], false, lines.ToArray(LINQ.snd)),
-                }, Math.Min(Console.BufferWidth, Console.WindowWidth), false, i => i == eip);
+                }, Math.Min(Console.BufferWidth, Console.WindowWidth), true, i => i == eip);
 
                 frame.Print(table);
             }
