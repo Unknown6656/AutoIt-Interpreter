@@ -141,7 +141,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public Union<InterpreterError, ScannedScript> ScanScriptFile(SourceLocation include_loc, string path, bool relative) =>
             ResolveScriptFile(include_loc, path, relative).Match<Union<InterpreterError, ScannedScript>>(e => e, file => ProcessScriptFile(file.physical_file, file.content));
 
-        private Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
+        internal Union<InterpreterError, ScannedScript> ProcessScriptFile(FileInfo file, string content) =>
             Interpreter.Telemetry.Measure<Union<InterpreterError, ScannedScript>>(TelemetryCategory.ScanScript, delegate
             {
                 if (!_cached_scripts.TryGetValue(ScannedScript.GetHashCode(file, content), out ScannedScript? script))
