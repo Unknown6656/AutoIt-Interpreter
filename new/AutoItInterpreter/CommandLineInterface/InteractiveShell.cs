@@ -8,6 +8,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using System.IO;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -37,6 +38,7 @@ Commands and keyboard shortcuts:
         private static int WIDTH => Console.WindowWidth;
         private static int HEIGHT => Console.WindowHeight;
 
+        private readonly FileInfo _interactive_tmp_path;
 
         private Index _current_cursor_pos = ^0;
         private bool _isdisposed;
@@ -65,7 +67,7 @@ Commands and keyboard shortcuts:
 
         public Interpreter Interpreter { get; }
 
-        public bool IsRunning { get; set; } = true;
+        public bool IsRunning { get; private set; } = true;
 
         public AU3Thread Thread { get; }
 
@@ -88,6 +90,7 @@ Commands and keyboard shortcuts:
         public InteractiveShell(Interpreter interpreter)
         {
             Interpreter = interpreter;
+            _interactive_tmp_path = new($"0:/temp~{interpreter.Random.NextInt():x8}");
             Thread = interpreter.CreateNewThread();
             CallFrame = Thread.PushAnonymousCallFrame();
             Variables = Thread.CurrentVariableResolver;
@@ -660,6 +663,14 @@ Commands and keyboard shortcuts:
 
         }
 
+        public void Clear()
+        {
+            History.Clear();
+            HistoryScrollIndex = 0;
+        }
+
+        public void Exit() => IsRunning = false;
+
         private void ProcessInput()
         {
             if (!string.IsNullOrWhiteSpace(CurrentInput))
@@ -669,6 +680,21 @@ Commands and keyboard shortcuts:
                 CurrentInput = "";
                 CurrentCursorPosition = 0;
                 History.Add((ScriptVisualizer.TokenizeScript(input), InteractiveShellStreamDirection.Input));
+
+                Union<InterpreterError, ScannedScript> scanned = Interpreter.ScriptScanner.ProcessScriptFile(_interactive_tmp_path, input);
+
+                if (scanned.Is(out InterpreterError? error))
+                {
+
+                }
+                else if (scanned.Is(out ScannedScript? script))
+                {
+
+                }
+
+
+
+                // Todo : remove comments
 
                 if (AU3CallFrame.REGEX_EXIT.IsMatch(input))
                     IsRunning = false;
