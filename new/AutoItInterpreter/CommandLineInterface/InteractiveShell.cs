@@ -44,6 +44,8 @@ Commands and keyboard shortcuts:
         private bool _isdisposed;
 
 
+        public static ConcurrentHashSet<InteractiveShell> Instances { get; } = new();
+
         public List<(ScriptToken[] Content, InteractiveShellStreamDirection Stream)> History { get; } = new();
 
         public List<(ScriptToken[] Display, string Content)> Suggestions { get; } = new();
@@ -89,6 +91,7 @@ Commands and keyboard shortcuts:
 
         public InteractiveShell(Interpreter interpreter)
         {
+            Instances.Add(this);
             Interpreter = interpreter;
             _interactive_tmp_path = new($"0:/temp~{interpreter.Random.NextInt():x8}");
             Thread = interpreter.CreateNewThread();
@@ -116,9 +119,7 @@ Commands and keyboard shortcuts:
                     MainProgram.PausePrinter = false;
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-
+                Instances.Remove(this);
                 _isdisposed = true;
             }
         }
@@ -681,70 +682,36 @@ Commands and keyboard shortcuts:
                 CurrentCursorPosition = 0;
                 History.Add((ScriptVisualizer.TokenizeScript(input), InteractiveShellStreamDirection.Input));
 
+                // CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
+                // Thread.IsRunning = true;
+                // FunctionReturnValue result = CallFrame.ParseCurrentLine();
+                // Thread.IsRunning = false;
+
                 Union<InterpreterError, ScannedScript> scanned = Interpreter.ScriptScanner.ProcessScriptFile(_interactive_tmp_path, input);
+                FunctionReturnValue? result = Variant.Zero;
 
-                if (scanned.Is(out InterpreterError? error))
-                {
+                if (scanned.Is(out ScannedScript? script))
+                    result = Interpreter.Run(script, true);
+                else if (scanned.Is(out InterpreterError? error))
+                    result = error;
 
-                }
-                else if (scanned.Is(out ScannedScript? script))
-                {
-
-                }
-
-
-
-                // Todo : remove comments
-
-                if (AU3CallFrame.REGEX_EXIT.IsMatch(input))
-                    IsRunning = false;
-                else if (input.Equals("clear", StringComparison.OrdinalIgnoreCase))
-                {
-                    History.Clear();
-                    HistoryScrollIndex = 0;
-                }
+                if (result.IsFatal(out InterpreterError? e))
+                    History.Add((new[] { ScriptToken.FromString(e.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
                 else
-                    try
-                    {
-                        CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
-                        Thread.UnsafeSetIsRunning(true);
+                {
+                    List<ScriptToken> tokens = new();
 
-                        FunctionReturnValue result = CallFrame.ParseCurrentLine();
+                    result.IsSuccess(out Variant value, out Variant? extended);
+                    tokens.AddRange(ScriptVisualizer.TokenizeScript(value.ToDebugString(Interpreter)));
 
-                        Thread.UnsafeSetIsRunning(false);
+                    if (result.IsError(out int error))
+                        tokens.AddRange(ScriptVisualizer.TokenizeScript($"\n@error: {error} (0x{error:x8})"));
 
-                        if (result.IsFatal(out InterpreterError? error))
-                            History.Add((new[] { ScriptToken.FromString(error.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
+                    if (extended is Variant ext)
+                        tokens.AddRange(ScriptVisualizer.TokenizeScript($"\n@extended: {ext.ToDebugString(Interpreter)}"));
 
-                        result.IfNonFatal((value, error, extended) =>
-                        {
-                            List<ScriptToken> tokens = new()
-                            {
-                                ScriptToken.FromString(value.ToDebugString(Interpreter), TokenType.DirectiveOption),
-                            };
-
-                            if (error is int err)
-                            {
-                                tokens.Add(ScriptToken.FromString("\n", TokenType.NewLine));
-                                tokens.Add(ScriptToken.FromString("@error", TokenType.Macro));
-                                tokens.Add(ScriptToken.FromString($": {err} (0x{err:x8})", TokenType.DirectiveOption));
-                            }
-
-                            if (extended is Variant ext)
-                            {
-                                tokens.Add(ScriptToken.FromString("\n", TokenType.NewLine));
-                                tokens.Add(ScriptToken.FromString("@extended", TokenType.Macro));
-                                tokens.Add(ScriptToken.FromString($": {ext.ToDebugString(Interpreter)}", TokenType.DirectiveOption));
-                            }
-
-                            History.Add((tokens.ToArray(), InteractiveShellStreamDirection.Output));
-
-                            return value;
-                        });
-                    }
-                    catch
-                    {
-                    }
+                    History.Add((tokens.ToArray(), InteractiveShellStreamDirection.Output));
+                }
             }
         }
 
