@@ -94,7 +94,7 @@ namespace Unknown6656.AutoIt3
 
         public async Task<T> MeasureAsync<T>(TelemetryCategory category, Func<Task<T>> function) => await Task.Factory.StartNew(delegate
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
 
             sw.Start();
 
@@ -118,7 +118,7 @@ namespace Unknown6656.AutoIt3
 
         public T Measure<T>(TelemetryCategory category, Func<T> function)
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             T result;
 
             sw.Start();
@@ -134,7 +134,7 @@ namespace Unknown6656.AutoIt3
 
         public async Task StartPerformanceMonitorAsync(Process process)
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             TimeSpan ts_total, ts_user, ts_kernel;
             int cores = Environment.ProcessorCount;
 

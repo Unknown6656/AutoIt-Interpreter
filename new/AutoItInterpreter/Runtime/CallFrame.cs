@@ -130,8 +130,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 if (CurrentFunction.IsMainFunction)
                     result = Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItStart, () => script.LoadScript(this));
 
-                return result.IfNonFatal(_ =>
-                {
+                if (result.IsNonFatal(out _, out _, out _))
                     if (CurrentThread.IsRunning)
                     {
                         if (CurrentFunction.Metadata.IsDeprecated)
@@ -139,22 +138,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
                         MainProgram.PrintfDebugMessage("debug.au3thread.executing", CurrentFunction);
 
-                        return Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
+                        result = Interpreter.Telemetry.Measure(TelemetryCategory.ScriptExecution, () => InternalExec(args));
                     }
                     else
-                        return Variant.False;
-                }).IfNonFatal((ret, err, ext) =>
-                {
-                    if (CurrentFunction.IsMainFunction && !result.IsFatal(out _))
-                        return Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItExit, () => script.UnLoadScript(this));
-                    else
-                        return new(ret, err, ext);
-                }).IfNonFatal((ret, err, ext) =>
-                {
+                        result = Variant.False;
+
+                if (CurrentFunction.IsMainFunction && result.IsNonFatal(out _, out _, out _))
+                    if (Interpreter.Telemetry.Measure(TelemetryCategory.OnAutoItExit, () => script.UnLoadScript(this)).IsFatal(out InterpreterError? error))
+                        result = error;
+
+                if (result.IsNonFatal(out Variant ret, out _, out _))
                     ReturnValue = ret;
 
-                    return new(ret, err, ext);
-                });
+                return result;
             };
         }
 
@@ -206,7 +202,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="value">The value to be printed.</param>
         public void Print(object? value) => Interpreter.Print(this, value);
 
-        /// <inheritdoc/>
         public override string ToString() => $"[0x{CurrentThread.ThreadID:x4}]";
 
         internal void IssueWarning(string key, params object?[] args) => MainProgram.PrintWarning(CurrentLocation, Interpreter.CurrentUILanguage[key, args]);
@@ -327,6 +322,7 @@ namespace Unknown6656.AutoIt3.Runtime
         internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args, InterpreterRunContext context)
             : base(thread, caller, function, args)
         {
+            LastStatementValue = (caller as AU3CallFrame)?.LastStatementValue ?? Variant.Null;
             CurrentFunction = function;
             InterpreterRunContext = context;
             _line_cache = function.Lines.ToList();
@@ -372,7 +368,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 param_var.Value = args[i];
             }
 
-            return Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.Au3ScriptExecution, delegate
+            return Interpreter.Telemetry.Measure(TelemetryCategory.Au3ScriptExecution, delegate
             {
                 _instruction_pointer = 0;
 

@@ -44,7 +44,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override string ToString() => _result.Match(err => $"FATAL: {err}", val => val.error is int err ? $"ERROR: {err}" : $"SUCCESS: {val.@return}");
 
-        public bool IsSuccess(out Variant value, out Variant? extended) => Is(out value, out int? err, out extended) && err is null;
+        public bool IsSuccess(out Variant value, out Variant? extended) => IsNonFatal(out value, out int? err, out extended) && err is null;
 
         public bool IsFatal([MaybeNullWhen(false), NotNullWhen(true)] out InterpreterError? error) => _result.Is(out error);
 
@@ -56,7 +56,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool IsError(out Variant value, out int error, out Variant? extended)
         {
-            bool res = Is(out value, out int? err, out extended);
+            bool res = IsNonFatal(out value, out int? err, out extended);
 
             if (err is null)
                 res = false;
@@ -66,11 +66,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return res;
         }
 
-        public FunctionReturnValue IfNonFatal(FunctionReturnValueDelegate function) => _result.Match(Fatal, t => function(t.@return, t.error, t.extended));
-
-        public FunctionReturnValue IfNonFatal(Func<Variant, FunctionReturnValue> function) => _result.Match(Fatal, t => function(t.@return));
-
-        private bool Is(out Variant @return, out int? error, out Variant? extended)
+        public bool IsNonFatal(out Variant @return, out int? error, out Variant? extended)
         {
             bool res = _result.Is(out (Variant @return, int? error, Variant? extended) tuple);
 
@@ -78,6 +74,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
             return res;
         }
+
+        public FunctionReturnValue IfNonFatal(FunctionReturnValueDelegate function) => _result.Match(Fatal, t => function(t.@return, t.error, t.extended));
+
+        public FunctionReturnValue IfNonFatal(Func<Variant, FunctionReturnValue> function) => _result.Match(Fatal, t => function(t.@return));
 
         public static FunctionReturnValue Success(Variant value) => new(value);
 
