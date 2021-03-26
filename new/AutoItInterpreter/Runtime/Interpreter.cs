@@ -320,7 +320,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// (This essentially executes the script stored in <see cref="CommandLineOptions.FilePath"/> of the interpreter's <see cref="CommandLineOptions"/>-property),
         /// </summary>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public InterpreterResult Run() => CommandLineOptions.FilePath is string s ? Run(s) : new InterpreterResult(-1, InterpreterError.WellKnown(null, "error.unresolved_script", "<null>"));
+        public FunctionReturnValue Run(bool keep_global_scope = false) => CommandLineOptions.FilePath is string s ? Run(s, keep_global_scope) : InterpreterError.WellKnown(null, "error.unresolved_script", "<null>");
 
         /// <summary>
         /// Creates a new (anonymous) interpreter, which invokes the given function with the given arguments.
@@ -328,7 +328,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="entry_point">The function (entry point) to be invoked.</param>
         /// <param name="args">Arguments to be passed to the invoked function.</param>
         /// <returns>The interpreter result of the function invocation.</returns>
-        public InterpreterResult Run(ScriptFunction entry_point, Variant[] args)
+        public FunctionReturnValue Run(ScriptFunction entry_point, Variant[] args, bool keep_global_scope = false)
         {
             try
             {
@@ -338,16 +338,16 @@ namespace Unknown6656.AutoIt3.Runtime
                     MainThread = thread;
 
                 FunctionReturnValue result = thread.Run(entry_point, args);
-                InterpreterError? error = null;
 
-                result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret)).IsFatal(out error);
-
-                return error is null ? new InterpreterResult(ExitCode) : new(-1, error);
+                return result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret));
             }
             finally
             {
                 lock (_main_thread_mutex)
                     MainThread = null;
+
+                if (!keep_global_scope)
+                    VariableResolver.GlobalRoot.Dispose();
             }
         }
 
@@ -356,13 +356,13 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="script">The script to be executed.</param>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public InterpreterResult Run(ScannedScript script) => Run(script.MainFunction, Array.Empty<Variant>());
+        public FunctionReturnValue Run(ScannedScript script, bool keep_global_scope = false) => Run(script.MainFunction, Array.Empty<Variant>(), keep_global_scope);
 
         /// <summary>
         /// Creates a new (anonymous) interpreter, which invokes the global function of the given script. This essentially executes the given script.
         /// </summary>
         /// <param name="path">The path of the script to be executed.</param>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public InterpreterResult Run(string path) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(err => new InterpreterResult(-1, err), Run);
+        public FunctionReturnValue Run(string path, bool keep_global_scope = false) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(FunctionReturnValue.Fatal, s => Run(s, keep_global_scope));
     }
 }

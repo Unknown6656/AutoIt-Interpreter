@@ -89,8 +89,11 @@ namespace Unknown6656.AutoIt3.Runtime
             VariableResolver = function.IsMainFunction ? thread.CurrentVariableResolver : thread.CurrentVariableResolver.CreateChildScope(this);
         }
 
-        /// <inheritdoc/>
-        public void Dispose() => VariableResolver.Dispose();
+        public void Dispose()
+        {
+            if (!VariableResolver.IsGlobalScope)
+                VariableResolver.Dispose();
+        }
 
         /// <summary>
         /// Executes the code stored inside the current call frame with the given arguments.
@@ -254,6 +257,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_WHILE = new(@"^while\s+(?<expression>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_WEND = new(@"^wend$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_NEXT = new(@"^next$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_CLEAR = new(@"^clear$", _REGEX_OPTIONS);
         internal static readonly Regex REGEX_EXIT = new(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_RETURN = new(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FOR = new(@"^for\s+.+$", _REGEX_OPTIONS);
@@ -654,8 +658,19 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private FunctionReturnValue? ProcessStatement(string line) => Interpreter.Telemetry.Measure(TelemetryCategory.ProcessStatement, delegate
         {
-            FunctionReturnValue? result = line.Match(null, new Dictionary<Regex, Func<Match, FunctionReturnValue>>
+            FunctionReturnValue? result = line.Match(null!, new Dictionary<Regex, Func<Match, FunctionReturnValue>>
             {
+                [REGEX_CLEAR] = _ =>
+                {
+                    if (InteractiveShell.Instances is { Count: > 0 } shells)
+                    {
+                        shells.Do(i => i.Clear());
+
+                        return Variant.Zero;
+                    }
+                    else
+                        return WellKnownError("error.unexpected_clear");
+                },
                 [REGEX_EXIT] = m =>
                 {
                     string code = m.Groups["code"].Value;
@@ -663,7 +678,12 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (string.IsNullOrWhiteSpace(code))
                         code = "0";
 
-                    return ProcessAsVariant(code).IfNonFatal(value => Interpreter.Stop((int)value.ToNumber()));
+                    FunctionReturnValue result = ProcessAsVariant(code);
+
+                    if (InteractiveShell.Instances is { Count: > 0 } shells)
+                        shells.Do(i => i.Exit());
+
+                    return result.IfNonFatal(value => Interpreter.Stop((int)value.ToNumber()));
                 },
                 [REGEX_RETURN] = m =>
                 {

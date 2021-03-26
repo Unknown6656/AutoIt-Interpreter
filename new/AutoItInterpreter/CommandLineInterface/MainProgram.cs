@@ -302,10 +302,12 @@ namespace Unknown6656.AutoIt3.CLI
                                 }
                                 else if (opt.ProgramExecutionMode is ExecutionMode.normal)
                                 {
-                                    InterpreterResult result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
+                                    FunctionReturnValue result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, interpreter.Run);
 
-                                    error = result.OptionalError;
-                                    code = result.ProgramExitCode;
+                                    result.IsFatal(out error);
+
+                                    if (!result.IsError(out code))
+                                        code = 0;
                                 }
                             }
                             else

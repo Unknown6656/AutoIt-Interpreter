@@ -29,7 +29,13 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <summary>
         /// Indicates whether the current thread is actively running.
         /// </summary>
-        public bool IsRunning => _running;
+        public bool IsRunning
+        {
+            get => _running;
+#if DEBUG
+            internal set => _running = value;
+#endif
+        }
 
         /// <summary>
         /// The top-most <see cref="CallFrame"/>, representing the top-most function invocation of this thread.
@@ -116,7 +122,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <summary>
         /// <b>[UNSAFE!]</b>
         /// Invokes the given <paramref name="ScriptFunction"/> with the given arguments. A call to this function is considered to be unsafe, as any non-concurrent call may result into undefined behavior.
-        /// Use <see cref="Run"/> instead.
+        /// Use <see cref="Run"/> or <see cref="RunAsync"/> instead.
         /// <para/>
         /// This function is blocking and returns only after the given function has been invoked.
         /// </summary>
@@ -166,12 +172,6 @@ namespace Unknown6656.AutoIt3.Runtime
 
             _override_exitcode = exitcode;
         }
-
-        /// <summary>
-        /// [UNSAFE!!!!]
-        /// </summary>
-        /// <param name="is_running"></param>
-        internal void UnsafeSetIsRunning(bool is_running) => _running = is_running;
 
         internal SourceLocation? ExitCall()
         {
