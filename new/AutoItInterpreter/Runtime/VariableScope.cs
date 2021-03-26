@@ -243,7 +243,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="interpreter">Interpreter for which the variable scope will be created.</param>
         /// <returns>The newly created variable scope.</returns>
-        public static VariableScope CreateGlobalScope(Interpreter interpreter) => new VariableScope(interpreter, null, null);
+        public static VariableScope CreateGlobalScope(Interpreter interpreter) => new(interpreter, null, null);
     }
 
     /// <summary>
