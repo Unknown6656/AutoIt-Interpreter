@@ -168,7 +168,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public FunctionReturnValue Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args);
+        public FunctionReturnValue Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args, (this as AU3CallFrame)?.InterpreterRunContext ?? InterpreterRunContext.Regular);
 
         public Variant SetError(int error, Variant? extended = null, in Variant @return = default)
         {
@@ -295,6 +295,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public override AU3Function CurrentFunction { get; }
 
+        public FunctionReturnValue LastStatementValue { get; private set; }
+
+        public InterpreterRunContext InterpreterRunContext { get; }
+
         /// <summary>
         /// The current instruction pointer.
         /// <para/>
@@ -320,24 +324,22 @@ namespace Unknown6656.AutoIt3.Runtime
         public Dictionary<string, int> InternalJumpLabels => _line_cache.WithIndex().Where(l => REGEX_INTERNAL_LABEL.IsMatch(l.Item.LineContent)).ToDictionary(l => l.Item.LineContent, l => l.Index);
 
 
-        internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args)
+        internal AU3CallFrame(AU3Thread thread, CallFrame? caller, AU3Function function, Variant[] args, InterpreterRunContext context)
             : base(thread, caller, function, args)
         {
             CurrentFunction = function;
+            InterpreterRunContext = context;
             _line_cache = function.Lines.ToList();
             _instruction_pointer = 0;
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"{base.ToString()} {CurrentLocation}";
 
-        /// <inheritdoc/>
         protected override FunctionReturnValue InternalExec(Variant[] args)
         {
             _instruction_pointer = -1;
 
-            AU3Function func = (AU3Function)CurrentFunction;
-            int argc = func.ParameterCount.MaximumCount;
+            int argc = CurrentFunction.ParameterCount.MaximumCount;
             int len = args.Length;
 
             if (len < argc)
@@ -345,8 +347,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
             for (int i = 0; i < argc; ++i)
             {
-                PARAMETER_DECLARATION param = func.Parameters[i];
-                Variable param_var = VariableResolver.CreateVariable(func.Location, param.Variable.Name, param.IsConst);
+                PARAMETER_DECLARATION param = CurrentFunction.Parameters[i];
+                Variable param_var = VariableResolver.CreateVariable(CurrentFunction.Location, param.Variable.Name, param.IsConst);
 
                 if (i < len)
                 {
@@ -380,7 +382,10 @@ namespace Unknown6656.AutoIt3.Runtime
                     else if (!MoveNext())
                         break;
 
-                return ReturnValue;
+                if (InterpreterRunContext == InterpreterRunContext.Regular)
+                    return ReturnValue;
+                else
+                    return LastStatementValue;
             });
         }
 
@@ -425,7 +430,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                 return Variant.True;
             }
-            else if ((CurrentFunction as AU3Function)?.JumpLabels[jump_label] is JumpLabel label)
+            else if (CurrentFunction.JumpLabels[jump_label] is JumpLabel label)
                 return Variant.FromBoolean(MoveTo(label));
 
             return WellKnownError("error.unknown_jumplabel", jump_label);
@@ -531,6 +536,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 TryDo(ProcessExpressionStatement);
             });
 
+            LastStatementValue = result ?? Variant.Null;
+
             if (Interpreter.CommandLineOptions.IgnoreErrors && result is { } && result.IsFatal(out InterpreterError? error))
             {
                 MainProgram.PrintWarning(CurrentLocation, error.Message);
@@ -538,7 +545,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 return Variant.False;
             }
             else
-                return result ?? Variant.True;
+                return LastStatementValue ?? Variant.True;
         }
 
         private FunctionReturnValue? ProcessDirective(string directive)

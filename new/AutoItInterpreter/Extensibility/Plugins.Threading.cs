@@ -68,7 +68,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
             if (func is { })
             {
                 AU3Thread thread = frame.Interpreter.CreateNewThread();
-                Task<FunctionReturnValue> runner = thread.RunAsync(func, frame.PassedArguments[1..]);
+                Task<FunctionReturnValue> runner = thread.RunAsync(func, frame.PassedArguments[1..], InterpreterRunContext.Interactive);
                 Variant handle = frame.Interpreter.GlobalObjectStorage.Store(new ThreadHandle(thread, runner));
 
                 return handle;

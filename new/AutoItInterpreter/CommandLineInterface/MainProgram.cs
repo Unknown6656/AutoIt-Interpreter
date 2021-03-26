@@ -302,7 +302,7 @@ namespace Unknown6656.AutoIt3.CLI
                                 }
                                 else if (opt.ProgramExecutionMode is ExecutionMode.normal)
                                 {
-                                    FunctionReturnValue result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, () => interpreter.Run(false));
+                                    FunctionReturnValue result = Telemetry.Measure(TelemetryCategory.InterpreterRuntime, () => interpreter.Run(InterpreterRunContext.Regular));
 
                                     result.IsFatal(out error);
 

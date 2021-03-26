@@ -249,7 +249,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         return result;
                     });
 
-                    @return = exit_thread.Run(function, Array.Empty<Variant>());
+                    @return = exit_thread.Run(function, Array.Empty<Variant>(), InterpreterRunContext.Interactive);
                 }
                 finally
                 {
@@ -320,7 +320,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// (This essentially executes the script stored in <see cref="CommandLineOptions.FilePath"/> of the interpreter's <see cref="CommandLineOptions"/>-property),
         /// </summary>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public FunctionReturnValue Run(bool keep_global_scope = false) => CommandLineOptions.FilePath is string s ? Run(s, keep_global_scope) : InterpreterError.WellKnown(null, "error.unresolved_script", "<null>");
+        public FunctionReturnValue Run(InterpreterRunContext context) => CommandLineOptions.FilePath is string s ? Run(s, context) : InterpreterError.WellKnown(null, "error.unresolved_script", "<null>");
 
         /// <summary>
         /// Creates a new (anonymous) interpreter, which invokes the given function with the given arguments.
@@ -328,7 +328,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="entry_point">The function (entry point) to be invoked.</param>
         /// <param name="args">Arguments to be passed to the invoked function.</param>
         /// <returns>The interpreter result of the function invocation.</returns>
-        public FunctionReturnValue Run(ScriptFunction entry_point, Variant[] args, bool keep_global_scope = false)
+        public FunctionReturnValue Run(ScriptFunction entry_point, Variant[] args, InterpreterRunContext context)
         {
             try
             {
@@ -337,16 +337,21 @@ namespace Unknown6656.AutoIt3.Runtime
                 lock (_main_thread_mutex)
                     MainThread = thread;
 
-                FunctionReturnValue result = thread.Run(entry_point, args);
+                FunctionReturnValue result = thread.Run(entry_point, args, context);
 
-                return result.IfNonFatal((ret, err, _) => Variant.FromNumber(ExitCode = err ?? (int)ret));
+                if (result.IsFatal(out _) || context == InterpreterRunContext.Interactive)
+                    return result;
+                else if (result.IsError(out int err_code))
+                    return Variant.FromNumber(err_code);
+                else
+                    return Variant.Zero;
             }
             finally
             {
                 lock (_main_thread_mutex)
                     MainThread = null;
 
-                if (!keep_global_scope)
+                if (context != InterpreterRunContext.Interactive)
                     VariableResolver.GlobalRoot.Dispose();
             }
         }
@@ -356,13 +361,19 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="script">The script to be executed.</param>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public FunctionReturnValue Run(ScannedScript script, bool keep_global_scope = false) => Run(script.MainFunction, Array.Empty<Variant>(), keep_global_scope);
+        public FunctionReturnValue Run(ScannedScript script, InterpreterRunContext context) => Run(script.MainFunction, Array.Empty<Variant>(), context);
 
         /// <summary>
         /// Creates a new (anonymous) interpreter, which invokes the global function of the given script. This essentially executes the given script.
         /// </summary>
         /// <param name="path">The path of the script to be executed.</param>
         /// <returns>The interpreter result of the script invocation.</returns>
-        public FunctionReturnValue Run(string path, bool keep_global_scope = false) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(FunctionReturnValue.Fatal, s => Run(s, keep_global_scope));
+        public FunctionReturnValue Run(string path, InterpreterRunContext context) => ScriptScanner.ScanScriptFile(SourceLocation.Unknown, path, false).Match(FunctionReturnValue.Fatal, s => Run(s, context));
+    }
+
+    public enum InterpreterRunContext
+    {
+        Regular,
+        Interactive
     }
 }

@@ -682,16 +682,11 @@ Commands and keyboard shortcuts:
                 CurrentCursorPosition = 0;
                 History.Add((ScriptVisualizer.TokenizeScript(input), InteractiveShellStreamDirection.Input));
 
-                // CallFrame.InsertReplaceSourceCode(CallFrame.CurrentInstructionPointer, input);
-                // Thread.IsRunning = true;
-                // FunctionReturnValue result = CallFrame.ParseCurrentLine();
-                // Thread.IsRunning = false;
-
                 Union<InterpreterError, ScannedScript> scanned = Interpreter.ScriptScanner.ProcessScriptFile(_interactive_tmp_path, input);
                 FunctionReturnValue? result = Variant.Zero;
 
                 if (scanned.Is(out ScannedScript? script))
-                    result = Interpreter.Run(script, true);
+                    result = Interpreter.Run(script, InterpreterRunContext.Interactive);
                 else if (scanned.Is(out InterpreterError? error))
                     result = error;
 

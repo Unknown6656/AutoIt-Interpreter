@@ -91,14 +91,14 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public FunctionReturnValue Run(ScriptFunction function, Variant[] args) => Interpreter.Telemetry.Measure(TelemetryCategory.ThreadRun, delegate
+        public FunctionReturnValue Run(ScriptFunction function, Variant[] args, InterpreterRunContext context) => Interpreter.Telemetry.Measure(TelemetryCategory.ThreadRun, delegate
         {
             if (_running)
                 return InterpreterError.WellKnown(CurrentLocation, "error.thread_already_running", ThreadID);
             else
                 _running = true;
 
-            FunctionReturnValue result = Call(function, args);
+            FunctionReturnValue result = Call(function, args, context);
 
             Stop();
 
@@ -117,7 +117,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>An async task which returns the functions return value or execution error.</returns>
-        public Task<FunctionReturnValue> RunAsync(ScriptFunction function, Variant[] args) => Task.Factory.StartNew(() => Run(function, args));
+        public Task<FunctionReturnValue> RunAsync(ScriptFunction function, Variant[] args, InterpreterRunContext context) => Task.Factory.StartNew(() => Run(function, args, context));
 
         /// <summary>
         /// <b>[UNSAFE!]</b>
@@ -129,7 +129,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <param name="function">The function to be invoked.</param>
         /// <param name="args">The arguments to be passed to the function.</param>
         /// <returns>The functions return value or execution error.</returns>
-        public FunctionReturnValue Call(ScriptFunction function, Variant[] args)
+        public FunctionReturnValue Call(ScriptFunction function, Variant[] args, InterpreterRunContext context)
         {
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AU3Thread));
@@ -137,11 +137,10 @@ namespace Unknown6656.AutoIt3.Runtime
             CallFrame? old = CurrentFrame;
             using CallFrame frame = function switch
             {
-                AU3Function f => new AU3CallFrame(this, old, f, args),
+                AU3Function f => new AU3CallFrame(this, old, f, args, context),
                 NativeFunction f => new NativeCallFrame(this, old, f, args),
                 _ => throw new ArgumentException($"A function of the type '{function}' cannot be handled by the current thread '{this}'.", nameof(function)),
             };
-
             _callstack.Push(frame);
 
             FunctionReturnValue result = frame.Execute(args);
@@ -186,7 +185,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         internal AU3CallFrame PushAnonymousCallFrame()
         {
-            AU3CallFrame frame = new(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>());
+            AU3CallFrame frame = new(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>(), (CurrentFrame as AU3CallFrame)?.InterpreterRunContext ?? InterpreterRunContext.Regular);
 
             _callstack.Push(frame);
 

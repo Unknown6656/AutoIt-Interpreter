@@ -317,7 +317,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             object? result = type.IsValueType ? Activator.CreateInstance(type) : null;
 
-            thread.Run(function, args).IfNonFatal(value =>
+            thread.Run(function, args, InterpreterRunContext.Regular).IfNonFatal(value =>
             {
                 result = value.ToCPPObject(type, interpreter);
 
