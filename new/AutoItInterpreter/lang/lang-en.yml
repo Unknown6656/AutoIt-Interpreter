@@ -202,6 +202,7 @@ strings:
         too_many_array_items: "Array declaration '{0}' has too many items: The array was constrained to a size of {1} item(s), however, {2} array items have been specified during initialization."
         undeclared_variable: "The variable '{0}' has not been declared prior to this line and can therefore not be used in this expression."
         unexpected_case: "Unexpected 'Case'-statement outside a 'Switch'- or 'Select'-block."
+        unexpected_clear: "Unexpected 'Clear'-statement. This statement can only be used inside the interactive AutoIt3 shell."
         unexpected_close: "Unexpected statement '{0}': A '{1}'-statement must be opened before it can be closed."
         unexpected_continuecase: "Unexpected 'ContinueCase'-statement outside a 'Switch'- or 'Select'-block."
         unexpected_contexitloop: "Unexpected statement '{0}'. '{0}' may only be used inside 'For'-, 'Do'-, or 'While'-loops."
