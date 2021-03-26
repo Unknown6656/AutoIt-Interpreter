@@ -72,7 +72,6 @@ namespace Unknown6656.AutoIt3.Runtime
             InternalName = parent is null ? "/" : $"{parent.InternalName}/{frame?.CurrentFunction?.Name ?? "::"}-{parent._children.Count}";
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             if (!_isdisposed)
@@ -92,7 +91,6 @@ namespace Unknown6656.AutoIt3.Runtime
             }
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"\"{InternalName}\"{(IsGlobalScope ? " (global)" : "")}: {_variables.Count} Variables, {_children.Count} Child scopes";
 
         /// <summary>
