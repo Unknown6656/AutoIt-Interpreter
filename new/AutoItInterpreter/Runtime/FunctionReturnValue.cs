@@ -8,27 +8,6 @@ namespace Unknown6656.AutoIt3.Runtime
 {
     // TODO: SOME OF THIS COULD BE OBSOLETE WITH C#10'S DISCRIMINATED UNIONS
 
-
-    // public sealed class InterpreterResult
-    // {
-    //     public static InterpreterResult OK { get; } = new InterpreterResult(0, null);
-    // 
-    //     public int ProgramExitCode { get; }
-    // 
-    //     public InterpreterError? OptionalError { get; }
-    // 
-    //     public bool IsOK => OptionalError is null && ProgramExitCode == 0;
-    // 
-    // 
-    //     public InterpreterResult(int programExitCode, InterpreterError? err = null)
-    //     {
-    //         ProgramExitCode = programExitCode;
-    //         OptionalError = err;
-    //     }
-    // 
-    //     public static implicit operator InterpreterResult?(InterpreterError? err) => err is null ? null : new InterpreterResult(-1, err);
-    // }
-
     public sealed class InterpreterError
     {
         public static InterpreterError Empty { get; } = new InterpreterError(SourceLocation.Unknown, "");
