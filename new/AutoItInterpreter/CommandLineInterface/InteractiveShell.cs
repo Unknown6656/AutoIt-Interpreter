@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Runtime.Native;
@@ -8,7 +10,6 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using System.IO;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -17,8 +18,8 @@ namespace Unknown6656.AutoIt3.CLI
     {
         public const int MIN_WIDTH = 120;
 
-        internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==" };
-
+        internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==", "\\" };
+        private static readonly Regex REGEX_END_OF_MULTILINE = new(@"^(.*\s+)?(?<sep>\\)$", RegexOptions.Compiled);
         private static readonly RGBAColor COLOR_HELP_FG = 0xffff;
         private static readonly RGBAColor COLOR_SEPARATOR = 0xfaaa;
         private static readonly RGBAColor COLOR_PROMPT = 0xffff;
@@ -336,15 +337,23 @@ Commands and keyboard shortcuts:
 
                     break;
                 case ConsoleKey.Enter when k.Modifiers.HasFlag(ConsoleModifiers.Shift):
+                    CurrentInput = CurrentInput[..cursor_pos] + '\n' + CurrentInput[cursor_pos..];
+                    CurrentCursorPosition = cursor_pos + 1;
+
+                    break;
+                case ConsoleKey.Enter:
+                    string trimmed = ScriptScanner.TrimComment(CurrentInput);
+
+                    if (trimmed.Match(REGEX_END_OF_MULTILINE, out Match match) && match.Groups["sep"].Index < CurrentCursorPosition.GetOffset(CurrentInput.Length))
                     {
                         CurrentInput = CurrentInput[..cursor_pos] + '\n' + CurrentInput[cursor_pos..];
                         CurrentCursorPosition = cursor_pos + 1;
                     }
-
-                    break;
-                case ConsoleKey.Enter:
-                    ProcessInput();
-                    UpdateSuggestions();
+                    else
+                    {
+                        ProcessInput();
+                        UpdateSuggestions();
+                    }
 
                     break;
                 case ConsoleKey.Tab:
@@ -568,7 +577,7 @@ Commands and keyboard shortcuts:
                             if (line.Length > (entry.Stream is InteractiveShellStreamDirection.Input ? 3 : 0))
                                 lines.Add(line);
 
-                            line = (entry.Stream is InteractiveShellStreamDirection.Input ? "   " : "")
+                            line = (entry.Stream is InteractiveShellStreamDirection.Input ? " ¦ " : "")
                                  + ScriptToken.FromString(partial, token.Type).ConvertToVT100(false);
                             len = token.TokenLength;
                         }
@@ -676,7 +685,15 @@ Commands and keyboard shortcuts:
         {
             if (!string.IsNullOrWhiteSpace(CurrentInput))
             {
-                string input = CurrentInput.Trim();
+                string input = CurrentInput.Trim().SplitIntoLines().Select(ScriptScanner.TrimComment).Aggregate(new List<string>(), (list, elem) =>
+                {
+                    if (list.Count > 0 && list[^1].Match(REGEX_END_OF_MULTILINE, out Match match))
+                        list[^1] = list[^1][..match.Groups["sep"].Index] + elem;
+                    else
+                        list.Add(elem);
+
+                    return list;
+                }).StringJoinLines();
 
                 CurrentInput = "";
                 CurrentCursorPosition = 0;

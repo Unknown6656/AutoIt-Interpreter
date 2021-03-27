@@ -363,7 +363,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return InterpreterError.WellKnown(loc, "error.unhandled_pragma_option", option);
         }
 
-        private static string TrimComment(string? line)
+        public static string TrimComment(string? line)
         {
             if (string.IsNullOrWhiteSpace(line))
                 return "";
@@ -510,13 +510,10 @@ namespace Unknown6656.AutoIt3.Runtime
             return Variant.True;
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode() => GetHashCode(Location, OriginalContent);
 
-        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScannedScript);
 
-        /// <inheritdoc/>
         public override string ToString() => Location.ToString();
 
         public bool Equals(ScannedScript? other) => other is ScannedScript script && GetHashCode() == script.GetHashCode();
