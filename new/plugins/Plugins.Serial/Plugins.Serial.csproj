@@ -15,6 +15,9 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
+      <PackageReference Include="System.IO.Ports" Version="6.0.0-preview.2.21154.6" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj">
             <Private>false</Private>
             <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
