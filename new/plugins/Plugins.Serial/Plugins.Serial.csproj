@@ -1,7 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-  </PropertyGroup>
-
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <OutDir>$(SolutionDir)bin/plugins</OutDir>
+        <LangVersion>preview</LangVersion>
+        <Deterministic>true</Deterministic>
+        <PublishTrimmed>true</PublishTrimmed>
+        <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+        <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+        <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+        <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj">
+            <Private>false</Private>
+            <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+        </ProjectReference>
+    </ItemGroup>
 </Project>
