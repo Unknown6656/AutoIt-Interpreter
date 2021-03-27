@@ -560,7 +560,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                DirectoryInfo dir = new DirectoryInfo(args[0].ToString());
+                DirectoryInfo dir = new(args[0].ToString());
 
                 if (!dir.Exists)
                     dir.Create();
@@ -684,7 +684,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     }
                 }
 
-                count_rec(new DirectoryInfo(args[0].ToString()), args[2].ToNumber() is 0m or 1m);
+                count_rec(new DirectoryInfo(args[0].ToString()), args[2].ToNumber() is 0d or 1d);
 
                 return args[2].ToNumber() is 1 ? Variant.FromArray(frame.Interpreter, total_size, file_count, dir_count) : total_size;
             }
@@ -952,7 +952,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue DriveSpaceFree(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
-                return Variant.FromNumber(drive.TotalFreeSpace / 1048576m);
+                return Variant.FromNumber(drive.TotalFreeSpace / 1048576d);
             else
                 return FunctionReturnValue.Error(1);
         }
@@ -960,7 +960,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue DriveSpaceTotal(CallFrame frame, Variant[] args)
         {
             if (GetDriveByPath(args[0].ToString()) is DriveInfo drive)
-                return Variant.FromNumber(drive.TotalSize / 1048576m);
+                return Variant.FromNumber(drive.TotalSize / 1048576d);
             else
                 return FunctionReturnValue.Error(1);
         }
@@ -1083,8 +1083,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                FileInfo src = new FileInfo(args[0].ToString());
-                FileInfo dst = new FileInfo(args[1].ToString());
+                FileInfo src = new(args[0].ToString());
+                FileInfo dst = new(args[1].ToString());
                 long flags = (long)args[2];
 
                 if ((flags & 8) != 0 && dst.Directory is { Exists: false } dir)
@@ -1234,7 +1234,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                 {
                     using FileStream fs = File.OpenRead(args[0].ToString());
-                    using StreamReader rd = new StreamReader(fs, Encoding.Default);
+                    using StreamReader rd = new(fs, Encoding.Default);
 
                     if (rd.Peek() >= 0)
                         rd.Read();
@@ -1259,7 +1259,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
             }
 
-            return Variant.FromNumber(-1m);
+            return Variant.FromNumber(-1);
         }
 
         internal static FunctionReturnValue FileGetShortName(CallFrame frame, Variant[] args) => NativeInterop.DoPlatformDependent(
@@ -1370,8 +1370,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                FileInfo src = new FileInfo(args[0].ToString());
-                FileInfo dst = new FileInfo(args[1].ToString());
+                FileInfo src = new(args[0].ToString());
+                FileInfo dst = new(args[1].ToString());
                 long flags = (long)args[2];
 
                 if ((flags & 8) != 0 && dst.Directory is { Exists: false } dir)
@@ -1391,24 +1391,24 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                FileInfo file = new FileInfo(args[0].ToString());
+                FileInfo file = new(args[0].ToString());
                 FileOpenFlags flags = (FileOpenFlags)args[1].ToNumber();
 
                 if (flags.HasFlag(FileOpenFlags.FO_CREATEPATH) && file.Directory is { Exists: false } dir)
                     dir.Create();
 
-                FileStream fs = new FileStream(
+                FileStream fs = new(
                     file.FullName,
                     flags.HasFlag(FileOpenFlags.FO_OVERWRITE) ? FileMode.Create : flags.HasFlag(FileOpenFlags.FO_APPEND) ? FileMode.Append : FileMode.OpenOrCreate,
                     flags.HasFlag(FileOpenFlags.FO_OVERWRITE) || flags.HasFlag(FileOpenFlags.FO_APPEND) ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read
                 );
-                FileHandle handle = new FileHandle(fs, flags);
+                FileHandle handle = new(fs, flags);
 
                 return frame.Interpreter.GlobalObjectStorage.Store(handle);
             }
             catch
             {
-                return Variant.FromNumber(-1m);
+                return Variant.FromNumber(-1);
             }
         }
 
@@ -1476,7 +1476,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
                     if (line_index is Index i)
                     {
-                        List<string> lines = new List<string>();
+                        List<string> lines = new();
 
                         handle.FileStream.Seek(0, SeekOrigin.Begin);
 
@@ -1531,11 +1531,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                FileInfo file = new FileInfo(args[0].ToString());
+                FileInfo file = new(args[0].ToString());
 
                 return NativeInterop.DoPlatformDependent(delegate
                 {
-                    SHFILEOPSTRUCT opt = new SHFILEOPSTRUCT
+                    SHFILEOPSTRUCT opt = new()
                     {
                         hwnd = null,
                         wFunc = FileFuncFlags.FO_DELETE,
@@ -1848,7 +1848,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                     return FunctionReturnValue.Error(1);
                 }
 
-            InetHandle inet = new InetHandle(uri, filename, options);
+            InetHandle inet = new(uri, filename, options);
             Variant handle = frame.Interpreter.GlobalObjectStorage.Store(inet);
 
             inet.Start();
@@ -2270,7 +2270,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             try
             {
-                using Ping ping = new Ping();
+                using Ping ping = new();
 
                 PingReply reply = ping.Send(args[0].ToString(), (int)args[1]);
 
@@ -2365,7 +2365,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             string procname = args[0].ToString();
             long timeout = (long)args[1] * 1000;
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
 
             sw.Start();
 
@@ -2412,7 +2412,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             if (frame.PassedArguments.Length == 1)
                 (min, max) = (0, (double)args[0]);
 
-            double val = frame.Interpreter.Random.NextDecimal();
+            double val = frame.Interpreter.Random.NextDouble();
 
             val *= max - min;
             val += min;
@@ -2538,7 +2538,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
                 {
                     int max_size = 512;
-                    StringBuilder sb = new StringBuilder(max_size);
+                    StringBuilder sb = new(max_size);
 
                     if ((err = NativeInterop.RegEnumKeyEx(hkey, (int)args[1], sb, &max_size, null, null, null, out _)) is 0)
                         return (Variant)sb;
@@ -2564,7 +2564,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 if ((err = NativeInterop.RegOpenKeyEx(hk_base, key, 0, RegSAM.Read, out hkey)) is 0)
                 {
                     int max_size = 512;
-                    StringBuilder sb = new StringBuilder(max_size);
+                    StringBuilder sb = new(max_size);
 
                     if ((err = NativeInterop.RegEnumValue(hkey, (int)args[1], sb, &max_size, null, out RegKeyType type, null, out _)) is 0)
                         return FunctionReturnValue.Success(sb, type.ToString());
@@ -3281,7 +3281,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                TcpClient listener = new TcpClient(args[0].ToString(), (int)args[1]);
+                TcpClient listener = new(args[0].ToString(), (int)args[1]);
 
                 return frame.Interpreter.GlobalObjectStorage.Store<TCPHandle>(listener);
             }
@@ -3302,7 +3302,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             try
             {
-                TcpListener listener = new TcpListener(IPAddress.Parse(args[0].ToString()), (int)args[1]);
+                TcpListener listener = new(IPAddress.Parse(args[0].ToString()), (int)args[1]);
                 int max_pending = (int)args[2];
 
                 if (max_pending <= 0)
@@ -3399,7 +3399,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue TimerInit(CallFrame frame, Variant[] args)
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
 
             sw.Start();
 
@@ -3435,8 +3435,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 IPAddress addr = IPAddress.Parse(args[0].ToString());
                 int port = (int)args[1];
-                IPEndPoint iep = new IPEndPoint(addr, port);
-                UDPServer server = new UDPServer(iep);
+                IPEndPoint iep = new(addr, port);
+                UDPServer server = new(iep);
                 Variant handle = frame.Interpreter.GlobalObjectStorage.Store(server);
 
                 return Variant.FromArray(
@@ -3668,7 +3668,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         private static string GetAttributeString(FileSystemInfo info)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             FileAttributes attr = info.Attributes;
             Dictionary<FileAttributes, char> dic = new()
             {
@@ -3879,7 +3879,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         private abstract class UDPBase
             : IDisposable
         {
-            protected UdpClient _client = new UdpClient();
+            protected UdpClient _client = new();
 
 
             protected internal UDPBase()
@@ -3925,7 +3925,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             public static UDPClient ConnectTo(string hostname, int port, bool enable_broadcast)
             {
-                UDPClient connection = new UDPClient();
+                UDPClient connection = new();
 
                 connection._client.EnableBroadcast = enable_broadcast;
                 connection._client.Connect(hostname, port);

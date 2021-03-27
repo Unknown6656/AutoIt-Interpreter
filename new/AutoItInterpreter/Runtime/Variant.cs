@@ -134,7 +134,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <para/>
         /// The internally stored data is (<see cref="VariantType.Number"/>, <see cref="0m"/>).
         /// </summary>
-        public static Variant Zero { get; } = FromNumber(0m);
+        public static Variant Zero { get; } = FromNumber(0);
 
         #endregion
         #region INSTANCE PROPERTIES
