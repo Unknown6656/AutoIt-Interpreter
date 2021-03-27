@@ -32,7 +32,7 @@ type LITERAL =
     | Default
     | True
     | False
-    | Number of decimal
+    | Number of float
     | String of string
     with
         override x.ToString() =

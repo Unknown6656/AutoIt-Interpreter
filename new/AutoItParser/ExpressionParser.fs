@@ -114,7 +114,7 @@ type ExpressionParser(mode : ParserMode) =
         let nt_conditional_expr     = x.CreateNonTerminal<EXPRESSION>                       "cond-expr"
         let nt_func_call            = x.CreateNonTerminal<FUNCCALL_EXPRESSION>              "funccall"
         let nt_literal              = x.CreateNonTerminal<LITERAL>                          "literal"
-        let nt_literal_num          = x.CreateNonTerminal<decimal>                          "literal-num"
+        let nt_literal_num          = x.CreateNonTerminal<float>                            "literal-num"
         let nt_args                 = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "args"
         let nt_arglist              = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "arglist"
         let t_operator_assign_add   = x.CreateTerminalF @"\+="                              (fun _ -> AssignAdd)

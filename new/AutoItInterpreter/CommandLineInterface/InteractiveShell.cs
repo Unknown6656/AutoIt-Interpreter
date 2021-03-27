@@ -511,7 +511,7 @@ Commands and keyboard shortcuts:
                 Console.CursorTop = cursor.t + 1;
                 Console.CursorLeft = cursor_pos_x + 3;
 
-                string indicator = $" {CurrentSuggestionIndex + 1}/{Suggestions.Count} ";
+                string indicator = Suggestions.Count > MAX_SUGGESTIONS ? $" {CurrentSuggestionIndex + 1} of {Suggestions.Count} " : "";
 
                 if (cursor_pos_x + 2 + indicator.Length < sugg_left + sugg_width)
                     indicator = '│' + indicator;

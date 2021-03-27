@@ -10,20 +10,20 @@ module Cleanup =
     let AsNumber =
         function
         | Null
-        | False -> 0m
-        | True -> 1m
-        | Default -> -1m
+        | False -> 0.0
+        | True -> 1.0
+        | Default -> -1.0
         | Number d -> d
         | String s ->
-            match Decimal.TryParse s with
+            match Double.TryParse s with
             | true, d -> d
-            | _ -> 0m
+            | _ -> 0.0
     
     let AsBoolean =
         function
         | Null
         | Default
-        | Number 0m
+        | Number 0.0
         | String ""
         | False -> false
         | _ -> true
@@ -85,7 +85,7 @@ module Cleanup =
                      | Subtract, _, _ -> num_op (-)
                      | Multiply, _, _ -> num_op (*)
                      | Divide, _, _ -> num_op (/)
-                     | Power, _, _ -> num_op (fun b e -> (float b) ** (float e) |> decimal)
+                     | Power, _, _ -> num_op (fun b e -> (float b) ** (float e))
                      | EqualCaseSensitive, l1, l2 when l1 = l2 -> Literal True
                      | Greater, Number d1, Number d2 -> AsLiteral (d1 > d2)
                      | GreaterEqual, Number d1, Number d2 -> AsLiteral (d1 >= d2)

@@ -890,8 +890,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 return FromBoolean(true);
             else if (literal is LITERAL.String { Item: string s })
                 return FromString(s);
-            else if (literal is LITERAL.Number { Item: decimal d })
-                return FromNumber((double)d);
+            else if (literal is LITERAL.Number { Item: double d })
+                return FromNumber(d);
             else
                 throw new InvalidCastException($"Unable to convert the value '{literal}' to an instance of the type '{typeof(Variant)}'");
         }
