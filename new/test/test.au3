@@ -2,6 +2,8 @@ ConsoleWrite(1/0)
 ConsoleWrite(@CRLF)
 ConsoleWrite(-1/0)
 ConsoleWrite(@CRLF)
+ConsoleWrite(-0/0)
+ConsoleWrite(@CRLF)
 ConsoleWrite(0/0)
 ConsoleWrite(@CRLF)
 exit

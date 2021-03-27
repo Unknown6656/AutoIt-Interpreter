@@ -290,7 +290,6 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <returns>Indicator whether the current instance represents a pointer to a function.</returns>
         public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
-        /// <inheritdoc/>
         public readonly int CompareTo(Variant other) =>
             RawData is string s1 && other.RawData is string s2 ? string.Compare(s1, s2, StringComparison.InvariantCultureIgnoreCase) : ToNumber().CompareTo(other.ToNumber());
 
@@ -308,13 +307,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool EqualsCaseSensitive(Variant other) => Equals(other); // TODO : unit tests
 
-        /// <inheritdoc/>
         public readonly bool Equals(Variant other) => Type.Equals(other.Type) && Equals(RawData, other.RawData);
 
-        /// <inheritdoc/>
         public readonly override bool Equals(object? obj) => obj is Variant variant && Equals(variant);
 
-        /// <inheritdoc/>
         public readonly override int GetHashCode() => HashCode.Combine(Type, RawData);
 
         /// <summary>
@@ -326,7 +322,20 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly override string ToString() => Type switch
         {
             VariantType.Default => "Default",
-            VariantType.Boolean or VariantType.Number or VariantType.String or VariantType.Handle => RawData?.ToString() ?? "",
+            VariantType.Boolean or VariantType.String or VariantType.Handle => RawData?.ToString() ?? "",
+            VariantType.Number when RawData is { } raw => FunctionExtensions.Do(delegate
+            {
+                double value = Convert.ToDouble(raw);
+
+                if (double.IsNaN(value))
+                    return "-1.#IND";
+                else if (double.IsPositiveInfinity(value))
+                    return "1.#INF";
+                else if (double.IsNegativeInfinity(value))
+                    return "-1.#INF";
+                else
+                    return value.ToString();
+            }),
             _ when RawData is Variable var => var.Value.ToString(),
             _ when RawData is byte[] { Length: > 0 } bytes => "0x" + From.Bytes(bytes).ToHexString(),
             _ => "",
