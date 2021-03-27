@@ -27,15 +27,14 @@ namespace UnitTests
         }
 
         [TestMethod, TestWith(0, -420.736, double.MaxValue, double.MinValue, double.Epsilon, 77, Math.PI)]
-        public void Test_01__Decimal(double d)
+        public void Test_01__Decimal(double original)
         {
-            decimal original = (decimal)d;
             Variant variant = original;
 
             Assert.AreEqual(VariantType.Number, variant.Type);
 
-            decimal d1 = variant.ToNumber();
-            decimal d2 = (decimal)variant;
+            double d1 = variant.ToNumber();
+            double d2 = (double)variant;
 
             Assert.AreEqual(original, d1);
             Assert.AreEqual(d1, d2);

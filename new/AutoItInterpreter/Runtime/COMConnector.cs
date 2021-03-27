@@ -207,7 +207,7 @@ namespace Unknown6656.AutoIt3.Runtime
             VariantType.Boolean => COMData.FromBool(com_data.ToBoolean()),
             VariantType.Number => FunctionExtensions.Do(delegate
             {
-                decimal d = com_data.ToNumber();
+                double d = com_data.ToNumber();
 
                 if ((short)d == d)
                     return COMData.FromInt((short)d);
@@ -216,7 +216,7 @@ namespace Unknown6656.AutoIt3.Runtime
                 else if ((long)d == d)
                     return COMData.FromLong((long)d);
                 else
-                    return COMData.FromDouble((double)d);
+                    return COMData.FromDouble(d);
             }),
             VariantType.String => COMData.FromString(com_data.ToString()),
             VariantType.Array => COMData.FromArray(com_data.ToArray(Interpreter).Select(Convert)),

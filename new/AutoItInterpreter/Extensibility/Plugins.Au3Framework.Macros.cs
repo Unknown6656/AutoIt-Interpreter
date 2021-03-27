@@ -151,7 +151,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
                 List<string> ips = new();
-                int idx = (int)decimal.Parse(g["num"], null);
+                int idx = (int)double.Parse(g["num"], null);
 
                 foreach (IPAddress ip in host.AddressList)
                     if (ip.AddressFamily is AddressFamily.InterNetwork)

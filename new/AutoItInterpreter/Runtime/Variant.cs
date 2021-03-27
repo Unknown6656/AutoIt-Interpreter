@@ -172,7 +172,7 @@ namespace Unknown6656.AutoIt3.Runtime
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.Number"/></term>
-        ///         <description><see cref="decimal"/></description>
+        ///         <description><see cref="double"/></description>
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.String"/></term>
@@ -253,7 +253,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <summary>
         /// Indicates whether the current instance is a valid C++/C#/C pointer address. This requires the current value to be a positive non-zero integer smaller or equal to <see cref="ulong.MaxValue"/>.
         /// </summary>
-        public readonly bool IsPtr => ToNumber() is decimal d and > 0 and <= ulong.MaxValue && (ulong)d == d;
+        public readonly bool IsPtr => ToNumber() is double d and > 0 and <= ulong.MaxValue && (ulong)d == d;
 
         /// <summary>
         /// Returns the semantic length of this value (e.g. elements in an array/map, length of a regular or binary string, etc.)
@@ -394,7 +394,7 @@ namespace Unknown6656.AutoIt3.Runtime
             _ when Type is VariantType.Null or VariantType.Default => false,
             byte[] arr => arr.FirstOrDefault() != 0,
             string s => s.Length > 0,
-            decimal d => d != 0m,
+            double d => d != 0d,
             int l => l != 0,
             uint l => l != 0,
             bool b => b,
@@ -406,20 +406,20 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Returns the numerical representation of the current instance in accordance with the official AutoIt specification.
         /// </summary>
         /// <returns>Numerical representation</returns>
-        public readonly decimal ToNumber() => RawData switch
+        public readonly double ToNumber() => RawData switch
         {
-            _ when Type is VariantType.Default => -1m,
-            true => 1m,
-            false => 0m,
+            _ when Type is VariantType.Default => -1d,
+            true => 1d,
+            false => 0d,
             int i => i,
             uint i => i,
-            decimal d => d,
-            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0m,
-            string s => decimal.TryParse(s, out decimal d) ? d : 0m,
-            VariantType.Null or _ => 0m,
+            double d => d,
+            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0d,
+            string s => double.TryParse(s, out double d) ? d : 0d,
+            VariantType.Null or _ => 0d,
         };
 
-        private readonly decimal ToNumber(decimal min, decimal max) => Math.Max(min, Math.Min(ToNumber(), max));
+        private readonly double ToNumber(double min, double max) => Math.Max(min, Math.Min(ToNumber(), max));
 
         /// <summary>
         /// Returns the binary representation of the current instance in accordance with the official AutoIt specification.
@@ -431,9 +431,9 @@ namespace Unknown6656.AutoIt3.Runtime
             _ when Type is VariantType.Default => From.Unmanaged(-1),
             null => From.Unmanaged(0),
             int i => From.Unmanaged(i),
-            decimal d when d <= 2147483647m && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
-            decimal d when d <= 9223372036854775807m && d >= -9223372036854775808m && d == (long)d => From.Unmanaged((long)d),
-            decimal d => From.Unmanaged((double)d), // TODO : allow 128bit numbers
+            double d when d <= 2147483647 && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
+            double d when d <= 9223372036854775807 && d >= -9223372036854775808 && d == (long)d => From.Unmanaged((long)d),
+            double d => From.Unmanaged(d), // TODO : allow 128bit numbers
             string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => From.Hex(s[2..]),
             string s => From.String(s, BytewiseEncoding.Instance),
             _ => Array.Empty<byte>(),
@@ -564,7 +564,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="parent">Variable to which a copy of this value will be assigned. A value of <see langword="null"/> removes any previous assignment.</param>
         /// <returns>Copy of the current instance with the given variable assigned to it.</returns>
-        public readonly Variant AssignTo(Variable? parent) => new Variant(Type, RawData, parent);
+        public readonly Variant AssignTo(Variable? parent) => new(Type, RawData, parent);
 
         public readonly bool TrySetIndexed(Interpreter interpreter, Variant index, Variant value)
         {
@@ -755,14 +755,14 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Creates a new (empty) map.
         /// </summary>
         /// <returns>Instance containing the newly created map.</returns>
-        public static Variant NewMap() => new Variant(VariantType.Map, new Dictionary<Variant, Variant>(), null);
+        public static Variant NewMap() => new(VariantType.Map, new Dictionary<Variant, Variant>(), null);
 
         /// <summary>
         /// Creates a new array with the given length.
         /// </summary>
         /// <param name="length">Length of the array. Must be non-negative.</param>
         /// <returns>Instance containing the newly created array.</returns>
-        public static Variant NewArray(int length) => new Variant(VariantType.Array, new Variant[length], null);
+        public static Variant NewArray(int length) => new(VariantType.Array, new Variant[length], null);
 
         /// <summary>
         /// Converts the given object into an appropriate instance of <see cref="Variant"/>.
@@ -787,9 +787,9 @@ namespace Unknown6656.AutoIt3.Runtime
             uint n => FromNumber(n),
             long n => FromNumber(n),
             ulong n => FromNumber(n),
-            float n => FromNumber((decimal)n),
-            double n => FromNumber((decimal)n),
-            decimal n => FromNumber(n),
+            float n => FromNumber(n),
+            double n => FromNumber(n),
+            decimal n => FromNumber((double)n),
             char c => FromString(c.ToString()),
             string str => FromString(str),
             StringBuilder builder => FromString(builder.ToString()),
@@ -876,7 +876,7 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="bytes">(Ordered) collection of bytes.</param>
         /// <returns>Newly created binary string.</returns>
-        public static Variant FromBinary(byte[] bytes) => new Variant(VariantType.Binary, bytes, null);
+        public static Variant FromBinary(byte[] bytes) => new(VariantType.Binary, bytes, null);
 
         public static Variant FromLiteral(LITERAL? literal)
         {
@@ -891,26 +891,26 @@ namespace Unknown6656.AutoIt3.Runtime
             else if (literal is LITERAL.String { Item: string s })
                 return FromString(s);
             else if (literal is LITERAL.Number { Item: decimal d })
-                return FromNumber(d);
+                return FromNumber((double)d);
             else
                 throw new InvalidCastException($"Unable to convert the value '{literal}' to an instance of the type '{typeof(Variant)}'");
         }
 
-        public static Variant FromReference(Variable variable) => new Variant(VariantType.Reference, variable, null);
+        public static Variant FromReference(Variable variable) => new(VariantType.Reference, variable, null);
 
-        public static Variant FromHandle(uint handle) => new Variant(VariantType.Handle, handle, null);
+        public static Variant FromHandle(uint handle) => new(VariantType.Handle, handle, null);
 
-        // public static Variant FromNETObject(object obj) => new Variant(VariantType.NETObject, obj, null);
+        // public static Variant FromNETObject(object obj) => new(VariantType.NETObject, obj, null);
 
-        public static Variant FromNumber(decimal value) => new Variant(VariantType.Number, value, null);
+        public static Variant FromNumber(double value) => new(VariantType.Number, value, null);
 
-        public static Variant FromString(string? value) => value is null ? Null : new Variant(VariantType.String, value, null);
+        public static Variant FromString(string? value) => value is null ? Null : new(VariantType.String, value, null);
 
-        public static Variant FromBoolean(bool value) => new Variant(VariantType.Boolean, value, null);
+        public static Variant FromBoolean(bool value) => new(VariantType.Boolean, value, null);
 
-        public static Variant FromFunction(ScriptFunction function) => new Variant(VariantType.Function, function, null);
+        public static Variant FromFunction(ScriptFunction function) => new(VariantType.Function, function, null);
 
-        internal static Variant FromCOMObject(uint id) => new Variant(VariantType.COMObject, id, null);
+        internal static Variant FromCOMObject(uint id) => new(VariantType.COMObject, id, null);
 
         public static bool TryCreateCOM(Interpreter interpreter, string classname, string? server, string? username, string? passwd, [MaybeNullWhen(false), NotNullWhen(true)] out Variant? com_object)
         {
@@ -972,7 +972,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public static Variant operator >>(Variant v, int offs) => offs < 0 ? v << -offs : (int)v << offs;
 
         /// <summary>This is <b>not</b> XOR - this is the mathematical power operator!</summary>
-        public static Variant operator ^(Variant v1, Variant v2) => FromNumber((decimal)Math.Pow((double)v1.ToNumber(), (double)v2.ToNumber()));
+        public static Variant operator ^(Variant v1, Variant v2) => FromNumber(Math.Pow(v1.ToNumber(), v2.ToNumber()));
 
         /// <summary>This is <b>not</b> AND - this is string concat!</summary>
         public static Variant operator &(Variant v1, Variant v2) => FromString(v1.ToString() + v2.ToString());
@@ -1010,11 +1010,11 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant(ulong value) => FromNumber(value);
 
-        public static implicit operator Variant(float value) => FromNumber((decimal)value);
+        public static implicit operator Variant(float value) => FromNumber(value);
 
-        public static implicit operator Variant(double value) => FromNumber((decimal)value);
+        public static implicit operator Variant(double value) => FromNumber(value);
 
-        public static implicit operator Variant(decimal value) => FromNumber(value);
+        public static implicit operator Variant(decimal value) => FromNumber((double)value);
 
         public static implicit operator Variant(char value) => FromString(value.ToString());
 
@@ -1050,13 +1050,13 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static explicit operator double(Variant v) => Convert.ToDouble(v.ToNumber());
 
-        public static explicit operator decimal(Variant v) => v.ToNumber();
+        public static explicit operator decimal(Variant v) => (decimal)v.ToNumber();
 
         public static explicit operator char(Variant v) => v.ToString().FirstOrDefault();
 
         public static explicit operator string(Variant v) => v.ToString();
 
-        public static explicit operator StringBuilder(Variant v) => new StringBuilder(v.ToString());
+        public static explicit operator StringBuilder(Variant v) => new(v.ToString());
 
         public static explicit operator byte[](Variant v) => v.ToBinary();
 

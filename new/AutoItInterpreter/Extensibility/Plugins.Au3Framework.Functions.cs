@@ -2128,11 +2128,11 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static FunctionReturnValue IsBool(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Boolean);
 
-        internal static FunctionReturnValue IsFloat(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d != d);
+        internal static FunctionReturnValue IsFloat(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is double d && (long)d != d);
 
         internal static FunctionReturnValue IsFunc(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.Function);
 
-        internal static FunctionReturnValue IsInt(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is decimal d && (long)d == d);
+        internal static FunctionReturnValue IsInt(CallFrame frame, Variant[] args) => (Variant)(args[0].ToNumber() is double d && (long)d == d);
 
         internal static FunctionReturnValue IsKeyword(CallFrame frame, Variant[] args) => (Variant)(args[0].IsDefault ? 1m : args[0].IsNull ? 2m : 0m);
 
@@ -2161,7 +2161,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             uint flags = (uint)args[0];
             string title = args[1].ToString();
             string text = args[2].ToString();
-            decimal timeout = args[3].ToNumber();
+            double timeout = args[3].ToNumber();
             int hwnd = (int)args[4];
 
             // TODO : timeout
@@ -2173,7 +2173,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }, () => throw new NotImplementedException());
         }
 
-        internal static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(decimal)args[0];
+        internal static FunctionReturnValue Number(CallFrame frame, Variant[] args) => (Variant)(double)args[0];
 
         #endregion
         #region ONAUTOITEXIT...
@@ -2406,13 +2406,13 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         internal static unsafe FunctionReturnValue Random(CallFrame frame, Variant[] args)
         {
-            decimal min = (decimal)args[0];
-            decimal max = (decimal)args[1];
+            double min = (double)args[0];
+            double max = (double)args[1];
 
             if (frame.PassedArguments.Length == 1)
-                (min, max) = (0, (decimal)args[0]);
+                (min, max) = (0, (double)args[0]);
 
-            decimal val = frame.Interpreter.Random.NextDecimal();
+            double val = frame.Interpreter.Random.NextDecimal();
 
             val *= max - min;
             val += min;
@@ -3595,7 +3595,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 VariantType.String or VariantType.Binary or VariantType.Array or VariantType.Map or VariantType.Function => var.Type.ToString(),
                 VariantType.Reference => gettype(var.ReferencedVariable!.Value),
                 VariantType.COMObject => "Object", // NETObject
-                VariantType.Number when (int)var == (decimal)var => "Int32",
+                VariantType.Number when (int)var == (double)var => "Int32",
                 VariantType.Number => "Double",
                 VariantType.Handle => "Ptr",
                 // TODO : ??

@@ -1,9 +1,9 @@
-DebugCodeLines()
-$add = Func($a, $b)
-    return $a + $b
-EndFunc
-Func add2($a, $b) -> $a + $b
-
+ConsoleWrite(1/0)
+ConsoleWrite(@CRLF)
+ConsoleWrite(-1/0)
+ConsoleWrite(@CRLF)
+ConsoleWrite(0/0)
+ConsoleWrite(@CRLF)
 exit
 
 
