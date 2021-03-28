@@ -67,7 +67,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{A2DB
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.Au3Framework.WindowsSpecific", "plugins\Plugin.Au3Framework.WindowsSpecific\Plugin.Au3Framework.WindowsSpecific.csproj", "{9834FD38-4E03-4ED5-98F0-0360508F1391}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugins.Serial", "plugins\Plugins.Serial\Plugins.Serial.csproj", "{47E0095B-EF3D-42AA-A292-559861A91BEC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugin.Serial", "plugins\Plugins.Serial\Plugin.Serial.csproj", "{47E0095B-EF3D-42AA-A292-559861A91BEC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
