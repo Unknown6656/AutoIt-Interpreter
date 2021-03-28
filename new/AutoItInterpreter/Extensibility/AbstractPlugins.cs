@@ -1,13 +1,13 @@
 ﻿using System.Text.RegularExpressions;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
-using System.Linq;
 
 [assembly: AutoIt3Plugin]
 
@@ -95,7 +95,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract FunctionReturnValue ProcessStatement(CallFrame frame, string directive);
+        public abstract FunctionReturnValue ProcessStatement(CallFrame frame, string statement);
     }
 
     public abstract class AbstractLineProcessor
@@ -163,7 +163,10 @@ namespace Unknown6656.AutoIt3.Extensibility
             return _known_functions?.TryGetValue(name, out function) is true ? (function?.Execute(frame, args)) : null;
         }
 
-        protected void RegisterFunction(string name, int param_count, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, OS os = OS.Any) =>
+        protected void RegisterFunction(string name, int param_count, Func<CallFrame, Variant[], FunctionReturnValue> @delegate) =>
+            RegisterFunction(name, param_count, @delegate, OS.Any);
+
+        protected void RegisterFunction(string name, int param_count, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, OS os) =>
             _known_functions[name] = NativeFunction.FromDelegate(Interpreter, name, param_count, @delegate, os);
 
         protected void RegisterFunction(string name, int min, int max, Func<CallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] defaults) =>
