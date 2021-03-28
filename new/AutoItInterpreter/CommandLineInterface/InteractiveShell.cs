@@ -16,7 +16,7 @@ namespace Unknown6656.AutoIt3.CLI
     public sealed class InteractiveShell
         : IDisposable
     {
-        public const int MIN_WIDTH = 120;
+        public const int MIN_WIDTH = 128;
 
         internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==", "\\" };
         private static readonly Regex REGEX_END_OF_MULTILINE = new(@"^(.*\s+)?(?<sep>\\)$", RegexOptions.Compiled);
@@ -164,14 +164,25 @@ Commands and keyboard shortcuts:
                     if (NativeInterop.OperatingSystem.HasFlag(OS.Windows))
                         Console.CursorVisible = false;
 
+                    bool candraw = WIDTH >= MIN_WIDTH && HEIGHT >= 32;
+
                     if (width != WIDTH || height != HEIGHT)
                     {
                         Console.Clear();
-                        RedrawHelp();
+
+                        if (candraw)
+                            RedrawHelp();
 
                         width = WIDTH;
                         height = HEIGHT;
                         hist_count = -1;
+                    }
+
+                    if (!candraw)
+                    {
+                        DrawResizeWarning();
+
+                        continue;
                     }
 
                     (int Left, int Top, int InputAreaYOffset) cursor = RedrawInputArea(false);
@@ -205,6 +216,30 @@ Commands and keyboard shortcuts:
 
                 MainProgram.PausePrinter = false;
             }
+        }
+
+        private void DrawResizeWarning()
+        {
+            string[] message = new[]
+            {
+                "  CONSOLE WINDOW TOO SMALL!  ",
+                "-----------------------------",
+                "  Please resize this window  ",
+                $" to a minimum size of {MIN_WIDTH}x32 ",
+                "to use the interactive shell.",
+                $" Current window size: {WIDTH}x{HEIGHT}"
+            };
+            int w = message.Max(l => l.Length);
+
+            ConsoleExtensions.RGBForegroundColor = RGBAColor.Red;
+
+            if (WIDTH <= w || HEIGHT <= message.Length)
+            {
+                Console.Clear();
+                message.Do(Console.WriteLine);
+            }
+            else
+                ConsoleExtensions.WriteBlock(message, (WIDTH - w) / 2, (HEIGHT - message.Length) / 2);
         }
 
         private void HandleKeyPress()
@@ -561,7 +596,7 @@ Commands and keyboard shortcuts:
             {
                 List<string> lines = new();
                 string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.Stream is InteractiveShellStreamDirection.Input ? " > " : "");
-                int line_width = width - MARGIN_RIGHT - (entry.Stream is InteractiveShellStreamDirection.Input ? 4 : 1);
+                int line_width = width - MARGIN_RIGHT - (entry.Stream is InteractiveShellStreamDirection.Input ? 3 : 0) - 3;
                 int len = 0;
 
                 foreach (ScriptToken token in entry.Content.SelectMany(c => c.SplitByLineBreaks()))
@@ -595,10 +630,17 @@ Commands and keyboard shortcuts:
             int height = input_area_y - MARGIN_TOP - 2;
 
             if (history.Length > height)
-            {
                 HistoryScrollIndex = Math.Max(0, Math.Min(HistoryScrollIndex, history.Length - height));
+
+            bool display_scroll_up = history.Length - HistoryScrollIndex < height;
+            bool display_scroll_down = HistoryScrollIndex > 0;
+
+            ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
+            ConsoleExtensions.WriteVertical('┬' + new string('│', height) + '┴', width - MARGIN_RIGHT - 3, MARGIN_TOP);
+            ConsoleExtensions.WriteVertical((display_scroll_up ? '↑' : ' ') + new string(' ', height - 2) + (display_scroll_up ? '↓' : ' '), width - MARGIN_RIGHT - 2, MARGIN_TOP + 1);
+
+            if (history.Length > height)
                 history = history[^(HistoryScrollIndex + height)..^HistoryScrollIndex];
-            }
 
             for (int y = 0; y < height; ++y)
             {
@@ -608,7 +650,7 @@ Commands and keyboard shortcuts:
                 if (height - history.Length <= y)
                     Console.Write(history[history.Length - height + y]);
 
-                Console.Write(new string(' ', width - MARGIN_RIGHT - 1 - Console.CursorLeft));
+                Console.Write(new string(' ', width - MARGIN_RIGHT - 3 - Console.CursorLeft));
             }
         }
 
