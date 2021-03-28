@@ -153,8 +153,8 @@ Commands and keyboard shortcuts:
 
                 UpdateSuggestions();
 
-                //int sugg_count = 0;
                 int hist_count = 0;
+                int hist_index = 0;
                 int width = 0;
                 int height = 0;
                 int input_y = -1;
@@ -176,6 +176,7 @@ Commands and keyboard shortcuts:
                         width = WIDTH;
                         height = HEIGHT;
                         hist_count = -1;
+                        hist_index = 0;
                     }
 
                     if (!candraw)
@@ -187,12 +188,13 @@ Commands and keyboard shortcuts:
 
                     (int Left, int Top, int InputAreaYOffset) cursor = RedrawInputArea(false);
 
-                    if (hist_count != History.Count || cursor.InputAreaYOffset != input_y)
+                    if (hist_count != History.Count || hist_index != HistoryScrollIndex || cursor.InputAreaYOffset != input_y)
                     {
                         RedrawHistoryArea(cursor.InputAreaYOffset);
                         RedrawThreadAndVariableWatchers();
 
                         hist_count = History.Count;
+                        hist_index = HistoryScrollIndex;
                         input_y = cursor.InputAreaYOffset;
                     }
                     else if (Interpreter.Threads.Length > 1)
@@ -632,12 +634,24 @@ Commands and keyboard shortcuts:
             if (history.Length > height)
                 HistoryScrollIndex = Math.Max(0, Math.Min(HistoryScrollIndex, history.Length - height));
 
-            bool display_scroll_up = history.Length - HistoryScrollIndex < height;
+            bool display_scroll_up = history.Length - HistoryScrollIndex >= height;
             bool display_scroll_down = HistoryScrollIndex > 0;
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
             ConsoleExtensions.WriteVertical('┬' + new string('│', height) + '┴', width - MARGIN_RIGHT - 3, MARGIN_TOP);
-            ConsoleExtensions.WriteVertical((display_scroll_up ? '↑' : ' ') + new string(' ', height - 2) + (display_scroll_up ? '↓' : ' '), width - MARGIN_RIGHT - 2, MARGIN_TOP + 1);
+
+            double scale = Math.Min(1, (double)(HistoryScrollIndex + height - 2) / history.Length);
+            int scroll_height = (int)Math.Ceiling(scale * (height - 2));
+            int scroll_offset = Math.Max(0, height - 2 - (int)(scale * HistoryScrollIndex) - scroll_height);
+
+            ConsoleExtensions.WriteVertical(
+                (display_scroll_up ? '^' : '-') +
+                new string(' ', scroll_offset) +
+                new string('█', scroll_height) +
+                new string(' ', height - 2 - scroll_height - scroll_offset) +
+                (display_scroll_down ? 'v' : '-'),
+                width - MARGIN_RIGHT - 2, MARGIN_TOP + 1
+            );
 
             if (history.Length > height)
                 history = history[^(HistoryScrollIndex + height)..^HistoryScrollIndex];
