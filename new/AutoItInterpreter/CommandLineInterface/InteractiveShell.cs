@@ -819,7 +819,7 @@ Commands and keyboard shortcuts:
             };
 
             void add_suggs(IEnumerable<string> suggs, TokenType type) => suggs.Select(s => (new[] { ScriptToken.FromString(s, type) }, s)).AppendToList(suggestions);
-            bool suggest_all = string.IsNullOrEmpty(CurrentInput) || curr_token?.Type is TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine;
+            bool suggest_all = string.IsNullOrEmpty(CurrentInput) || curr_token?.Type is null or TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine;
             string to_dbg_str(Variant value)
             {
                 string str = value.ToDebugString(Interpreter);
