@@ -485,7 +485,7 @@ Commands and keyboard shortcuts:
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
             Console.CursorLeft = 0;
             Console.CursorTop = input_area_height - 1;
-            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 1) + '┤');
+            Console.WriteLine(new string('─', width - MARGIN_RIGHT - 3) + "┴─┤");
 
             int line_no = 0;
 
@@ -594,7 +594,8 @@ Commands and keyboard shortcuts:
         private void RedrawHistoryArea(int input_area_y)
         {
             int width = WIDTH;
-            string[] history = History.SelectMany(entry =>
+            Dictionary<int, int> index_map = new() { [0] = 0 };
+            string[] history = History.SelectMany((entry, index) =>
             {
                 List<string> lines = new();
                 string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.Stream is InteractiveShellStreamDirection.Input ? " > " : "");
@@ -625,25 +626,45 @@ Commands and keyboard shortcuts:
                     }
 
                 lines.Add(line);
+                index_map[index] = index > 0 ? index_map[index - 1] + lines.Count : 0;
 
                 return lines;
             }).Where(line => !string.IsNullOrEmpty(line)).ToArray();
 
             int height = input_area_y - MARGIN_TOP - 2;
 
-            if (history.Length > height)
-                HistoryScrollIndex = Math.Max(0, Math.Min(HistoryScrollIndex, history.Length - height));
+            //foreach ((int from, int to) in index_map.ToArray())
+            //    index_map[History.Count - 1 - from] = to;
 
-            bool display_scroll_up = history.Length - HistoryScrollIndex >= height;
-            bool display_scroll_down = HistoryScrollIndex > 0;
+            for (int i = index_map.Count - 1; i >= 0; --i)
+                if (index_map[i] + height <= history.Length)
+                {
+                    HistoryScrollIndex = Math.Max(0, Math.Min(i, HistoryScrollIndex));
+
+                    break;
+                }
+
+            bool display_scroll_up = false;
+            bool display_scroll_down = false;
+            int scroll_height = height - 2;
+            int scroll_offset = 0;
+
+            if (history.Length > height)
+            {
+                display_scroll_up = history.Length - index_map[HistoryScrollIndex] >= height;
+                display_scroll_down = index_map[HistoryScrollIndex] > 0;
+
+                double scale = Math.Min(1, (height - 2d) / history.Length);
+                double progress = 1 - (double)index_map[HistoryScrollIndex] / (history.Length - height);
+
+                scroll_height = (int)Math.Ceiling(scale * (height - 2));
+                scroll_offset = (int)(progress * (height - 2 - scroll_height));
+            }
+            else
+                display_scroll_up = display_scroll_down = false;
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
             ConsoleExtensions.WriteVertical('┬' + new string('│', height) + '┴', width - MARGIN_RIGHT - 3, MARGIN_TOP);
-
-            double scale = Math.Min(1, (double)(HistoryScrollIndex + height - 2) / history.Length);
-            int scroll_height = (int)Math.Ceiling(scale * (height - 2));
-            int scroll_offset = Math.Max(0, height - 2 - (int)(scale * HistoryScrollIndex) - scroll_height);
-
             ConsoleExtensions.WriteVertical(
                 (display_scroll_up ? '^' : '-') +
                 new string(' ', scroll_offset) +
@@ -654,7 +675,7 @@ Commands and keyboard shortcuts:
             );
 
             if (history.Length > height)
-                history = history[^(HistoryScrollIndex + height)..^HistoryScrollIndex];
+                history = history[^(index_map[HistoryScrollIndex] + height)..^index_map[HistoryScrollIndex]];
 
             for (int y = 0; y < height; ++y)
             {
