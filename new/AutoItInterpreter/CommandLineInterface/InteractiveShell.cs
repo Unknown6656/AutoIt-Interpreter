@@ -389,7 +389,9 @@ Commands and keyboard shortcuts:
                     else
                     {
                         ProcessInput();
-                        UpdateSuggestions();
+
+                        if (IsRunning)
+                            UpdateSuggestions();
                     }
 
                     break;
@@ -927,28 +929,26 @@ Commands and keyboard shortcuts:
 /* ┌─┬┐
  ╭╮│├┼┤
  ╰╯└┴┘
- *      +----------------------------------+---------------+
- *      | help text                        |  variable     |
- *      +--------------------------------+-+  monitor (?)  |
- *      |                                |^|               |
- *      |     ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^      | | thread monitor|
- *      |      text moves upwards        | |               |
- *      |                                | |               |
- *      | > input                        | |               |
- *      | result                         | |               |
- *      | > input                        | |               |
- *      | result                         | |               |
- *      | > input                        | |               |
- *      | result                         |#|               |
- *      | > input                        |#|               |
- *      | result                         |#|               |
- *      | > input                        |#|               |
- *      | result                         |V|               |
- *      +--------------------------------+-+               |
- *      | > ~~~~~~~~~ I                    |               |
- *      |             |--------------+     |               |
- *      |             | autocomplete |     |               |
- *      |             | suggestions  |     |               |
- *      |             +--------------+     |               |
- *      +----------------------------------+---------------+
+ *      +--------------------------------------------+
+ *      | help text                                  |
+ *      +--------------------------------+-+---------+
+ *      |                                |^|         |
+ *      |     ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^      | | thread  |
+ *      |      text moves upwards        | | monitor |
+ *      |                                | +---------+
+ *      | > input                        | |         |
+ *      | result                         | | variable|
+ *      | > input                        | | monitor |
+ *      | result                         |#|         |
+ *      | > input                        |#|         |
+ *      | result                         |#|         |
+ *      | > input                        |#|         |
+ *      | result                         |V|         |
+ *      +--------------------------------+-+         |
+ *      | > ~~~~~~~~~ I                    |         |
+ *      |             |--------------+     |         |
+ *      |             | autocomplete |     |         |
+ *      |             | suggestions  |     |         |
+ *      |             +--------------+     |         |
+ *      +----------------------------------+---------+
  */
