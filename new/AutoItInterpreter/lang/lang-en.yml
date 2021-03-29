@@ -120,6 +120,8 @@ strings:
                 native: "Native"
                 stdout: "Console Out"
                 stdin: "Console In"
+                cache_read: "Function Cache (Read)"
+                cache_write: "Function Cache (Write)"
                 expr_eval: "Expression Evaluation"
                 const_folding: "Constant Folding"
                 macros: "Macros"

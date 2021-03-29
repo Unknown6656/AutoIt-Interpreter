@@ -37,6 +37,8 @@ namespace Unknown6656.AutoIt3
         OnAutoItStart,
         OnAutoItExit,
         Au3ScriptExecution,
+        Au3CacheWrite,
+        Au3CacheRead,
         NativeScriptExecution,
         ScriptConsoleOut,
         ScriptConsoleIn,
@@ -285,6 +287,8 @@ namespace Unknown6656.AutoIt3
             nd_native.AddChild(pack["debug.telemetry.categories.stdout"], get_timings(TelemetryCategory.ScriptConsoleOut));
             nd_native.AddChild(pack["debug.telemetry.categories.stdin"], get_timings(TelemetryCategory.ScriptConsoleIn));
 
+            nd_au3.AddChild(pack["debug.telemetry.categories.cache_read"], get_timings(TelemetryCategory.Au3CacheRead));
+            nd_au3.AddChild(pack["debug.telemetry.categories.cache_write"], get_timings(TelemetryCategory.Au3CacheWrite));
             nd_au3.AddChild(pack["debug.telemetry.categories.expr_eval"], get_timings(TelemetryCategory.EvaluateExpression));
             nd_au3.AddChild(pack["debug.telemetry.categories.const_folding"], get_timings(TelemetryCategory.ExpressionCleanup));
             nd_au3.AddChild(pack["debug.telemetry.categories.macros"], get_timings(TelemetryCategory.MacroResolving));

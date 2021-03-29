@@ -341,60 +341,56 @@ namespace Unknown6656.AutoIt3.Runtime
             if (len < argc)
                 Array.Resize(ref args, argc);
 
-            for (int i = 0; i < argc; ++i)
-            {
-                PARAMETER_DECLARATION param = CurrentFunction.Parameters[i];
-                Variable param_var = VariableResolver.CreateVariable(CurrentFunction.Location, param.Variable.Name, param.IsConst);
-
-                if (i < len)
-                {
-                    if (param.IsByRef && args[i].AssignedTo is Variable existing)
-                        if (existing.IsConst)
-                            return WellKnownError("error.constant_passed_as_ref", existing, i + 1);
-                        else
-                            args[i] = Variant.FromReference(existing);
-                }
-                else if (param.DefaultValue is null)
-                    return WellKnownError("error.missing_argument", i + 1, param.Variable);
-                else
-                {
-                    EXPRESSION expr = param.DefaultValue.Value;
-                    FunctionReturnValue result = ProcessExpression(expr);
-
-                    if (result.IfNonFatal(value => args[i] = value).IsFatal(out InterpreterError? error))
-                        return error;
-                }
-
-                param_var.Value = args[i];
-            }
-
             FunctionReturnValue? return_value = null;
 
-            if (CurrentFunction.IsCached)
+            if (!(CurrentFunction.IsCached && Interpreter.FunctionCache.TryFetch(CurrentFunction, args, out return_value)))
             {
-                // fetch cache
+                for (int i = 0; i < argc; ++i)
+                {
+                    PARAMETER_DECLARATION param = CurrentFunction.Parameters[i];
+                    Variable param_var = VariableResolver.CreateVariable(CurrentFunction.Location, param.Variable.Name, param.IsConst);
+
+                    if (i < len)
+                    {
+                        if (param.IsByRef && args[i].AssignedTo is Variable existing)
+                            if (existing.IsConst)
+                                return WellKnownError("error.constant_passed_as_ref", existing, i + 1);
+                            else
+                                args[i] = Variant.FromReference(existing);
+                    }
+                    else if (param.DefaultValue is null)
+                        return WellKnownError("error.missing_argument", i + 1, param.Variable);
+                    else
+                    {
+                        EXPRESSION expr = param.DefaultValue.Value;
+                        FunctionReturnValue result = ProcessExpression(expr);
+
+                        if (result.IfNonFatal(value => args[i] = value).IsFatal(out InterpreterError? error))
+                            return error;
+                    }
+
+                    param_var.Value = args[i];
+                }
+
+                return_value = Interpreter.Telemetry.Measure(TelemetryCategory.Au3ScriptExecution, delegate
+                {
+                    _instruction_pointer = 0;
+
+                    while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
+                        if (ParseCurrentLine().IsFatal(out InterpreterError? error))
+                            return error;
+                        else if (!MoveNext())
+                            break;
+
+                    if (InterpreterRunContext == InterpreterRunContext.Regular)
+                        return ReturnValue;
+                    else
+                        return LastStatementValue;
+                });
             }
 
-            return_value ??= Interpreter.Telemetry.Measure(TelemetryCategory.Au3ScriptExecution, delegate
-            {
-                _instruction_pointer = 0;
-
-                while (_instruction_pointer < _line_cache.Count && CurrentThread.IsRunning)
-                    if (ParseCurrentLine().IsFatal(out InterpreterError? error))
-                        return error;
-                    else if (!MoveNext())
-                        break;
-
-                if (InterpreterRunContext == InterpreterRunContext.Regular)
-                    return ReturnValue;
-                else
-                    return LastStatementValue;
-            });
-
             if (CurrentFunction.IsCached)
-            {
-                // store result
-            }
+                Interpreter.FunctionCache.SetOrUpdate(CurrentFunction, args, return_value);
 
             return return_value;
         }
