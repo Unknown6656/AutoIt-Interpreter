@@ -6,7 +6,6 @@
 	  +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	  ¦Name         ¦Location                                                               ¦Type       ¦                                                                   Value¦
 	  +-------------+-----------------------------------------------------------------------+-----------+------------------------------------------------------------------------¦
-	  ¦/$_          ¦<unknown>                                                              ¦Null       ¦                                                                    Null¦
 	  ¦/$datetime   ¦"L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3", line 7 ¦Handle     ¦                                        hnd:0x00000002 (static DateTime)¦
 	  ¦/$float      ¦"L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3", line 1 ¦Handle     ¦                                          hnd:0x00000001 (static Single)¦
 	  ¦/$func       ¦"L:\Projects.VisualStudio\AutoItInterpreter\new\test\test.au3", line 2 ¦Function   ¦<<unknown>>System.Single.IsFinite: System.Single -> System.Boolean(0, 0)¦

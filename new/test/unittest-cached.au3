@@ -6,6 +6,7 @@ Func fib_1($a)
    EndIf
 EndFunc
 
+
 Cached Func fib_2($a)
    If $a < 2 Then
 	  Return $a
@@ -15,10 +16,20 @@ Cached Func fib_2($a)
 EndFunc
 
 
-ConsoleWriteLine("not cached:" & @CRLF & @DATE_TIME)
-ConsoleWriteLine(fib_1(30))
-ConsoleWriteLine(@DATE_TIME & @CRLF & "-------------------" & @CRLF & "cached:" & @CRLF & @DATE_TIME)
-ConsoleWriteLine(fib_2(30))
-ConsoleWriteLine(@DATE_TIME & @CRLF & "-------------------")
+Func measure($f, $a)
+   $watch = NETNew("System.Diagnostics.Stopwatch")
+   $watch.Start()
+
+   Call($f, $a)
+
+   $watch.Stop()
+   return $watch.ElapsedMilliseconds
+EndFunc
+
+
+const $fib_depth = 6
+
+ConsoleWriteLine("not cached: " & measure(fib_1, $fib_depth) & "ms")
+ConsoleWriteLine("    cached: " & measure(fib_2, $fib_depth) & "ms")
 
 

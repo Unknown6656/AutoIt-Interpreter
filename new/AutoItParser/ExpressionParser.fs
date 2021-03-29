@@ -67,6 +67,11 @@ type ExpressionParser(mode : ParserMode) =
                              | identifier
                              | funccall
                              | "(" any-expr ")"
+                             | "new" net-identifier
+                             | "class" net-identifier
+
+                net-identifier = identifier
+                               | identifier "::" net-identifier
 
                 any-expr := object-expr
                           | any-expr "?" any-expr ":" any-expr
@@ -117,6 +122,7 @@ type ExpressionParser(mode : ParserMode) =
         let nt_literal_num          = x.CreateNonTerminal<float>                            "literal-num"
         let nt_args                 = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "args"
         let nt_arglist              = x.CreateNonTerminal<FUNCCALL_ARGUMENTS>               "arglist"
+        let nt_net_identifier       = x.CreateNonTerminal<string>                           "net-identifier"
         let t_operator_assign_add   = x.CreateTerminalF @"\+="                              (fun _ -> AssignAdd)
         let t_operator_assign_sub   = x.CreateTerminalF @"-="                               (fun _ -> AssignSubtract)
         let t_operator_assign_mul   = x.CreateTerminalF @"\*="                              (fun _ -> AssignMultiply)
@@ -131,6 +137,7 @@ type ExpressionParser(mode : ParserMode) =
         let t_symbol_equal          = x.CreateTerminal  @"="
         let t_symbol_questionmark   = x.CreateTerminal  @"\?"
         let t_symbol_colon          = x.CreateTerminal  @":"
+        let t_symbol_double_colon   = x.CreateTerminal  @"::"
         let t_symbol_dot            = x.CreateTerminal  @"\."
         let t_symbol_comma          = x.CreateTerminal  @","
         let t_symbol_minus          = x.CreateTerminal  @"-"
@@ -145,7 +152,8 @@ type ExpressionParser(mode : ParserMode) =
         let t_symbol_cbrack         = x.CreateTerminal  @"\]"
      // let t_symbol_ocurly         = x.CreateTerminal  @"\{"
      // let t_symbol_ccurly         = x.CreateTerminal  @"\}"
-     // let t_keyword_new           = x.CreateTerminal  @"new"
+        let t_keyword_new           = x.CreateTerminal  @"new"
+        let t_keyword_class         = x.CreateTerminal  @"class"
         let t_keyword_to            = x.CreateTerminal  @"to"
         let t_keyword_const         = x.CreateTerminal  @"const"
         let t_keyword_byref         = x.CreateTerminal  @"(by)?ref"
@@ -250,6 +258,8 @@ type ExpressionParser(mode : ParserMode) =
         reduce_1i nt_object_expr nt_member_expr Member
         reduce_1i nt_object_expr t_macro Macro
         reduce_1i nt_object_expr nt_literal Literal
+        reduce_2i nt_object_expr t_keyword_new nt_net_identifier (fun _ i -> FunctionCall(DirectFunctionCall(Identifier "NETNew", [Literal(String i)])))
+        reduce_2i nt_object_expr t_keyword_class nt_net_identifier (fun _ i -> FunctionCall(DirectFunctionCall(Identifier "NETClass", [Literal(String i)])))
         reduce_1i nt_object_expr t_identifier FunctionName
         reduce_1i nt_object_expr nt_func_call FunctionCall
         reduce_3i nt_object_expr t_symbol_oparen nt_any_expr t_symbol_cparen (fun _ e _ -> e)
@@ -283,6 +293,9 @@ type ExpressionParser(mode : ParserMode) =
         reduce_2i nt_any_expr t_symbol_plus nt_any_expr (fun _ e -> Unary(Identity, e))
         reduce_2i nt_any_expr t_symbol_minus nt_any_expr (fun _ e -> Unary(Negate, e))
         reduce_2i nt_any_expr t_keyword_not nt_any_expr (fun _ e -> Unary(Not, e))
+        
+        reduce_1i nt_net_identifier t_identifier (fun (Identifier s) -> s)
+        reduce_3i nt_net_identifier t_identifier t_symbol_double_colon nt_net_identifier (fun (Identifier s) _ r -> s + "." + r)
 
         reduce_0i nt_literal_num t_hex
         reduce_0i nt_literal_num t_bin

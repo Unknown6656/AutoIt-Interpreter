@@ -255,6 +255,7 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_CLEAR = new(@"^clear$", _REGEX_OPTIONS);
         internal static readonly Regex REGEX_EXIT = new(@"^exit(\b\s*(?<code>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_RETURN = new(@"^return(\b\s*(?<value>.+))?$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DELETE = new(@"^delete\b\s*(?<value>.+)$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FOR = new(@"^for\s+.+$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FORTO = new(@"^for\s+(?<start>.+)\s+to\s+(?<stop>.+?)(\s+step\s+(?<step>.+))?$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_FORIN = new(@"^for\s+(?<variable>.+)\s+in\s+(?<expression>.+)$", _REGEX_OPTIONS);
@@ -698,6 +699,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     return result.IfNonFatal(value => Interpreter.Stop((int)value.ToNumber()));
                 },
+                [REGEX_DELETE] = m => ProcessExpressionStatement($"{nameof(NETInteropFunctionProvider.NETDelete)}({m.Groups["value"]})"),
                 [REGEX_RETURN] = m =>
                 {
                     if (CurrentFunction.IsMainFunction)
