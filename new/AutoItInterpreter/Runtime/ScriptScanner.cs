@@ -22,26 +22,27 @@ namespace Unknown6656.AutoIt3.Runtime
     /// </summary>
     public sealed class ScriptScanner
     {
-        private const RegexOptions _REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
-        private static readonly Regex REGEX_COMMENT = new(@"\;[^\""\']*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", _REGEX_OPTIONS);
-        internal static readonly Regex REGEX_CS = new(@"^#(comments\-start|cs)(\b|$)", _REGEX_OPTIONS);
-        internal static readonly Regex REGEX_CE = new(@"^#(comments\-end|ce)(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_REGION = new(@"^#(end-?)?region\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_PRAGMA = new(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_LINECONT = new(@"(\s|^)_$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1L_IF = new(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_1L_FUNC = new(@"^(?<decl>(volatile)?\s*\bfunc\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FUNC_ASSG = new(@"^(?<target>.+)=\s*(?<func>(volatile)?\s*\bfunc)\s*(?<args>\(.*\))$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_FUNC = new(@"^(?<volatile>volatile)?\s*\bfunc\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDFUNC = new(@"^endfunc$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_LABEL = new(@"^(?<name>[a-z_]\w*)\s*:$", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_INCLUDEONCE = new(@" ^#include-once(\b|$)", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_AUSTARTREGISTER = new(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_AUEXITREGISTER = new(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_REQADMIN = new(@"^#requireadmin\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_NOTRYICON = new(@"^#notrayicon\b", _REGEX_OPTIONS);
+        private const RegexOptions REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+        private const string REGEX_FUNC_MODIFIERS = /*lang=regex*/@"((\s+|\b)(?<modifiers>volatile(\s+cached)?|cached(\s+volatile)?)(\s+|\b))?";
+        private static readonly Regex REGEX_COMMENT = new(@"\;[^\""\']*$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING1 = new(@"^([^\""\;]*\""[^\""]*\""[^\""\;]*)*(?<cmt>\;).*$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_COMMENT_AFTER_STRING2 = new(@"^([^'\;]*'[^']*'[^'\;]*)*(?<cmt>\;).*$", REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CS = new(@"^#(comments\-start|cs)(\b|$)", REGEX_OPTIONS);
+        internal static readonly Regex REGEX_CE = new(@"^#(comments\-end|ce)(\b|$)", REGEX_OPTIONS);
+        private static readonly Regex REGEX_REGION = new(@"^#(end-?)?region\b", REGEX_OPTIONS);
+        private static readonly Regex REGEX_PRAGMA = new(@"^#pragma\s+(?<option>[a-z_]\w+)\b\s*(\((?<params>.*)\))?\s*", REGEX_OPTIONS);
+        private static readonly Regex REGEX_LINECONT = new(@"(\s|^)_$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_IF = new(@"^\s*(?<if>if\b\s*.+\s*\bthen)\b\s*(?<then>.+)$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_1L_FUNC = new($@"^(?<decl>{REGEX_FUNC_MODIFIERS}\s*\bfunc\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC_ASSG = new($@"^(?<target>.+)=\s*(?<func>{REGEX_FUNC_MODIFIERS}\s*\bfunc)\s*(?<args>\(.*\))$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_FUNC = new($@"^{REGEX_FUNC_MODIFIERS}\s*\bfunc\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDFUNC = new(@" ^endfunc$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_LABEL = new(@"^(?<name>[a-z_]\w*)\s*:$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDEONCE = new(@" ^#include-once(\b|$)", REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUSTARTREGISTER = new(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", REGEX_OPTIONS);
+        private static readonly Regex REGEX_AUEXITREGISTER = new(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", REGEX_OPTIONS);
+        private static readonly Regex REGEX_REQADMIN = new(@"^#requireadmin\b", REGEX_OPTIONS);
+        private static readonly Regex REGEX_NOTRYICON = new(@"^#notrayicon\b", REGEX_OPTIONS);
 
         private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
         {
@@ -243,7 +244,7 @@ namespace Unknown6656.AutoIt3.Runtime
                         {
                             string name = m.Groups["name"].Value;
                             string args = m.Groups["args"].Value;
-                            bool @volatile = m.Groups["volatile"].Length > 0;
+                            string mods = m.Groups["modifiers"].Value;
 
                             if (ScriptFunction.RESERVED_NAMES.Contains(name.ToUpperInvariant()))
                                 return InterpreterError.WellKnown(loc, "error.reserved_name", name);
@@ -279,10 +280,11 @@ namespace Unknown6656.AutoIt3.Runtime
                                 }
 
                             curr_func = script.GetOrCreateAU3Function(name, @params);
-                            curr_func.IsVolatile = @volatile;
+                            curr_func.IsVolatile = mods.Contains("volatile", StringComparison.InvariantCultureIgnoreCase);
+                            curr_func.IsCached = mods.Contains("cached", StringComparison.InvariantCultureIgnoreCase);
                             _cached_functions.TryAdd(name.ToUpperInvariant(), curr_func);
 
-                            MainProgram.PrintDebugMessage($"Scanned {(@volatile ? "(vol) " : "")}func {name}({string.Join(", ", @params)})");
+                            MainProgram.PrintDebugMessage($"Scanned {(curr_func.IsVolatile ? "volatile " : "")}{(curr_func.IsCached ? "cached " : "")}func {name}({string.Join(", ", @params)})");
                         }
                         else if (line.Match(REGEX_ENDFUNC, out Match _))
                         {

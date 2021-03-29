@@ -23,10 +23,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static readonly string[] RESERVED_NAMES =
         {
-            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
-            "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT",
-            "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "RETURN", "VOLATILE", "TRUE",
-            "FALSE", "DEFAULT", "NULL", "BYREF", "REF", "AND", "OR", "NOT", "CLEAR", "NEW", "DELETE"
+            "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR",
+            "IN", "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT",
+            "ENDSELECT", "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "CACHED",
+            "VOLATILE", "RETURN", "TRUE", "FALSE", "DEFAULT", "NULL", "BYREF", "REF", "AND", "OR", "NOT", "CLEAR", "NEW", "DELETE",
         };
 
 
@@ -50,16 +50,12 @@ namespace Unknown6656.AutoIt3.Runtime
             Script.AddFunction(this);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Name.ToUpperInvariant(), Script);
 
-        /// <inheritdoc/>
         public override bool Equals(object? obj) => Equals(obj as ScriptFunction);
 
-        /// <inheritdoc/>
         public bool Equals(ScriptFunction? other) => other is ScriptFunction f && f.GetHashCode() == GetHashCode();
 
-        /// <inheritdoc/>
         public override string ToString() => $"[{Script}] Func {Name}";
 
 
@@ -103,6 +99,11 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Indicates whether the function has been declared as '<see langword="volatile"/>'.
         /// </summary>
         public bool IsVolatile { get; internal set; }
+
+        /// <summary>
+        /// Indicates whether the function has been declared as '<see langword="cached"/>'.
+        /// </summary>
+        public bool IsCached { get; internal set; }
 
         /// <summary>
         /// Returns the number of source code lines in the function definition.
@@ -154,8 +155,7 @@ namespace Unknown6656.AutoIt3.Runtime
             return l;
         });
 
-        /// <inheritdoc/>
-        public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{LineCount} Lines]";
+        public override string ToString() => $"{base.ToString()}({string.Join<PARAMETER_DECLARATION>(", ", Parameters)})  [{(IsVolatile ? "volatile, " : "")}{(IsCached ? "cached, " : "")}{LineCount} Lines]";
     }
 
     /// <summary>

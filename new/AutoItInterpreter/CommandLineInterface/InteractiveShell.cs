@@ -18,8 +18,8 @@ namespace Unknown6656.AutoIt3.CLI
     {
         public const int MIN_WIDTH = 128;
 
-        internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==", "\\" };
-        private static readonly Regex REGEX_END_OF_MULTILINE = new(@"^(.*\s+)?(?<sep>\\)$", RegexOptions.Compiled);
+        internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==" };
+        private static readonly Regex REGEX_END_OF_MULTILINE = new(@"^(.*\s+)?(?<sep>_)$", RegexOptions.Compiled);
         private static readonly RGBAColor COLOR_HELP_FG = 0xffff;
         private static readonly RGBAColor COLOR_SEPARATOR = 0xfaaa;
         private static readonly RGBAColor COLOR_PROMPT = 0xffff;
