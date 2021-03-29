@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System;
 
@@ -96,6 +95,8 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         public ScriptScanner ScriptScanner { get; }
 
+        public FunctionCache FunctionCache { get; }
+
         public PluginLoader PluginLoader { get; }
 
         public ParserProvider ParserProvider { get; }
@@ -163,6 +164,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             ScriptScanner.ScanNativeFunctions();
 
+            FunctionCache = new FunctionCache(this);
             GlobalObjectStorage = new GlobalObjectStorage(this);
             VariableResolver = VariableScope.CreateGlobalScope(this);
             VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);

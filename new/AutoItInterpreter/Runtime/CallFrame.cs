@@ -368,7 +368,14 @@ namespace Unknown6656.AutoIt3.Runtime
                 param_var.Value = args[i];
             }
 
-            return Interpreter.Telemetry.Measure(TelemetryCategory.Au3ScriptExecution, delegate
+            FunctionReturnValue? return_value = null;
+
+            if (CurrentFunction.IsCached)
+            {
+                // fetch cache
+            }
+
+            return_value ??= Interpreter.Telemetry.Measure(TelemetryCategory.Au3ScriptExecution, delegate
             {
                 _instruction_pointer = 0;
 
@@ -383,6 +390,13 @@ namespace Unknown6656.AutoIt3.Runtime
                 else
                     return LastStatementValue;
             });
+
+            if (CurrentFunction.IsCached)
+            {
+                // store result
+            }
+
+            return return_value;
         }
 
         private bool MoveNext()
