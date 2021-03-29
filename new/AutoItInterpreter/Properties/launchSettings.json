@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": " ../test/test -v -minteractive",
+      "commandLineArgs": " ../test/unittest-cached -- -m interactive",
       "nativeDebugging": false
     }
   }

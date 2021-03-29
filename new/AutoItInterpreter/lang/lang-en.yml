@@ -228,6 +228,7 @@ strings:
         unsupported_platform: "The function '{0}' is not supported on the current operating system '{1}'. Supported system(s) is/are: '{2}'."
         vlc_required: "This function requires a working installation of 'vlc' or 'vlc.exe' to be accessible from the 'PATH' environment variable. Please visit \u001b[4mhttps://www.videolan.org/vlc/\u001b[24m to download and install the free VLC player."
         experimental:
-            one_liner: "One-liner functions can only be used if the interpreter is started without the '--strict' option."
-            goto_instructions: "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."
+            cached_functions: "Cached functions can only be used if the interpreter is started without the '--strict' option."
             function_assignment: "Function assignments can only be used if the interpreter is started without the '--strict' option."
+            goto_instructions: "'Goto'-instructions and jump labels can only be used if the interpreter is started without the '--strict' option."
+            one_liner: "One-liner functions can only be used if the interpreter is started without the '--strict' option."

@@ -37,9 +37,9 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_1L_FUNC = new($@"^(?<decl>{REGEX_FUNC_MODIFIERS}\s*\bfunc\b\s*([a-z_]\w*)\s*\(.*\))\s*->\s*(?<body>.+)$", REGEX_OPTIONS);
         private static readonly Regex REGEX_FUNC_ASSG = new($@"^(?<target>.+)=\s*(?<func>{REGEX_FUNC_MODIFIERS}\s*\bfunc)\s*(?<args>\(.*\))$", REGEX_OPTIONS);
         private static readonly Regex REGEX_FUNC = new($@"^{REGEX_FUNC_MODIFIERS}\s*\bfunc\s+(?<name>[a-z_]\w*)\s*\((?<args>.*)\)$", REGEX_OPTIONS);
-        private static readonly Regex REGEX_ENDFUNC = new(@" ^endfunc$", REGEX_OPTIONS);
+        private static readonly Regex REGEX_ENDFUNC = new(@"^endfunc$", REGEX_OPTIONS);
         private static readonly Regex REGEX_LABEL = new(@"^(?<name>[a-z_]\w*)\s*:$", REGEX_OPTIONS);
-        private static readonly Regex REGEX_INCLUDEONCE = new(@" ^#include-once(\b|$)", REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDEONCE = new(@"^#include-once(\b|$)", REGEX_OPTIONS);
         private static readonly Regex REGEX_AUSTARTREGISTER = new(@"^#(onautoitstartregister\s+""(?<func>[^""]+)"")", REGEX_OPTIONS);
         private static readonly Regex REGEX_AUEXITREGISTER = new(@"^#(onautoitexitregister\s+""(?<func>[^""]+)"")", REGEX_OPTIONS);
         private static readonly Regex REGEX_REQADMIN = new(@"^#requireadmin\b", REGEX_OPTIONS);
@@ -284,6 +284,9 @@ namespace Unknown6656.AutoIt3.Runtime
                             curr_func.IsVolatile = mods.Contains("volatile", StringComparison.InvariantCultureIgnoreCase);
                             curr_func.IsCached = mods.Contains("cached", StringComparison.InvariantCultureIgnoreCase);
                             _cached_functions.TryAdd(name.ToUpperInvariant(), curr_func);
+
+                            if (MainProgram.CommandLineOptions.StrictMode && curr_func.IsCached)
+                                return InterpreterError.WellKnown(loc, "error.experimental.cached_functions");
 
                             MainProgram.PrintDebugMessage($"Scanned {(curr_func.IsVolatile ? "volatile " : "")}{(curr_func.IsCached ? "cached " : "")}func {name}({string.Join(", ", @params)})");
                         }
