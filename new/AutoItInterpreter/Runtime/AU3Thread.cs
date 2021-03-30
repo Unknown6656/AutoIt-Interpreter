@@ -192,19 +192,14 @@ namespace Unknown6656.AutoIt3.Runtime
             return frame;
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"0x{ThreadID:x4}{(IsMainThread ? " (main)" : "")} @ {CurrentLocation}";
 
-        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine(Interpreter, ThreadID);
 
-        /// <inheritdoc/>
         public override bool Equals(object? obj) => obj is AU3Thread thread && Equals(thread);
 
-        /// <inheritdoc/>
         public bool Equals(AU3Thread? other) => Interpreter == other?.Interpreter && ThreadID == other?.ThreadID;
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             _running = false;
