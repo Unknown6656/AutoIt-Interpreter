@@ -2,7 +2,7 @@
   "profiles": {
     "AutoItInterpreter": {
       "commandName": "Project",
-      "commandLineArgs": " ../test/unittest-netinterop-syntax -t -- -m interactive",
+      "commandLineArgs": " ../test/test -t -m interactive",
       "nativeDebugging": false
     }
   }

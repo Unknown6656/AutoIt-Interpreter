@@ -35,6 +35,14 @@ namespace Unknown6656.AutoIt3.Extensibility
                 return FunctionReturnValue.Error(1);
         }
 
-        public static FunctionReturnValue NETDelete(CallFrame frame, Variant[] args) => (Variant)frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+        public static FunctionReturnValue NETDelete(CallFrame frame, Variant[] args)
+        {
+            bool result = frame.Interpreter.GlobalObjectStorage.Delete(args[0]);
+
+            if (result && args[0].AssignedTo is Variable variable)
+                variable.Value = Variant.Null;
+
+            return (Variant)result;
+        }
     }
 }
