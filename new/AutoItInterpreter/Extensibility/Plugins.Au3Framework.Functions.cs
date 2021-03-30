@@ -50,7 +50,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             // RegisterFunction("Opt", 1, 2, AutoItSetOption, Variant.Default);
             RegisterFunction(nameof(BlockInput), 1, BlockInput);
             RegisterFunction(nameof(CDTray), 2, CDTray);
-            RegisterFunction(nameof(ClipPut), 1, ClipPut);
             RegisterFunction(nameof(Abs), 1, Abs);
             RegisterFunction(nameof(ACos), 1, ACos);
             RegisterFunction(nameof(ASin), 1, ASin);
@@ -496,21 +495,6 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue Chr(CallFrame frame, Variant[] args) => (Variant)((char)(int)args[0]).ToString();
 
         internal static FunctionReturnValue ChrW(CallFrame frame, Variant[] args) => (Variant)((char)(byte)args[0]).ToString();
-
-        internal static FunctionReturnValue ClipPut(CallFrame frame, Variant[] args)
-        {
-            try
-            {
-                string cmd = NativeInterop.DoPlatformDependent($"echo {args[0]} | clip", $"echo \"{args[0]}\" | pbcopy");
-                (_, int code) = NativeInterop.Exec(cmd);
-
-                return Variant.FromBoolean(code == 0);
-            }
-            catch
-            {
-                return Variant.False;
-            }
-        }
 
         internal static FunctionReturnValue ConsoleWriteError(CallFrame frame, Variant[] args) =>
             frame.Interpreter.Telemetry.Measure<FunctionReturnValue>(TelemetryCategory.ScriptConsoleOut, delegate

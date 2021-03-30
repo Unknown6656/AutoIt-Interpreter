@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net5.0-windows</TargetFramework>
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin/plugins</OutDir>
+        <UseWindowsForms>true</UseWindowsForms>
         <LangVersion>preview</LangVersion>
         <Deterministic>true</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
