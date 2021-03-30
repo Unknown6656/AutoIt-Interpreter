@@ -552,7 +552,7 @@ Commands and keyboard shortcuts:
 
                 string indicator = Suggestions.Count > MAX_SUGGESTIONS ? $" {CurrentSuggestionIndex + 1} of {Suggestions.Count} " : "";
 
-                if (cursor_pos_x + 2 + indicator.Length < sugg_left + sugg_width)
+                if (sugg_left + 2 + indicator.Length < input_area_width)
                     indicator = '│' + indicator;
                 else
                 {
