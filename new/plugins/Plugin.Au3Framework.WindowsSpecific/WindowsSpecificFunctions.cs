@@ -1,5 +1,8 @@
 ﻿using System.Windows.Forms;
 
+using Unknown6656.Mathematics;
+using Unknown6656.Common;
+
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
@@ -17,6 +20,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         {
             RegisterFunction(nameof(ClipGet), 0, ClipGet, OS.Windows);
             RegisterFunction(nameof(ClipPut), 1, ClipPut);
+            RegisterFunction(nameof(FileOpenDialog), 3, 6, FileOpenDialog, Variant.Zero, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(FileSaveDialog), 3, 6, FileSaveDialog, Variant.Zero, Variant.Default, Variant.Default);
+            RegisterFunction(nameof(FileSelectFolder), 2, 5, FileSelectFolder, Variant.Zero, Variant.Default, Variant.Default);
         }
 
         private static FunctionReturnValue ClipGet(CallFrame frame, Variant[] args)
@@ -56,6 +62,56 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             {
                 return Variant.False;
             }
+        }
+
+        private static FunctionReturnValue FileSelectFolder(CallFrame frame, Variant[] args)
+        {
+        }
+
+        private static FunctionReturnValue FileSaveDialog(CallFrame frame, Variant[] args)
+        {
+        }
+
+        private static FunctionReturnValue FileOpenDialog(CallFrame frame, Variant[] args)
+        {
+            try
+            {
+                int options = (int)args[3];
+                using OpenFileDialog ofd = new()
+                {
+                    Title = args[0].ToString(),
+                    InitialDirectory = args[1].ToString(),
+                    Filter = args[2].ToString(),
+                    FileName = args[4].ToString(),
+                    CheckFileExists = options.HasFlag(1),
+                    CheckPathExists = options.HasFlag(2),
+                    Multiselect = options.HasFlag(4),
+                    // TODO : create if it does not exist = options.HasFlag(8),
+                };
+                DialogResult result;
+
+                if (args[5].IsDefault)
+                    result = ofd.ShowDialog();
+                else
+                    result = ofd.ShowDialog(WindowWrapper.FromHWND(args[5]));
+
+                return Variant.FromString(ofd.FileNames is { Length: > 1 } names ? names.StringJoin("|") : ofd.FileName);
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
+        }
+
+        public sealed class WindowWrapper
+            : IWin32Window
+        {
+            public nint Handle { get; }
+
+
+            public WindowWrapper(nint handle) => Handle = handle;
+
+            public static WindowWrapper FromHWND(Variant hwnd) => new((nint)hwnd);
         }
     }
 }
