@@ -238,6 +238,10 @@ namespace Unknown6656.AutoIt3.Runtime
         /// Indicates whether the current instance is equal to <see cref="Default"/>.
         /// </summary>
         public readonly bool IsDefault => Type is VariantType.Default;
+        
+        public readonly bool IsNumber => Type is VariantType.Number;
+
+        public readonly bool IsNumeric => Type is VariantType.Number or VariantType.Handle or VariantType.COMObject;
 
         /// <summary>
         /// Indicates whether the current instance contains an handle to an (internally managed) object. This is not to be confused with an handle of the type "<see cref="VariantType.COMObject"/>".

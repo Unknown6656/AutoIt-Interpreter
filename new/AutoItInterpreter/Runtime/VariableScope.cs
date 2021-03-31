@@ -99,6 +99,15 @@ namespace Unknown6656.AutoIt3.Runtime
         /// <returns>The newly created temporary variable.</returns>
         public Variable CreateTemporaryVariable() => CreateVariable((CallFrame as AU3CallFrame)?.CurrentLocation ?? SourceLocation.Unknown, $"tmp__{Guid.NewGuid():N}", false);
 
+        public Variable CreateConstant(string name, Variant value, SourceLocation? location = null)
+        {
+            Variable variable = CreateVariable(location ?? SourceLocation.Unknown, name, true);
+
+            variable.Value = value;
+
+            return variable;
+        }
+
         /// <summary>
         /// Creates a new variable with the given name.
         /// </summary>
