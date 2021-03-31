@@ -196,14 +196,8 @@ namespace Unknown6656.AutoIt3.Runtime
         ///     </item>
         ///     <item>
         ///         <term><see cref="VariantType.Handle"/></term>
-        ///         <description><see cref="uint"/></description>
+        ///         <description><see cref="IntPtr"/> (<see langword="nint"/>)</description>
         ///     </item>
-        ///     <!--
-        ///     <item>
-        ///         <term><see cref="VariantType.NETObject"/></term>
-        ///         <description><see cref="object"/></description>
-        ///     </item>
-        ///     -->
         ///     <item>
         ///         <term><see cref="VariantType.COMObject"/></term>
         ///         <description><see cref="uint"/></description>
@@ -246,7 +240,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly bool IsDefault => Type is VariantType.Default;
 
         /// <summary>
-        /// Indicates whether the current instance contains an handle to an (internally managed) object. This is not to be confused with an handle of the type "<see cref="VariantType.COMObject"/>" or "<see cref="VariantType.NETObject"/>".
+        /// Indicates whether the current instance contains an handle to an (internally managed) object. This is not to be confused with an handle of the type "<see cref="VariantType.COMObject"/>".
         /// </summary>
         public readonly bool IsHandle => Type is VariantType.Handle;
 
@@ -372,8 +366,8 @@ namespace Unknown6656.AutoIt3.Runtime
                 return '"' + string.Concat(ToString().ToArray(sanitize)) + '"';
             else if (Type is VariantType.Handle)
             {
-                string data = "invalid";
-                uint id = (uint)this;
+                string data = "invalid/hwnd";
+                nint id = (nint)this;
 
                 if (interpreter.GlobalObjectStorage.TryGet(id, out object? obj))
                     data = obj is StaticTypeReference(Type t) ? $"static {t.Name}" : obj?.GetType().Name ?? "null";
@@ -405,6 +399,7 @@ namespace Unknown6656.AutoIt3.Runtime
             string s => s.Length > 0,
             double d => d != 0d,
             int l => l != 0,
+            nint l => l != 0,
             uint l => l != 0,
             bool b => b,
             null => false,
@@ -421,6 +416,7 @@ namespace Unknown6656.AutoIt3.Runtime
             true => 1d,
             false => 0d,
             int i => i,
+            nint i => i,
             uint i => i,
             double d => d,
             string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0d,
@@ -793,6 +789,8 @@ namespace Unknown6656.AutoIt3.Runtime
             short n => FromNumber(n),
             ushort n => FromNumber(n),
             int n => FromNumber(n),
+            nint n => FromHandle(n),
+            nuint n => FromHandle((nint)n),
             uint n => FromNumber(n),
             long n => FromNumber(n),
             ulong n => FromNumber(n),
@@ -809,8 +807,6 @@ namespace Unknown6656.AutoIt3.Runtime
             // convert any ienumerable
 
             ScriptFunction func => FromFunction(func),
-            nint n => FromNumber((ulong)n),
-            nuint n => FromNumber(n),
             _ when obj.GetType().IsPointer => FromNumber((ulong)Pointer.Unbox(obj)),
             _ => interpreter.GlobalObjectStorage.GetOrStore(obj),
             // _ => throw new NotImplementedException(obj.ToString()),
@@ -907,7 +903,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static Variant FromReference(Variable variable) => new(VariantType.Reference, variable, null);
 
-        public static Variant FromHandle(uint handle) => new(VariantType.Handle, handle, null);
+        public static Variant FromHandle(nint handle) => new(VariantType.Handle, handle, null);
 
         // public static Variant FromNETObject(object obj) => new(VariantType.NETObject, obj, null);
 
@@ -1015,6 +1011,10 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public static implicit operator Variant(uint value) => FromNumber(value);
 
+        public static implicit operator Variant(nint value) => FromHandle(value);
+
+        public static implicit operator Variant(nuint value) => FromHandle((nint)value);
+
         public static implicit operator Variant(long value) => FromNumber(value);
 
         public static implicit operator Variant(ulong value) => FromNumber(value);
@@ -1050,6 +1050,19 @@ namespace Unknown6656.AutoIt3.Runtime
         public static explicit operator int(Variant v) => v.RawData is int i ? i : Convert.ToInt32(v.ToNumber(int.MinValue, int.MaxValue));
 
         public static explicit operator uint(Variant v) => v.RawData is uint i ? i : Convert.ToUInt32(v.ToNumber(uint.MinValue, uint.MaxValue));
+
+        public static explicit operator nint(Variant v) => v.RawData switch
+        {
+            nint n => n,
+            nuint nu => (nint)nu,
+            long l => (nint)l,
+            ulong ul => (nint)ul,
+            uint u => (nint)u,
+            int i => i,
+            _ => (nint)(long)v,
+        };
+
+        public static explicit operator nuint(Variant v) => (nuint)(nint)v;
 
         public static explicit operator long(Variant v) => Convert.ToInt64(v.ToNumber(long.MinValue, long.MaxValue));
 

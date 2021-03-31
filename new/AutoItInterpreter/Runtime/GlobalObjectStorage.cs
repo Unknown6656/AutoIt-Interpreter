@@ -15,8 +15,8 @@ namespace Unknown6656.AutoIt3.Runtime
     public sealed class GlobalObjectStorage
         : IDisposable
     {
-        private static volatile uint _id = 0;
-        private readonly ConcurrentDictionary<uint, object> _objects = new();
+        private static volatile nint _id = 0;
+        private readonly ConcurrentDictionary<nint, object> _objects = new();
 
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace Unknown6656.AutoIt3.Runtime
         public bool TryGetHandle<T>(T? item, out Variant handle)
             where T : class
         {
-            uint key = item is { } ? _objects.FirstOrDefault(kvp => ReferenceEquals(item, kvp.Value)).Key : 0;
+            nint key = item is { } ? _objects.FirstOrDefault(kvp => ReferenceEquals(item, kvp.Value)).Key : 0;
 
             handle = key == 0 ? Variant.Zero : Variant.FromHandle(key);
 
@@ -94,9 +94,9 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public bool Contains<T>(T? item) where T : class => item is { } && _objects.Values.Contains(item);
 
-        public bool Contains(Variant handle) => _objects.ContainsKey((uint)handle);
+        public bool Contains(Variant handle) => _objects.ContainsKey((nint)handle);
 
-        public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue((uint)handle, out item);
+        public bool TryGet(Variant handle, [MaybeNullWhen(false), NotNullWhen(true)] out object? item) => _objects.TryGetValue((nint)handle, out item);
 
         /// <summary>
         /// Resolves the given handle to the .NET object with the given type.
@@ -121,7 +121,7 @@ namespace Unknown6656.AutoIt3.Runtime
             bool success;
 
             if (success = (handle.Type is VariantType.Handle))
-                _objects[(uint)handle] = item;
+                _objects[(nint)handle] = item;
 
             return success;
         }
@@ -141,9 +141,9 @@ namespace Unknown6656.AutoIt3.Runtime
         /// </summary>
         /// <param name="handle">The handle associated with the object to be deleted.</param>
         /// <returns>Deletion result. <see langword="true"/> indicates that the associated object has been found and deleted. Otherwise <see langword="false"/>.</returns>
-        public bool Delete(Variant handle) => handle.Type is VariantType.Handle && Delete((uint)handle);
+        public bool Delete(Variant handle) => handle.Type is VariantType.Handle && Delete((nint)handle);
 
-        private bool Delete(uint id)
+        private bool Delete(nint id)
         {
             bool success = _objects.TryRemove(id, out object? obj);
 
@@ -164,7 +164,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     if ((from key in _objects.Keys
                          let val = _objects[key]
                          where stat_type.Equals(val)
-                         select key).FirstOrDefault() is uint id and > 0)
+                         select key).FirstOrDefault() is nint id and > 0)
                         reference = Variant.FromHandle(id);
                     else
                         reference = Store(stat_type);
