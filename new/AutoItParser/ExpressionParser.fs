@@ -157,25 +157,25 @@ type ExpressionParser(mode : ParserMode) =
         let t_keyword_to            = x.CreateTerminal  @"to"
         let t_keyword_const         = x.CreateTerminal  @"const"
         let t_keyword_byref         = x.CreateTerminal  @"(by)?ref"
-        let t_keyword_and           = x.CreateTerminalF @"and"                              (fun _ -> And)
-        let t_keyword_or            = x.CreateTerminalF @"or"                               (fun _ -> Or)
-        let t_keyword_not           = x.CreateTerminalF @"(not|!)"                          (fun _ -> Not)
-        let t_literal_true          = x.CreateTerminalF @"true"                             (fun _ -> True)
-        let t_literal_false         = x.CreateTerminalF @"false"                            (fun _ -> False)
-        let t_literal_null          = x.CreateTerminalF @"null"                             (fun _ -> Null)
-        let t_literal_default       = x.CreateTerminalF @"default"                          (fun _ -> Default)
-     // let t_literal_empty         = x.CreateTerminalF @"empty"                            (fun _ -> String "")
-        let t_hex                   = x.CreateTerminalF @"(\+|-)?(0x[\da-f_]+|[\da-f_]+h)"  (parse_num "0x" (fun s -> Int64.Parse(s.Replace("_", "").TrimEnd 'h', NumberStyles.HexNumber)))
-        let t_bin                   = x.CreateTerminalF @"(\+|-)?0b[01_]+"                  (parse_num "0b" (fun s -> Convert.ToInt64(s.Replace("_", ""), 2)))
-        let t_oct                   = x.CreateTerminalF @"(\+|-)?0o[0-7_]+"                 (parse_num "0o" (fun s -> Convert.ToInt64(s.Replace("_", ""), 8)))
-        let t_dec                   = x.CreateTerminalF @"(\+|-)?\d+(\.\d+)?(e(\+|-)?\d+)?" (fun s -> match Double.TryParse s with
-                                                                                                      | (true, d) -> d
-                                                                                                      | _ -> Double.Parse(s, NumberStyles.Float))
-        let t_variable              = x.CreateTerminalF @"$[^\W\d]\w*"                      (fun s -> VARIABLE(s.Substring 1))
-        let t_macro                 = x.CreateTerminalF @"@[^\W\d]\w*"                      (fun s -> MACRO(s.Substring 1))
-        let t_string_1              = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""  (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
-        let t_string_2              = x.CreateTerminalF @"'(([^']*''[^']*)*|[^']+)'"        (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
-        let t_identifier            = x.CreateTerminalF @"[^\W\d]\w*"                       Identifier
+        let t_keyword_and           = x.CreateTerminalF @"and"                                   (fun _ -> And)
+        let t_keyword_or            = x.CreateTerminalF @"or"                                    (fun _ -> Or)
+        let t_keyword_not           = x.CreateTerminalF @"(not|!)"                               (fun _ -> Not)
+        let t_literal_true          = x.CreateTerminalF @"true"                                  (fun _ -> True)
+        let t_literal_false         = x.CreateTerminalF @"false"                                 (fun _ -> False)
+        let t_literal_null          = x.CreateTerminalF @"null"                                  (fun _ -> Null)
+        let t_literal_default       = x.CreateTerminalF @"default"                               (fun _ -> Default)
+     // let t_literal_empty         = x.CreateTerminalF @"empty"                                 (fun _ -> String "")
+        let t_hex                   = x.CreateTerminalF @"(\+|-)?(0x[\da-fA-F_]+|[\da-fA-F_]+h)" (parse_num "0x" (fun s -> Int64.Parse(s.Replace("_", "").TrimEnd 'h', NumberStyles.HexNumber)))
+        let t_bin                   = x.CreateTerminalF @"(\+|-)?0b[01_]+"                       (parse_num "0b" (fun s -> Convert.ToInt64(s.Replace("_", ""), 2)))
+        let t_oct                   = x.CreateTerminalF @"(\+|-)?0o[0-7_]+"                      (parse_num "0o" (fun s -> Convert.ToInt64(s.Replace("_", ""), 8)))
+        let t_dec                   = x.CreateTerminalF @"(\+|-)?\d+(\.\d+)?(e(\+|-)?\d+)?"      (fun s -> match Double.TryParse s with
+                                                                                                           | (true, d) -> d
+                                                                                                           | _ -> Double.Parse(s, NumberStyles.Float))
+        let t_variable              = x.CreateTerminalF @"$[^\W\d]\w*"                           (fun s -> VARIABLE(s.Substring 1))
+        let t_macro                 = x.CreateTerminalF @"@[^\W\d]\w*"                           (fun s -> MACRO(s.Substring 1))
+        let t_string_1              = x.CreateTerminalF "\"(([^\"]*\"\"[^\"]*)*|[^\"]+)\""       (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("\"\"", "\"")))
+        let t_string_2              = x.CreateTerminalF @"'(([^']*''[^']*)*|[^']+)'"             (fun s -> String(s.Remove(s.Length - 1).Remove(0, 1).Replace("''", "'")))
+        let t_identifier            = x.CreateTerminalF @"[^\W\d]\w*"                            Identifier
 
 
         let precedences =
