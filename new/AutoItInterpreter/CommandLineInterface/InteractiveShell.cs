@@ -845,9 +845,6 @@ Commands and keyboard shortcuts:
             // if (suggest_all || curr_token?.Type is TokenType.DirectiveOption)
             //     ; // TODO
 
-            if (suggest_all || curr_token?.Type is TokenType.Keyword or TokenType.Identifier or TokenType.FunctionCall)
-                add_suggs(ScriptFunction.RESERVED_NAMES.Except(new[] { "_", "$_", "$GLOBAL" }), TokenType.Keyword);
-
             if (suggest_all || curr_token?.Type is TokenType.Operator)
                 add_suggs(KNOWN_OPERATORS, TokenType.Operator);
 
@@ -896,8 +893,10 @@ Commands and keyboard shortcuts:
                 }).AppendToList(suggestions);
             }
 
-            if (suggest_all || curr_token?.Type is TokenType.Identifier or TokenType.FunctionCall)
+            if (suggest_all || curr_token?.Type is TokenType.Keyword or TokenType.Identifier or TokenType.FunctionCall)
             {
+                add_suggs(ScriptFunction.RESERVED_NAMES.Except(new[] { "_", "$_", "$GLOBAL" }), TokenType.Keyword);
+
                 ScriptFunction[] functions = Interpreter.ScriptScanner.CachedFunctions.Where(f => !string.IsNullOrWhiteSpace(f.Name)).ToArray();
                 int name_length = functions.Max(f => f.Name.Length);
 
