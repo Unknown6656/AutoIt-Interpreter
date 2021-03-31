@@ -720,7 +720,17 @@ Commands and keyboard shortcuts:
 
             string[] variables = Variables.LocalVariables
                                 .Concat(Interpreter.VariableResolver.GlobalVariables)
-                                .Select(v => ScriptVisualizer.ConvertToVT100(ScriptVisualizer.TokenizeScript($"${v.Name} = {v.Value.ToDebugString(Interpreter)}"), false))
+                                .Select(v =>
+                                {
+                                    string str = $"${v.Name} = {v.Value.ToDebugString(Interpreter)}";
+
+                                    if (v.IsConst)
+                                        str = "const " + str;
+                                    if (!v.IsGlobal)
+                                        str = "local " + str;
+
+                                    return ScriptVisualizer.ConvertToVT100(ScriptVisualizer.TokenizeScript(str), false);
+                                })
                                 .Take(HEIGHT - top - 2)
                                 .ToArray();
 

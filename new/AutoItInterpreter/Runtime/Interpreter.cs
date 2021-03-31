@@ -148,6 +148,13 @@ namespace Unknown6656.AutoIt3.Runtime
             LanguageLoader = lang_loader;
             ScriptScanner = new ScriptScanner(this);
             MacroResolver = new MacroResolver(this);
+            FunctionCache = new FunctionCache(this);
+            GlobalObjectStorage = new GlobalObjectStorage(this);
+            VariableResolver = VariableScope.CreateGlobalScope(this);
+            VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
+            VariableResolver.CreateConstant("$CmdLineRaw", Variant.FromString(opt.ScriptArguments.StringJoin(" ")));
+            VariableResolver.CreateConstant("$CmdLine", Variant.FromArray(this, opt.ScriptArguments.Select(Variant.FromString).Prepend(Variant.FromNumber(opt.ScriptArguments.Length))));
+
             PluginLoader = new PluginLoader(this, MainProgram.PLUGIN_DIR);
 
             if (!opt.DontLoadPlugins)
@@ -163,13 +170,6 @@ namespace Unknown6656.AutoIt3.Runtime
             TimerManager.StartAllTimers();
 
             ScriptScanner.ScanNativeFunctions();
-
-            FunctionCache = new FunctionCache(this);
-            GlobalObjectStorage = new GlobalObjectStorage(this);
-            VariableResolver = VariableScope.CreateGlobalScope(this);
-            VariableResolver.CreateVariable(SourceLocation.Unknown, VARIABLE.Discard.Name, false);
-            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLineRaw", true).Value = Variant.FromString(opt.ScriptArguments.StringJoin(" "));
-            VariableResolver.CreateVariable(SourceLocation.Unknown, "$CmdLine", true).Value = Variant.FromArray(this, opt.ScriptArguments.Select(Variant.FromString).Prepend(Variant.FromNumber(opt.ScriptArguments.Length)));
 
             if (NativeInterop.OperatingSystem is OS.Windows)
             {
