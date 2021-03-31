@@ -270,7 +270,6 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_ENDIF = new(@"^endif$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_DECLARATION_MODIFIER = new(@"^(local|static|global|const|dim|enum|step)\b", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENUM_STEP = new(@"^(?<op>[+\-*]?)(?<step>\d+)\b", _REGEX_OPTIONS);
-        private static readonly Regex REGEX_INCLUDE = new(@"^include?\s+(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_CONTINUELOOP_EXITLOOP = new(@"^(?<mode>continue|exit)loop\s*(?<level>.+)?\s*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_SELECT = new(@"^select$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_ENDSELECT = new(@"^endselect$", _REGEX_OPTIONS);
@@ -278,6 +277,8 @@ namespace Unknown6656.AutoIt3.Runtime
         private static readonly Regex REGEX_ENDSWITCH = new(@"^endswitch$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_CASE = new(@"^case\b\s*(?<expression>.+)*$", _REGEX_OPTIONS);
         private static readonly Regex REGEX_CONTINUECASE = new(@"^continuecase$", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_DIRECTIVE = new(@"^#(?<directive>\w+)($|(\b|\s)\s*(?<arguments>.*))", _REGEX_OPTIONS);
+        private static readonly Regex REGEX_INCLUDE = new(@"^(?<open>[""'<])(?<path>(?:(?!\k<close>).)+)(?<close>[""'>])$", _REGEX_OPTIONS);
 
         private readonly ConcurrentDictionary<string, IEnumerator<(Variant key, Variant value)>> _iterators = new();
         private readonly ConcurrentStack<Variable> _withcontext_stack = new();
@@ -557,24 +558,23 @@ namespace Unknown6656.AutoIt3.Runtime
 
         private FunctionReturnValue? ProcessDirective(string directive)
         {
-            if (!directive.StartsWith('#'))
-                return null;
-            else
+            if (directive.Match(REGEX_DIRECTIVE, out Match match))
             {
-                directive = directive[1..];
+                directive = match.Groups["directive"].Value;
 
+                string arguments = match.Groups["arguments"].Value;
                 FunctionReturnValue? result = Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, delegate
                 {
-                    if (directive.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? g))
+                    if (arguments.Match(REGEX_INCLUDE, out ReadOnlyIndexer<string, string>? groups))
                     {
-                        char open = g["open"][0];
-                        char close = g["close"][0];
+                        char open = groups["open"][0];
+                        char close = groups["close"][0];
                         bool relative = open != '<';
 
                         if (open != close && open != '<' && close != '>')
                             return WellKnownError("error.mismatched_quotes", open, close);
 
-                        return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, g["path"], relative).Match(FunctionReturnValue.Fatal, script =>
+                        return Interpreter.ScriptScanner.ScanScriptFile(CurrentLocation, groups["path"], relative).Match(FunctionReturnValue.Fatal, script =>
                         {
                             ScannedScript[] active = Interpreter.ScriptScanner.ActiveScripts;
 
@@ -589,18 +589,23 @@ namespace Unknown6656.AutoIt3.Runtime
                                 return Call(script.MainFunction, Array.Empty<Variant>());
                         });
                     }
-
-                    return null;
+                    else
+                        return null;
                 });
 
                 foreach (AbstractDirectiveProcessor proc in Interpreter.PluginLoader.DirectiveProcessors)
-                    result ??= Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.TryProcessDirective(this, directive));
+                    if (result is null)
+                        result = Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDirective, () => proc.TryProcessDirective(this, directive, arguments));
+                    else
+                        break;
 
                 if (result is null)
                     IssueWarning("warning.unparsable_dirctive", directive);
 
-                return Variant.True;
+                return result ?? Variant.False;
             }
+            else
+                return null;
         }
 
         private FunctionReturnValue MoveToEndOf(BlockStatementType type)

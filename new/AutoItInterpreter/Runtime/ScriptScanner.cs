@@ -50,6 +50,7 @@ namespace Unknown6656.AutoIt3.Runtime
             ResolveUNC,
             ResolveHTTP,
             ResolveFTP,
+            ResolveSSH,
         };
         private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
         private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
@@ -134,7 +135,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
             string combined = Path.Combine(MainProgram.INCLUDE_DIR.FullName, path);
 
-            if (!relative && combined != path && ResolveScriptFile(include_loc, combined, false).Is(out file) && file is { })
+            if (relative && combined != path && ResolveScriptFile(include_loc, combined, false).Is(out file) && file is { })
                 return file;
 
             return InterpreterError.WellKnown(include_loc, "error.unresolved_script", path);
@@ -395,7 +396,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             FileInfo? fi = null;
 
-            foreach (string ext in new[] { "", ".au3", ".au2", ".au" })
+            foreach (string ext in new[] { "", ".au3", ".au2", ".au", ".aupp", ".au++" })
                 if (fi?.Exists ?? false)
                     break;
                 else
