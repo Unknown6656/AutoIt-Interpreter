@@ -128,11 +128,18 @@ Commands and keyboard shortcuts:
         public bool Initialize()
         {
             if (WIDTH < MIN_WIDTH)
-            {
-                MainProgram.PrintError(Interpreter.CurrentUILanguage["error.min_width_interactive", MIN_WIDTH, WIDTH]);
+                try
+                {
+#pragma warning disable CA1416 // Validate platform compatibility
+                    Console.WindowWidth = MIN_WIDTH + 1;
+#pragma warning restore CA1416
+                }
+                catch
+                {
+                    MainProgram.PrintError(Interpreter.CurrentUILanguage["error.min_width_interactive", MIN_WIDTH, WIDTH]);
 
-                return false;
-            }
+                    return false;
+                }
 
             return true;
         }

@@ -81,7 +81,7 @@ namespace Unknown6656.AutoIt3.Extensibility
         {
         }
 
-        public abstract FunctionReturnValue? TryProcessDirective(CallFrame frame, string directive);
+        public abstract FunctionReturnValue? TryProcessDirective(CallFrame frame, string directive, string arguments);
     }
 
     public abstract class AbstractStatementProcessor
