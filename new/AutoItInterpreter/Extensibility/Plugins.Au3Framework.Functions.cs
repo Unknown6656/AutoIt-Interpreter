@@ -48,6 +48,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(AutoItWinSetTitle), 1, AutoItWinSetTitle);
             // RegisterFunction(nameof(AutoItSetOption), 1, 2, AutoItSetOption, Variant.Default);
             // RegisterFunction("Opt", 1, 2, AutoItSetOption, Variant.Default);
+            RegisterFunction(nameof(Assign), 2, 3, Assign);
             RegisterFunction(nameof(BlockInput), 1, BlockInput);
             RegisterFunction(nameof(CDTray), 2, CDTray);
             RegisterFunction(nameof(Abs), 1, Abs);
@@ -160,7 +161,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(FileSetTime), 2, 4, FileSetTime, Variant.Zero, Variant.False);
             RegisterFunction(nameof(FileWrite), 2, FileWrite);
             RegisterFunction(nameof(FileWriteLine), 2, FileWriteLine);
-            RegisterFunction(nameof(Assign), 2, 3, Assign);
+            RegisterFunction(nameof(Hwnd), 1, Hwnd);
             RegisterFunction(nameof(InetClose), 1, InetClose);
             RegisterFunction(nameof(InetGet), 2, 4, InetGet, Variant.Zero, Variant.Zero);
             RegisterFunction(nameof(InetGetInfo), 0, 2, InetGetInfo, Variant.Null, Variant.Default);
@@ -180,6 +181,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(IsFloat), 1, IsFloat);
             RegisterFunction(nameof(IsFunc), 1, IsFunc);
             RegisterFunction(nameof(IsInt), 1, IsInt);
+            RegisterFunction(nameof(IsPtr), 1, IsPtr);
+            RegisterFunction(nameof(IsHwnd), 1, IsHwnd);
             RegisterFunction(nameof(IsKeyword), 1, IsKeyword);
             RegisterFunction(nameof(IsNumber), 1, IsNumber);
             // RegisterFunction(nameof(IsObj), 1, IsObj);
@@ -199,6 +202,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterFunction(nameof(ProcessSetPriority), 2, ProcessSetPriority);
             RegisterFunction(nameof(ProcessWait), 1, 2, ProcessWait, Variant.Zero);
             RegisterFunction(nameof(ProcessWaitClose), 1, 2, ProcessWaitClose, Variant.Zero);
+            RegisterFunction("Ptr", 1, Hwnd);
             RegisterFunction(nameof(Random), 0, 3, Random, Variant.Zero, 1, Variant.False);
             RegisterFunction(nameof(RegDelete), 1, 2, RegDelete, OS.Windows, Variant.Default);
             RegisterFunction(nameof(RegEnumKey), 2, RegEnumKey, OS.Windows);
@@ -1787,6 +1791,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             return (Variant)From.Bytes(bytes).ToHexString();
         }
 
+        internal static FunctionReturnValue Hwnd(CallFrame frame, Variant[] args) => Variant.FromHandle((nint)args[0]);
+
         #endregion
         #region INET...
 
@@ -2125,6 +2131,8 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         internal static FunctionReturnValue IsObj(CallFrame frame, Variant[] args) => (Variant)args[0].IsObject;
 
         internal static FunctionReturnValue IsPtr(CallFrame frame, Variant[] args) => (Variant)args[0].IsPtr;
+
+        internal static FunctionReturnValue IsHwnd(CallFrame frame, Variant[] args) => (Variant)args[0].IsHandle;
 
         internal static FunctionReturnValue IsString(CallFrame frame, Variant[] args) => (Variant)(args[0].Type is VariantType.String);
 
@@ -3587,6 +3595,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
             return (Variant)gettype(args[0]);
         }
+
         #endregion
         #endregion
         #region HELPER FUNCTIONS
