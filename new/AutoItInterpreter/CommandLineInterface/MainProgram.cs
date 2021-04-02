@@ -66,7 +66,7 @@ namespace Unknown6656.AutoIt3.CLI
     /// </summary>
     public sealed class CommandLineOptions
     {
-        [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. Possible values are 'view' (v), 'normal' (n), and 'interactive' (i). The default value is 'normal'. This will run the specified script. The value 'view' implies the flags '-B -s -v q' and indicates that the interpreter shall only display a syntax highlighted version of the script. The value 'interactive' starts the interactive AutoIt shell.")]
+        [Option('m', "mode", Default = ExecutionMode.normal, HelpText = "The program's execution mode. Possible values are 'normal' (n), 'interactive' (i), 'view' (v), and 'tidy' (t). The default value is 'normal'. This will run the specified script. The value 'view' indicates that the interpreter shall only display a syntax highlighted version of the script. The value 'interactive' starts the interactive AutoIt shell. The value 'tidy' formats the speicified script file.")]
         public ExecutionMode ProgramExecutionMode { get; set; } = ExecutionMode.normal;
 
         [Option('N', "no-plugins", Default = false, HelpText = "Prevents the loading of interpreter plugins/extensions.")]
@@ -192,8 +192,10 @@ namespace Unknown6656.AutoIt3.CLI
                 {
                     NativeInterop.DoPlatformDependent(delegate
                     {
+#pragma warning disable CA1416 // Validate platform compatibility
                         Console.WindowWidth = Math.Max(Console.WindowWidth, 100);
                         Console.BufferWidth = Math.Max(Console.BufferWidth, Console.WindowWidth);
+#pragma warning restore CA1416
                     }, OS.Windows);
 
                     // Console.OutputEncoding = Encoding.Unicode;
@@ -230,13 +232,13 @@ namespace Unknown6656.AutoIt3.CLI
                         return result;
                     }).WithParsed(opt =>
                     {
-                        if (opt.ProgramExecutionMode == ExecutionMode.normal)
+                        if (opt.ProgramExecutionMode is ExecutionMode.normal)
                             print_telemetry = true;
                         else
                         {
                             opt.Verbose = false;
                             opt.PrintTelemetry = false;
-                            opt.DontLoadPlugins = opt.ProgramExecutionMode is ExecutionMode.view;
+                            opt.DontLoadPlugins = opt.ProgramExecutionMode is ExecutionMode.view or ExecutionMode.tidy;
                         }
 
                         opt.ScriptArguments = script_args ?? opt.ScriptArguments;
@@ -299,6 +301,12 @@ namespace Unknown6656.AutoIt3.CLI
                                     ScriptToken[] tokens = ScriptVisualizer.TokenizeScript(script);
 
                                     Console.WriteLine(tokens.ConvertToVT100(true));
+                                }
+                                else if (opt.ProgramExecutionMode is ExecutionMode.tidy)
+                                {
+                                    // TODO : clean up the script
+
+                                    throw new NotImplementedException();
                                 }
                                 else if (opt.ProgramExecutionMode is ExecutionMode.normal)
                                 {
@@ -1101,6 +1109,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         normal,
         view,
         interactive,
+        tidy,
     }
 
     public enum UpdaterMode
