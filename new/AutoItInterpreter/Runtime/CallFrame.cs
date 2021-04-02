@@ -702,6 +702,8 @@ namespace Unknown6656.AutoIt3.Runtime
                     if (InteractiveShell.Instances is { Count: > 0 } shells)
                         shells.Do(i => i.Exit());
 
+                    Interpreter.ExitMethod = InterpreterExitMethod.ByExit;
+
                     return result.IfNonFatal(value => Interpreter.Stop((int)value.ToNumber()));
                 },
                 [REGEX_DELETE] = m => ProcessExpressionStatement($"{nameof(NETInteropFunctionProvider.NETDelete)}({m.Groups["value"]})"),

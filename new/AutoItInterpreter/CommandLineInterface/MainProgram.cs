@@ -173,7 +173,10 @@ namespace Unknown6656.AutoIt3.CLI
                 e.Cancel = instances.Length > 0;
 
                 foreach (Interpreter interpreter in instances)
+                {
+                    interpreter.ExitMethod = InterpreterExitMethod.ByClick;
                     return_values.Add(interpreter.Stop(-1));
+                }
 
                 // TODO : exit?
                 // TODO : print fatal error

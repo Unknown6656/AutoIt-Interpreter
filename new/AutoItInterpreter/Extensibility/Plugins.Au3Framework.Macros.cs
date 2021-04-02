@@ -45,6 +45,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             RegisterMacro("DESKTOPDIR", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             RegisterMacro("DOCUMENTSCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments));
             RegisterMacro("EXITCODE", f => f.Interpreter.ExitCode);
+            RegisterMacro("EXITMETHOD", f => (int)f.Interpreter.ExitMethod);
             RegisterMacro("ERROR", f => f.Interpreter.ErrorCode);
             RegisterMacro("EXTENDED", f => f.Interpreter.ExtendedValue);
             RegisterMacro("FAVORITESCOMMONDIR", Environment.GetFolderPath(Environment.SpecialFolder.Favorites));

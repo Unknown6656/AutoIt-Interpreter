@@ -114,6 +114,8 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public int ExitCode { get; private set; } = 0;
 
+        public InterpreterExitMethod ExitMethod { get; internal set; } = InterpreterExitMethod.Normal;
+
         public int ErrorCode
         {
             get => _error;
@@ -377,5 +379,14 @@ namespace Unknown6656.AutoIt3.Runtime
     {
         Regular,
         Interactive
+    }
+
+    public enum InterpreterExitMethod
+    {
+        Normal = 0,
+        ByExit = 1,
+        ByClick = 2,
+        ByLogoff = 3,
+        ByShutdown = 4,
     }
 }
