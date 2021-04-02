@@ -107,6 +107,12 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(USER32_DLL, SetLastError = true)]
         public static extern nint SetParent(nint hWnd, nint hWndNewParent);
 
+        [DllImport(USER32_DLL, CharSet = CharSet.Auto)]
+        public static extern nint SendMessage(nint hWnd, int Msg, nint wParam, nint lParam);
+
+        [DllImport(USER32_DLL, CharSet = CharSet.Auto)]
+        public static extern nint SendMessage(nint hWnd, int Msg, nint wParam, [MarshalAs(UnmanagedType.LPWStr)] string lParam);
+
         #endregion
         #region SHELL32.DLL
 
@@ -124,6 +130,12 @@ namespace Unknown6656.AutoIt3.Runtime.Native
 
         [DllImport(KERNEL32_DLL, SetLastError = true)]
         public static extern unsafe void* GetCurrentProcess();
+
+        [DllImport(KERNEL32_DLL)]
+        public static extern int GetLastError();
+
+        [DllImport(KERNEL32_DLL)]
+        public static extern void SetLastError(int error);
 
         [DllImport(KERNEL32_DLL)]
         public static extern unsafe nint LocalFree(void* hMem);
