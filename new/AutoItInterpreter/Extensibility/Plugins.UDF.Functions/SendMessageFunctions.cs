@@ -9,9 +9,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.UDF.Functions
         public SendMessageFunctions(Interpreter interpreter)
             : base(interpreter)
         {
-            RegisterFunction(nameof(_SendMessage), 2, 8, _SendMessage, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
-            RegisterFunction("_SendMessageA", 2, 8, _SendMessage, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
-            RegisterFunction("_SendMessageW", 2, 8, _SendMessage, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
+            RegisterFunction(nameof(_SendMessage), 2, 8, _SendMessage, OS.Windows, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
+            RegisterFunction("_SendMessageA", 2, 8, _SendMessage, OS.Windows, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
+            RegisterFunction("_SendMessageW", 2, 8, _SendMessage, OS.Windows, Variant.Zero, Variant.Zero, Variant.Zero, "wparam", "lparam", "lresult");
         }
 
         private static FunctionReturnValue _SendMessage(CallFrame frame, Variant[] args)
