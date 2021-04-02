@@ -264,6 +264,11 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly bool IsBinary => Type is VariantType.Binary;
 
         /// <summary>
+        /// Indicates whether this value represents a non-binary string.
+        /// </summary>
+        public readonly bool IsString => Type is VariantType.String;
+
+        /// <summary>
         /// Indicates whether the current instance represents an object (namely "<see cref="VariantType.COMObject"/>" or "<see cref="VariantType.NETObject"/>"). This is not to be confused with <see cref="IsHandle"/>.
         /// </summary>
         public readonly bool IsObject => Type is VariantType.COMObject; // TODO : or .netobject
