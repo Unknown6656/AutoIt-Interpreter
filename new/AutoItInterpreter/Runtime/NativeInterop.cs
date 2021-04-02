@@ -98,6 +98,15 @@ namespace Unknown6656.AutoIt3.Runtime.Native
         [DllImport(USER32_DLL, SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern int MessageBox(int hWnd, string text, string title, uint type);
 
+        [DllImport(USER32_DLL, SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern nint CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, nint hWndParent, nint hMenu, nint hInstance, nint lpParam);
+
+        [DllImport(USER32_DLL, SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
+        [DllImport(USER32_DLL, SetLastError = true)]
+        public static extern nint SetParent(nint hWnd, nint hWndNewParent);
+
         #endregion
         #region SHELL32.DLL
 
