@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using System;
 
 using Unknown6656.Mathematics;
 using Unknown6656.Common;
@@ -66,10 +67,66 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
         private static FunctionReturnValue FileSelectFolder(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                int options = (int)args[2];
+                using FolderBrowserDialog ofd = new()
+                {
+                    Description = args[0].ToString(),
+                    SelectedPath = args[3].ToString(),
+                    RootFolder = Environment.SpecialFolder.MyComputer,
+                    ShowNewFolderButton = options.HasFlag(1),
+                    AutoUpgradeEnabled = true,
+                };
+                DialogResult result;
+
+                if (args[5].IsDefault)
+                    result = ofd.ShowDialog();
+                else
+                    result = ofd.ShowDialog(WindowWrapper.FromHWND(args[5]));
+
+                if (result is DialogResult.OK)
+                    return Variant.FromString(ofd.SelectedPath);
+            }
+            catch
+            {
+            }
+
+            return FunctionReturnValue.Error("", 1, Variant.Null);
         }
 
         private static FunctionReturnValue FileSaveDialog(CallFrame frame, Variant[] args)
         {
+            try
+            {
+                int options = (int)args[3];
+                using SaveFileDialog ofd = new()
+                {
+                    Title = args[0].ToString(),
+                    InitialDirectory = args[1].ToString(),
+                    Filter = args[2].ToString(),
+                    FileName = args[4].ToString(),
+                    CheckFileExists = options.HasFlag(1),
+                    CheckPathExists = options.HasFlag(2),
+                    Multiselect = options.HasFlag(4),
+                    // TODO : create if it does not exist = options.HasFlag(8),
+                };
+                DialogResult result;
+
+                if (args[5].IsDefault)
+                    result = ofd.ShowDialog();
+                else
+                    result = ofd.ShowDialog(WindowWrapper.FromHWND(args[5]));
+
+                return FunctionReturnValue.Success(
+                    ofd.FileNames is { Length: > 1 } names ? names.StringJoin("|") : ofd.FileName,
+                    (int)result
+                );
+            }
+            catch
+            {
+                return FunctionReturnValue.Error(1);
+            }
         }
 
         private static FunctionReturnValue FileOpenDialog(CallFrame frame, Variant[] args)
@@ -95,7 +152,10 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
                 else
                     result = ofd.ShowDialog(WindowWrapper.FromHWND(args[5]));
 
-                return Variant.FromString(ofd.FileNames is { Length: > 1 } names ? names.StringJoin("|") : ofd.FileName);
+                return FunctionReturnValue.Success(
+                    ofd.FileNames is { Length: > 1 } names ? names.StringJoin("|") : ofd.FileName,
+                    (int)result
+                );
             }
             catch
             {
