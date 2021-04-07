@@ -36,10 +36,10 @@ Supported Language| Strict AutoIt 3<br/>with extension support | AutoIt 3<br/>Au
 Works as an ... | Interpreter | Interpiler/Transpiler:<br/>60% compiler, 30% interpreter, 10% magic 
 Written in | C#, F# | C#, F#
 Target Framework | .NET 5 and newer | .NET Core 2.1
-Works on Windows | Hell yeah | Yup
-Works on Linux | Yes, but not tested thoroughly | Kinda
-Works on MacOs | Yes, but not tested thoroughly | Kinda
-Status | [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
+Works on Windows | Yes | Yup
+Works on Linux | Yes | Kinda
+Works on MacOs | Yes | Kinda
+Status | Beta, [In development](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1) | Discontinued, Beta-ish
 
 ## Links
 
