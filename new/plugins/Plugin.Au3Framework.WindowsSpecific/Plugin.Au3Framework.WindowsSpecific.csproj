@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net5.0-windows</TargetFramework>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
+		<TargetFramework>net7.0-windows</TargetFramework>
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin/plugins</OutDir>
         <UseWindowsForms>true</UseWindowsForms>

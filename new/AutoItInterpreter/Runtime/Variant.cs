@@ -11,6 +11,7 @@ using System;
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -326,7 +327,7 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariantType.Default => "Default",
             VariantType.Boolean or VariantType.String or VariantType.Handle => RawData?.ToString() ?? "",
-            VariantType.Number when RawData is { } raw => FunctionExtensions.Do(delegate
+            VariantType.Number when RawData is { } raw => LINQ.Do(delegate
             {
                 double value = Convert.ToDouble(raw);
 
@@ -340,7 +341,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     return value.ToString();
             }),
             _ when RawData is Variable var => var.Value.ToString(),
-            _ when RawData is byte[] { Length: > 0 } bytes => "0x" + From.Bytes(bytes).ToHexString(),
+            _ when RawData is byte[] { Length: > 0 } bytes => "0x" + DataStream.FromBytes(bytes).ToHexString(),
             _ => "",
         };
 
@@ -442,14 +443,14 @@ namespace Unknown6656.AutoIt3.Runtime
         public readonly byte[] ToBinary() => RawData switch
         {
             bool b => new[] { (byte)(b ? 1 : 0) },
-            _ when Type is VariantType.Default => From.Unmanaged(-1),
-            null => From.Unmanaged(0),
-            int i => From.Unmanaged(i),
-            double d when d <= 2147483647 && d >= -2147483648 && d == (int)d => From.Unmanaged((int)d),
-            double d when d <= 9223372036854775807 && d >= -9223372036854775808 && d == (long)d => From.Unmanaged((long)d),
-            double d => From.Unmanaged(d), // TODO : allow 128bit numbers
-            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => From.Hex(s[2..]),
-            string s => From.String(s, BytewiseEncoding.Instance),
+            _ when Type is VariantType.Default => DataStream.FromUnmanaged(-1),
+            null => DataStream.FromUnmanaged(0),
+            int i => DataStream.FromUnmanaged(i),
+            double d when d <= 2147483647 && d >= -2147483648 && d == (int)d => DataStream.FromUnmanaged((int)d),
+            double d when d <= 9223372036854775807 && d >= -9223372036854775808 && d == (long)d => DataStream.FromUnmanaged((long)d),
+            double d => DataStream.FromUnmanaged(d), // TODO : allow 128bit numbers
+            string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => DataStream.FromHex(s[2..]),
+            string s => DataStream.FromString(s, BytewiseEncoding.Instance),
             _ => Array.Empty<byte>(),
         };
 

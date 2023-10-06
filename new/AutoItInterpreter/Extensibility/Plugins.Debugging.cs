@@ -9,7 +9,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.AutoIt3.CLI;
 
 using Unknown6656.Imaging;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Extensibility.Plugins.Debugging
 {

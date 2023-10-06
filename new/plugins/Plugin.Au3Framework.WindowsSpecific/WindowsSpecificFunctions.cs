@@ -3,7 +3,7 @@ using System.IO;
 using System;
 
 using Unknown6656.Mathematics;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
@@ -208,74 +208,9 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
             }
         }
 
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
-        private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
-        {
-        }
-
+        //private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
+        //{
+        //}
 
         public sealed class WindowWrapper
             : IWin32Window

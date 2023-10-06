@@ -23,10 +23,11 @@ using Unknown6656.Mathematics.Cryptography;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
-using Unknown6656.IO;
+using Unknown6656.Generics;
 
 using OS = Unknown6656.AutoIt3.Runtime.Native.OS;
 using CLParser = CommandLine.Parser;
+using Unknown6656.IO;
 
 [assembly: AssemblyUsage(@"
   Run the interpreter quietly (only print the script's output):
@@ -1072,7 +1073,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 {
                     LanguagePack? lang = LanguageLoader.CurrentLanguage;
 
-                    From hash = From.File(ASM_FILE).Hash(HashFunctions.SHA256);
+                    DataStream hash = DataStream.FromFile(ASM_FILE).Hash(HashFunction.SHA256);
 
                     ConsoleExtensions.RGBForegroundColor = RGBAColor.White;
                     Console.WriteLine($@"

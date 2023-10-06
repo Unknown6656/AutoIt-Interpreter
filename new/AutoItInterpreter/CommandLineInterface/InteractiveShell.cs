@@ -10,6 +10,7 @@ using Unknown6656.AutoIt3.Runtime;
 using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.CLI
 {
@@ -924,7 +925,7 @@ Commands and keyboard shortcuts:
             }
 
             Suggestions.Clear();
-            Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content)
+            Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content) // DistinctBy in Unknown6656.Common collides with DistinctBy in System.LINQ
                                  where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
                                  orderby s.tokens[0].Type, s.content ascending
                                  select s);
