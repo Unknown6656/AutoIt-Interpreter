@@ -299,10 +299,54 @@ namespace Unknown6656.AutoIt3.Runtime
 
         public readonly bool NotEquals(Variant other) => !EqualsCaseInsensitive(other); // TODO : unit tests
 
+        VariantType GetComparisionType(VariantType nOp1, VariantType nOp2)
+        {
+            switch (nOp1)
+            {
+                case VariantType.Number:
+                    switch (nOp2)
+                    {
+                        case VariantType.Number:
+                            return VariantType.Number;
+                        case VariantType.String:
+                            return VariantType.Number;
+                    }
+                    break;
+
+                case VariantType.String:
+                    switch (nOp2)
+                    {
+                        case VariantType.Number:
+                            return VariantType.Number;
+                        case VariantType.String:
+                            return VariantType.String;
+                    }
+                    break;
+
+                case VariantType.Handle:
+                    if (nOp2 == VariantType.Handle)
+                        return VariantType.Handle;
+                    break;
+            }
+
+            // Everything else is undefined
+            return VariantType.Null;
+        } // GetComparisionType()
+
         public readonly bool EqualsCaseInsensitive(Variant other)
         {
-            if (Type is VariantType.String && other.Type is VariantType.String)
-                return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+            //if (Type is VariantType.String && other.Type is VariantType.String)
+            //    return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+            switch (GetComparisionType(Type, other.Type))
+            {
+                case VariantType.String:
+                    // Do string conparision
+                    return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+
+                case VariantType.Number:
+                    return double.Equals(ToNumber(), other.ToNumber());
+
+            }
 
             // TODO : binary compare
 
