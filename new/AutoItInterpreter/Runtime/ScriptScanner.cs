@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿//#define SUPPORT_SSH
+
+using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.Generic;
@@ -51,7 +53,9 @@ namespace Unknown6656.AutoIt3.Runtime
             ResolveUNC,
             ResolveHTTP,
             ResolveFTP,
+#if SUPPORT_SSH
             ResolveSSH,
+#endif
         };
         private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
         private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
@@ -421,8 +425,9 @@ namespace Unknown6656.AutoIt3.Runtime
         private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), DataStream.FromWebResource(new Uri(path)).ToString());
 
         private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), DataStream.FromFTP(path).ToString());
-
+#if SUPPORT_SSH
         private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), DatastreamExtensions.FromSSH(path).ToString());
+#endif
     }
 
     /// <summary>
