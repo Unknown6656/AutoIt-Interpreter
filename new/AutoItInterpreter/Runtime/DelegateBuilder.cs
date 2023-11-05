@@ -9,7 +9,7 @@ using System;
 
 using Unknown6656.AutoIt3.Parser.DLLStructParser;
 using Unknown6656.AutoIt3.Runtime.Native;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {

@@ -4,7 +4,7 @@ using System.Text;
 using System.Linq;
 using System;
 
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -52,7 +52,7 @@ namespace Unknown6656.AutoIt3.Runtime
 
                     string result = type switch
                     {
-                        'd' or 'i' => FunctionExtensions.Do(delegate
+                        'd' or 'i' => LINQ.Do(delegate
                         {
                             long value = (long)arg;
 

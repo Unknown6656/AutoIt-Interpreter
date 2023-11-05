@@ -3,7 +3,6 @@
 using System;
 
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Logging.Serilog;
 using Avalonia.Logging;
 using Avalonia;
 

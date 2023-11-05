@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30114.128
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoItInterpreter", "AutoItInterpreter\AutoItInterpreter.csproj", "{510D487F-32FE-4255-9D73-075A628121B4}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -49,6 +49,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{CCA3DC14-871
 		lib\Piglet.FSharp.pdb = lib\Piglet.FSharp.pdb
 		lib\Piglet.pdb = lib\Piglet.pdb
 		lib\Piglet.xml = lib\Piglet.xml
+		lib\Unknown6656.Core.deps.json = lib\Unknown6656.Core.deps.json
+		lib\Unknown6656.Core.dll = lib\Unknown6656.Core.dll
+		lib\Unknown6656.Core.Extensions.deps.json = lib\Unknown6656.Core.Extensions.deps.json
+		lib\Unknown6656.Core.Extensions.dll = lib\Unknown6656.Core.Extensions.dll
+		lib\Unknown6656.Core.Windows.deps.json = lib\Unknown6656.Core.Windows.deps.json
+		lib\Unknown6656.Core.Windows.dll = lib\Unknown6656.Core.Windows.dll
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Common", "util\AutoIt3.Common\AutoIt3.Common.csproj", "{84894845-C1AF-4A45-9026-C5C30E31E43D}"
@@ -67,7 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{A2DB
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.Au3Framework.WindowsSpecific", "plugins\Plugin.Au3Framework.WindowsSpecific\Plugin.Au3Framework.WindowsSpecific.csproj", "{9834FD38-4E03-4ED5-98F0-0360508F1391}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugin.Serial", "plugins\Plugins.Serial\Plugin.Serial.csproj", "{47E0095B-EF3D-42AA-A292-559861A91BEC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.Serial", "plugins\Plugins.Serial\Plugin.Serial.csproj", "{47E0095B-EF3D-42AA-A292-559861A91BEC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

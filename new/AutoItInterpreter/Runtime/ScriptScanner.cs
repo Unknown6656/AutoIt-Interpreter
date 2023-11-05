@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿//#define SUPPORT_SSH
+
+using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.Generic;
@@ -8,6 +10,7 @@ using System;
 
 using Unknown6656.Common;
 using Unknown6656.IO;
+using Unknown6656.Generics;
 
 using Unknown6656.AutoIt3.Parser.ExpressionParser;
 using Unknown6656.AutoIt3.Runtime.Native;
@@ -50,7 +53,9 @@ namespace Unknown6656.AutoIt3.Runtime
             ResolveUNC,
             ResolveHTTP,
             ResolveFTP,
+#if SUPPORT_SSH
             ResolveSSH,
+#endif
         };
         private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
         private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
@@ -152,7 +157,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     script = new ScannedScript(file, content);
 
                     AU3Function curr_func = script.GetOrCreateAU3Function(ScriptFunction.GLOBAL_FUNC, null);
-                    List<(string line, SourceLocation loc)> lines = From.String(content)
+                    List<(string line, SourceLocation loc)> lines = DataStream.FromString(content)
                                                                         .ToLines()
                                                                         .Select((l, i) => (l, new SourceLocation(file.FullName, i)))
                                                                         .ToList();
@@ -316,7 +321,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     }
 
                     if (!curr_func.IsMainFunction)
-                        return InterpreterError.WellKnown(new SourceLocation(file.FullName, From.String(content).ToLines().Length + 1), "error.unexpected_eof");
+                        return InterpreterError.WellKnown(new SourceLocation(file.FullName, DataStream.FromString(content).ToLines().Length + 1), "error.unexpected_eof");
 
                     _cached_scripts.TryAdd(script.GetHashCode(), script);
 
@@ -417,11 +422,12 @@ namespace Unknown6656.AutoIt3.Runtime
             return null;
         }
 
-        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), From.WebResource(new Uri(path)).ToString());
+        private static (FileInfo physical, string content)? ResolveHTTP(string path) => (new FileInfo(path), DataStream.FromWebResource(new Uri(path)).ToString());
 
-        private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), From.FTP(path).ToString());
-
-        private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), From.SSH(path).ToString());
+        private static (FileInfo physical, string content)? ResolveFTP(string path) => (new FileInfo(path), DataStream.FromFTP(path).ToString());
+#if SUPPORT_SSH
+        private static (FileInfo physical, string content)? ResolveSSH(string path) => (new FileInfo(path), DatastreamExtensions.FromSSH(path).ToString());
+#endif
     }
 
     /// <summary>

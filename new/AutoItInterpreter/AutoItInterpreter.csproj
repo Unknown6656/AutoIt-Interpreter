@@ -1,11 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
+        <LangVersion>preview</LangVersion>
+
         <Nullable>enable</Nullable>
+
         <!--<StartupObject>$Program.$Main</StartupObject>-->
         <OutDir>$(SolutionDir)bin</OutDir>
-        <LangVersion>preview</LangVersion>
+        <OutputPath>$(SolutionDir)bin</OutputPath>
+        <AssemblyName>autoit3</AssemblyName>
+        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -16,7 +23,7 @@
         <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+
         <Authors>Unknown6656</Authors>
         <Company>Unknown6656</Company>
         <Copyright>Copyright © 2020, Unknown6656</Copyright>
@@ -28,62 +35,62 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
-        <AssemblyName>autoit3</AssemblyName>
-        <OutputPath>$(SolutionDir)bin</OutputPath>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <PackageProjectUrl>https://github.com/Unknown6656/AutoIt-Interpreter</PackageProjectUrl>
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryType>Git</RepositoryType>
-        <PackageTags>unknown6656; AutoIt; AutoIt3; Interpreter; Compiler</PackageTags>
+        <PackageTags>unknown6656;AutoIt;AutoIt3;Interpreter;Compiler</PackageTags>
+
         <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="lang\lang-en.yml" />
-        <None Include="..\artwork\icon.png">
-          <Pack>True</Pack>
-          <PackagePath></PackagePath>
-        </None>
-    </ItemGroup>
-    <ItemGroup>
-        <Reference Include="Piglet">
-            <HintPath>..\lib\Piglet.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-    <ItemGroup>
-        <Content Include="lang\lang-en.yml">
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
-    <ItemGroup>
-        <None Include="..\..\LICENSE.md">
+        <None Remove="lang/lang-en.yml" />
+        <None Include="../artwork/icon.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="CommandLineParser" Version="2.8.0" />
-        <PackageReference Include="FSharp.Core" Version="5.0.1" />
-        <PackageReference Include="Lokad.ILPack" Version="0.1.6" />
-        <PackageReference Include="Octokit" Version="0.50.0" />
+        <Reference Include="Piglet">
+            <HintPath>../lib/Piglet.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <Content Include="lang/lang-en.yml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="../../LICENSE.md">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CommandLineParser" Version="2.9.1" />
+        <PackageReference Include="FSharp.Core" Version="8.0.100-beta.23475.2" />
+        <PackageReference Include="Lokad.ILPack" Version="0.2.0" />
+        <PackageReference Include="Octokit" Version="9.0.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.0.20.2" />
+        <PackageReference Include="Unknown6656.Core" Version="1.1.7"/>
+        <PackageReference Include="Unknown6656.Generics" Version="0.9.12" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />
-        <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
+        <ProjectReference Include="../AutoItParser/AutoItParser.fsproj" />
+        <ProjectReference Include="../util/AutoIt3.Common/AutoIt3.Common.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Folder Include="include\" />
+        <Folder Include="include/" />
     </ItemGroup>
     <ItemGroup>
-        <None Update="include\*">
+        <None Update="include/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
     <ItemGroup>
-      <None Update="autoit3">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="autoit3">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
         <Exec Command="dotnet &quot;$(OutDir)../bin-util/incr.dll&quot; &quot;$(ProjectPath)&quot;" />

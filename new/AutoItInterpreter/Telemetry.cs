@@ -9,7 +9,7 @@ using Unknown6656.AutoIt3.Localization;
 using Unknown6656.AutoIt3.CLI;
 
 using Unknown6656.Mathematics.LinearAlgebra;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3
 {

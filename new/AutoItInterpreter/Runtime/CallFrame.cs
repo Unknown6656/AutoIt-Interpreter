@@ -21,6 +21,7 @@ using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.CLI;
 
 using Unknown6656.Common;
+using Unknown6656.Generics;
 
 using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
 
@@ -1489,7 +1490,7 @@ namespace Unknown6656.AutoIt3.Runtime
                     EXPRESSION.Member { Item: MEMBER_EXPRESSION member } => ProcessMember(member).Match(FunctionReturnValue.Fatal, v => v.MemberValue),
                     EXPRESSION.Indexer { Item: Tuple<EXPRESSION, EXPRESSION> indexer } => ProcessIndexer(indexer.Item1, indexer.Item2),
                     EXPRESSION.FunctionCall { Item: FUNCCALL_EXPRESSION funccall } => ProcessFunctionCall(funccall),
-                    EXPRESSION.ReferenceTo { Item: VARIABLE variable } => FunctionExtensions.Do(delegate
+                    EXPRESSION.ReferenceTo { Item: VARIABLE variable } => LINQ.Do(delegate
                     {
                         FunctionReturnValue result = ProcessVariable(variable);
                         Variable? var = null;
