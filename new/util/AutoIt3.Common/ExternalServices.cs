@@ -422,7 +422,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                     {
                         string name = Path.GetFileName(instance?.Solution.FullName);
 
-                        if (string.Equals(name, solutionName, StringComparison.InvariantCultureIgnoreCase))
+                        if (string.Equals(name, solutionName, StringComparison.OrdinalIgnoreCase))
                             return proc;
                     }
                     catch

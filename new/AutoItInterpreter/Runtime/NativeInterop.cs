@@ -273,7 +273,7 @@ public static class NativeInterop
 
     private static (string stdout, int code) InternalRun(string filename, string[] arguments, bool use_shexec)
     {
-        static string escape(char c) => "^[]|()<>&'\"=$".Contains(c, StringComparison.InvariantCulture) ? "^" + c : c.ToString();
+        static string escape(char c) => "^[]|()<>&'\"=$".Contains(c) ? "^" + c : c.ToString();
         using Process process = new Process()
         {
             StartInfo = new ProcessStartInfo

@@ -163,7 +163,7 @@ public record ScriptToken(int LineIndex, int CharIndex, int TokenLength, string 
 
     public IEnumerable<ScriptToken> SplitByLineBreaks()
     {
-        List<ScriptToken> tokens = Content.Replace("\r\n", "\n", StringComparison.InvariantCulture)
+        List<ScriptToken> tokens = Content.Replace("\r\n", "\n")
                                           .Split('\n')
                                           .SelectMany((line, index) => new[]
                                           {

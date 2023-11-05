@@ -995,7 +995,7 @@ public sealed class AU3CallFrame
             },
             [REGEX_CONTINUELOOP_EXITLOOP] = m =>
             {
-                bool exit = m.Groups["mode"].Value.Equals("exit", StringComparison.InvariantCultureIgnoreCase);
+                bool exit = m.Groups["mode"].Value.Equals("exit", StringComparison.OrdinalIgnoreCase);
                 int level = 1;
 
                 if (m.Groups["level"].Length > 0)
@@ -1561,7 +1561,7 @@ public sealed class AU3CallFrame
                 result = (res.instance, res.name, v);
             else if (res.instance.TryGetIndexed(Interpreter, res.name, out v))
                 result = (res.instance, res.name, v);
-            else if (res.name.Equals("length", StringComparison.InvariantCultureIgnoreCase))
+            else if (res.name.Equals("length", StringComparison.OrdinalIgnoreCase))
                 result = (res.instance, "Length", res.instance.Length);
             else
                 return WellKnownError("error.unknown_member", res.name);

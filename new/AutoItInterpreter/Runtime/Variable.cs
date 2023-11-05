@@ -81,12 +81,12 @@ public sealed class Variable
     public override string ToString() => $"${Name}: {Value.ToDebugString(Interpreter)}";
 
     /// <inheritdoc/>
-    public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
+    public override int GetHashCode() => Name.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) => (obj is Variable v && Equals(v))
-                                             || (obj is string s && Name.Equals(s, StringComparison.InvariantCultureIgnoreCase));
+                                             || (obj is string s && Name.Equals(s, StringComparison.OrdinalIgnoreCase));
 
     /// <inheritdoc/>
-    public bool Equals(Variable? other) => Name.Equals(other?.Name, StringComparison.InvariantCultureIgnoreCase);
+    public bool Equals(Variable? other) => Name.Equals(other?.Name, StringComparison.OrdinalIgnoreCase);
 }

@@ -183,7 +183,7 @@ public sealed class DebuggingFunctionProvider
                         break;
                 }
 
-                if (!sb.ToString().EndsWith(Environment.NewLine, StringComparison.InvariantCultureIgnoreCase))
+                if (!sb.ToString().EndsWith(Environment.NewLine))
                     sb.AppendLine();
             }
         }
@@ -379,13 +379,13 @@ public sealed class DebuggingFunctionProvider
             for (int i = 0, l = Math.Min(pathx.Length, pathy.Length); i < l; ++i)
             {
                 bool varx = pathx[i].StartsWith('$');
-                int cmp = varx ^ pathy[i].StartsWith('$') ? varx ? -1 : 1 : string.Compare(pathx[i], pathy[i], StringComparison.InvariantCultureIgnoreCase);
+                int cmp = varx ^ pathy[i].StartsWith('$') ? varx ? -1 : 1 : string.Compare(pathx[i], pathy[i], StringComparison.OrdinalIgnoreCase);
 
                 if (cmp != 0)
                     return cmp;
             }
 
-            return string.Compare(x.name, y.name, StringComparison.InvariantCultureIgnoreCase);
+            return string.Compare(x.name, y.name, StringComparison.OrdinalIgnoreCase);
         });
 
         string table = GenerateTable(

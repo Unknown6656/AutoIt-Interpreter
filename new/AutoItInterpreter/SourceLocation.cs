@@ -51,7 +51,7 @@ public readonly struct SourceLocation
         if (start > end)
             throw new ArgumentException("The end line number must not be smaller than the start line number", nameof(end));
 
-        FullFileName = file.Equals(_unknown_path, StringComparison.InvariantCultureIgnoreCase) ? file : Path.GetFullPath(new FileInfo(file).FullName);
+        FullFileName = file.Equals(_unknown_path, StringComparison.OrdinalIgnoreCase) ? file : Path.GetFullPath(new FileInfo(file).FullName);
         StartLineNumber = start;
         EndLineNumber = end;
     }

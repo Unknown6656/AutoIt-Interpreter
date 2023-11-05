@@ -154,7 +154,7 @@ public abstract class AbstractFunctionProvider
 
 
     protected AbstractFunctionProvider(Interpreter interpreter)
-        : base(interpreter, PluginCategory.FunctionProvider) => _known_functions = new(StringComparer.InvariantCultureIgnoreCase);
+        : base(interpreter, PluginCategory.FunctionProvider) => _known_functions = new(StringComparer.OrdinalIgnoreCase);
 
     public FunctionReturnValue? TryExecute(string name, NativeCallFrame frame, Variant[] args)
     {
@@ -194,7 +194,7 @@ public abstract class AbstractKnownMacroProvider
 
 
     public AbstractKnownMacroProvider(Interpreter interpreter)
-        : base(interpreter) => _known_macros = new(StringComparer.InvariantCultureIgnoreCase);
+        : base(interpreter) => _known_macros = new(StringComparer.OrdinalIgnoreCase);
 
     protected void RegisterMacro(string name, Variant value) => RegisterMacro(name, _ => value);
 

@@ -104,7 +104,7 @@ public sealed class GithubUpdater
             ReleaseAsset? asset = assets[0];
 
             if (assets.Count > 1)
-                asset = assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase) && a.Name.Contains(release.TagName, StringComparison.InvariantCultureIgnoreCase));
+                asset = assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && a.Name.Contains(release.TagName, StringComparison.OrdinalIgnoreCase));
 
             if (asset is null)
                 return false;

@@ -118,7 +118,7 @@ namespace Unknown6656.AutoIt3.Localization
             formatted = null;
             key = "strings." + key;
 
-            if (_strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value is string fmt_str)
+            if (_strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value is string fmt_str)
             {
                 int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}")
                                 .Cast<Match>()

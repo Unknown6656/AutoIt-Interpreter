@@ -94,7 +94,7 @@ public sealed class MacroResolver
         (value, metadata, result) = Interpreter.Telemetry.Measure(TelemetryCategory.MacroResolving, delegate
         {
             foreach (KnownMacro macro in _macros)
-                if (macro.Name.Equals(macro_name, StringComparison.InvariantCultureIgnoreCase))
+                if (macro.Name.Equals(macro_name, StringComparison.OrdinalIgnoreCase))
                     return (macro.GetValue(frame), macro.Metadata, true);
 
             foreach (AbstractMacroProvider provider in Interpreter.PluginLoader.MacroProviders)

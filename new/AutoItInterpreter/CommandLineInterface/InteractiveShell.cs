@@ -926,7 +926,7 @@ Commands and keyboard shortcuts:
 
         Suggestions.Clear();
         Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content) // DistinctBy in Unknown6656.Common collides with DistinctBy in System.LINQ
-                             where filter is null || s.content.StartsWith(filter, StringComparison.InvariantCultureIgnoreCase)
+                             where filter is null || s.content.StartsWith(filter, StringComparison.OrdinalIgnoreCase)
                              orderby s.tokens[0].Type, s.content ascending
                              select s);
         CurrentSuggestionIndex = Math.Min(CurrentSuggestionIndex, Suggestions.Count - 1);

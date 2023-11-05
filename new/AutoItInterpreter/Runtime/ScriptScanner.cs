@@ -26,6 +26,8 @@ using static AST;
 /// </summary>
 public sealed class ScriptScanner
 {
+    private static readonly string[] AUTOIT_FILE_EXTENSIONS = { "", ".au3", ".au2", ".au", ".aupp", ".au++" };
+
     private const RegexOptions REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
     private const string REGEX_FUNC_MODIFIERS = /*lang=regex*/@"((\s+|\b)(?<modifiers>volatile(\s+cached)?|cached(\s+volatile)?)(\s+|\b))?";
     private static readonly Regex REGEX_COMMENT = new(@"\;[^\""\']*$", REGEX_OPTIONS);
@@ -287,8 +289,8 @@ public sealed class ScriptScanner
                             }
 
                         curr_func = script.GetOrCreateAU3Function(name, @params);
-                        curr_func.IsVolatile = mods.Contains("volatile", StringComparison.InvariantCultureIgnoreCase);
-                        curr_func.IsCached = mods.Contains("cached", StringComparison.InvariantCultureIgnoreCase);
+                        curr_func.IsVolatile = mods.Contains("volatile", StringComparison.OrdinalIgnoreCase);
+                        curr_func.IsCached = mods.Contains("cached", StringComparison.OrdinalIgnoreCase);
                         _cached_functions.TryAdd(name.ToUpperInvariant(), curr_func);
 
                         if (MainProgram.CommandLineOptions.StrictMode && curr_func.IsCached)
@@ -366,7 +368,7 @@ public sealed class ScriptScanner
         }
 
         foreach (AbstractPragmaProcessor proc in Interpreter.PluginLoader.PragmaProcessors)
-            if (proc.PragmaName.Equals(option, StringComparison.InvariantCultureIgnoreCase))
+            if (proc.PragmaName.Equals(option, StringComparison.OrdinalIgnoreCase))
                 if (proc.CanProcessPragmaKey(key))
                     return proc.ProcessPragma(loc, key, value);
                 else
@@ -401,7 +403,7 @@ public sealed class ScriptScanner
     {
         FileInfo? fi = null;
 
-        foreach (string ext in new[] { "", ".au3", ".au2", ".au", ".aupp", ".au++" })
+        foreach (string ext in AUTOIT_FILE_EXTENSIONS)
             if (fi?.Exists ?? false)
                 break;
             else
@@ -436,7 +438,7 @@ public sealed class ScriptScanner
 public sealed class ScannedScript
     : IEquatable<ScannedScript>
 {
-    private readonly Dictionary<string, ScriptFunction> _functions = new(new CustomEqualityComparer<string>((s1, s2) => s1.Equals(s2, StringComparison.InvariantCultureIgnoreCase)));
+    private readonly Dictionary<string, ScriptFunction> _functions = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<(string func, SourceLocation decl)> _startup = new();
     private readonly List<(string func, SourceLocation decl)> _exit = new();
 
@@ -487,7 +489,7 @@ public sealed class ScannedScript
 
     private bool AddFunction(string name, SourceLocation decl, in List<(string, SourceLocation)> list)
     {
-        if (!list.Any(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)))
+        if (!list.Any(t => string.Equals(t.Item1, name, StringComparison.OrdinalIgnoreCase)))
         {
             list.Add((name.ToUpperInvariant(), decl));
 
@@ -497,7 +499,7 @@ public sealed class ScannedScript
             return false;
     }
 
-    private bool RemoveFunction(string name, in List<(string, SourceLocation)> list) => list.RemoveAll(t => string.Equals(t.Item1, name, StringComparison.InvariantCultureIgnoreCase)) != 0;
+    private bool RemoveFunction(string name, in List<(string, SourceLocation)> list) => list.RemoveAll(t => string.Equals(t.Item1, name, StringComparison.OrdinalIgnoreCase)) != 0;
 
     public FunctionReturnValue LoadScript(CallFrame frame) => HandleLoading(frame, false);
 

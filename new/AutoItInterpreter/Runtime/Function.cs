@@ -40,7 +40,7 @@ public abstract class ScriptFunction
 
     public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
-    public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.InvariantCultureIgnoreCase);
+    public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.OrdinalIgnoreCase);
 
 
     internal ScriptFunction(ScannedScript script, string name)
@@ -210,9 +210,9 @@ public class NativeFunction
 
     public override string ToString() => "[native] Func " + Name;
 
-    public override bool Equals(object? obj) => Name.Equals((obj as ScriptFunction)?.Name, StringComparison.InvariantCultureIgnoreCase);
+    public override bool Equals(object? obj) => Name.Equals((obj as ScriptFunction)?.Name, StringComparison.OrdinalIgnoreCase);
 
-    public override int GetHashCode() => Name.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
+    public override int GetHashCode() => Name.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Creates a new (parameterless) native function using the given delegate.

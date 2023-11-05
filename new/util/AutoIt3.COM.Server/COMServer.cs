@@ -631,7 +631,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             List<MemberInfo> members = _cached_members.Where(m => m.Name == name).ToList();
 
             if (members.Count == 0)
-                members.AddRange(_cached_members.Where(m => string.Equals(name, m.Name, StringComparison.InvariantCultureIgnoreCase)));
+                members.AddRange(_cached_members.Where(m => string.Equals(name, m.Name, StringComparison.OrdinalIgnoreCase)));
 
             if (members.Count == 0)
             {

@@ -443,7 +443,7 @@ public sealed class FrameworkFunctions
         Variant[] call_args = frame.PassedArguments.Length == 2 &&
                               args[1] is { Type: VariantType.Array } arr &&
                               arr.TryGetIndexed(frame.Interpreter, 0, out Variant caa) &&
-                              caa.ToString().Equals("CallArgArray", StringComparison.InvariantCultureIgnoreCase) ? arr.ToArray(frame.Interpreter) : args;
+                              caa.ToString().Equals("CallArgArray", StringComparison.OrdinalIgnoreCase) ? arr.ToArray(frame.Interpreter) : args;
 
         call_args = call_args[1..];
 
@@ -1828,7 +1828,7 @@ public sealed class FrameworkFunctions
         if (!background)
             try
             {
-                DataStream source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
+                DataStream source = uri.StartsWith("ftp", StringComparison.OrdinalIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
 
                 source.ToFile(filename);
 
@@ -1882,7 +1882,7 @@ public sealed class FrameworkFunctions
 
         try
         {
-            DataStream source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
+            DataStream source = uri.StartsWith("ftp", StringComparison.OrdinalIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
 
             return (Variant)source.Length;
         }
@@ -1898,7 +1898,7 @@ public sealed class FrameworkFunctions
 
         try
         {
-            DataStream source = uri.StartsWith("ftp", StringComparison.InvariantCultureIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
+            DataStream source = uri.StartsWith("ftp", StringComparison.OrdinalIgnoreCase) ? DataStream.FromFTP(uri) : DataStream.FromHTTP(uri);
 
             return FunctionReturnValue.Success(Variant.FromBinary(source.ToBytes()), source.Length);
         }
@@ -2863,9 +2863,9 @@ public sealed class FrameworkFunctions
     #endregion
     #region STRING...
 
-    internal static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n", StringComparison.InvariantCultureIgnoreCase);
+    internal static FunctionReturnValue StringAddCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\n", "\r\n");
 
-    internal static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant)string.Compare(args[0].ToString(), args[1].ToString(), ((int)args[2]) switch
+    internal static FunctionReturnValue StringCompare(CallFrame frame, Variant[] args) => (Variant)string.Compare(args[0].ToString(), args[1].ToString(), (int)args[2] switch
     {
         1 => StringComparison.CurrentCulture,
         2 => StringComparison.InvariantCultureIgnoreCase,
@@ -2908,7 +2908,7 @@ public sealed class FrameworkFunctions
     {
         string input = args[0].ToString();
         string substr = args[1].ToString();
-        StringComparison mode = ((int)args[2]) switch
+        StringComparison mode = (int)args[2] switch
         {
             1 => StringComparison.InvariantCulture,
             2 => StringComparison.InvariantCultureIgnoreCase,
@@ -3060,7 +3060,7 @@ public sealed class FrameworkFunctions
         string search = args[1].ToString();
         string replace = args[2].ToString();
         int occurence = (int)args[3];
-        StringComparison mode = ((int)args[4]) switch
+        StringComparison mode = (int)args[4] switch
         {
             1 => StringComparison.InvariantCulture,
             2 => StringComparison.InvariantCultureIgnoreCase,
@@ -3132,7 +3132,7 @@ public sealed class FrameworkFunctions
         return Variant.FromArray(frame.Interpreter, array);
     }
 
-    internal static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "", StringComparison.InvariantCulture);
+    internal static FunctionReturnValue StringStripCR(CallFrame frame, Variant[] args) => (Variant)args[0].ToString().Replace("\r", "");
 
     internal static FunctionReturnValue StringStripWS(CallFrame frame, Variant[] args)
     {

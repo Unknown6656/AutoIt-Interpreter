@@ -295,7 +295,7 @@ public readonly struct Variant
     public readonly bool IsFunction([MaybeNullWhen(false), NotNullWhen(true)] out ScriptFunction? function) => (function = RawData as ScriptFunction) is { };
 
     public readonly int CompareTo(Variant other) =>
-        RawData is string s1 && other.RawData is string s2 ? string.Compare(s1, s2, StringComparison.InvariantCultureIgnoreCase) : ToNumber().CompareTo(other.ToNumber());
+        RawData is string s1 && other.RawData is string s2 ? string.Compare(s1, s2, StringComparison.OrdinalIgnoreCase) : ToNumber().CompareTo(other.ToNumber());
 
     public readonly bool NotEquals(Variant other) => !EqualsCaseInsensitive(other); // TODO : unit tests
 
@@ -336,12 +336,12 @@ public readonly struct Variant
     public readonly bool EqualsCaseInsensitive(Variant other)
     {
         //if (Type is VariantType.String && other.Type is VariantType.String)
-        //    return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+        //    return string.Equals(ToString(), other.ToString(), StringComparison.OrdinalIgnoreCase);
         switch (GetComparisionType(Type, other.Type))
         {
             case VariantType.String:
                 // Do string conparision
-                return string.Equals(ToString(), other.ToString(), StringComparison.InvariantCultureIgnoreCase);
+                return string.Equals(ToString(), other.ToString(), StringComparison.OrdinalIgnoreCase);
 
             case VariantType.Number:
                 return double.Equals(ToNumber(), other.ToNumber());
@@ -473,7 +473,7 @@ public readonly struct Variant
         nint i => i,
         uint i => i,
         double d => d,
-        string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0d,
+        string s when s.StartsWith("0x", StringComparison.OrdinalIgnoreCase) => long.TryParse(s[2..], NumberStyles.HexNumber, null, out long l) ? l : 0d,
         string s => double.TryParse(s, out double d) ? d : 0d,
         VariantType.Null or _ => 0d,
     };
@@ -493,7 +493,7 @@ public readonly struct Variant
         double d when d <= 2147483647 && d >= -2147483648 && d == (int)d => DataStream.FromUnmanaged((int)d),
         double d when d <= 9223372036854775807 && d >= -9223372036854775808 && d == (long)d => DataStream.FromUnmanaged((long)d),
         double d => DataStream.FromUnmanaged(d), // TODO : allow 128bit numbers
-        string s when s.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase) => DataStream.FromHex(s[2..]),
+        string s when s.StartsWith("0x", StringComparison.OrdinalIgnoreCase) => DataStream.FromHex(s[2..]),
         string s => DataStream.FromString(s, BytewiseEncoding.Instance),
         _ => Array.Empty<byte>(),
     };
@@ -731,7 +731,7 @@ public readonly struct Variant
             return interpreter.GlobalObjectStorage.TryGetNETMember(instance, member, out value);
         else if (RawData is IDictionary<Variant, Variant> dic)
             return dic.TryGetValue(member, out value);
-        else if (string.Equals(member, nameof(Length), StringComparison.InvariantCultureIgnoreCase))
+        else if (string.Equals(member, nameof(Length), StringComparison.OrdinalIgnoreCase))
         {
             value = Length;
 
