@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <!--<StartupObject>$Program.$Main</StartupObject>-->
         <OutDir>$(SolutionDir)bin</OutDir>
@@ -40,8 +40,8 @@
     <ItemGroup>
         <None Remove="lang\lang-en.yml" />
         <None Include="..\artwork\icon.png">
-          <Pack>True</Pack>
-          <PackagePath></PackagePath>
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
         </None>
     </ItemGroup>
     <ItemGroup>
@@ -51,7 +51,7 @@
     </ItemGroup>
     <ItemGroup>
         <Content Include="lang\lang-en.yml">
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
     <ItemGroup>
@@ -81,9 +81,9 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-      <None Update="autoit3">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="autoit3">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
         <Exec Command="dotnet &quot;$(OutDir)../bin-util/incr.dll&quot; &quot;$(ProjectPath)&quot;" />

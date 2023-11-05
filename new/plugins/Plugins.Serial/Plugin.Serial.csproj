@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin/plugins</OutDir>
         <LangVersion>preview</LangVersion>
@@ -15,7 +15,7 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="System.IO.Ports" Version="6.0.0-preview.2.21154.6" />
+        <PackageReference Include="System.IO.Ports" Version="6.0.0-preview.2.21154.6" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj">
