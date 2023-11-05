@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <EnablePreviewFeatures>true</EnablePreviewFeatures>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
+        <LangVersion>preview</LangVersion>
         
         <Nullable>enable</Nullable>
         
@@ -12,11 +13,10 @@
         <AssemblyName>autoit3</AssemblyName>
         <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
 
-        <LangVersion>preview</LangVersion>
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
         <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
@@ -39,7 +39,7 @@
         <PackageProjectUrl>https://github.com/Unknown6656/AutoIt-Interpreter</PackageProjectUrl>
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryType>Git</RepositoryType>
-        <PackageTags>unknown6656; AutoIt; AutoIt3; Interpreter; Compiler</PackageTags>
+        <PackageTags>unknown6656;AutoIt;AutoIt3;Interpreter;Compiler</PackageTags>
         
         <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
@@ -67,13 +67,13 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="CommandLineParser" Version="2.8.0" />
-        <PackageReference Include="FSharp.Core" Version="7.0.400" />
-        <PackageReference Include="Lokad.ILPack" Version="0.1.6" />
-        <PackageReference Include="Octokit" Version="0.50.0" />
+        <PackageReference Include="CommandLineParser" Version="2.9.1" />
+        <PackageReference Include="FSharp.Core" Version="8.0.100-beta.23475.2" />
+        <PackageReference Include="Lokad.ILPack" Version="0.2.0" />
+        <PackageReference Include="Octokit" Version="9.0.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.1.5" /> <!-- 1.0.20.2 -->
-		<PackageReference Include="Unknown6656.Core.Extensions" Version="1.1.5" />
+        <PackageReference Include="Unknown6656.Core" Version="1.1.6" />
+		<PackageReference Include="Unknown6656.Generics" Version="0.9.12" />
 	</ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../AutoItParser/AutoItParser.fsproj" />
