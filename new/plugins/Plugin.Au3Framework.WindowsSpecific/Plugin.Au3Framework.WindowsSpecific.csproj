@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net8.0-windows</TargetFramework>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin/plugins</OutDir>
         <UseWindowsForms>true</UseWindowsForms>

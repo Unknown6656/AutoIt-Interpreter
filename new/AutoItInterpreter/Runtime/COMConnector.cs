@@ -6,7 +6,7 @@ using Unknown6656.AutoIt3.Runtime.ExternalServices;
 using Unknown6656.AutoIt3.Common;
 using Unknown6656.AutoIt3.COM;
 using Unknown6656.AutoIt3.CLI;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime
 {
@@ -205,7 +205,8 @@ namespace Unknown6656.AutoIt3.Runtime
         {
             VariantType.Null or VariantType.Default => COMData.Null,
             VariantType.Boolean => COMData.FromBool(com_data.ToBoolean()),
-            VariantType.Number => FunctionExtensions.Do(delegate
+            VariantType.Number => 
+            LINQ.Do(delegate
             {
                 double d = com_data.ToNumber();
 

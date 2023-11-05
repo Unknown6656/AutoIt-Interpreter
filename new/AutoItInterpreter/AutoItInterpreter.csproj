@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
@@ -9,7 +10,7 @@
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
         <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
@@ -62,12 +63,13 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommandLineParser" Version="2.8.0" />
-        <PackageReference Include="FSharp.Core" Version="5.0.1" />
+        <PackageReference Include="FSharp.Core" Version="7.0.400" />
         <PackageReference Include="Lokad.ILPack" Version="0.1.6" />
         <PackageReference Include="Octokit" Version="0.50.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.0.20.2" />
-    </ItemGroup>
+        <PackageReference Include="Unknown6656.Core" Version="1.1.5" /> <!-- 1.0.20.2 -->
+		<PackageReference Include="Unknown6656.Core.Extensions" Version="1.1.5" />
+	</ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />
         <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />

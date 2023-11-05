@@ -11,7 +11,7 @@ using Octokit;
 
 using Unknown6656.Mathematics.Cryptography;
 using Unknown6656.AutoIt3.CLI;
-using Unknown6656.Common;
+using Unknown6656.Generics;
 using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3
@@ -134,7 +134,7 @@ namespace Unknown6656.AutoIt3
 
                     if (path.Exists)
                     {
-                        uint crc32 = From.File(path.FullName).Hash<CRC32Hash>().ToUnmanaged<uint>();
+                        uint crc32 = DataStream.FromFile(path.FullName).Hash<CRC32Hash>().ToUnmanaged<uint>();
 
                         if (crc32 == entry.Crc32)
                         {

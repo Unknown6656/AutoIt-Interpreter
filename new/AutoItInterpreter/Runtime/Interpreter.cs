@@ -11,6 +11,7 @@ using Unknown6656.AutoIt3.CLI;
 
 using Unknown6656.Mathematics.Numerics;
 using Unknown6656.Common;
+using Unknown6656.Generics;
 
 using Random = Unknown6656.Mathematics.Numerics.Random;
 
