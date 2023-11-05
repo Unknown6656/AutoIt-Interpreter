@@ -1,11 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-		<EnablePreviewFeatures>true</EnablePreviewFeatures>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
+        
         <Nullable>enable</Nullable>
+        
         <!--<StartupObject>$Program.$Main</StartupObject>-->
         <OutDir>$(SolutionDir)bin</OutDir>
+        <OutputPath>$(SolutionDir)bin</OutputPath>
+        <AssemblyName>autoit3</AssemblyName>
+        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+
         <LangVersion>preview</LangVersion>
         <Deterministic>false</Deterministic>
         <PublishTrimmed>true</PublishTrimmed>
@@ -17,7 +23,7 @@
         <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-        <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
+
         <Authors>Unknown6656</Authors>
         <Company>Unknown6656</Company>
         <Copyright>Copyright © 2020, Unknown6656</Copyright>
@@ -29,34 +35,33 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
         <RepositoryUrl>https://github.com/Unknown6656/AutoIt-Interpreter</RepositoryUrl>
-        <AssemblyName>autoit3</AssemblyName>
-        <OutputPath>$(SolutionDir)bin</OutputPath>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <PackageProjectUrl>https://github.com/Unknown6656/AutoIt-Interpreter</PackageProjectUrl>
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryType>Git</RepositoryType>
         <PackageTags>unknown6656; AutoIt; AutoIt3; Interpreter; Compiler</PackageTags>
+        
         <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="lang\lang-en.yml" />
-        <None Include="..\artwork\icon.png">
+        <None Remove="lang/lang-en.yml" />
+        <None Include="../artwork/icon.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Piglet">
-            <HintPath>..\lib\Piglet.dll</HintPath>
+            <HintPath>../lib/Piglet.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Content Include="lang\lang-en.yml">
+        <Content Include="lang/lang-en.yml">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
     <ItemGroup>
-        <None Include="..\..\LICENSE.md">
+        <None Include="../../LICENSE.md">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
@@ -71,14 +76,14 @@
 		<PackageReference Include="Unknown6656.Core.Extensions" Version="1.1.5" />
 	</ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\AutoItParser\AutoItParser.fsproj" />
-        <ProjectReference Include="..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
+        <ProjectReference Include="../AutoItParser/AutoItParser.fsproj" />
+        <ProjectReference Include="../util/AutoIt3.Common/AutoIt3.Common.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Folder Include="include\" />
+        <Folder Include="include/" />
     </ItemGroup>
     <ItemGroup>
-        <None Update="include\*">
+        <None Update="include/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
