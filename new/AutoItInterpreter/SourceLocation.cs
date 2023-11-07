@@ -82,9 +82,9 @@ public readonly struct SourceLocation
         if (IsUnknown)
             return _unknown_path;
 
-        string endline = IsSingleLine ? $"..{EndLineNumber + 1}" : "";
+        string endline = IsSingleLine ? "" : $"..{EndLineNumber + 1}";
 
-        return $"\"{FullFileName}\", {UILanguage["general.line"]} {StartLineNumber + 1}{endline}";
+        return $"\"{FullFileName}\", {UILanguage[IsSingleLine ? "general.line": "general.lines"]} {StartLineNumber + 1}{endline}";
     }
 
     public int CompareTo(SourceLocation other) =>
