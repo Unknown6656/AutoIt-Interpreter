@@ -8,6 +8,7 @@ using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime;
 
+
 /// <summary>
 /// Represents an AutoIt execution thread. The thread consists of multiple call frames which in term represent function invocations.
 /// </summary>
@@ -52,6 +53,9 @@ public sealed class AU3Thread
     /// </summary>
     public ScriptFunction? CurrentFunction => CurrentFrame?.CurrentFunction;
 
+    /// <summary>
+    /// The variable scope associated with the current thread. This might be either a reference to the global variable scope or the variable scope of the current call stack frame.
+    /// </summary>
     public VariableScope CurrentVariableResolver => CurrentFrame?.VariableResolver ?? Interpreter.VariableResolver;
 
     /// <summary>

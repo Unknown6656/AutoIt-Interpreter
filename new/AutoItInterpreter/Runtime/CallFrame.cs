@@ -27,6 +27,7 @@ using static Unknown6656.AutoIt3.Parser.ExpressionParser.AST;
 
 namespace Unknown6656.AutoIt3.Runtime;
 
+
 // TODO : covariant return for 'CurrentFunction'
 
 /// <summary>
@@ -167,6 +168,14 @@ public abstract class CallFrame
     /// <returns>The functions return value or execution error.</returns>
     public FunctionReturnValue Call(ScriptFunction function, Variant[] args) => CurrentThread.Call(function, args, (this as AU3CallFrame)?.InterpreterRunContext ?? InterpreterRunContext.Regular);
 
+    /// <summary>
+    /// Manually sets the value of the <c>@error</c> macro (and optionally <c>@extended</c>).
+    /// See <see href="https://www.autoitscript.com/autoit3/docs/functions/SetError.htm"/>.
+    /// </summary>
+    /// <param name="error">The value to be assigned to the AutoIt macro <c>@error</c>.</param>
+    /// <param name="extended">The value to be assigned to the AutoIt macro <c>@extended</c>.</param>
+    /// <param name="return">The value to be returned by this function (default is <see cref="Variant.Null"/>).</param>
+    /// <returns>The return value, as specified by <paramref name="return"/>.</returns>
     public Variant SetError(int error, Variant? extended = null, in Variant @return = default)
     {
         Interpreter.ErrorCode = error;
@@ -174,6 +183,13 @@ public abstract class CallFrame
         return SetExtended(extended, in @return);
     }
 
+    /// <summary>
+    /// Manually sets the value of the <c>@extended</c> macro.
+    /// See <see href="https://www.autoitscript.com/autoit3/docs/functions/SetExtended.htm"/>.
+    /// </summary>
+    /// <param name="extended">The value to be assigned to the AutoIt macro <c>@extended</c>.</param>
+    /// <param name="return">The value to be returned by this function (default is <see cref="Variant.Null"/>).</param>
+    /// <returns>The return value, as specified by <paramref name="return"/>.</returns>
     public Variant SetExtended(Variant? extended, in Variant @return = default)
     {
         Interpreter.ExtendedValue = extended ?? Variant.Null;
@@ -291,10 +307,19 @@ public sealed class AU3CallFrame
     private readonly List<(SourceLocation LineLocation, string LineContent)> _line_cache;
 
 
+    /// <summary>
+    /// Returns the currently executed AutoIt function.
+    /// </summary>
     public override AU3Function CurrentFunction { get; }
 
+    /// <summary>
+    /// Returns the return value of the most recently executed statement.
+    /// </summary>
     public FunctionReturnValue LastStatementValue { get; private set; }
 
+    /// <summary>
+    /// Returns the interpreter run context of the current stack frame.
+    /// </summary>
     public InterpreterRunContext InterpreterRunContext { get; }
 
     /// <summary>

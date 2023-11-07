@@ -21,6 +21,9 @@ public abstract class ScriptFunction
 {
     internal const string GLOBAL_FUNC = "$global";
 
+    /// <summary>
+    /// A collection of reserved function names.
+    /// </summary>
     public static readonly string[] RESERVED_NAMES =
     {
         "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
@@ -30,16 +33,31 @@ public abstract class ScriptFunction
     };
 
 
+    /// <summary>
+    /// The name of the current function.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// The script which defines the current function.
+    /// </summary>
     public ScannedScript Script { get; }
 
+    /// <summary>
+    /// The metadata associated with the current function.
+    /// </summary>
     public Metadata Metadata { get; init; } = Metadata.Default;
 
+    /// <summary>
+    /// The source location, at which the current function has been defined.
+    /// </summary>
     public abstract SourceLocation Location { get; }
 
     public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
+    /// <summary>
+    /// Indicates whether the current function is the global main function (see <see cref="GLOBAL_FUNC"/>).
+    /// </summary>
     public bool IsMainFunction => Name.Equals(GLOBAL_FUNC, StringComparison.OrdinalIgnoreCase);
 
 
