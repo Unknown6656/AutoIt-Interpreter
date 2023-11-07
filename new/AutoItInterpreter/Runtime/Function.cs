@@ -155,17 +155,30 @@ public sealed class AU3Function
         JumpLabels = new ReadOnlyIndexer<string, JumpLabel?>(name => _jumplabels.TryGetValue(name.ToUpperInvariant(), out JumpLabel? label) ? label : null);
     }
 
+    /// <summary>
+    /// Adds a new jump label with the given <paramref name="name"/> at the given source code <paramref name="location"/>.
+    /// </summary>
+    /// <param name="location">The source code location at which the new jump label should be inserted.</param>
+    /// <param name="name">The jump label to be inserted at the given <paramref name="location"/>.</param>
+    /// <returns>The newly created jump label.</returns>
     public JumpLabel AddJumpLabel(SourceLocation location, string name)
     {
         name = name.Trim().ToUpperInvariant();
 
-        JumpLabel label = new JumpLabel(this, location, name);
+        JumpLabel label = new(this, location, name);
 
         _jumplabels.AddOrUpdate(name, label, (_, _) => label);
 
         return label;
     }
 
+    /// <summary>
+    /// Adds the given <paramref name="content"/> as a new source code line at the given <paramref name="location"/>.
+    /// <para/>
+    /// Note that this method might have unwanted side effects, e.g. invalidation of existing jump labels and relative jump offsets.
+    /// </summary>
+    /// <param name="location">The location at which the given <paramref name="content"/> shall be inserted.</param>
+    /// <param name="content">The content to be inserted as a new source code line.</param>
     public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, [content], (_, l) =>
     {
         l.Add(content);
