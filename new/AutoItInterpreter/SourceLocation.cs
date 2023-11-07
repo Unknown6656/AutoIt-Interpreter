@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Localization;
@@ -67,12 +67,9 @@ public readonly struct SourceLocation
         if (IsUnknown)
             return _unknown_path;
 
-        string s = $"\"{FullFileName}\", ";
+        string endline = IsSingleLine ? $"..{EndLineNumber + 1}" : "";
 
-        if (IsSingleLine)
-            return $"{s}{UILanguage["general.line"]} {StartLineNumber + 1}";
-        else
-            return $"{s}{UILanguage["general.lines"]} {StartLineNumber + 1}..{EndLineNumber + 1}";
+        return $"\"{FullFileName}\", {UILanguage["general.line"]} {StartLineNumber + 1}{endline}";
     }
 
     public int CompareTo(SourceLocation other) =>
