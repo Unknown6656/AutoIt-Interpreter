@@ -13,8 +13,8 @@ namespace Unknown6656.AutoIt3.Runtime;
 /// </summary>
 public static class StringFormatter
 {
-    private static readonly Regex REGEX_FROMAT = new Regex(@"^%(?<flags>[+\-0#]*)(?<width>\d+)?(\.(?<precision>\d+))?(?<type>[diouxXeEfgGs])", RegexOptions.Compiled);
-    private static readonly Regex REGEX_ESCAPE = new Regex(@"^\\[rnt\\]", RegexOptions.Compiled);
+    private static readonly Regex REGEX_FROMAT = new(@"^%(?<flags>[+\-0#]*)(?<width>\d+)?(\.(?<precision>\d+))?(?<type>[diouxXeEfgGs])", RegexOptions.Compiled);
+    private static readonly Regex REGEX_ESCAPE = new(@"^\\[rnt\\]", RegexOptions.Compiled);
 
 
     /// <summary>
@@ -33,7 +33,7 @@ public static class StringFormatter
     /// <returns>Formatted string.</returns>
     public static string FormatString(string format, params Variant[] args)
     {
-        StringBuilder output = new StringBuilder();
+        StringBuilder output = new();
         int arg_index = 0;
 
         while (format.Length > 0)
@@ -68,7 +68,7 @@ public static class StringFormatter
 
                 if (flags.Contains(FormatFlags.ZeroPadding) && width > result.Length)
                 {
-                    string pad = new string('0', result.Length - width);
+                    string pad = new('0', result.Length - width);
 
                     result = result[0] == '-' ? '-' + pad + result[1..] : pad + result;
                 }

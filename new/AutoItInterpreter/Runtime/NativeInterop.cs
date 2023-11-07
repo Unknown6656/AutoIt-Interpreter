@@ -274,7 +274,7 @@ public static class NativeInterop
     private static (string stdout, int code) InternalRun(string filename, string[] arguments, bool use_shexec)
     {
         static string escape(char c) => "^[]|()<>&'\"=$".Contains(c) ? "^" + c : c.ToString();
-        using Process process = new Process()
+        using Process process = new()
         {
             StartInfo = new ProcessStartInfo
             {
@@ -299,7 +299,7 @@ public static class NativeInterop
 
     public static unsafe bool IsWindowsServer()
     {
-        OSVERSIONINFOEXW osvi = new OSVERSIONINFOEXW
+        OSVERSIONINFOEXW osvi = new()
         {
             dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXW),
             wProductType = 1

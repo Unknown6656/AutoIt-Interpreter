@@ -18,7 +18,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         , ICOMResolver<COMWrapper>
     {
         private readonly ConcurrentDictionary<uint, COMWrapper> _com_objects = new();
-        private readonly object _mutex = new object();
+        private readonly object _mutex = new();
         private volatile uint _nextid = 0;
 
         public uint[] IDsInUse => _com_objects.Keys.ToArray();
@@ -635,7 +635,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
             if (members.Count == 0)
             {
-                Regex regex = new Regex("^(" + string.Join("|", new[]
+                Regex regex = new("^(" + string.Join("|", new[]
                 {
                     (MemberFindMode.EventAdd, "add_"),
                     (MemberFindMode.EventRemove, "remove_"),
@@ -773,7 +773,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                     // TODO : force typecast for [com]
 
-                    COMWrapper wrapper = new COMWrapper(Server, com, type);
+                    COMWrapper wrapper = new(Server, com, type);
 
                     _objects.Add(wrapper);
 
@@ -797,7 +797,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
         }
 
-        public static COMWrapper FromGUID(COMServer server, Guid guid) => new COMWrapper(server, guid);
+        public static COMWrapper FromGUID(COMServer server, Guid guid) => new(server, guid);
 
         private static bool IsComObject(object o) => o.GetType().Name == "__ComObject";
 

@@ -18,7 +18,7 @@ namespace Unknown6656.AutoIt3.Updater
 
                 if (proxy)
                 {
-                    ProcessStartInfo psi = new ProcessStartInfo
+                    ProcessStartInfo psi = new()
                     {
                         FileName = "dotnet",
                         UseShellExecute = false,
@@ -67,7 +67,7 @@ namespace Unknown6656.AutoIt3.Updater
 
                     Console.WriteLine($"Starting '{exe}' ...");
 
-                    ProcessStartInfo psi = new ProcessStartInfo
+                    ProcessStartInfo psi = new()
                     {
                         FileName = "dotnet",
                         UseShellExecute = false,

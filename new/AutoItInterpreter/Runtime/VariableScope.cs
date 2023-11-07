@@ -240,7 +240,7 @@ public sealed class VariableScope
     /// <returns>The newly created variable scope.</returns>
     public VariableScope CreateChildScope(CallFrame frame)
     {
-        VariableScope res = new VariableScope(Interpreter, frame, this);
+        VariableScope res = new(Interpreter, frame, this);
 
         _children.Add(res);
 

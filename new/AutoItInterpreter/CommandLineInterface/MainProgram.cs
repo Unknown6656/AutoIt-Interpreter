@@ -706,7 +706,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         RGBAColor col_backg = RGBAColor.DarkSlateGray;
         RGBAColor col_hotpath = RGBAColor.Salmon;
 
-        Regex regex_trimstart = new Regex(@"^(?<space>\s*)0(?<rest>\d[:\.].+)$", RegexOptions.Compiled);
+        Regex regex_trimstart = new(@"^(?<space>\s*)0(?<rest>\d[:\.].+)$", RegexOptions.Compiled);
         string[] headers = {
             lang["debug.telemetry.columns.category"],
             lang["debug.telemetry.columns.count"],

@@ -250,7 +250,7 @@ public sealed class TelemetryTimingsNode
 
     public TelemetryTimingsNode AddChild(string name, TimeSpan[] timings)
     {
-        TelemetryTimingsNode node = new TelemetryTimingsNode(this, name, timings);
+        TelemetryTimingsNode node = new(this, name, timings);
 
         _children.Add(node);
 
@@ -263,7 +263,7 @@ public sealed class TelemetryTimingsNode
     {
         TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();
         LanguagePack pack = MainProgram.LanguageLoader.CurrentLanguage!;
-        TelemetryTimingsNode root = new TelemetryTimingsNode(null, pack["debug.telemetry.categories.total"], get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
+        TelemetryTimingsNode root = new(null, pack["debug.telemetry.categories.total"], get_timings(TelemetryCategory.ProgramRuntimeAndPrinting));
         TelemetryTimingsNode nd_interpreter, nd_runtime, nd_codeexec, nd_native, nd_init, nd_thread, nd_au3, nd_proc, nd_vars;
 
         nd_interpreter = root.AddChild(pack["debug.telemetry.categories.interpreter"], get_timings(TelemetryCategory.ProgramRuntime));

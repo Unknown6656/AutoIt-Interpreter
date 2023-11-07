@@ -26,11 +26,11 @@ namespace VersionIncrementer
                 v1 = new Version(0, 0, 0, 0);
 
             DateTime now = DateTime.Now;
-            Version v2 = new Version(v1.Major, v1.Minor, v1.Build + 1, (now.Year - 2000) * 356 + now.DayOfYear);
+            Version v2 = new(v1.Major, v1.Minor, v1.Build + 1, (now.Year - 2000) * 356 + now.DayOfYear);
 
             try
             {
-                using Process p = new Process
+                using Process p = new()
                 {
                     StartInfo = new ProcessStartInfo
                     {
