@@ -13,6 +13,10 @@ using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3;
 
+
+/// <summary>
+/// An enumeration of known telemetry and performance measurement categories.
+/// </summary>
 public enum TelemetryCategory
 {
     ProgramRuntimeAndPrinting,
@@ -58,6 +62,11 @@ public enum TelemetryCategory
     COMConnection,
 }
 
+/// <summary>
+/// Class containing methods for telemetry operations and the measurement of performance.
+/// <para/>
+/// Note: This does not imply that recorded performance data will be transmitted to an outside server!
+/// </summary>
 public sealed class Telemetry
 {
     private readonly List<(DateTime timestamp, double cpu_total, double cpu_user, double cpu_kernel, long ram_used)> _performance_measurements = new();
@@ -248,6 +257,8 @@ public sealed class TelemetryTimingsNode
         return node;
     }
 
+
+    // TODO : refactor telemetry tree generation
     public static TelemetryTimingsNode FromTelemetry(Telemetry telemetry)
     {
         TimeSpan[] get_timings(params TelemetryCategory[] cat) => cat.SelectMany(c => telemetry.Timings[c]).ToArray();

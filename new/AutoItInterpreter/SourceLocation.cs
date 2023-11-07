@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System;
 
 using Unknown6656.AutoIt3.Localization;
@@ -6,6 +6,10 @@ using Unknown6656.AutoIt3.CLI;
 
 namespace Unknown6656.AutoIt3;
 
+
+/// <summary>
+/// Represents the location of a line of code inside a (usually known) source file.
+/// </summary>
 public readonly struct SourceLocation
     : IEquatable<SourceLocation>
     , IComparable<SourceLocation>
@@ -41,11 +45,22 @@ public readonly struct SourceLocation
     public bool IsSingleLine => EndLineNumber == StartLineNumber;
 
 
+    /// <summary>
+    /// Creates a new instance of <see cref="SourceLocation"/> using the file path (local or remote), as well as the zero-based line number.
+    /// </summary>
+    /// <param name="file">File path (may also be a remote or non-existent/invalid file path).</param>
+    /// <param name="line">Zero-based line number (i.e. a value of <c>0</c> represents the first line in the specified file).</param>
     public SourceLocation(string file, int line)
         : this(file, line, line)
     {
     }
 
+    /// <summary>
+    /// Creates a new instance of <see cref="SourceLocation"/> using the file path (local or remote), as well as the zero-based start and end line number.
+    /// </summary>
+    /// <param name="file">File path (may also be a remote or non-existent/invalid file path).</param>
+    /// <param name="start">Zero-based start line number (i.e. a value of <c>0</c> represents the first line in the specified file).</param>
+    /// <param name="end">Zero-based end line number. This value must be greater or equals to <paramref name="start"/>.</param>
     public SourceLocation(string file, int start, int end)
     {
         if (start > end)

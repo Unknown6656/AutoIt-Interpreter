@@ -16,12 +16,25 @@ using Unknown6656.IO;
 
 namespace Unknown6656.AutoIt3;
 
+
+/// <summary>
+/// An enumeration of known GitHub updater modes.
+/// </summary>
 public enum GithubUpdaterMode
 {
+    /// <summary>
+    /// Indicates that the newest version should only be fetched from GitHub if it is marked as "release".
+    /// </summary>
     ReleaseOnly,
+    /// <summary>
+    /// Indicates that the newest version should be fetched from GitHub, even if it is marked as "beta".
+    /// </summary>
     IncludeBetaVersions,
 }
 
+/// <summary>
+/// A class managing software updates by fetching the newest releases from GitHub.
+/// </summary>
 public sealed class GithubUpdater
 {
     private Release[] _releases;
@@ -42,11 +55,21 @@ public sealed class GithubUpdater
     public Release? LatestReleaseAvailable => _releases.FirstOrDefault();
 
 
-    public GithubUpdater(Telemetry telemetry)
+    /// <summary>
+    /// Creates a new instance of the GitHub software updater.
+    /// </summary>
+    /// <param name="telemetry">Reference to the telemetry instance for this application.</param>
+    internal GithubUpdater(Telemetry telemetry)
         : this(telemetry, __module__.Author, __module__.RepositoryName)
     {
     }
 
+    /// <summary>
+    /// Creates a new instance of the GitHub software updater.
+    /// </summary>
+    /// <param name="telemetry">Reference to the telemetry instance for this application.</param>
+    /// <param name="repo_author">Name of the GitHub repository author/owner/organization (user handle, not canonical name).</param>
+    /// <param name="repo_name">Name of the GitHub repository (URN name, not canonical name).</param>
     public GithubUpdater(Telemetry telemetry, string repo_author, string repo_name)
     {
         Client = new GitHubClient(new ProductHeaderValue($"{__module__.Author}.{__module__.RepositoryName}", __module__.InterpreterVersion?.ToString()));
