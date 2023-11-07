@@ -263,7 +263,7 @@ public sealed class ScriptScanner
                             return InterpreterError.WellKnown(loc, "error.duplicate_function", existing.Name, existing.Location);
 
                         IEnumerable<PARAMETER_DECLARATION> @params;
-                        HashSet<VARIABLE> parnames = new();
+                        HashSet<VARIABLE> parnames = [];
                         bool optional = false;
 
                         try
@@ -439,8 +439,8 @@ public sealed class ScannedScript
     : IEquatable<ScannedScript>
 {
     private readonly Dictionary<string, ScriptFunction> _functions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<(string func, SourceLocation decl)> _startup = new();
-    private readonly List<(string func, SourceLocation decl)> _exit = new();
+    private readonly List<(string func, SourceLocation decl)> _startup = [];
+    private readonly List<(string func, SourceLocation decl)> _exit = [];
 
 
     public ImmutableDictionary<string, ScriptFunction> Functions => _functions.ToImmutableDictionary();

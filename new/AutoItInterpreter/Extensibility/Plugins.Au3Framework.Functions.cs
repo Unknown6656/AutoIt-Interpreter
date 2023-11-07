@@ -1465,7 +1465,7 @@ public sealed class FrameworkFunctions
 
                 if (line_index is Index i)
                 {
-                    List<string> lines = new();
+                    List<string> lines = [];
 
                     handle.FileStream.Seek(0, SeekOrigin.Begin);
 
@@ -2000,7 +2000,7 @@ public sealed class FrameworkFunctions
                     return FunctionReturnValue.Error(Variant.False, 1, Variant.Zero);
                 else
                 {
-                    ini[new_sec] = section ?? new INISection();
+                    ini[new_sec] = section ?? [];
                     ini.TryDeleteSection(old_sec);
 
                     DataStream.FromINI(ini).ToFile(path);
@@ -2023,10 +2023,10 @@ public sealed class FrameworkFunctions
         try
         {
             FileInfo ini_file = new(args[0].ToString());
-            INIFile ini = ini_file.Exists ? DataStream.FromFile(ini_file).ToINI() : new();
+            INIFile ini = ini_file.Exists ? DataStream.FromFile(ini_file).ToINI() : [];
 
             if (!ini.HasSection(section))
-                ini[section] = new();
+                ini[section] = [];
 
             ini[section][key] = value;
 
@@ -2049,7 +2049,7 @@ public sealed class FrameworkFunctions
         try
         {
             FileInfo ini_file = new(args[0].ToString());
-            INIFile ini = ini_file.Exists ? DataStream.FromFile(ini_file).ToINI() : new();
+            INIFile ini = ini_file.Exists ? DataStream.FromFile(ini_file).ToINI() : [];
             INISection sec = ini.GetOrAddSection(section);
 
             if (args[2] is { Type: VariantType.Array } arr)
@@ -3327,7 +3327,7 @@ public sealed class FrameworkFunctions
             if (args[0].TryResolveHandle(frame.Interpreter, out TCPHandle.Case1? handle))
             {
                 TcpClient client = handle.Item;
-                List<byte> resp = new();
+                List<byte> resp = [];
 
                 int max_length = (int)args[1];
                 bool binary = args[2].ToBoolean();

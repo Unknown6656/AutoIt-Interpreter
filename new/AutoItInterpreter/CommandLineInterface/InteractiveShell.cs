@@ -46,11 +46,11 @@ Commands and keyboard shortcuts:
     private bool _isdisposed;
 
 
-    public static ConcurrentHashSet<InteractiveShell> Instances { get; } = new();
+    public static ConcurrentHashSet<InteractiveShell> Instances { get; } = [];
 
-    public List<(ScriptToken[] Content, InteractiveShellStreamDirection Stream)> History { get; } = new();
+    public List<(ScriptToken[] Content, InteractiveShellStreamDirection Stream)> History { get; } = [];
 
-    public List<(ScriptToken[] Display, string Content)> Suggestions { get; } = new();
+    public List<(ScriptToken[] Display, string Content)> Suggestions { get; } = [];
 
     public string CurrentInput { get; private set; } = "";
 
@@ -461,7 +461,7 @@ Commands and keyboard shortcuts:
         int height = HEIGHT;
         int input_area_width = width - MARGIN_RIGHT - 1;
         int line_max_len = input_area_width - 4;
-        List<(string content, int orig_index)> input_lines = new();
+        List<(string content, int orig_index)> input_lines = [];
         int cursor_pos = CurrentCursorPosition.GetOffset(CurrentInput.Length);
         int cursor_pos_x = -1;
         int cursor_pos_y = 0;
@@ -607,7 +607,7 @@ Commands and keyboard shortcuts:
         Dictionary<int, int> index_map = new() { [0] = 0 };
         string[] history = History.SelectMany((entry, index) =>
         {
-            List<string> lines = new();
+            List<string> lines = [];
             string line = COLOR_PROMPT.ToVT100ForegroundString() + (entry.Stream is InteractiveShellStreamDirection.Input ? " > " : "");
             int line_width = width - MARGIN_RIGHT - (entry.Stream is InteractiveShellStreamDirection.Input ? 3 : 0) - 3;
             int len = 0;
@@ -808,7 +808,7 @@ Commands and keyboard shortcuts:
                 History.Add((new[] { ScriptToken.FromString(e.Message, TokenType.UNKNOWN) }, InteractiveShellStreamDirection.Error));
             else
             {
-                List<ScriptToken> tokens = new();
+                List<ScriptToken> tokens = [];
 
                 result.IsSuccess(out Variant value, out Variant? extended);
                 tokens.AddRange(ScriptVisualizer.TokenizeScript(value.ToDebugString(Interpreter)));
@@ -833,10 +833,10 @@ Commands and keyboard shortcuts:
         if (string.IsNullOrWhiteSpace(filter))
             filter = null;
 
-        List<(ScriptToken[] tokens, string content)> suggestions = new()
-        {
+        List<(ScriptToken[] tokens, string content)> suggestions =
+        [
             (new[] { ScriptToken.FromString("CLEAR", TokenType.Keyword) }, "clear"),
-        };
+        ];
 
         void add_suggs(IEnumerable<string> suggs, TokenType type) => suggs.Select(s => (new[] { ScriptToken.FromString(s, type) }, s)).AppendToList(suggestions);
         bool suggest_all = string.IsNullOrEmpty(CurrentInput) || curr_token?.Type is null or TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine;

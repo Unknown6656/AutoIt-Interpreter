@@ -96,7 +96,7 @@ public sealed class DebuggingFunctionProvider
     private IDictionary<string, object?> GetAllVariables(Interpreter interpreter)
     {
         IDictionary<string, object?> dic = new Dictionary<string, object?>();
-        List<VariableScope> scopes = new() { interpreter.VariableResolver };
+        List<VariableScope> scopes = [interpreter.VariableResolver];
         int count;
 
         do
@@ -317,7 +317,7 @@ public sealed class DebuggingFunctionProvider
 
     public FunctionReturnValue DebugAllVarsCompact(CallFrame frame, Variant[] _)
     {
-        List<VariableScope> scopes = new() { frame.Interpreter.VariableResolver };
+        List<VariableScope> scopes = [frame.Interpreter.VariableResolver];
         LanguagePack lang = Interpreter.CurrentUILanguage;
         int count;
 

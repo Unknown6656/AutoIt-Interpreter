@@ -1283,7 +1283,7 @@ public sealed class AU3CallFrame
     private FunctionReturnValue ProcessMultiDeclarationExpression(PARSABLE_EXPRESSION.MultiDeclarationExpression multi_decl, DeclarationModifiers modifiers, (char op, long amount)? enum_step) =>
         Interpreter.Telemetry.Measure(TelemetryCategory.ProcessDeclaration, delegate
         {
-            List<Variable> declared_variables = new();
+            List<Variable> declared_variables = [];
             Variant last_enum_value = Variant.Zero;
             Variant next_enum_value() => enum_step switch
             {

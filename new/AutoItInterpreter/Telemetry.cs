@@ -69,8 +69,8 @@ public enum TelemetryCategory
 /// </summary>
 public sealed class Telemetry
 {
-    private readonly List<(DateTime timestamp, double cpu_total, double cpu_user, double cpu_kernel, long ram_used)> _performance_measurements = new();
-    private readonly List<(TelemetryCategory category, TimeSpan duration)> _recorded_timings = new();
+    private readonly List<(DateTime timestamp, double cpu_total, double cpu_user, double cpu_kernel, long ram_used)> _performance_measurements = [];
+    private readonly List<(TelemetryCategory category, TimeSpan duration)> _recorded_timings = [];
     private volatile bool _run_performancemonitor;
 
 
@@ -206,7 +206,7 @@ public sealed class Telemetry
 
 public sealed class TelemetryTimingsNode
 {
-    private readonly List<TelemetryTimingsNode> _children = new();
+    private readonly List<TelemetryTimingsNode> _children = [];
 
     public string Name { get; }
     public string Path => IsRoot ? Name : $"{Parent.Path}/{Name}";

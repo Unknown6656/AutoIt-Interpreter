@@ -341,7 +341,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         private static readonly MethodInfo _set;
         private static readonly MethodInfo _release;
 
-        private readonly HashSet<COMWrapper> _objects = new HashSet<COMWrapper>();
+        private readonly HashSet<COMWrapper> _objects = [];
         private readonly MemberInfo[] _cached_members;
 
         #endregion
@@ -388,7 +388,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             ObjectType = type;
             IUnknownPtr = Marshal.GetIUnknownForObject(com);
 
-            List<MemberInfo> members = new List<MemberInfo>();
+            List<MemberInfo> members = [];
 
             do
             {

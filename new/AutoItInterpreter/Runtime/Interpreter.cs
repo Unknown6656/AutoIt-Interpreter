@@ -28,10 +28,10 @@ public sealed class Interpreter
     : IDisposable
     , IDebugPrintingService
 {
-    private static readonly ConcurrentHashSet<Interpreter> _instances = new();
+    private static readonly ConcurrentHashSet<Interpreter> _instances = [];
 
     private readonly ConcurrentDictionary<ScriptFunction, int> _exit_functions = new();
-    private readonly ConcurrentHashSet<AU3Thread> _threads = new();
+    private readonly ConcurrentHashSet<AU3Thread> _threads = [];
     private readonly object _main_thread_mutex = new();
     private volatile bool _exiting;
     private volatile int _error;

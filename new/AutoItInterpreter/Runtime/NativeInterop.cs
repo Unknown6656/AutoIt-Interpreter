@@ -259,7 +259,7 @@ public static class NativeInterop
         char separator = NativeInterop.DoPlatformDependent(';', ':');
         List<string> path = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)?
                                        .Split(separator, StringSplitOptions.RemoveEmptyEntries)
-                                       .ToList() ?? new();
+                                       .ToList() ?? [];
 
         path.Add(dir);
 

@@ -74,7 +74,7 @@ public static class ScriptVisualizer
     /// <returns>Array of <see cref="ScriptToken"/>s which collectively represent the tokenized script.</returns>
     public static ScriptToken[] TokenizeScript(IEnumerable<string> au3_script_lines)
     {
-        List<ScriptToken> tokens = new();
+        List<ScriptToken> tokens = [];
         int comment_level = 0;
         string[] lines = au3_script_lines.ToArray();
 

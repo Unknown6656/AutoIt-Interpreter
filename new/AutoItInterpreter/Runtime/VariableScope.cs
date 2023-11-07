@@ -15,8 +15,8 @@ using static AST;
 public sealed class VariableScope
     : IDisposable
 {
-    private readonly ConcurrentHashSet<VariableScope> _children = new();
-    private readonly ConcurrentHashSet<Variable> _variables = new();
+    private readonly ConcurrentHashSet<VariableScope> _children = [];
+    private readonly ConcurrentHashSet<Variable> _variables = [];
     private bool _isdisposed = false;
 
 

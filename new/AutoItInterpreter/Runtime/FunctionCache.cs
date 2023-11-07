@@ -10,7 +10,7 @@ namespace Unknown6656.AutoIt3.Runtime;
 
 public sealed class FunctionCache
 {
-    private readonly Dictionary<AU3Function, List<(Variant[] Arguments, FunctionReturnValue ReturnValue)>> _cache = new();
+    private readonly Dictionary<AU3Function, List<(Variant[] Arguments, FunctionReturnValue ReturnValue)>> _cache = [];
 
     public Interpreter Interpreter { get; }
 
@@ -20,7 +20,7 @@ public sealed class FunctionCache
     public void SetOrUpdate(AU3Function function, Variant[] arguments, FunctionReturnValue return_value) => Interpreter.Telemetry.Measure(TelemetryCategory.Au3CacheWrite, delegate
     {
         if (!_cache.TryGetValue(function, out List<(Variant[] args, FunctionReturnValue ret)>? entries))
-            _cache[function] = entries = new();
+            _cache[function] = entries = [];
 
         for (int i = 0; i < entries.Count; ++i)
             if (entries[i] is { args: { } args } entry && args.SequenceEqual(arguments))

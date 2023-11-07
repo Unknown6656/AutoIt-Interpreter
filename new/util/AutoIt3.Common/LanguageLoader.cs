@@ -11,7 +11,7 @@ namespace Unknown6656.AutoIt3.Localization
 {
     public sealed class LanguageLoader
     {
-        private readonly Dictionary<string, LanguagePack> _packs = new();
+        private readonly Dictionary<string, LanguagePack> _packs = [];
 
         public string[] LoadedLanguageCodes => _packs.Keys.ToArray();
 
@@ -147,8 +147,8 @@ namespace Unknown6656.AutoIt3.Localization
                                  .Replace("\0", "")
                                  .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-            List<(int level, string path)> scope = new();
-            Dictionary<string, string> dict = new();
+            List<(int level, string path)> scope = [];
+            Dictionary<string, string> dict = [];
 
             foreach (string line in lines)
                 if (REGEX_YAML.Match(line) is { Success: true, Groups: GroupCollection groups })

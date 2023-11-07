@@ -151,7 +151,7 @@ public sealed class FrameworkMacros
         else if (name.Match(REGEX_IPADDRESS, out ReadOnlyIndexer<string, string>? g))
         {
             IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
-            List<string> ips = new();
+            List<string> ips = [];
             int idx = (int)double.Parse(g["num"], null);
 
             foreach (IPAddress ip in host.AddressList)

@@ -166,7 +166,7 @@ public sealed class AU3Function
         return label;
     }
 
-    public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, new List<string>() { content }, (_, l) =>
+    public void AddLine(SourceLocation location, string content) => _lines.AddOrUpdate(location, [content], (_, l) =>
     {
         l.Add(content);
 
@@ -213,10 +213,7 @@ public class NativeFunction
 
     public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args)
     {
-        List<Variant> a = new();
-
-        a.AddRange(args);
-        a.AddRange(DefaultValues.Skip(args.Length - ParameterCount.MinimumCount));
+        List<Variant> a = [.. args, .. DefaultValues.Skip(args.Length - ParameterCount.MinimumCount)];
 
         if (a.Count < ParameterCount.MaximumCount)
             a.AddRange(Enumerable.Repeat(Variant.Default, ParameterCount.MaximumCount - a.Count));

@@ -391,7 +391,7 @@ public readonly struct Variant
 
     private readonly string ToDebugString__Internal__() => ToDebugString(Interpreter.ActiveInstances.First());
 
-    public readonly string ToDebugString(Interpreter interpreter) => ToDebugString(interpreter, new(), 0);
+    public readonly string ToDebugString(Interpreter interpreter) => ToDebugString(interpreter, [], 0);
 
     private readonly string ToDebugString(Interpreter interpreter, HashSet<Variable> forbidden, int level)
     {
@@ -526,7 +526,7 @@ public readonly struct Variant
     /// <returns>The ordered map.</returns>
     public readonly (Variant key, Variant value)[] ToOrderedMap(Interpreter interpreter)
     {
-        List<(Variant, Variant)> output = new();
+        List<(Variant, Variant)> output = [];
 
         if (RawData is Array arr)
             for (int i = 0; i < arr.Length; ++i)

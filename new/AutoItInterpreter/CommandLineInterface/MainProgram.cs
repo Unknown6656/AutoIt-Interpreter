@@ -169,7 +169,7 @@ public static class MainProgram
         Console.CancelKeyPress += (_, e) =>
         {
             Interpreter[] instances = Interpreter.ActiveInstances;
-            List<FunctionReturnValue> return_values = new();
+            List<FunctionReturnValue> return_values = [];
 
             e.Cancel = instances.Length > 0;
 
@@ -717,7 +717,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             lang["debug.telemetry.columns.parent"],
             lang["debug.telemetry.columns.relative"],
         };
-        List<(string[] cells, TelemetryTimingsNode node)> rows = new();
+        List<(string[] cells, TelemetryTimingsNode node)> rows = [];
         static string ReplaceStart(string input, params (string search, string replace)[] substitutions)
         {
             int idx = 0;
@@ -898,7 +898,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             #region PERFORMANCE : FETCH DATA
 
             const int PADDING = 22;
-            List<(DateTime time, double total, double user, double kernel, long ram)> performance_data = new();
+            List<(DateTime time, double total, double user, double kernel, long ram)> performance_data = [];
             int width_perf = width - 3 - PADDING;
             const int height_perf_cpu = 14;
 

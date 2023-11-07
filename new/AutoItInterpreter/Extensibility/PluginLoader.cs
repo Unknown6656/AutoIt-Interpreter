@@ -14,16 +14,16 @@ namespace Unknown6656.AutoIt3.Extensibility;
 
 public sealed class PluginLoader
 {
-    internal readonly Dictionary<AbstractInterpreterPlugin, FileInfo> _plugin_locations = new();
+    internal readonly Dictionary<AbstractInterpreterPlugin, FileInfo> _plugin_locations = [];
 
-    private readonly List<AbstractLineProcessor> _line_processors = new();
-    private readonly List<AbstractDirectiveProcessor> _directive_processors = new();
-    private readonly List<AbstractStatementProcessor> _statement_processors = new();
-    private readonly List<AbstractPragmaProcessor> _pragma_processors = new();
-    private readonly List<AbstractFunctionProvider> _func_providers = new();
-    private readonly List<AbstractIncludeResolver> _resolvers = new();
-    private readonly List<AbstractMacroProvider> _macro_providers = new();
-    private readonly HashSet<FileInfo> _plugin_files = new();
+    private readonly List<AbstractLineProcessor> _line_processors = [];
+    private readonly List<AbstractDirectiveProcessor> _directive_processors = [];
+    private readonly List<AbstractStatementProcessor> _statement_processors = [];
+    private readonly List<AbstractPragmaProcessor> _pragma_processors = [];
+    private readonly List<AbstractFunctionProvider> _func_providers = [];
+    private readonly List<AbstractIncludeResolver> _resolvers = [];
+    private readonly List<AbstractMacroProvider> _macro_providers = [];
+    private readonly HashSet<FileInfo> _plugin_files = [];
 
 
     public Interpreter Interpreter { get; }
@@ -92,7 +92,7 @@ public sealed class PluginLoader
     {
         ClearLoadedPlugins();
 
-        List<(Type Type, FileInfo PluginLocation)> types = new();
+        List<(Type Type, FileInfo PluginLocation)> types = [];
         IEnumerable<FileInfo> assemblies = MainProgram.CommandLineOptions.StrictMode ? Array.Empty<FileInfo>() : PluginDirectory.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Directory });
 
         foreach (FileInfo file in assemblies.Append(MainProgram.ASM_FILE))

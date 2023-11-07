@@ -65,7 +65,7 @@ public sealed class KnownMacro
 
 public sealed class MacroResolver
 {
-    private readonly HashSet<KnownMacro> _macros = new();
+    private readonly HashSet<KnownMacro> _macros = [];
 
     
     public Interpreter Interpreter { get; }

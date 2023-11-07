@@ -69,8 +69,8 @@ namespace Unknown6656.AutoIt3
         [DebuggerDisplay("{" + nameof(Type) + "}: {" + nameof(Data) + "}")]
         public readonly struct COMData
         {
-            private static readonly List<(Type expected, Func<object, uint> func)> _converters_from_com = new();
-            private static readonly List<COMResolver<object>> _converters_to_com = new();
+            private static readonly List<(Type expected, Func<object, uint> func)> _converters_from_com = [];
+            private static readonly List<COMResolver<object>> _converters_to_com = [];
 
 
             //public static ICOMConverter<T> Converter { get; set; } = DefaultCOMConverter<T>.Instance;
