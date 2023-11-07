@@ -40,18 +40,43 @@ public sealed class GithubUpdater
     private Release[] _releases;
 
 
+    /// <summary>
+    /// The underlying <see cref="Telemetry"/> module associated with this updater.
+    /// </summary>
     public Telemetry Telemetry { get; }
 
+    /// <summary>
+    /// The underlying <see cref="GitHubClient"/> associated with this updater.
+    /// </summary>
     public GitHubClient Client { get; }
 
+    /// <summary>
+    /// The GitHub repository author name associated with this software.
+    /// </summary>
     public string RepositoryAuthor { get; }
 
+    /// <summary>
+    /// The GitHub repository name associated with this software.
+    /// </summary>
     public string RepositoryName { get; }
 
+    /// <summary>
+    /// The <see cref="GithubUpdaterMode"/> associated with this instance of the GitHub software updater.
+    /// </summary>
     public GithubUpdaterMode UpdaterMode { get; set; }
 
+    /// <summary>
+    /// Returns whether any updates are available.
+    /// <para/>
+    /// This property requires <see cref="FetchReleaseInformationAsync"/> to have been run previously, in order to return any meaningful results.
+    /// </summary>
     public bool UpdatesAvailable => _releases.Length > 0;
 
+    /// <summary>
+    /// Returns the latest available release version.
+    /// <para/>
+    /// This property requires <see cref="FetchReleaseInformationAsync"/> to have been run previously, in order to return any meaningful results.
+    /// </summary>
     public Release? LatestReleaseAvailable => _releases.FirstOrDefault();
 
 
@@ -72,20 +97,28 @@ public sealed class GithubUpdater
     /// <param name="repo_name">Name of the GitHub repository (URN name, not canonical name).</param>
     public GithubUpdater(Telemetry telemetry, string repo_author, string repo_name)
     {
-        Client = new GitHubClient(new ProductHeaderValue($"{__module__.Author}.{__module__.RepositoryName}", __module__.InterpreterVersion?.ToString()));
+        Client = new GitHubClient(new ProductHeaderValue($"{repo_author}.{repo_name}", __module__.InterpreterVersion?.ToString()));
         RepositoryAuthor = repo_author;
         RepositoryName = repo_name;
         Telemetry = telemetry;
         _releases = Array.Empty<Release>();
     }
 
+    /// <summary>
+    /// Fetches the newest release information from the GitHub repo.
+    /// </summary>
+    /// <returns>
+    /// Returns whether the the information could be fetched successfully.
+    /// <para/>
+    /// <i>NOTE: This does <b>NOT</b> indicate whether an update is available!</i>.
+    /// </returns>
     public async Task<bool> FetchReleaseInformationAsync() => await Telemetry.MeasureAsync(TelemetryCategory.GithubUpdater, async delegate
     {
         try
         {
             MainProgram.PrintfDebugMessage("debug.update.searching");
 
-            _releases = (from release in await Client.Repository.Release.GetAll(__module__.Author, __module__.RepositoryName).ConfigureAwait(true)
+            _releases = (from release in await Client.Repository.Release.GetAll(RepositoryAuthor, RepositoryName).ConfigureAwait(true)
                          let date = release.PublishedAt ?? release.CreatedAt
                          where !release.Draft
                          where date > __module__.DateBuilt
@@ -94,10 +127,10 @@ public sealed class GithubUpdater
                          orderby date descending
                          select release).ToArray();
 
-            if (_releases.Length == 0)
-                MainProgram.PrintfDebugMessage("debug.update.no_releases");
-            else
+            if (UpdatesAvailable)
                 MainProgram.PrintfDebugMessage("debug.update.new_releases", _releases.Length, _releases.Select(r => $"\n\t- 0x{r.Id:x8}: {r.Name} ({r.PublishedAt})").StringConcat());
+            else
+                MainProgram.PrintfDebugMessage("debug.update.no_releases");
 
             return true;
         }
@@ -107,14 +140,17 @@ public sealed class GithubUpdater
         }
     }).ConfigureAwait(true);
 
-    public async Task<bool> TryUpdateToLatestAsync()
-    {
-        if (LatestReleaseAvailable is Release latest)
-            return await TryUpdateTo(latest).ConfigureAwait(true);
+    /// <summary>
+    /// Tries to update the software to the latest GitHub release.
+    /// </summary>
+    /// <returns>Returns whether the the information could be fetched successfully <b>and</b> whether the update could be successfully performed.</returns>
+    public async Task<bool> TryUpdateToLatestAsync() => LatestReleaseAvailable is Release latest && await TryUpdateTo(latest).ConfigureAwait(true);
 
-        return false;
-    }
-
+    /// <summary>
+    /// Tries to update the software to the given GitHub release.
+    /// </summary>
+    /// <param name="release">Release version, to which the software should be updated.</param>
+    /// <returns>Returns whether the the information could be fetched successfully <b>and</b> whether the update could be successfully performed.</returns>
     public async Task<bool> TryUpdateTo(Release release) => await Telemetry.MeasureAsync(TelemetryCategory.GithubUpdater, async delegate
     {
         try
