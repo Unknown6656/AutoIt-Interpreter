@@ -10,6 +10,10 @@ using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.CLI;
 
+
+/// <summary>
+/// The module responsible for the display of AutoIt scripts on the terminal.
+/// </summary>
 public static class ScriptVisualizer
 {
     private static readonly Regex REGEX_WHITESPACE = new(@"^\s+", RegexOptions.Compiled);
@@ -27,6 +31,9 @@ public static class ScriptVisualizer
     private static readonly Regex REGEX_NUMBER = new(@"^(0x[\da-f_]+|[\da-f_]+h|0b[01_]+|0o[0-7_]+|\d+(\.\d+)?(e[+\-]?\d+)?)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 
+    /// <summary>
+    /// The color scheme which determines how individual tokens shall be highlighted.
+    /// </summary>
     public static Dictionary<TokenType, RGBAColor> ColorScheme { get; } = new()
     {
         // [TokenType.NewLine] = RGBAColor.White,
@@ -46,11 +53,25 @@ public static class ScriptVisualizer
         [TokenType.UNKNOWN] = RGBAColor.Tomato,
     };
 
-
+    /// <summary>
+    /// Tokenizes the given AutoIt script and returns an array of <see cref="ScriptToken"/>s.
+    /// </summary>
+    /// <param name="script">The script to be tokenized.</param>
+    /// <returns>Array of <see cref="ScriptToken"/>s which collectively represent the tokenized script.</returns>
     public static ScriptToken[] TokenizeScript(this ScannedScript script) => TokenizeScript(script.OriginalContent);
 
+    /// <summary>
+    /// Tokenizes the given AutoIt script and returns an array of <see cref="ScriptToken"/>s.
+    /// </summary>
+    /// <param name="au3_script">The script to be tokenized. Note: this parameter should contain the actual script, <i>not</i> a file path pointing towards an existing script file.</param>
+    /// <returns>Array of <see cref="ScriptToken"/>s which collectively represent the tokenized script.</returns>
     public static ScriptToken[] TokenizeScript(string au3_script) => TokenizeScript(au3_script.SplitIntoLines());
 
+    /// <summary>
+    /// Tokenizes the given AutoIt script and returns an array of <see cref="ScriptToken"/>s.
+    /// </summary>
+    /// <param name="au3_script_lines">The source code lines as read from an AutoIt script.</param>
+    /// <returns>Array of <see cref="ScriptToken"/>s which collectively represent the tokenized script.</returns>
     public static ScriptToken[] TokenizeScript(IEnumerable<string> au3_script_lines)
     {
         List<ScriptToken> tokens = new();
@@ -128,6 +149,12 @@ public static class ScriptVisualizer
         return tokens.ToArray();
     }
 
+    /// <summary>
+    /// Converts the given script tokens to its VT-100 terminal escape codes and text representation.
+    /// </summary>
+    /// <param name="tokens">The tokens to be printed.</param>
+    /// <param name="print_linebreaks_and_line_numbers">Indicates whether line breaks and line numbers shall be printed.</param>
+    /// <returns>The VT-100 representation of the given tokens.</returns>
     public static string ConvertToVT100(this IEnumerable<ScriptToken> tokens, bool print_linebreaks_and_line_numbers)
     {
         string text = (from t in tokens
@@ -144,6 +171,12 @@ public static class ScriptVisualizer
         return lines.Select((line, number) => $"{vt100} {(number + 1).ToString().PadLeft(b)} │  {line}").StringJoin("\n");
     }
 
+    /// <summary>
+    /// Converts the given script token to its VT-100 terminal escape codes and text representation.
+    /// </summary>
+    /// <param name="token">The token to be printed.</param>
+    /// <param name="print_linebreaks">Indicates whether line breaks shall be preserved.</param>
+    /// <returns>The VT-100 representation of the given token.</returns>
     public static string ConvertToVT100(this ScriptToken token, bool print_linebreaks)
     {
         if (token.Type is TokenType.NewLine)
@@ -157,10 +190,22 @@ public static class ScriptVisualizer
     }
 }
 
+/// <summary>
+/// Represents an AutoIt script token, i.e. a sequence of characters (from an AutoIt script) which are associated with a certain <see cref="TokenType"/>.
+/// </summary>
+/// <param name="LineIndex">The zero-based line index.</param>
+/// <param name="CharIndex">The zero-based character index (from the start of the line <paramref name="LineIndex"/>).</param>
+/// <param name="TokenLength">The length of the token in characters.</param>
+/// <param name="Content">The textual content of the token.</param>
+/// <param name="Type">The token type associated with the token.</param>
 public record ScriptToken(int LineIndex, int CharIndex, int TokenLength, string Content, TokenType Type)
 {
     public override string ToString() => $"{LineIndex}:{CharIndex}{(TokenLength > 1 ? ".." + (CharIndex + TokenLength) : "")}: \"{Content}\" ({Type})";
 
+    /// <summary>
+    /// Splits the current instance of <see cref="ScriptToken"/> by line breaks (<c>\n</c> or <c>\r\n</c>) and returns an enumeration of split tokens, as well as the line breaks, themselves.
+    /// </summary>
+    /// <returns>An enumeration of tokens resulting from the split by line breaks.</returns>
     public IEnumerable<ScriptToken> SplitByLineBreaks()
     {
         List<ScriptToken> tokens = Content.Replace("\r\n", "\n")
@@ -178,24 +223,78 @@ public record ScriptToken(int LineIndex, int CharIndex, int TokenLength, string 
         return tokens;
     }
 
+    /// <summary>
+    /// Creates a token based on the given string and token type. The properties <see cref="LineIndex"/> and <see cref="CharIndex"/> will have the value <c>0</c>.
+    /// </summary>
+    /// <param name="text">The string content of the token.</param>
+    /// <param name="type">The associated token type.</param>
+    /// <returns>The newly created script token.</returns>
     public static ScriptToken FromString(string text, TokenType type) => new(0, 0, text.Length, text, type);
 }
 
+/// <summary>
+/// An enumeration of known token types.
+/// </summary>
 public enum TokenType
 {
+    /// <summary>
+    /// Represents a sequence of whitespace characters (ignoring line breaks, which are represented by <see cref="NewLine"/>).
+    /// </summary>
     Whitespace,
+    /// <summary>
+    /// Represents a new line (<c>\n</c> or <c>\r\n</c>).
+    /// </summary>
     NewLine,
+    /// <summary>
+    /// Represents a known AutoIt keyword. See <see href="https://www.autoitscript.com/autoit3/docs/keywords.htm"/>.
+    /// </summary>
     Keyword,
+    /// <summary>
+    /// Represents a function call.
+    /// </summary>
     FunctionCall,
+    /// <summary>
+    /// Represents an AutoIt identifier (e.g. function name).
+    /// </summary>
     Identifier,
+    /// <summary>
+    /// Represents a comment or comment block. See <see href="https://www.autoitscript.com/autoit3/docs/lang_comments.htm"/>.
+    /// </summary>
     Comment,
+    /// <summary>
+    /// Represents a numeric literal (integer or floating-point).
+    /// </summary>
     Number,
+    /// <summary>
+    /// Represents a string literal.
+    /// </summary>
     String,
+    /// <summary>
+    /// Represents an AutoIt operator. See <see href="https://www.autoitscript.com/autoit3/docs/lang_operators.htm"/>.
+    /// </summary>
     Operator,
+    /// <summary>
+    /// Represents a generic symbol character which is not an operator.
+    /// </summary>
     Symbol,
+    /// <summary>
+    /// Represents an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
+    /// </summary>
     Directive,
+    /// <summary>
+    /// Represents an option for an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
+    /// </summary>
     DirectiveOption,
+    /// <summary>
+    /// Represents a macro (which starts with '<c>$</c>').
+    /// </summary>
     Variable,
+    /// <summary>
+    /// Represents a macro (which starts with '<c>@</c>').
+    /// </summary>
     Macro,
+    /// <summary>
+    /// An unknown AutoIt token (usually indicating a syntax error).
+    /// </summary>
     UNKNOWN,
 }

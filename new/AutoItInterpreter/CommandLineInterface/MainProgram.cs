@@ -1122,4 +1122,3 @@ public enum UpdaterMode
     beta,
     none,
 }
-
