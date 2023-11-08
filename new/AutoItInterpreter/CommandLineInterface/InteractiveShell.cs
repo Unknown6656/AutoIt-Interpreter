@@ -11,8 +11,10 @@ using Unknown6656.Controls.Console;
 using Unknown6656.Imaging;
 using Unknown6656.Common;
 using Unknown6656.Generics;
+using System.Threading.Tasks;
 
 namespace Unknown6656.AutoIt3.CLI;
+
 
 public sealed class InteractiveShell
     : IDisposable
@@ -46,14 +48,29 @@ Commands and keyboard shortcuts:
     private bool _isdisposed;
 
 
+    /// <summary>
+    /// Returns an enumeration of all currently active <see cref="InteractiveShell"/> instances.
+    /// </summary>
     public static ConcurrentHashSet<InteractiveShell> Instances { get; } = [];
 
+    /// <summary>
+    /// Returns the current history of <see cref="InteractiveShell"/> content (represented by <see cref="ScriptToken"/>s), as well as the corresponding <see cref="InteractiveShellStreamDirection"/>s.
+    /// </summary>
     public List<(ScriptToken[] Content, InteractiveShellStreamDirection Stream)> History { get; } = [];
 
+    /// <summary>
+    /// Returns a list of formatted textual suggestions for the auto-complete functionality of the interactive AutoIt shell.
+    /// </summary>
     public List<(ScriptToken[] Display, string Content)> Suggestions { get; } = [];
 
+    /// <summary>
+    /// Contains the current user-provided input.
+    /// </summary>
     public string CurrentInput { get; private set; } = "";
 
+    /// <summary>
+    /// The current cursor position in characters from the left-hand bound.
+    /// </summary>
     public Index CurrentCursorPosition
     {
         get => _current_cursor_pos;
@@ -65,20 +82,44 @@ Commands and keyboard shortcuts:
         }
     }
 
+    /// <summary>
+    /// The currently selected zero-based index of auto-completion suggestions.
+    /// </summary>
     public int CurrentSuggestionIndex { get; private set; }
 
+    /// <summary>
+    /// The current zero-based history scroll index. A larger history scroll index suggests a farther scrolling into the past.
+    /// </summary>
     public int HistoryScrollIndex { get; private set; }
 
+    /// <summary>
+    /// The current AutoIt interpreter instance.
+    /// </summary>
     public Interpreter Interpreter { get; }
 
+    /// <summary>
+    /// Indicates whether the current interactive shell is running.
+    /// </summary>
     public bool IsRunning { get; private set; } = true;
 
+    /// <summary>
+    /// Returns the main thread of the current instance of <see cref="InteractiveShell"/>.
+    /// </summary>
     public AU3Thread Thread { get; }
 
+    /// <summary>
+    /// Returns the global <see cref="VariableScope"/> associated with this interactive shell instance.
+    /// </summary>
     public VariableScope Variables { get; }
 
+    /// <summary>
+    /// Returns the global stack call frame.
+    /// </summary>
     public AU3CallFrame CallFrame { get; }
 
+    /// <summary>
+    /// Returns the currently typed <see cref="ScriptToken"/> (or <see langword="null"/>).
+    /// </summary>
     public ScriptToken? CurrentlyTypedToken
     {
         get
@@ -91,6 +132,10 @@ Commands and keyboard shortcuts:
     }
 
 
+    /// <summary>
+    /// Creates a new interactive shell instance using the given AutoIt interpreter.
+    /// </summary>
+    /// <param name="interpreter">The AutoIt interpreter instance which shall be used by the interactive shell.</param>
     public InteractiveShell(Interpreter interpreter)
     {
         Instances.Add(this);
@@ -110,6 +155,7 @@ Commands and keyboard shortcuts:
         GC.SuppressFinalize(this);
     }
 
+    /// <inheritdoc cref="Dispose()"/>
     private void Dispose(bool disposing)
     {
         if (!_isdisposed)
@@ -126,6 +172,10 @@ Commands and keyboard shortcuts:
         }
     }
 
+    /// <summary>
+    /// Initializes the interactive shell and returns whether the console is large enough for interactive usage (see <see cref="MIN_WIDTH"/>).
+    /// </summary>
+    /// <returns>Indication of successfull initialization.</returns>
     public bool Initialize()
     {
         if (WIDTH < MIN_WIDTH)
@@ -145,6 +195,11 @@ Commands and keyboard shortcuts:
         return true;
     }
 
+    /// <summary>
+    /// Starts and runs the current interactive shell in a thread-blocking fashion.
+    /// <para/>
+    /// Consider using <see cref="TaskFactory.StartNew(Action)"/> in order to run the interactive shell on an <see langword="async"/> thread model.
+    /// </summary>
     public void Run()
     {
         if (Console.CursorTop > 0)
@@ -770,12 +825,18 @@ Commands and keyboard shortcuts:
 
     }
 
+    /// <summary>
+    /// Clears the history of the current interactive shell.
+    /// </summary>
     public void Clear()
     {
         History.Clear();
         HistoryScrollIndex = 0;
     }
 
+    /// <summary>
+    /// Requests the interactive shell to be exited.
+    /// </summary>
     public void Exit() => IsRunning = false;
 
     private void ProcessInput()
@@ -824,6 +885,9 @@ Commands and keyboard shortcuts:
         }
     }
 
+    /// <summary>
+    /// Updates the list of auto-complete suggestions.
+    /// </summary>
     public void UpdateSuggestions()
     {
         OS os = NativeInterop.OperatingSystem;
@@ -932,13 +996,29 @@ Commands and keyboard shortcuts:
         CurrentSuggestionIndex = Math.Min(CurrentSuggestionIndex, Suggestions.Count - 1);
     }
 
+    /// <summary>
+    /// Submits the given <paramref name="message"/> to be printed to the history while formatting it as <see cref="TokenType.Comment"/> and <see cref="InteractiveShellStreamDirection.Output"/>.
+    /// </summary>
+    /// <param name="message">The message to be printed to the interactive shell.</param>
     public void SubmitPrint(string message) => History.Add((new[] { ScriptToken.FromString(message, TokenType.Comment) }, InteractiveShellStreamDirection.Output));
 }
 
+/// <summary>
+/// An enumeration of known interactive shell stream directions.
+/// </summary>
 public enum InteractiveShellStreamDirection
 {
+    /// <summary>
+    /// Represents the input stream, i.e. what the user enters into the interactive shell.
+    /// </summary>
     Input,
+    /// <summary>
+    /// Represents the output stream, e.g. result values of code executions.
+    /// </summary>
     Output,
+    /// <summary>
+    /// Represents the error stream, i.e. occurrences of exceptions and parsing errors.
+    /// </summary>
     Error,
 }
 
