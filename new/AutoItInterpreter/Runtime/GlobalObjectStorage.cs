@@ -215,9 +215,9 @@ public sealed class GlobalObjectStorage
         return false;
     }
 
-    public bool TrySetNETIndex(object instance, Variant index, Variant value) => TryInvokeNETMember(instance, "set_Item", new[] { index, value }, out _);
+    public bool TrySetNETIndex(object instance, Variant index, Variant value) => TryInvokeNETMember(instance, "set_Item", [index, value], out _);
 
-    public bool TryGetNETIndex(object instance, Variant index, out Variant value) => TryInvokeNETMember(instance, "get_Item", new[] { index }, out value);
+    public bool TryGetNETIndex(object instance, Variant index, out Variant value) => TryInvokeNETMember(instance, "get_Item", [index], out value);
 
     public bool TrySetNETMember(object instance, string member, Variant value)
     {

@@ -530,7 +530,7 @@ public sealed class FrameworkFunctions
             if (input < 0)
                 return FunctionReturnValue.Error(1);
             else if (binary)
-                return Variant.FromBinary(new[] { (byte)(input & 0xff) });
+                return Variant.FromBinary([(byte)(input & 0xff)]);
             else
                 return Variant.FromString(new string(new[] { (char)input }));
         });
@@ -1855,14 +1855,14 @@ public sealed class FrameworkFunctions
             {
                 int index = (int)args[1];
                 Variant[] array =
-                {
+                [
                     0, // TODO : currently downloaded
                     0,
                     inet.Complete,
                     inet.Complete && !inet.Error,
                     inet.Error,
                     args[0]
-                };
+                ];
 
                 return index >= 0 && index < array.Length ? array[index] : Variant.FromArray(frame.Interpreter, array);
             }
@@ -2743,10 +2743,10 @@ public sealed class FrameworkFunctions
                     TOKEN_PRIVILEGES tk = new()
                     {
                         PrivilegeCount = 1,
-                        Privileges = new[]
-                        {
+                        Privileges =
+                        [
                         new LUID_AND_ATTRIBUTES { Attributes = 0x00000002 }
-                    }
+                    ]
                     };
                     NativeInterop.LookupPrivilegeValue(null, "SeShutdownPrivilege", ref tk.Privileges[0].Luid);
                     NativeInterop.AdjustTokenPrivileges(token, false, ref tk, 0, null, null);

@@ -707,7 +707,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
         RGBAColor col_hotpath = RGBAColor.Salmon;
 
         Regex regex_trimstart = new(@"^(?<space>\s*)0(?<rest>\d[:\.].+)$", RegexOptions.Compiled);
-        string[] headers = {
+        string[] headers = [
             lang["debug.telemetry.columns.category"],
             lang["debug.telemetry.columns.count"],
             lang["debug.telemetry.columns.total"],
@@ -716,7 +716,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
             lang["debug.telemetry.columns.max"],
             lang["debug.telemetry.columns.parent"],
             lang["debug.telemetry.columns.relative"],
-        };
+        ];
         List<(string[] cells, TelemetryTimingsNode node)> rows = [];
         static string ReplaceStart(string input, params (string search, string replace)[] substitutions)
         {

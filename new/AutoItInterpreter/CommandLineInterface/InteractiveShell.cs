@@ -19,7 +19,7 @@ public sealed class InteractiveShell
 {
     public const int MIN_WIDTH = 128;
 
-    internal static readonly string[] KNOWN_OPERATORS = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "==" };
+    internal static readonly string[] KNOWN_OPERATORS = ["+", "-", "*", "/", "+=", "-=", "*=", "/=", "&", "&=", "^", "<=", "<", ">", ">=", "<>", "=", "=="];
     private static readonly Regex REGEX_END_OF_MULTILINE = new(@"^(.*\s+)?(?<sep>_)$", RegexOptions.Compiled);
     private static readonly RGBAColor COLOR_HELP_FG = 0xffff;
     private static readonly RGBAColor COLOR_SEPARATOR = 0xfaaa;
@@ -230,15 +230,15 @@ Commands and keyboard shortcuts:
 
     private void DrawResizeWarning()
     {
-        string[] message = new[]
-        {
+        string[] message =
+        [
             "  CONSOLE WINDOW TOO SMALL!  ",
             "-----------------------------",
             "  Please resize this window  ",
             $" to a minimum size of {MIN_WIDTH}x32 ",
             "to use the interactive shell.",
             $" Current window size: {WIDTH}x{HEIGHT}"
-        };
+        ];
         int w = message.Max(l => l.Length);
 
         ConsoleExtensions.RGBForegroundColor = RGBAColor.Red;

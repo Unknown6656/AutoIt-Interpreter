@@ -486,7 +486,7 @@ public readonly struct Variant
     /// <returns>Binary representation</returns>
     public readonly byte[] ToBinary() => RawData switch
     {
-        bool b => new[] { (byte)(b ? 1 : 0) },
+        bool b => [(byte)(b ? 1 : 0)],
         _ when Type is VariantType.Default => DataStream.FromUnmanaged(-1),
         null => DataStream.FromUnmanaged(0),
         int i => DataStream.FromUnmanaged(i),

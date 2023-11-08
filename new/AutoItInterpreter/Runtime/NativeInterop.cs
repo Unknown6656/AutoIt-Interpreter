@@ -267,8 +267,8 @@ public static class NativeInterop
     }
 
     public static (string stdout, int code) Exec(string command, bool use_shellexec = false) => DoPlatformDependent(
-        () => InternalRun("cmd.exe", new[] { "/c", command }, use_shellexec),
-        () => InternalRun("/bin/bash", new[] { "-c", command }, use_shellexec)
+        () => InternalRun("cmd.exe", ["/c", command], use_shellexec),
+        () => InternalRun("/bin/bash", ["-c", command], use_shellexec)
     );
 
     private static (string stdout, int code) InternalRun(string filename, string[] arguments, bool use_shexec)

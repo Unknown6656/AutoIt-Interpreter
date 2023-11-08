@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Reflection.Emit;
 using System.Reflection;
@@ -63,7 +63,7 @@ public sealed class DelegateBuilder
             method_il.Emit(OpCodes.Stloc_0);
 
             MethodInfo gettypefromhnd = typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle))!;
-            ConstructorInfo tuplector = typeof((object, Type)).GetConstructor(new[] { typeof(object), typeof(Type) })!;
+            ConstructorInfo tuplector = typeof((object, Type)).GetConstructor([typeof(object), typeof(Type)])!;
 
             for (int i = 0; i < @params.Length; ++i)
             {
@@ -93,7 +93,7 @@ public sealed class DelegateBuilder
             ILGenerator il_cctor = cctor_builder.GetILGenerator();
 
             il_cctor.Emit(OpCodes.Ldftn, method_builder);
-            il_cctor.Emit(OpCodes.Call, typeof(IntPtr).GetMethod("op_Explicit", new[] { typeof(void*) })!);
+            il_cctor.Emit(OpCodes.Call, typeof(IntPtr).GetMethod("op_Explicit", [typeof(void*)])!);
             il_cctor.Emit(OpCodes.Stsfld, field_ptr_builder);
             il_cctor.Emit(OpCodes.Ret);
 
@@ -131,14 +131,14 @@ public sealed class DelegateBuilder
                                          signature.ReturnType.CallConvention.IsWinAPI ? CallingConvention.Winapi : CallingConvention.Cdecl;
 
             delegate_builder.SetCustomAttribute(new CustomAttributeBuilder(
-                typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) })!,
+                typeof(UnmanagedFunctionPointerAttribute).GetConstructor([typeof(CallingConvention)])!,
                 new object[] { callconv }
             ));
 
             ConstructorBuilder constructor = delegate_builder.DefineConstructor(
                 MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                 CallingConventions.Standard,
-                new[] { typeof(object), typeof(nint) }
+                [typeof(object), typeof(nint)]
             );
             constructor.SetImplementationFlags(MethodImplAttributes.CodeTypeMask);
             constructor.DefineParameter(1, ParameterAttributes.None, "object");
@@ -156,7 +156,7 @@ public sealed class DelegateBuilder
                 CallingConventions.Standard,
                 rettype,
                 null,
-                new[] {
+                [
                     callconv switch
                     {
                         CallingConvention.Cdecl => typeof(CallConvCdecl),
@@ -166,7 +166,7 @@ public sealed class DelegateBuilder
                         CallingConvention.Winapi when NativeInterop.OperatingSystem == OS.Windows => typeof(CallConvStdcall),
                         _ => typeof(CallConvCdecl),
                     }
-                },
+                ],
                 @params!,
                 null,
                 null
@@ -184,7 +184,7 @@ public sealed class DelegateBuilder
 
                 if (type.IsWSTR || type.IsSTR)
                     parameter.SetCustomAttribute(new CustomAttributeBuilder(
-                        typeof(MarshalAsAttribute).GetConstructor(new[] { typeof(UnmanagedType) })!,
+                        typeof(MarshalAsAttribute).GetConstructor([typeof(UnmanagedType)])!,
                         new object[] { type.IsWSTR ? UnmanagedType.LPWStr : UnmanagedType.LPStr }
                     ));
 
@@ -276,11 +276,11 @@ public sealed class DelegateBuilder
                     // if (otypes[i].IsWSTR || otypes[i].IsSTR)
                     //     attr |= FieldAttributes.HasFieldMarshal;
 
-                    FieldBuilder field = builder.DefineField("Item" + i, ftype, new[] { typeof(MarshalAsAttribute) }, null, attr);
+                    FieldBuilder field = builder.DefineField("Item" + i, ftype, [typeof(MarshalAsAttribute)], null, attr);
 
                     if (otypes[i].IsWSTR || otypes[i].IsSTR)
                         field.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(MarshalAsAttribute).GetConstructor(new[] { typeof(UnmanagedType) })!,
+                            typeof(MarshalAsAttribute).GetConstructor([typeof(UnmanagedType)])!,
                             new object[] { otypes[i].IsWSTR ? UnmanagedType.LPWStr : UnmanagedType.LPStr }
                         ));
                 }

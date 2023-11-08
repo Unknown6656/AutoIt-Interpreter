@@ -37,7 +37,7 @@ public sealed class AdditionalFunctions
     }
 
     internal static FunctionReturnValue ConsoleWriteLine(CallFrame frame, Variant[] args) =>
-        FrameworkFunctions.ConsoleWrite(frame, new[] { (args.Length > 0 ? args[0] : "") & "\r\n" });
+        FrameworkFunctions.ConsoleWrite(frame, [(args.Length > 0 ? args[0] : "") & "\r\n"]);
 
     internal static FunctionReturnValue ConsoleReadLine(CallFrame frame, Variant[] args) => (Variant)Console.ReadLine();
 

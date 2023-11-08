@@ -26,7 +26,7 @@ using static AST;
 /// </summary>
 public sealed class ScriptScanner
 {
-    private static readonly string[] AUTOIT_FILE_EXTENSIONS = { "", ".au3", ".au2", ".au", ".aupp", ".au++" };
+    private static readonly string[] AUTOIT_FILE_EXTENSIONS = ["", ".au3", ".au2", ".au", ".aupp", ".au++"];
 
     private const RegexOptions REGEX_OPTIONS = RegexOptions.IgnoreCase | RegexOptions.Compiled;
     private const string REGEX_FUNC_MODIFIERS = /*lang=regex*/@"((\s+|\b)(?<modifiers>volatile(\s+cached)?|cached(\s+volatile)?)(\s+|\b))?";
@@ -51,14 +51,14 @@ public sealed class ScriptScanner
     private static readonly Regex REGEX_NOTRYICON = new(@"^#notrayicon\b", REGEX_OPTIONS);
 
     private static readonly Func<string, (FileInfo physical, string content)?>[] _existing_resolvers =
-    {
+    [
         ResolveUNC,
         ResolveHTTP,
         ResolveFTP,
 #if SUPPORT_SSH
         ResolveSSH,
 #endif
-    };
+    ];
     private readonly ConcurrentDictionary<string, ScriptFunction> _cached_functions = new();
     private readonly ConcurrentDictionary<int, ScannedScript> _cached_scripts = new();
 

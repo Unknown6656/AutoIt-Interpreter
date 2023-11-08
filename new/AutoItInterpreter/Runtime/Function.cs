@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
@@ -25,12 +25,12 @@ public abstract class ScriptFunction
     /// A collection of reserved function names.
     /// </summary>
     public static readonly string[] RESERVED_NAMES =
-    {
+    [
         "_", "$_", VARIABLE.Discard.Name, "$GLOBAL", "GLOBAL", "STATIC", "CONST", "DIM", "REDIM", "ENUM", "STEP", "LOCAL", "FOR", "IN",
         "NEXT", "TO", "FUNC", "ENDFUNC", "DO", "UNTIL", "WHILE", "WEND", "IF", "THEN", "ELSE", "ENDIF", "ELSEIF", "SELECT", "ENDSELECT",
         "CASE", "SWITCH", "ENDSWITCH", "WITH", "ENDWITH", "CONTINUECASE", "CONTINUELOOP", "EXIT", "EXITLOOP", "CACHED", "VOLATILE",
         "RETURN", "TRUE", "FALSE", "DEFAULT", "NULL", "BYREF", "REF", "AND", "OR", "NOT", "CLEAR", "NEW", "DELETE", "CLASS",
-    };
+    ];
 
 
     /// <summary>

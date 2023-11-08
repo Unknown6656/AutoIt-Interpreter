@@ -481,7 +481,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 if (FindMembers(INDEX_NAME, MemberFindMode.Getter) is { Count: > 0 } match)
                 {
-                    object? data = GetMember(match[0], new[] { index.Data });
+                    object? data = GetMember(match[0], [index.Data]);
 
                     value = COMData.FromArbitrary(data);
 
@@ -501,7 +501,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 if (FindMembers(INDEX_NAME, MemberFindMode.Setter) is { Count: > 0 } match)
                 {
-                    SetMember(match[0], value.Data, new[] { index.Data });
+                    SetMember(match[0], value.Data, [index.Data]);
 
                     return true;
                 }
