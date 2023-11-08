@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Reflection.Emit;
 using System.Reflection;
@@ -13,6 +13,7 @@ using Unknown6656.Generics;
 
 namespace Unknown6656.AutoIt3.Runtime;
 
+
 using static AST;
 
 /// <summary>
@@ -20,8 +21,12 @@ using static AST;
 /// </summary>
 public sealed class DelegateBuilder
 {
-    public static DelegateBuilder Instance { get; } = new DelegateBuilder();
+    private const string FN_FUNCTION = "_function";
+    private const string FN_RETTYPE = "_rettype";
+    private const string FN_POINTER = "_pointer";
 
+
+    public static DelegateBuilder Instance { get; } = new DelegateBuilder();
 
     private readonly AssemblyBuilder _assembly;
     private readonly ModuleBuilder _module;
@@ -33,14 +38,20 @@ public sealed class DelegateBuilder
         _module = _assembly.DefineDynamicModule(nameof(DelegateBuilder));
     }
 
+    /// <summary>
+    /// Creates a user-space script function callback which has the given function <paramref name="signature"/> and internally invokes the given .NET <paramref name="callback"/>.
+    /// </summary>
+    /// <param name="signature">The function signature.</param>
+    /// <param name="callback">The internally wrapped .NET callback.</param>
+    /// <returns>Returns the user-space script function callback.</returns>
     public UserFunctionCallback? CreateUserFunctionCallback(SIGNATURE signature, Func<(object?, Type)[], Type, object?> callback)
     {
         try
         {
             TypeBuilder type_builder = _module.DefineType(GetRandomName(), TypeAttributes.Sealed | TypeAttributes.Abstract | TypeAttributes.Public | TypeAttributes.BeforeFieldInit, typeof(object));
-            FieldBuilder field_func_builder = type_builder.DefineField("_function", typeof(Func<(object, Type)[], Type, object>), FieldAttributes.Public | FieldAttributes.Static);
-            FieldBuilder field_rettype_builder = type_builder.DefineField("_rettype", typeof(Type), FieldAttributes.Public | FieldAttributes.Static);
-            FieldBuilder field_ptr_builder = type_builder.DefineField("_pointer", typeof(nint), FieldAttributes.Public | FieldAttributes.Static);
+            FieldBuilder field_func_builder = type_builder.DefineField(FN_FUNCTION, typeof(Func<(object, Type)[], Type, object>), FieldAttributes.Public | FieldAttributes.Static);
+            FieldBuilder field_rettype_builder = type_builder.DefineField(FN_RETTYPE, typeof(Type), FieldAttributes.Public | FieldAttributes.Static);
+            FieldBuilder field_ptr_builder = type_builder.DefineField(FN_POINTER, typeof(nint), FieldAttributes.Public | FieldAttributes.Static);
 
             Type? rettype = ConvertType(signature.ReturnType.Type, false);
             Type?[] @params = signature.ParameterTypes.ToArray(t => ConvertType(t, true));
@@ -120,6 +131,11 @@ public sealed class DelegateBuilder
         return null;
     }
 
+    /// <summary>
+    /// Creates a new native delegate using the given function signature.
+    /// </summary>
+    /// <param name="signature">The function signature.</param>
+    /// <returns>The newly created <see cref="NativeDelegateWrapper"/>.</returns>
     public NativeDelegateWrapper? CreateNativeDelegateType(SIGNATURE signature)
     {
         try
@@ -293,18 +309,34 @@ public sealed class DelegateBuilder
         return null; // TODO
     }
 #if DEBUG
+    /// <summary>
+    /// Saves the delegate containing the internally generated assembly to the given file path.
+    /// </summary>
+    /// <param name="path">File path, under which the internally generated assembly shall be saved.</param>
     public void SaveAssembly(string path) => new Lokad.ILPack.AssemblyGenerator().GenerateAssembly(_assembly, path);
 #endif
     private static string GetRandomName(string prefix = "", string suffix = "") => prefix + Guid.NewGuid() + suffix;
 }
 
+/// <summary>
+/// Represents a user-space script function callback, which can be used for the invocation of AutoIt user functions via .NET delegates.
+/// </summary>
+/// <param name="FunctionPointer">The internal function pointer.</param>
 public unsafe record UserFunctionCallback(nint FunctionPointer)
 {
     /// <summary>
-    /// A string prefix reserved only for interpreter errors. Must be a sequence which no one in their right mind would use as a real function return value.
+    /// A string prefix reserved only for interpreter errors.
+    /// <para/>
+    /// THIS MUST BE AN UNIQUE SEQUENCE WHICH NO ONE IN THEIR RIGHT MIND WOULD USE AS A REAL FUNCTION RETURN VALUE.
     /// </summary>
     internal static readonly string ErrorPrefix = $"{DateTime.UtcNow}\U0001F1EA\U0001F1F7\U0001F1F7\U0001F1F4\U0001F1F7:";
 
+    /// <summary>
+    /// Creates a new .NET callback from the given user-space script function.
+    /// </summary>
+    /// <param name="function">The user-space script function from which the .NET delegate shall be created.</param>
+    /// <param name="interpreter">AutoIt interpreter instance.</param>
+    /// <returns>The corresponding .NET delegate.</returns>
     public static Func<(object?, Type)[], Type, object?> CreateNativeCallback(ScriptFunction function, Interpreter interpreter) => (arguments, type) =>
     {
         if (arguments.Length < function.ParameterCount.MinimumCount)
@@ -330,13 +362,28 @@ public unsafe record UserFunctionCallback(nint FunctionPointer)
     };
 }
 
+/// <summary>
+/// Represents a native function wrapper using a delegate.
+/// </summary>
+/// <param name="Delegate">The underlying .NET delegate instance.</param>
+/// <param name="ArgTypes">An array containing the types of the delegate arguments.</param>
+/// <param name="RetType">The delegate's return type.</param>
+/// <param name="Invoker">The <see cref="MethodInfo"/> pointing towards the wrapped .NET function.</param>
 public unsafe record NativeDelegateWrapper(object Delegate, Type[] ArgTypes, Type RetType, MethodInfo Invoker)
 {
     internal static readonly FieldInfo _methodPtr = typeof(Delegate).GetField(nameof(_methodPtr), BindingFlags.NonPublic | BindingFlags.Instance)!;
     internal static readonly FieldInfo _methodPtrAux = typeof(Delegate).GetField(nameof(_methodPtrAux), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
 
-    public object? CallCPP(void* funcptr, params object?[] arguments) => CallCPP((nint)funcptr, arguments);
+    /// <summary>
+    /// Calls the given function pointer with the given arguments and returns the function return value of the called function.
+    /// <para/>
+    /// <b>WARNING: Debugging this method will most certainly crash the entire application due to missing debug symbols!</b>
+    /// </summary>
+    /// <param name="funcptr">Function pointer to be called.</param>
+    /// <param name="arguments">The function arguments to be passed.</param>
+    /// <returns>Function return value.</returns>
+    public object? CallCPP(void* funcptr, params object?[]? arguments) => CallCPP((nint)funcptr, arguments);
 
     /// <summary>
     /// Calls the given function pointer with the given arguments and returns the function return value of the called function.
@@ -347,7 +394,7 @@ public unsafe record NativeDelegateWrapper(object Delegate, Type[] ArgTypes, Typ
     /// <param name="arguments">The function arguments to be passed.</param>
     /// <returns>Function return value.</returns>
     [DebuggerNonUserCode, DebuggerHidden, DebuggerStepThrough]
-    public object? CallCPP(nint funcptr, params object?[] arguments)
+    public object? CallCPP(nint funcptr, params object?[]? arguments)
     {
         nint orig = default;
         object? result;
@@ -373,8 +420,26 @@ public unsafe record NativeDelegateWrapper(object Delegate, Type[] ArgTypes, Typ
         return result;
     }
 
-    public Variant CallCPPfromAutoit(void* funcptr, Interpreter interpreter, Variant[] arguments) => CallCPPfromAutoit((nint)funcptr, interpreter, arguments);
+    /// <summary>
+    /// Calls the given function pointer from the AutoIt context with the given arguments and returns the function return value of the called function.
+    /// <para/>
+    /// <b>WARNING: Debugging this method will most certainly crash the entire application due to missing debug symbols!</b>
+    /// </summary>
+    /// <param name="interpreter">The AutoIt interpreter instance.</param>
+    /// <param name="funcptr">Function pointer to be called.</param>
+    /// <param name="arguments">The function arguments to be passed.</param>
+    /// <returns>Function return value.</returns>
+    public Variant CallCPPfromAutoit(void* funcptr, Interpreter interpreter, Variant[]? arguments) => CallCPPfromAutoit((nint)funcptr, interpreter, arguments);
 
+    /// <summary>
+    /// Calls the given function pointer from the AutoIt context with the given arguments and returns the function return value of the called function.
+    /// <para/>
+    /// <b>WARNING: Debugging this method will most certainly crash the entire application due to missing debug symbols!</b>
+    /// </summary>
+    /// <param name="interpreter">The AutoIt interpreter instance.</param>
+    /// <param name="funcptr">Function pointer to be called.</param>
+    /// <param name="arguments">The function arguments to be passed.</param>
+    /// <returns>Function return value.</returns>
     public Variant CallCPPfromAutoit(nint funcptr, Interpreter interpreter, Variant[]? arguments)
     {
         object?[] cpp_arguments = new object?[ArgTypes.Length];

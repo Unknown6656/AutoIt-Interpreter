@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
@@ -53,6 +53,9 @@ public abstract class ScriptFunction
     /// </summary>
     public abstract SourceLocation Location { get; }
 
+    /// <summary>
+    /// Returns the parameter count of this function.
+    /// </summary>
     public abstract (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
     /// <summary>
@@ -144,6 +147,9 @@ public sealed class AU3Function
                                                                          from line in _lines[loc]
                                                                          select (loc, line)).ToArray();
 
+    /// <summary>
+    /// Returns the jump labels defined in this function.
+    /// </summary>
     public ReadOnlyIndexer<string, JumpLabel?> JumpLabels { get; }
 
 
@@ -203,6 +209,9 @@ public class NativeFunction
 
     public override (int MinimumCount, int MaximumCount) ParameterCount { get; }
 
+    /// <summary>
+    /// Returns the default values for the optional parameters of this function.
+    /// </summary>
     public Variant[] DefaultValues { get; }
 
     public override SourceLocation Location { get; } = SourceLocation.Unknown;
@@ -224,6 +233,12 @@ public class NativeFunction
     {
     }
 
+    /// <summary>
+    /// Executes the current function on the given call frame with the given arguments.
+    /// </summary>
+    /// <param name="frame">Call frame, on which the current function shall be executed.</param>
+    /// <param name="args">Function arguments.</param>
+    /// <returns>The return value of the function call.</returns>
     public FunctionReturnValue Execute(NativeCallFrame frame, Variant[] args)
     {
         List<Variant> a = [.. args, .. DefaultValues.Skip(args.Length - ParameterCount.MinimumCount)];
@@ -244,51 +259,112 @@ public class NativeFunction
 
     /// <summary>
     /// Creates a new (parameterless) native function using the given delegate.
-    /// The function internally gets assigned an unique name, but will <b>not</b> be registered in the function resolver.
+    /// The function internally gets assigned an unique name, but will <i>not</i> be registered in the function resolver.
     /// </summary>
     /// <param name="interpreter">The interpreter instance.</param>
-    /// <param name="execute">The delegate representing the function's internal logic.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
     /// <param name="os">The operating systems supported by the given delegate.</param>
     /// <returns>The newly created native function.</returns>
-    public static NativeFunction FromDelegate(Interpreter interpreter, Func<NativeCallFrame, FunctionReturnValue> execute, OS os = OS.Any) =>
-        FromDelegate(interpreter, 0, (f, _) => execute(f), os);
+    public static NativeFunction FromDelegate(Interpreter interpreter, Func<NativeCallFrame, FunctionReturnValue> @delegate, OS os = OS.Any) =>
+        FromDelegate(interpreter, 0, (f, _) => @delegate(f), os);
 
     /// <summary>
     /// Creates a new native function using the given delegate.
-    /// The function internally gets assigned an unique name, but will <b>not</b> be registered in the function resolver.
+    /// The function internally gets assigned an unique name, but will <i>not</i> be registered in the function resolver.
     /// </summary>
     /// <param name="interpreter">The interpreter instance.</param>
     /// <param name="param_count">The number of parameters expected by the delegate.</param>
-    /// <param name="execute">The delegate representing the function's internal logic.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
     /// <param name="os">The operating systems supported by the given delegate.</param>
     /// <returns>The newly created native function.</returns>
-    public static NativeFunction FromDelegate(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
-        FromDelegate(interpreter, null, param_count, execute, os);
+    public static NativeFunction FromDelegate(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os = OS.Any) =>
+        FromDelegate(interpreter, null, param_count, @delegate, os);
 
-    public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os = OS.Any) =>
-        new(interpreter, param_count, execute, os, name);
+    /// <summary>
+    /// Creates a new native function using the given delegate.
+    /// Please note that the function will <i>not</i> be registered in the function resolver.
+    /// </summary>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="name">The name of the function.</param>
+    /// <param name="param_count">The number of parameters expected by the delegate.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
+    /// <param name="os">The operating systems supported by the given delegate.</param>
+    /// <returns>The newly created native function.</returns>
+    public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os = OS.Any) =>
+        new(interpreter, param_count, @delegate, os, name);
 
+    /// <summary>
+    /// Creates a new native function using the given delegate.
+    /// The function internally gets assigned an unique name, but will <i>not</i> be registered in the function resolver.
+    /// </summary>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="min_param_count">The minimum parameter count expected by the function.</param>
+    /// <param name="max_param_count">The maximum parameter count expected by the function. This value must be equals or larger than <paramref name="min_param_count"/>.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
+    /// <param name="default_values">The default values for the function's optional parameters. The length of this array must be equals or larger than the difference of <paramref name="max_param_count"/> and <paramref name="min_param_count"/>.</param>
+    /// <returns>The newly created native function.</returns>
     public static NativeFunction FromDelegate(Interpreter interpreter, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
         FromDelegate(interpreter, min_param_count, max_param_count, @delegate, OS.Any, default_values);
 
+    /// <summary>
+    /// Creates a new native function using the given delegate.
+    /// Please note that the function will <i>not</i> be registered in the function resolver.
+    /// </summary>
+    /// <param name="name">The name of the function.</param>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="min_param_count">The minimum parameter count expected by the function.</param>
+    /// <param name="max_param_count">The maximum parameter count expected by the function. This value must be equals or larger than <paramref name="min_param_count"/>.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
+    /// <param name="default_values">The default values for the function's optional parameters. The length of this array must be equals or larger than the difference of <paramref name="max_param_count"/> and <paramref name="min_param_count"/>.</param>
+    /// <returns>The newly created native function.</returns>
     public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, params Variant[] default_values) =>
         FromDelegate(interpreter, name, min_param_count, max_param_count, @delegate, OS.Any, default_values);
 
+    /// <summary>
+    /// Creates a new native function using the given delegate.
+    /// The function internally gets assigned an unique name, but will <i>not</i> be registered in the function resolver.
+    /// </summary>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="min_param_count">The minimum parameter count expected by the function.</param>
+    /// <param name="max_param_count">The maximum parameter count expected by the function. This value must be equals or larger than <paramref name="min_param_count"/>.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
+    /// <param name="os">The operating systems supported by the given delegate.</param>
+    /// <param name="default_values">The default values for the function's optional parameters. The length of this array must be equals or larger than the difference of <paramref name="max_param_count"/> and <paramref name="min_param_count"/>.</param>
+    /// <returns>The newly created native function.</returns>
     public static NativeFunction FromDelegate(Interpreter interpreter, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os, params Variant[] default_values) =>
         FromDelegate(interpreter, null, min_param_count, max_param_count, @delegate, os, default_values);
 
+    /// <summary>
+    /// Creates a new native function using the given delegate.
+    /// Please note that the function will <i>not</i> be registered in the function resolver.
+    /// </summary>
+    /// <param name="name">The name of the function.</param>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="min_param_count">The minimum parameter count expected by the function.</param>
+    /// <param name="max_param_count">The maximum parameter count expected by the function. This value must be equals or larger than <paramref name="min_param_count"/>.</param>
+    /// <param name="delegate">The delegate representing the function's internal logic.</param>
+    /// <param name="os">The operating systems supported by the given delegate.</param>
+    /// <param name="default_values">The default values for the function's optional parameters. The length of this array must be equals or larger than the difference of <paramref name="max_param_count"/> and <paramref name="min_param_count"/>.</param>
+    /// <returns>The newly created native function.</returns>
     public static NativeFunction FromDelegate(Interpreter interpreter, string? name, int min_param_count, int max_param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> @delegate, OS os, params Variant[] default_values) =>
         new(interpreter, (min_param_count, max_param_count), default_values, @delegate, os, name);
 }
 
 /// <summary>
-/// Represents an unmanaged .NET framework function.
-/// The refrence to the .NET function is provided via an instance of <see cref="MethodInfo"/>.
+/// Represents an unmanaged .NET function.
+/// The reference to the .NET function is provided via an instance of <see cref="MethodInfo"/>.
 /// </summary>
 public sealed class NETFrameworkFunction
     : NativeFunction
 {
-    internal NETFrameworkFunction(Interpreter interpreter, MethodInfo method, object? instance)
+    /// <summary>
+    /// Creates a new unmanaged .NET method.
+    /// The reference to the .NET function is provided via the given <paramref name="method"/> parameter.
+    /// </summary>
+    /// <param name="interpreter">The interpreter instance.</param>
+    /// <param name="method">The <see cref="MethodInfo"/> which this instance of the .NET function will be wrapping.</param>
+    /// <param name="instance">The .NET object instance, on which this method will be executed. A value of <see langword="null"/> indicates a static invocation.</param>
+    public NETFrameworkFunction(Interpreter interpreter, MethodInfo method, object? instance)
         : this(interpreter, method, method.GetParameters(), instance)
     {
     }
