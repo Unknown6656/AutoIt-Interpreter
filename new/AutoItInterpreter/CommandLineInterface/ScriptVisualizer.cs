@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -159,6 +159,7 @@ public static class ScriptVisualizer
     {
         string text = (from t in tokens
                        orderby t.LineIndex, t.CharIndex
+                       where print_linebreaks_and_line_numbers || t.Type is not TokenType.NewLine
                        select ConvertToVT100(t, print_linebreaks_and_line_numbers)).StringConcat();
 
         if (!print_linebreaks_and_line_numbers)
@@ -179,14 +180,19 @@ public static class ScriptVisualizer
     /// <returns>The VT-100 representation of the given token.</returns>
     public static string ConvertToVT100(this ScriptToken token, bool print_linebreaks)
     {
-        if (token.Type is TokenType.NewLine)
-            return print_linebreaks ? "\n" : string.Empty;
-        else if (token.Type is TokenType.Whitespace)
-            return token.Content;
+        string content;
 
-        string str = ColorScheme[token.Type].ToVT100ForegroundString() + token.Content;
+        if (token.Type is TokenType.NewLine or TokenType.Whitespace)
+        {
+            content = "\x1b[0m" + (print_linebreaks && token.Type is TokenType.NewLine ? "\n" : token.Content.Replace("\r\n", "\n"));
 
-        return token.Type is TokenType.UNKNOWN ? $"\x1b[4m{str}\x1b[24m" : str;
+            if (!print_linebreaks)
+                content = content.Replace("\n", "");
+        }
+        else
+            content = ColorScheme[token.Type].ToVT100ForegroundString() + token.Content;
+
+        return token.Type is TokenType.UNKNOWN ? $"\x1b[4m{content}\x1b[24m" : content;
     }
 }
 
@@ -250,6 +256,14 @@ public enum TokenType
     /// </summary>
     Keyword,
     /// <summary>
+    /// Represents a variable (which starts with '<c>$</c>').
+    /// </summary>
+    Variable,
+    /// <summary>
+    /// Represents a macro (which starts with '<c>@</c>').
+    /// </summary>
+    Macro,
+    /// <summary>
     /// Represents a function call.
     /// </summary>
     FunctionCall,
@@ -285,14 +299,6 @@ public enum TokenType
     /// Represents an option for an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
     /// </summary>
     DirectiveOption,
-    /// <summary>
-    /// Represents a macro (which starts with '<c>$</c>').
-    /// </summary>
-    Variable,
-    /// <summary>
-    /// Represents a macro (which starts with '<c>@</c>').
-    /// </summary>
-    Macro,
     /// <summary>
     /// An unknown AutoIt token (usually indicating a syntax error).
     /// </summary>
