@@ -12,6 +12,9 @@ using Unknown6656.Imaging;
 using Unknown6656.Common;
 using Unknown6656.Generics;
 using System.Threading.Tasks;
+using Unknown6656.AutoIt3.Parser;
+using Unknown6656.IO;
+using Unknown6656.AutoIt3.Parser.ExpressionParser;
 
 namespace Unknown6656.AutoIt3.CLI;
 
@@ -131,6 +134,8 @@ Commands and keyboard shortcuts:
         }
     }
 
+    private static readonly string[] second = ["_", "$_", "$GLOBAL"];
+
 
     /// <summary>
     /// Creates a new interactive shell instance using the given AutoIt interpreter.
@@ -232,6 +237,11 @@ Commands and keyboard shortcuts:
                 if (width != WIDTH || height != HEIGHT)
                 {
                     Console.Clear();
+
+//#pragma warning disable CA1416 // Validate platform compatibility
+//                    if (NativeInterop.OperatingSystem == OS.Windows)
+//                        Console.BufferHeight = Math.Max(Console.BufferHeight, Console.WindowHeight + 1);
+//#pragma warning restore CA1416
 
                     if (candraw)
                         RedrawHelp();
@@ -600,10 +610,12 @@ Commands and keyboard shortcuts:
 
             start_index = Math.Max(0, Math.Min(start_index, Suggestions.Count - MAX_SUGGESTIONS));
 
-            ScriptToken[][] suggestions = Suggestions.Skip(start_index).Take(MAX_SUGGESTIONS).ToArray(s => s.Display);
+            ScriptToken[][] suggestions = Suggestions.Skip(start_index)
+                                                     .Take(MAX_SUGGESTIONS)
+                                                     .ToArray(s => s.Display.ToArray());
 
-            int sugg_width = suggestions.Select(s => s.Sum(t => t.TokenLength)).Append(0).Max() + 2;
-            int sugg_left = Math.Min(input_area_width - 2 - sugg_width, cursor_pos_x + 3);
+            int sugg_width = suggestions.Select(s => s.Sum(t => t.TokenLength)).Append(0).Max() + 4;
+            int sugg_left = Math.Min(input_area_width - 4 - sugg_width, cursor_pos_x + 3);
             int i = 0;
 
             ConsoleExtensions.RGBForegroundColor = COLOR_SEPARATOR;
@@ -632,18 +644,19 @@ Commands and keyboard shortcuts:
             {
                 Console.CursorTop = cursor.t + 3 + i;
                 Console.CursorLeft = sugg_left;
-                Console.Write('│');
 
                 if (i == CurrentSuggestionIndex - start_index)
-                    Console.Write("\x1b[7m");
+                    Console.Write("{> ");
+                else
+                    Console.Write("│  ");
 
-                Console.Write(' ' + suggestion.ConvertToVT100(false) + COLOR_SEPARATOR.ToVT100ForegroundString());
-                Console.Write(new string(' ', sugg_width + sugg_left - Console.CursorLeft + 1));
+                Console.Write(suggestion.ConvertToVT100(false) + COLOR_SEPARATOR.ToVT100ForegroundString());
+                Console.Write(new string(' ', sugg_width + sugg_left - Console.CursorLeft - 1));
 
                 if (i == CurrentSuggestionIndex - start_index)
-                    Console.Write("\x1b[27m");
-
-                Console.Write('│');
+                    Console.Write(" <}");
+                else
+                    Console.Write("  │");
 
                 ++i;
             }
@@ -899,30 +912,30 @@ Commands and keyboard shortcuts:
 
         List<(ScriptToken[] tokens, string content)> suggestions =
         [
-            (new[] { ScriptToken.FromString("CLEAR", TokenType.Keyword) }, "clear"),
+            //(new[] { ScriptToken.FromString("CLEAR", TokenType.Keyword) }, "clear"),
         ];
 
-        void add_suggs(IEnumerable<string> suggs, TokenType type) => suggs.Select(s => (new[] { ScriptToken.FromString(s, type) }, s)).AppendToList(suggestions);
+        void add_suggestions(IEnumerable<string> suggs, TokenType type) => suggs.Select(s => (new[] { ScriptToken.FromString(s, type) }, s)).AppendToList(suggestions);
         bool suggest_all = string.IsNullOrEmpty(CurrentInput) || curr_token?.Type is null or TokenType.UNKNOWN or TokenType.Whitespace or TokenType.NewLine;
-        string to_dbg_str(Variant value)
+        string to_debug_string(Variant value)
         {
             string str = value.ToDebugString(Interpreter);
 
             return str.Length > WIDTH - MARGIN_RIGHT - 30 ? str[..(WIDTH - MARGIN_RIGHT - 33)] + " ..." : str;
         }
 
-        // if (suggest_all || curr_token?.Type is TokenType.Directive)
-        //     ; // TODO
-        //
+        if (suggest_all || curr_token?.Type is TokenType.Directive)
+             add_suggestions(["#include"], TokenType.Directive);
+
         // if (suggest_all || curr_token?.Type is TokenType.DirectiveOption)
         //     ; // TODO
 
         if (suggest_all || curr_token?.Type is TokenType.Operator)
-            add_suggs(KNOWN_OPERATORS, TokenType.Operator);
+            add_suggestions(KNOWN_OPERATORS, TokenType.Operator);
 
         if (suggest_all || curr_token?.Type is TokenType.Macro)
         {
-            KnownMacro[] macros = Interpreter.MacroResolver.KnownMacros.ToArray();
+            KnownMacro[] macros = [.. Interpreter.MacroResolver.KnownMacros];
             int name_length = macros.Max(m => m.Name.Length);
 
             macros.Select(macro =>
@@ -936,21 +949,21 @@ Commands and keyboard shortcuts:
                 else if (!supported)
                     return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {name}", TokenType.UNKNOWN) }, name);
                 else
-                    return (ScriptVisualizer.TokenizeScript($"@{macro.Name.PadRight(name_length)} : {to_dbg_str(macro.GetValue(CallFrame))}"), name);
+                    return (ScriptVisualizer.TokenizeScript($"@{macro.Name.PadRight(name_length)} : {to_debug_string(macro.GetValue(CallFrame))}"), name);
 
             }).AppendToList(suggestions);
-        }   
+        }
 
         if (suggest_all || curr_token?.Type is TokenType.Variable)
         {
-            Variable[] vars = Variables.LocalVariables.Concat(Interpreter.VariableResolver.GlobalVariables).ToArray();
+            Variable[] vars = [.. Variables.LocalVariables, .. Interpreter.VariableResolver.GlobalVariables];
             int name_length = vars.Max(v => v.Name.Length);
 
             vars.Select(variable =>
             {
                 string name = '$' + variable.Name.PadRight(name_length);
                 string type = variable.Value.Type.ToString().PadRight(9);
-                string value = to_dbg_str(variable.Value);
+                string value = to_debug_string(variable.Value);
                 IEnumerable<ScriptToken> tokens = new[] {
                     ScriptToken.FromString(name, TokenType.Variable),
                     ScriptToken.FromString(" : ", TokenType.Operator),
@@ -967,7 +980,7 @@ Commands and keyboard shortcuts:
 
         if (suggest_all || curr_token?.Type is TokenType.Keyword or TokenType.Identifier or TokenType.FunctionCall)
         {
-            add_suggs(ScriptFunction.RESERVED_NAMES.Except(new[] { "_", "$_", "$GLOBAL" }), TokenType.Keyword);
+            add_suggestions(ScriptFunction.RESERVED_NAMES.Except(second), TokenType.Keyword);
 
             ScriptFunction[] functions = Interpreter.ScriptScanner.CachedFunctions.Where(f => !string.IsNullOrWhiteSpace(f.Name)).ToArray();
             int name_length = functions.Max(f => f.Name.Length);
@@ -975,21 +988,68 @@ Commands and keyboard shortcuts:
             functions.Select(function =>
             {
                 bool supported = function.Metadata.SupportsPlatfrom(os);
-                bool deprecated = function.Metadata.IsDeprecated;
+                bool deprecated = function.Metadata.IsDeprecated;   
+                List<ScriptToken> tokens = [
+                    ScriptToken.FromString(function.Name, TokenType.FunctionCall),
+                    ScriptToken.FromString(new(' ', name_length - function.Name.Length + 1), TokenType.Whitespace),
+                    ScriptToken.FromString(": ", TokenType.Symbol),
+                ];
+
+                if (function is NativeFunction native)
+                {
+                    tokens.AddRange(ScriptVisualizer.TokenizeScript([
+                        $"({Interpreter.CurrentUILanguage["interactive.argument_count", function.ParameterCount.MinimumCount, function.ParameterCount.MaximumCount]}) "
+                    ]));
+                    tokens.Add(ScriptToken.FromString(function is NETFrameworkFunction ? "[.NET]" : Interpreter.CurrentUILanguage["interactive.native"], TokenType.Comment));
+                }
+                else if (function is AU3Function au3)
+                {
+                    StringBuilder sb = new();
+
+                    if (au3.IsCached)
+                        sb.Append("CACHED ");
+
+                    if (au3.IsVolatile)
+                        sb.Append("VOLATILE ");
+
+                    sb.Append('(');
+
+                    foreach ((AST.PARAMETER_DECLARATION param, int i) in au3.Parameters.WithIndex())
+                    {
+                        if (i > 0)
+                            sb.Append(", ");
+
+                        if (i >= function.ParameterCount.MinimumCount)
+                            sb.Append('[');
+
+                        sb.Append(param);
+
+                        if (i >= function.ParameterCount.MinimumCount)
+                            sb.Append(']');
+                    }
+
+                    sb.Append(')');
+
+                    tokens.AddRange(ScriptVisualizer.TokenizeScript(sb.ToString()));
+                }
 
                 if (deprecated)
-                    return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.deprecated", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
+                {
+                    tokens.Add(ScriptToken.FromString(" ", TokenType.Whitespace));
+                    tokens.Add(ScriptToken.FromString(Interpreter.CurrentUILanguage["interactive.deprecated"], TokenType.UNKNOWN));
+                }
                 else if (!supported)
-                    return (new[] { ScriptToken.FromString($"{Interpreter.CurrentUILanguage["interactive.unsupported_platform", os]} {function.Name}", TokenType.UNKNOWN) }, function.Name);
-                else
-                    return (ScriptVisualizer.TokenizeScript(
-                        $"{function.Name.PadRight(name_length)} ({Interpreter.CurrentUILanguage["interactive.argument_count", function.ParameterCount.MinimumCount, function.ParameterCount.MaximumCount]})"
-                    ), function.Name);
+                {
+                    tokens.Add(ScriptToken.FromString(" ", TokenType.Whitespace));
+                    tokens.Add(ScriptToken.FromString(Interpreter.CurrentUILanguage["interactive.unsupported_platform", os], TokenType.UNKNOWN));
+                }
+
+                return (tokens.ToArray(), function.Name);
             }).AppendToList(suggestions);
         }
 
         Suggestions.Clear();
-        Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content) // DistinctBy in Unknown6656.Common collides with DistinctBy in System.LINQ
+        Suggestions.AddRange(from s in suggestions.DistinctBy(s => s.content)
                              where filter is null || s.content.StartsWith(filter, StringComparison.OrdinalIgnoreCase)
                              orderby s.tokens[0].Type, s.content ascending
                              select s);

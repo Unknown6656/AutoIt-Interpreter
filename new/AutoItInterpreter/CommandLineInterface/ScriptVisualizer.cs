@@ -17,7 +17,7 @@ namespace Unknown6656.AutoIt3.CLI;
 public static class ScriptVisualizer
 {
     private static readonly Regex REGEX_WHITESPACE = new(@"^\s+", RegexOptions.Compiled);
-    private static readonly Regex REGEX_DIRECTIVE = new(@"^#[^\W\d]\w*\b", RegexOptions.Compiled);
+    private static readonly Regex REGEX_DIRECTIVE = new(@"^#[^\W\d][\w\-]*\b", RegexOptions.Compiled);
     private static readonly Regex REGEX_STRING = new(@"^('[^']*'|""[^""]*"")", RegexOptions.Compiled);
     private static readonly Regex REGEX_KEYWORD = new(@$"^(->|({ScriptFunction.RESERVED_NAMES.Select(Regex.Escape).StringJoin("|")})\b)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex REGEX_SYMOBLS = new(@"^([\.,()\[\]{}'""]|::)", RegexOptions.Compiled);
@@ -240,6 +240,8 @@ public record ScriptToken(int LineIndex, int CharIndex, int TokenLength, string 
 
 /// <summary>
 /// An enumeration of known token types.
+/// <para/>
+/// <i>Note that the order of these enum items influence the sorting while displaying auto-complete suggestions inside an interactive shell.</i>
 /// </summary>
 public enum TokenType
 {
@@ -263,6 +265,14 @@ public enum TokenType
     /// Represents a macro (which starts with '<c>@</c>').
     /// </summary>
     Macro,
+    /// <summary>
+    /// Represents an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
+    /// </summary>
+    Directive,
+    /// <summary>
+    /// Represents an option for an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
+    /// </summary>
+    DirectiveOption,
     /// <summary>
     /// Represents a function call.
     /// </summary>
@@ -291,14 +301,6 @@ public enum TokenType
     /// Represents a generic symbol character which is not an operator.
     /// </summary>
     Symbol,
-    /// <summary>
-    /// Represents an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
-    /// </summary>
-    Directive,
-    /// <summary>
-    /// Represents an option for an AutoIt directive. See <see href="https://www.autoitscript.com/autoit3/docs/intro/lang_directives.htm"/>.
-    /// </summary>
-    DirectiveOption,
     /// <summary>
     /// An unknown AutoIt token (usually indicating a syntax error).
     /// </summary>
