@@ -17,6 +17,8 @@ strings:
             message: "You are currently using version {0} of the AutoIt-Interpreter. The newer version {1} is available.\nThese are the known additions and changes of the newer version:\n{2}\n\nDo you wish to download and update the AutoIt-Interpreter?\nType [Y] for 'yes', or any other key for 'no'."
             update_cancelled: "You chose not to update to the newer version."
     interactive:
+        native: "[native]"
+        deprecated: "[deprecated]"
         unsupported_platform: "[unsupported on {0}]"
         argument_count: "min: {0}, max: {1}"
     debug:
