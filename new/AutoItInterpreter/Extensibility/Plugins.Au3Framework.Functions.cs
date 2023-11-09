@@ -38,6 +38,15 @@ public sealed class FrameworkFunctions
     private static readonly Regex REGEX_RUN = new(@"^(?<file>""[^""]*""|[^""]+)(\s+(?<args>.*))?$", RegexOptions.Compiled);
     private static readonly Regex REGEX_DRIVE_ADD = new(@"Drive (?<letter>.:) is now connected to .*The command completed successfully\.", RegexOptions.Compiled | RegexOptions.Singleline);
     private static readonly Regex REGEX_DRIVE_GET = new(@"Remote name\s+(?<target>.+)", RegexOptions.Compiled);
+    private static readonly string[] TRASH_LOCATIONS =
+    [
+        "~/.local/share/Trash/items/",
+        "~/.local/share/Trash/",
+        "~/.Trash/",
+        "~/Desktop/.Trash/items/",
+        "~/Desktop/.Trash/",
+        "/var/tmp",
+    ];
 
 
     public FrameworkFunctions(Interpreter interpreter)
@@ -1536,23 +1545,13 @@ public sealed class FrameworkFunctions
                 return Variant.FromBoolean(NativeInterop.SHFileOperation(ref opt) == 0);
             }, delegate
             {
-                foreach (DirectoryInfo trash in new[]
-                {
-                    "~/.local/share/Trash/items/",
-                    "~/.local/share/Trash/",
-                    "~/.Trash/",
-                    "~/Desktop/.Trash/items/",
-                    "~/Desktop/.Trash/",
-                    "/var/tmp",
-                }.Select(p => new DirectoryInfo(p)))
-                {
+                foreach (DirectoryInfo trash in TRASH_LOCATIONS.Select(p => new DirectoryInfo(p)))
                     if (trash.Exists)
                     {
                         file.MoveTo(Path.Combine(trash.FullName, file.Name));
 
                         return Variant.True;
                     }
-                }
 
                 return Variant.False;
             });
