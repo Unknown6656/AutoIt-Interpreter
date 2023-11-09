@@ -353,7 +353,7 @@ public sealed class AU3CallFrame
         LastStatementValue = (caller as AU3CallFrame)?.LastStatementValue ?? Variant.Null;
         CurrentFunction = function;
         InterpreterRunContext = context;
-        _line_cache = function.Lines.ToList();
+        _line_cache = [.. function.Lines];
         _instruction_pointer = 0;
     }
 

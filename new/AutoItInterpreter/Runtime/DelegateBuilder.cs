@@ -274,7 +274,7 @@ public sealed class DelegateBuilder
             ; // TODO
         else if (type is TYPE.Composite { Item: { } types })
         {
-            TYPE[] otypes = types.ToArray();
+            TYPE[] otypes = [.. types];
             Type?[] fields = types.ToArray(t => ConvertType(t, true));
             bool unicode = otypes.Any(t => t.IsWSTR);
 

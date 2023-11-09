@@ -403,7 +403,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
             while (type is { } && type != typeof(object));
 
-            _cached_members = members.ToArray();
+            _cached_members = [.. members];
 
             Server.DebugPrint("debug.com.wrapper.created", (long)IUnknownPtr, ObjectType);
         }

@@ -454,7 +454,7 @@ public sealed class DebuggingFunctionProvider
 
     public FunctionReturnValue DebugAllThreads(CallFrame frame, Variant[] _)
     {
-        AU3Thread[] threads = frame.Interpreter.Threads.Where(t => !t.IsDisposed).OrderBy(t => t.ThreadID).ToArray();
+        AU3Thread[] threads = [.. frame.Interpreter.Threads.Where(t => !t.IsDisposed).OrderBy(t => t.ThreadID)];
         StringBuilder sb = new();
 
         sb.AppendLine($"Overview ({threads.Length} threads):");

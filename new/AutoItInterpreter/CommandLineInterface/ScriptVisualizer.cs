@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -146,7 +146,7 @@ public static class ScriptVisualizer
             add_token(0, TokenType.NewLine);
         }
 
-        return tokens.ToArray();
+        return [.. tokens];
     }
 
     /// <summary>

@@ -107,7 +107,7 @@ public sealed class AU3Function
     {
         get
         {
-            SourceLocation[] lines = _lines.Keys.OrderBy(LINQ.id).ToArray();
+            SourceLocation[] lines = [.. _lines.Keys.OrderBy(LINQ.id)];
 
             if (lines.Length > 0)
                 return new SourceLocation(lines[0].FullFileName, lines[0].StartLineNumber, lines[^1].EndLineNumber);
@@ -248,7 +248,7 @@ public class NativeFunction
         else if (a.Count > ParameterCount.MaximumCount)
             a.RemoveRange(ParameterCount.MaximumCount, a.Count - ParameterCount.MaximumCount);
 
-        return _execute(frame, a.ToArray());
+        return _execute(frame, [.. a]);
     }
 
     public override string ToString() => "[native] Func " + Name;

@@ -777,7 +777,7 @@ ______________________.,-#%&$@#&@%#&#~,.___________________________________");
                 $"{node.PercentageOfTotal * 100,9:F5} %",
             }, node));
 
-            TelemetryTimingsNode[] children = node.Children.OrderByDescending(c => c.PercentageOfTotal).ToArray();
+            TelemetryTimingsNode[] children = [.. node.Children.OrderByDescending(c => c.PercentageOfTotal)];
 
             for (int i = 0; i < children.Length; i++)
             {
