@@ -245,7 +245,7 @@ public sealed class Interpreter
 
                     foreach ((ScriptFunction function, _) in _exit_functions.OrderBy(kvp => kvp.Value))
                     {
-                        result = frame.Call(function, Array.Empty<Variant>());
+                        result = frame.Call(function, []);
 
                         if (result.IsFatal(out _))
                             break;
@@ -254,7 +254,7 @@ public sealed class Interpreter
                     return result;
                 });
 
-                @return = exit_thread.Run(function, Array.Empty<Variant>(), InterpreterRunContext.Interactive);
+                @return = exit_thread.Run(function, [], InterpreterRunContext.Interactive);
             }
             finally
             {
@@ -366,7 +366,7 @@ public sealed class Interpreter
     /// </summary>
     /// <param name="script">The script to be executed.</param>
     /// <returns>The interpreter result of the script invocation.</returns>
-    public FunctionReturnValue Run(ScannedScript script, InterpreterRunContext context) => Run(script.MainFunction, Array.Empty<Variant>(), context);
+    public FunctionReturnValue Run(ScannedScript script, InterpreterRunContext context) => Run(script.MainFunction, [], context);
 
     /// <summary>
     /// Creates a new (anonymous) interpreter, which invokes the global function of the given script. This essentially executes the given script.

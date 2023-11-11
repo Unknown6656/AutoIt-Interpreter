@@ -91,7 +91,7 @@ public sealed class DelegateBuilder
                 method_il.Emit(OpCodes.Stelem_Ref);
             }
 
-            method_il.Emit(OpCodes.Ldsfld, typeof(object).GetConstructor(Array.Empty<Type>())!);
+            method_il.Emit(OpCodes.Ldsfld, typeof(object).GetConstructor([])!);
             method_il.Emit(OpCodes.Ldloc_0);
             method_il.Emit(OpCodes.Callvirt, typeof(Func<(object, Type)[], Type, object>).GetMethod(nameof(callback.Invoke))!);
 
@@ -218,7 +218,7 @@ public sealed class DelegateBuilder
             MethodBuilder dummy_builder = delegate_builder.DefineMethod("Dummy", MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, CallingConventions.Standard, rettype, @params!);
             ILGenerator dummy_il = dummy_builder.GetILGenerator();
 
-            dummy_il.Emit(OpCodes.Newobj, typeof(NotImplementedException).GetConstructor(Array.Empty<Type>())!);
+            dummy_il.Emit(OpCodes.Newobj, typeof(NotImplementedException).GetConstructor([])!);
             dummy_il.Emit(OpCodes.Throw);
 
             if (delegate_builder.CreateType() is Type type)
@@ -444,7 +444,7 @@ public unsafe record NativeDelegateWrapper(object Delegate, Type[] ArgTypes, Typ
     {
         object?[] cpp_arguments = new object?[ArgTypes.Length];
 
-        arguments ??= Array.Empty<Variant>();
+        arguments ??= [];
 
         for (int i = 0; i < cpp_arguments.Length; ++i)
             if (i < arguments.Length)

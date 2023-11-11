@@ -215,7 +215,7 @@ public sealed class TelemetryTimingsNode
     public TelemetryTimingsNode Root { get; }
     public TelemetryTimingsNode Parent { get; }
     public TelemetryTimingsNode[] Children => _children.ToArray();
-    public TelemetryTimingsNode[] Siblings => IsRoot ? Array.Empty<TelemetryTimingsNode>() : Parent._children.Except(new[] { this }).ToArray();
+    public TelemetryTimingsNode[] Siblings => IsRoot ? [] : Parent._children.Except(new[] { this }).ToArray();
     public TimeSpan[] Timings { get; }
     public TimeSpan Average { get; }
     public TimeSpan Total { get; }

@@ -277,7 +277,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             if (_com_objects.TryGetValue(id, out COMWrapper? com))
                 return com.GetType().FindMembers(MemberTypes.All, BindingFlags.Public | BindingFlags.Instance, null, null).Select(m => m.Name).ToArray();
 
-            return Array.Empty<string>();
+            return [];
         }
 
         internal object? Cast(object? value, Type target_type)

@@ -95,7 +95,7 @@ public sealed class CommandLineOptions
     public string? FilePath { set; get; } = null;
 
 #pragma warning disable CA1819 // Properties should not return arrays
-    public string[] ScriptArguments { get; set; } = Array.Empty<string>();
+    public string[] ScriptArguments { get; set; } = [];
 #pragma warning restore CA1819
 
 

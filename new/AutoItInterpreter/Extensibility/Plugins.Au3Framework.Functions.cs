@@ -1507,7 +1507,7 @@ public sealed class FrameworkFunctions
 
     internal static FunctionReturnValue FileReadToArray(CallFrame frame, Variant[] args)
     {
-        string[] lines = Array.Empty<string>();
+        string[] lines = [];
         bool error = false;
 
         try
@@ -3842,7 +3842,7 @@ public sealed class FrameworkFunctions
 
         public void Start() => _task = Task.Factory.StartNew(delegate
         {
-            byte[] data = Array.Empty<byte>();
+            byte[] data = [];
 
             try
             {

@@ -612,7 +612,7 @@ public sealed class AU3CallFrame
                                 return WellKnownError("error.circular_include", script.Location.FullName);
                         }
                         else
-                            return Call(script.MainFunction, Array.Empty<Variant>());
+                            return Call(script.MainFunction, []);
                     });
                 }
                 else

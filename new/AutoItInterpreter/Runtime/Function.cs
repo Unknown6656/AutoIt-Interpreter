@@ -156,7 +156,7 @@ public sealed class AU3Function
     internal AU3Function(ScannedScript script, string name, IEnumerable<PARAMETER_DECLARATION>? @params)
         : base(script, name)
     {
-        Parameters = @params?.ToArray() ?? Array.Empty<PARAMETER_DECLARATION>();
+        Parameters = @params?.ToArray() ?? [];
         ParameterCount = (Parameters.Count(p => !p.IsOptional), Parameters.Length);
         JumpLabels = new ReadOnlyIndexer<string, JumpLabel?>(name => _jumplabels.TryGetValue(name.ToUpperInvariant(), out JumpLabel? label) ? label : null);
     }
@@ -229,7 +229,7 @@ public class NativeFunction
     }
 
     protected NativeFunction(Interpreter interpreter, int param_count, Func<NativeCallFrame, Variant[], FunctionReturnValue> execute, OS os, string? name = null)
-        : this(interpreter, (param_count, param_count), Array.Empty<Variant>(), execute, os, name)
+        : this(interpreter, (param_count, param_count), [], execute, os, name)
     {
     }
 

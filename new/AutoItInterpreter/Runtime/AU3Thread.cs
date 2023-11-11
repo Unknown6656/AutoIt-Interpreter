@@ -189,7 +189,7 @@ public sealed class AU3Thread
 
     internal AU3CallFrame PushAnonymousCallFrame()
     {
-        AU3CallFrame frame = new(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, Array.Empty<Variant>(), (CurrentFrame as AU3CallFrame)?.InterpreterRunContext ?? InterpreterRunContext.Regular);
+        AU3CallFrame frame = new(this, CurrentFrame, Interpreter.ScriptScanner.AnonymousFunction, [], (CurrentFrame as AU3CallFrame)?.InterpreterRunContext ?? InterpreterRunContext.Regular);
 
         _callstack.Push(frame);
 

@@ -101,7 +101,7 @@ public sealed class GithubUpdater
         RepositoryAuthor = repo_author;
         RepositoryName = repo_name;
         Telemetry = telemetry;
-        _releases = Array.Empty<Release>();
+        _releases = [];
     }
 
     /// <summary>

@@ -518,7 +518,7 @@ public sealed class ScannedScript
                     return InterpreterError.WellKnown(loc, "error.unresolved_func", name);
                 else if (func.ParameterCount.MinimumCount > 0)
                     return InterpreterError.WellKnown(func.Location, "error.register_func_argcount");
-                else if (frame.Call(func, Array.Empty<Variant>()).IsFatal(out InterpreterError? error))
+                else if (frame.Call(func, []).IsFatal(out InterpreterError? error))
                     return error;
         }
 

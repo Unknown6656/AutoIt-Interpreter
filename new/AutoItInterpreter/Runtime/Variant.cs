@@ -114,7 +114,7 @@ public readonly struct Variant
     /// <para/>
     /// The internally stored data is (<see cref="VariantType.Binary"/>, <see langword="new byte"/>[<see cref="0"/>]).
     /// </summary>
-    public static Variant EmptyBinary { get; } = FromBinary(Array.Empty<byte>());
+    public static Variant EmptyBinary { get; } = FromBinary([]);
 
     /// <summary>
     /// Represents the constant boolean <see cref="True"/>-value which is accessible using the AutoIt keyword '<see langword="True"/>'.
@@ -516,7 +516,7 @@ public readonly struct Variant
         // TODO : maps
 
         else
-            return Array.Empty<Variant>();
+            return [];
     }
 
     /// <summary>
@@ -914,7 +914,7 @@ public readonly struct Variant
         Variant v = NewArray(array?.Length ?? 0);
         Variant i = Zero;
 
-        foreach (object? element in array ?? Array.Empty<Variant>())
+        foreach (object? element in array ?? [])
         {
             v.TrySetIndexed(interpreter, i, FromObject(interpreter, element));
             ++i;

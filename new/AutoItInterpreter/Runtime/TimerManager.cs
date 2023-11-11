@@ -60,7 +60,7 @@ public sealed class TimerManager
                 while (_timers.TryGetValue(function, out (int Interval, AU3Thread, Task<FunctionReturnValue>) value))
                 {
                     if (_active)
-                        result = frame.Interpreter.Telemetry.Measure(TelemetryCategory.TimedFunctions, () => frame.Call(function, Array.Empty<Variant>()));
+                        result = frame.Interpreter.Telemetry.Measure(TelemetryCategory.TimedFunctions, () => frame.Call(function, []));
 
                     if (result.IsFatal(out _))
                         break;
@@ -73,7 +73,7 @@ public sealed class TimerManager
 
             var tuple = _timers[function] = (interval, thread, null)!;
 
-            tuple.Task = thread.RunAsync(loop, Array.Empty<Variant>(), InterpreterRunContext.Interactive);
+            tuple.Task = thread.RunAsync(loop, [], InterpreterRunContext.Interactive);
             _timers[function] = tuple;
         }
 
