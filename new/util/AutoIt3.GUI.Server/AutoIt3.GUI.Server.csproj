@@ -10,8 +10,8 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.0.5" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.0.5" />
+        <PackageReference Include="Avalonia" Version="11.0.9" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.9" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../AutoIt3.Common/AutoIt3.Common.csproj" />
