@@ -1,17 +1,17 @@
 
 //////////////////////////////////////////////////////////////////////////
-// Auto-generated 2023-11-09 16:51:27.570                               //
+// Auto-generated 2024-03-03 23:40:44.661                               //
 // ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION         //
 //////////////////////////////////////////////////////////////////////////
 
 using System.Reflection;
 using System;
 
-[assembly: AssemblyVersion("0.8.2136.8501")]
-[assembly: AssemblyFileVersion("0.8.2136.8501")]
-[assembly: AssemblyInformationalVersion("v.0.8.2136.8501, commit: 38aaf1a3d6beaf0b33fb94ead3ea9b69fe8a2a47")]
+[assembly: AssemblyVersion("0.8.2137.8607")]
+[assembly: AssemblyFileVersion("0.8.2137.8607")]
+[assembly: AssemblyInformationalVersion("v.0.8.2137.8607, commit: f3a99df90f764d8c2125a750ce8f1f35caaf118a")]
 [assembly: AssemblyCompany("Unknown6656")]
-[assembly: AssemblyCopyright("Copyright © 2018 - 2023, Unknown6656")]
+[assembly: AssemblyCopyright("Copyright © 2018 - 2024, Unknown6656")]
 [assembly: AssemblyProduct("AutoIt-Interpreter by Unknown6656")]
 [assembly: AssemblyTitle("autoit3")]
 
@@ -27,19 +27,19 @@ public static class __module__
     /// <summary>
     /// Development year(s).
     /// </summary>
-    public const string Year = "2018 - 2023";
+    public const string Year = "2018 - 2024";
     /// <summary>
     /// The interpreter's copyright information.
     /// </summary>
-    public const string Copyright = "Copyright © 2018 - 2023, Unknown6656";
+    public const string Copyright = "Copyright © 2018 - 2024, Unknown6656";
     /// <summary>
     /// The interpreter's current version.
     /// </summary>
-    public static Version? InterpreterVersion { get; } = Version.Parse("0.8.2136.8501");
+    public static Version? InterpreterVersion { get; } = Version.Parse("0.8.2137.8607");
     /// <summary>
     /// The Git hash associated with the current build.
     /// </summary>
-    public const string GitHash = "38aaf1a3d6beaf0b33fb94ead3ea9b69fe8a2a47";
+    public const string GitHash = "f3a99df90f764d8c2125a750ce8f1f35caaf118a";
     /// <summary>
     /// The name of the GitHub repository associated with <see cref="RepositoryURL"/>.
     /// </summary>
@@ -49,7 +49,7 @@ public static class __module__
     /// </summary>
     public const string RepositoryURL = "https://github.com/Unknown6656/AutoIt-Interpreter";
     /// <summary>
-    /// The date and time of the current build (2023-11-09 16:51:27.570).
+    /// The date and time of the current build (2024-03-03 23:40:44.661).
     /// </summary>
-    public static DateTime DateBuilt { get; } = DateTime.FromFileTimeUtc(0x01da1324997cfad7L);
+    public static DateTime DateBuilt { get; } = DateTime.FromFileTimeUtc(0x01da6dbbd428e27dL);
 }
