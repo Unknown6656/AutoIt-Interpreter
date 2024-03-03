@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<TargetFramework>net7.0-windows7.0</TargetFramework>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
+        <TargetFramework>net8.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <LangVersion>preview</LangVersion>
@@ -14,8 +14,8 @@
         <PackageReference Include="Unknown6656.TestRunner" Version="1.0.5" />
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj" />
-      <ProjectReference Include="..\..\AutoItParser\AutoItParser.fsproj" />
-      <ProjectReference Include="..\..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
+        <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj" />
+        <ProjectReference Include="..\..\AutoItParser\AutoItParser.fsproj" />
+        <ProjectReference Include="..\..\util\AutoIt3.Common\AutoIt3.Common.csproj" />
     </ItemGroup>
 </Project>
