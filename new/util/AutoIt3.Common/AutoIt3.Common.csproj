@@ -10,6 +10,6 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="EnvDTE" Version="17.7.37355" />
+        <PackageReference Include="EnvDTE" Version="17.9.37000" />
     </ItemGroup>
 </Project>
