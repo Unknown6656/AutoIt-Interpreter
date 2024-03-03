@@ -72,7 +72,7 @@
         <PackageReference Include="Lokad.ILPack" Version="0.2.0" />
         <PackageReference Include="Octokit" Version="10.0.0" />
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-        <PackageReference Include="Unknown6656.Core" Version="1.1.7" />
+        <PackageReference Include="Unknown6656.Core" Version="1.1.8" />
         <PackageReference Include="Unknown6656.Generics" Version="0.9.12" />
     </ItemGroup>
     <ItemGroup>

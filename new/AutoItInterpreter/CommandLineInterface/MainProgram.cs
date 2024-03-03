@@ -160,6 +160,24 @@ public static class MainProgram
     /// <returns>Return/exit code.</returns>
     public static int Start(string[] argv)
     {
+        if (!ConsoleExtensions.SupportsVTEscapeSequences)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("""
+            .--------------------------------------------------.
+            |                     WARNING!                     |
+            |                                                  |
+            | Your terminal does NOT support VT100/ANSI escape |
+            | sequences. This WILL lead to a severely degraded |
+            |      user experience. You have been warned.      |
+            '--------------------------------------------------'
+
+            """);
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("(Press any key to continue)");
+            Console.ReadKey(true);
+        }
+
         RawCMDLineArguments = argv;
 
         Stopwatch sw = new();
