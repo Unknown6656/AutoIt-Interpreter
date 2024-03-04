@@ -1,9 +1,10 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/7ql5ht899jtcwjw6?svg=true)](https://ci.appveyor.com/project/Unknown6656/autoit-interpreter)
 ![issues](https://img.shields.io/github/issues/Unknown6656/AutoIt-Interpreter)
-![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
-![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
 ![repo size](https://img.shields.io/github/repo-size/unknown6656/AutoIt-Interpreter)
 ![downloads](https://img.shields.io/github/downloads/unknown6656/AutoIt-Interpreter/total)
 ![license](https://img.shields.io/github/license/Unknown6656/AutoIt-Interpreter)
+![forks](https://img.shields.io/github/forks/Unknown6656/AutoIt-Interpreter)
+![stars](https://img.shields.io/github/stars/Unknown6656/AutoIt-Interpreter)
 
 <img alt="Banner image" src="new/artwork/banner.png" width="700"/><br/>
 <img alt="Banner image" src="new/artwork/banner-features.png" width="700"/>
