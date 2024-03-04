@@ -1,8 +1,14 @@
-version: 0.10.2154.8608
+################################################################
+# Auto-generated 2024-03-04 14:33:48.719                       #
+# ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION #
+################################################################
+#
+# git commit: 6ae6cf378da655cbddf3b82d6cbc4c509cf52fc6
+version: 0.10.2160.8608
 image: Visual Studio 2022
 configuration: Release
 before_build:
-- cmd: nuget restore
+- cmd: nuget restore "new/AutoItInterpreter.sln"
 build:
-    project: new/AutoItInterpreter.sln
+    project: "new/AutoItInterpreter.sln"
     verbosity: minimal

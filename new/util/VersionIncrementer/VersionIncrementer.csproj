@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <AssemblyName>incr</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Nullable>enable</Nullable>
         <Optimize>true</Optimize>
         <OutDir>$(SolutionDir)bin-util</OutDir>
         <StartupObject>VersionIncrementer.Program</StartupObject>

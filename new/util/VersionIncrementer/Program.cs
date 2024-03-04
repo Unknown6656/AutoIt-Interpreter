@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Linq;
 using System.IO;
 using System;
 
@@ -13,24 +14,76 @@ public static class Program
     public const int START_YEAR = 2018;
 
 
+    public static FileInfo? GetSLN(FileInfo csproj)
+    {
+        DirectoryInfo? dir = csproj.Directory;
+        string relative;
+
+        while (dir is { })
+        {
+            relative = Path.GetRelativePath(dir.FullName, csproj.FullName);
+
+            foreach (FileInfo sln in dir.GetFiles("*.sln", SearchOption.TopDirectoryOnly))
+                try
+                {
+                    using FileStream fs = sln.OpenRead();
+                    using StreamReader sr = new(fs);
+
+                    string content = sr.ReadToEnd();
+
+                    if (content.Contains(relative, StringComparison.OrdinalIgnoreCase))
+                        return sln;
+                }
+                catch
+                {
+                }
+
+            dir = dir.Parent;
+        }
+
+        return null;
+    }
+
+    public static DirectoryInfo? GetRepoRootDir(FileInfo csproj)
+    {
+        DirectoryInfo? dir = csproj.Directory;
+
+        while (dir is { } && !dir.GetDirectories().Any(d => d.Name == ".git"))
+            dir = dir.Parent;
+
+        return dir;
+    }
+
     public static void Main(string[] args)
     {
-        args[0] = args[0].TrimEnd('\\', '/');
+        FileInfo path_csproj = new(args[0]);
 
-        string metapath = args[0] + "/../AssemblyInfo.cs";
-        string verspath = args[0] + "/../version.txt";
-        string appveyorpath = args[0] + "/../../../appveyor.yml";
+        if (!path_csproj.Exists)
+            throw new FileNotFoundException("The specified .csproj file does not exist.", path_csproj.FullName);
+
+        FileInfo? path_sln = GetSLN(path_csproj);
+
+        if (path_sln is null)
+            throw new FileNotFoundException("The .csproj file does not belong to any .sln file.", path_csproj.FullName);
+
+        DirectoryInfo dir_project = path_csproj.Directory!;
+        DirectoryInfo dir_solution = path_sln.Directory!;
+        DirectoryInfo dir_reporoot = GetRepoRootDir(path_csproj)!;
+
+        string metapath = Path.Combine(dir_project.FullName, "AssemblyInfo.cs");
+        string verspath = Path.Combine(dir_project.FullName, "version.txt");
+        string appveyorpath = Path.Combine(dir_reporoot.FullName, "appveyor.yml");
         string githash = "<unknown>";
         string vers = "0.0.0.0";
 
         if (File.Exists(verspath))
             vers = File.ReadAllText(verspath).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
 
-        if (!Version.TryParse(vers, out Version v1))
-            v1 = new Version(0, 0, 0, 0);
+        if (!Version.TryParse(vers, out Version? version_curr))
+            version_curr = new Version(0, 0, 0, 0);
 
         DateTime now = DateTime.Now;
-        Version v2 = new(v1.Major, v1.Minor, v1.Build + 1, (now.Year - 2000) * 356 + now.DayOfYear);
+        Version version_next = new(version_curr.Major, version_curr.Minor, version_curr.Build + 1, (now.Year - 2000) * 356 + now.DayOfYear);
 
         try
         {
@@ -40,7 +93,7 @@ public static class Program
                 {
                     FileName = "git",
                     Arguments = "rev-parse HEAD",
-                    WorkingDirectory = new FileInfo(verspath).Directory.FullName,
+                    WorkingDirectory = dir_reporoot.FullName,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
@@ -63,7 +116,7 @@ public static class Program
         string year = START_YEAR < now.Year ? $"{START_YEAR} - {now.Year}" : START_YEAR.ToString();
         string copyright = $"Copyright © {year}, {REPOSITORY_AUTHOR}";
 
-        File.WriteAllText(verspath, $"{v2}\n{githash}");
+        File.WriteAllText(verspath, $"{version_next}\n{githash}");
         File.WriteAllText(metapath, $$"""
 
         //////////////////////////////////////////////////////////////////////////
@@ -74,9 +127,9 @@ public static class Program
         using System.Reflection;
         using System;
 
-        [assembly: AssemblyVersion("{{v2}}")]
-        [assembly: AssemblyFileVersion("{{v2}}")]
-        [assembly: AssemblyInformationalVersion("v.{{v2}}, commit: {{githash}}")]
+        [assembly: AssemblyVersion("{{version_next}}")]
+        [assembly: AssemblyFileVersion("{{version_next}}")]
+        [assembly: AssemblyInformationalVersion("v.{{version_next}}, commit: {{githash}}")]
         [assembly: AssemblyCompany("{{REPOSITORY_AUTHOR}}")]
         [assembly: AssemblyCopyright("{{copyright}}")]
         [assembly: AssemblyProduct("{{REPOSITORY_NAME}} by {{REPOSITORY_AUTHOR}}")]
@@ -102,7 +155,7 @@ public static class Program
             /// <summary>
             /// The interpreter's current version.
             /// </summary>
-            public static Version? InterpreterVersion { get; } = Version.Parse("{{v2}}");
+            public static Version? InterpreterVersion { get; } = Version.Parse("{{version_next}}");
             /// <summary>
             /// The Git hash associated with the current build.
             /// </summary>
@@ -123,13 +176,19 @@ public static class Program
 
         """);
         File.WriteAllText(appveyorpath, $"""
-        version: {v2}
+        ################################################################
+        # Auto-generated {now:yyyy-MM-dd HH:mm:ss.fff}                       #
+        # ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION #
+        ################################################################
+        #
+        # git commit: {githash}
+        version: {version_next}
         image: Visual Studio 2022
         configuration: Release
         before_build:
-        - cmd: nuget restore
+        - cmd: nuget restore "{Path.GetRelativePath(dir_reporoot.FullName, path_sln.FullName).Replace('\\', '/')}"
         build:
-            project: new/AutoItInterpreter.sln
+            project: "{Path.GetRelativePath(dir_reporoot.FullName, path_sln.FullName).Replace('\\', '/')}"
             verbosity: minimal
         """);
     }
