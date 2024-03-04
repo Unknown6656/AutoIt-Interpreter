@@ -8,9 +8,11 @@ namespace VersionIncrementer;
 
 public static class Program
 {
+    public const string GITHUB_APPVEYOR_AUTH_TOKEN = ""; // <-- insert your GitHub AppVeyor auth token here
     public const string REPOSITORY_AUTHOR = "Unknown6656";
     public const string REPOSITORY_NAME = "AutoIt-Interpreter";
     public const string REPOSITORY_URL = $"https://github.com/{REPOSITORY_AUTHOR}/{REPOSITORY_NAME}";
+    private const string APPVEYOR_PR_TEMPLATE = @"{{#passed}}:white_check_mark:{{/passed}}{{#failed}}:x:{{/failed}} [Build {{&projectName}} {{buildVersion}} {{status}}]({{buildUrl}}) (commit {{commitUrl}} by @{{&commitAuthorUsername}})";
     public const int START_YEAR = 2018;
 
 
@@ -190,6 +192,11 @@ public static class Program
         build:
             project: "{Path.GetRelativePath(dir_reporoot.FullName, path_sln.FullName).Replace('\\', '/')}"
             verbosity: minimal
+        notifications:
+        - provider: GitHubPullRequest
+          # auth_token:
+          #   secure: "{GITHUB_APPVEYOR_AUTH_TOKEN}"
+          template: "{APPVEYOR_PR_TEMPLATE}"
         """);
     }
 }
