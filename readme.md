@@ -16,9 +16,9 @@ The aim of this repository is to provide an AutoIt3 Interpreter for other platfo
 
 This repository contains _two_ AutoIt-Interpreters:
 
- 1. [The newer (.NET5-based) **extensible AutoIt3 Interpreter**.](new/readme.md)
+ 1. [The newer (.NET8-based) **extensible AutoIt3 Interpreter**.](new/readme.md)
     <br/>
-    This Interpreter is based purely on .NET5-conform C#/F# code and primarily supports the AutoIt3-specification.
+    This Interpreter is based purely on .NET8-conform C#/F# code and primarily supports the AutoIt3-specification.
     The Interpreter does support a plugin-based extension system in order to provide a custom syntax or framework functionality to the interpreter.
 
  1. [The "old" **AutoIt++ Interpiler** written in 2018 (discontinued).](old/readme.md)
@@ -35,7 +35,7 @@ Category | [new AutoIt3 Interpreter](new/readme.md) | [old AutoIt++ Interpiler](
 Supported Language| Strict AutoIt 3<br/>with extension support | AutoIt 3<br/>AutoIt++ 
 Works as an ... | Interpreter | Interpiler/Transpiler:<br/>60% compiler, 30% interpreter, 10% magic 
 Written in | C#, F# | C#, F#
-Target Framework | .NET 5 and newer | .NET Core 2.1
+Target Framework | .NET 8 and newer | .NET Core 2.1
 Works on Windows | Yes | Yup
 Works on Linux | Yes | Kinda
 Works on MacOs | Yes | Kinda
@@ -45,7 +45,7 @@ Status | Beta, [In development](https://github.com/Unknown6656/AutoIt-Interprete
 
  - [Wiki](https://github.com/Unknown6656/AutoIt-Interpreter/wiki)
  - [Code Overview](./new)
- - [.NET 5 developement progress](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1)
+ - [.NET 8 developement progress](https://github.com/Unknown6656/AutoIt-Interpreter/projects/1)
  - [Issues](https://github.com/Unknown6656/AutoIt-Interpreter/issues)
  - [Official AutoIt3 documentation](https://www.autoitscript.com/autoit3/docs/)
 
