@@ -160,6 +160,8 @@ public static class MainProgram
     /// <returns>Return/exit code.</returns>
     public static int Start(string[] argv)
     {
+        ConsoleExtensions.ThrowOnInvalidConsoleMode = false;
+
         if (!ConsoleExtensions.SupportsVTEscapeSequences)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
