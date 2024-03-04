@@ -126,6 +126,8 @@ public static class Program
         version: {v2}
         image: Visual Studio 2022
         configuration: Release
+        before_build:
+        - cmd: nuget restore
         build:
             project: new/AutoItInterpreter.sln
             verbosity: minimal

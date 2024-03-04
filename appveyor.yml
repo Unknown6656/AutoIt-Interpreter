@@ -1,6 +1,8 @@
-version: 0.10.2153.8608
+version: 0.10.2154.8608
 image: Visual Studio 2022
 configuration: Release
+before_build:
+- cmd: nuget restore
 build:
     project: new/AutoItInterpreter.sln
     verbosity: minimal
