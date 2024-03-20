@@ -1,6 +1,7 @@
 ﻿using System.Windows.Forms;
 using System.IO;
 using System;
+using System.Threading;
 
 using Unknown6656.Mathematics;
 using Unknown6656.Generics;
@@ -8,6 +9,11 @@ using Unknown6656.Generics;
 using Unknown6656.AutoIt3.Extensibility;
 using Unknown6656.AutoIt3.Runtime.Native;
 using Unknown6656.AutoIt3.Runtime;
+using System.Drawing;
+using static Microsoft.FSharp.Core.ByRefKinds;
+using Microsoft.FSharp.Core;
+using System.Diagnostics.Eventing.Reader;
+//using Plugin.Au3Framework.WindowsSpecific;
 
 [assembly: AutoIt3Plugin]
 
@@ -29,6 +35,12 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
 
 
             RegisterFunction(nameof(GUICreate), 1, 8, GUICreate, Variant.Default, Variant.Default, -1, -1, -1, -1, Variant.Zero);
+
+            RegisterFunction(nameof(MouseGetPos), 0, 1, MouseGetPos, OS.Windows);
+            RegisterFunction(nameof(MouseMove), 2, 3, MouseMove, OS.Windows);
+            RegisterFunction(nameof(MouseClick), 1, 5, MouseClick, OS.Windows);
+            RegisterFunction(nameof(MouseDown), 1, MouseDown, OS.Windows);
+            RegisterFunction(nameof(MouseUp), 1, MouseUp, OS.Windows);
         }
 
         private static FunctionReturnValue ClipGet(CallFrame frame, Variant[] args)
@@ -211,6 +223,154 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Au3Framework
         //private static FunctionReturnValue GUI(CallFrame frame, Variant[] args)
         //{
         //}
+
+        // TODO relative coords
+        private static FunctionReturnValue MouseGetPos(CallFrame frame, Variant[] args)
+        {
+            Point pos = new Point(Cursor.Position.X, Cursor.Position.Y);
+            if (args[0].IsNull)
+                return Variant.FromArray(frame.Interpreter, pos.X, pos.Y);
+            else if (args[0] == 0)
+                return Variant.FromNumber(pos.X);
+            else if (args[0] == 1)
+                return Variant.FromNumber(pos.Y);
+            else
+                return FunctionReturnValue.Error(1);
+        }
+
+        private static FunctionReturnValue MouseMove(CallFrame frame, Variant[] args)
+        {
+            // TODO if args.length is 3, move mouse at the given speed.  Create thread?
+            if (args[0].Type is VariantType.Number && args[1].Type is VariantType.Number)
+            {
+                Cursor.Position = new Point((int)args[0].ToNumber(), (int)args[1].ToNumber());
+                /*
+                NativeInterop.POINT p = new NativeInterop.POINT((int)args[0].ToNumber(), (int)args[1].ToNumber());
+                IntPtr desktopWinHandle = NativeInterop.GetDesktopWindow();
+                NativeInterop.ClientToScreen(desktopWinHandle, ref p);
+                NativeInterop.SetCursorPos(p.x, p.y);
+                */
+                return FunctionReturnValue.Success(1);
+            }
+            return FunctionReturnValue.Error(1);
+        }
+
+        private const UInt32 MOUSEEVENTF_MOVE = 0x0001;
+        private const UInt32 MOUSEEVENTF_LEFTDOWN = 0x0002;
+        private const UInt32 MOUSEEVENTF_LEFTUP = 0x0004;
+        private const UInt32 MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+        private const UInt32 MOUSEEVENTF_MIDDLEUP = 0x0040;
+        private const UInt32 MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        private const UInt32 MOUSEEVENTF_RIGHTUP = 0x0010;
+        private const UInt32 MOUSEEVENTF_ABSOLUTE = 0x8000;
+
+        // TODO implement MouseClickDownDelay (Option) to set time between down and up
+        private static FunctionReturnValue MouseClick(CallFrame frame, Variant[] args)
+        {
+            // TODO if args.length is 5, specify speed?  Of movement?
+            UInt32 button;// = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+            uint x;
+            uint y;
+            int repetitions;
+
+            if (string.Equals(args[0].ToString(), "middle", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP;
+            }
+            else if (string.Equals(args[0].ToString(), "right", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP;
+            }
+            else if (string.Equals(args[0].ToString(), "left", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+            }
+            else {
+                return FunctionReturnValue.Error(1);
+            }
+
+
+            if (args[1].IsNull)
+                x = (uint)Cursor.Position.X;
+            else
+                x = (uint)(args[1].ToNumber());
+
+            if (args[2].IsNull)
+                y = (uint)Cursor.Position.Y;
+            else
+                y = (uint)(args[2].ToNumber());
+
+            if (args[3].IsNull)
+                repetitions = 1;
+            else
+                repetitions = (int)(args[3].ToNumber());
+
+            Cursor.Position = new Point((int)x, (int)y);
+            for (int t = 0; t < repetitions; t++)
+            {
+                // MOUSEEVENTF_ABSOLUTE needs to do the 65560/screenwidth * x thing
+                // without, MOUSEEVENT_MOVE seems to do in pixels (relative)
+                NativeInterop.mouse_event(button, x, y, 0, 0);
+                Thread.Sleep(100);
+            }
+            return FunctionReturnValue.Success(1);
+        }
+
+        private static FunctionReturnValue MouseDown(CallFrame frame, Variant[] args)
+        {
+            UInt32 button;
+            uint x = (uint)Cursor.Position.X;
+            uint y = (uint)Cursor.Position.Y;
+
+            if (string.Equals(args[0].ToString(), "middle", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_MIDDLEDOWN;
+            }
+            else if (string.Equals(args[0].ToString(), "right", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_RIGHTDOWN;
+            }
+            else if (string.Equals(args[0].ToString(), "left", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_LEFTDOWN;
+            }
+            else
+            {
+                return FunctionReturnValue.Error(1);
+            }
+
+
+            NativeInterop.mouse_event(button, x, y, 0, 0);
+            return FunctionReturnValue.Success(1);
+        }
+
+        private static FunctionReturnValue MouseUp(CallFrame frame, Variant[] args)
+        {
+            UInt32 button;
+            uint x = (uint)Cursor.Position.X;
+            uint y = (uint)Cursor.Position.Y;
+
+            if (string.Equals(args[0].ToString(), "middle", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_MIDDLEUP;
+            }
+            else if (string.Equals(args[0].ToString(), "right", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_RIGHTUP;
+            }
+            else if (string.Equals(args[0].ToString(), "left", StringComparison.InvariantCultureIgnoreCase))
+            {
+                button = MOUSEEVENTF_LEFTUP;
+            }
+            else
+            {
+                return FunctionReturnValue.Error(1);
+            }
+
+
+            NativeInterop.mouse_event(button, x, y, 0, 0);
+            return FunctionReturnValue.Success(1);
+        }
 
         public sealed class WindowWrapper
             : IWin32Window
