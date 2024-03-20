@@ -69,8 +69,8 @@ namespace Unknown6656.AutoIt3
         [DebuggerDisplay("{" + nameof(Type) + "}: {" + nameof(Data) + "}")]
         public readonly struct COMData
         {
-            private static readonly List<(Type expected, Func<object, uint> func)> _converters_from_com = new();
-            private static readonly List<COMResolver<object>> _converters_to_com = new();
+            private static readonly List<(Type expected, Func<object, uint> func)> _converters_from_com = [];
+            private static readonly List<COMResolver<object>> _converters_to_com = [];
 
 
             //public static ICOMConverter<T> Converter { get; set; } = DefaultCOMConverter<T>.Instance;
@@ -312,25 +312,25 @@ namespace Unknown6656.AutoIt3
                 return new COMData(type, data);
             }
 
-            public static COMData FromBool(bool value) => new COMData(COMDataType.Bool, value);
+            public static COMData FromBool(bool value) => new(COMDataType.Bool, value);
 
-            public static COMData FromInt(int value) => new COMData(COMDataType.Int, value);
+            public static COMData FromInt(int value) => new(COMDataType.Int, value);
 
-            public static COMData FromByte(byte value) => new COMData(COMDataType.Byte, value);
+            public static COMData FromByte(byte value) => new(COMDataType.Byte, value);
 
-            public static COMData FromShort(short value) => new COMData(COMDataType.Short, value);
+            public static COMData FromShort(short value) => new(COMDataType.Short, value);
 
-            public static COMData FromLong(long value) => new COMData(COMDataType.Long, value);
+            public static COMData FromLong(long value) => new(COMDataType.Long, value);
 
-            public static COMData FromFloat(float value) => new COMData(COMDataType.Float, value);
+            public static COMData FromFloat(float value) => new(COMDataType.Float, value);
 
-            public static COMData FromDouble(double value) => new COMData(COMDataType.Double, value);
+            public static COMData FromDouble(double value) => new(COMDataType.Double, value);
 
-            public static COMData FromString(string value) => new COMData(COMDataType.String, value);
+            public static COMData FromString(string value) => new(COMDataType.String, value);
 
-            public static COMData FromArray(IEnumerable value) => new COMData(COMDataType.String, value.Cast<object?>().Select(FromArbitrary).ToArray());
+            public static COMData FromArray(IEnumerable value) => new(COMDataType.String, value.Cast<object?>().Select(FromArbitrary).ToArray());
 
-            public static COMData FromCOMObjectID(uint id) => new COMData(COMDataType.COM, id);
+            public static COMData FromCOMObjectID(uint id) => new(COMDataType.COM, id);
 
             public static COMData FromArbitrary(object? value) => value switch
             {

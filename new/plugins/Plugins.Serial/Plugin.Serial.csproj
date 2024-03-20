@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<TargetFramework>net7.0-windows7.0</TargetFramework>
         <Nullable>enable</Nullable>
         <OutDir>$(SolutionDir)bin/plugins</OutDir>
         <LangVersion>preview</LangVersion>
@@ -16,10 +16,10 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="System.IO.Ports" Version="6.0.0-preview.2.21154.6" />
+        <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\AutoItInterpreter\AutoItInterpreter.csproj">
+        <ProjectReference Include="../../AutoItInterpreter/AutoItInterpreter.csproj">
             <Private>false</Private>
             <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
         </ProjectReference>

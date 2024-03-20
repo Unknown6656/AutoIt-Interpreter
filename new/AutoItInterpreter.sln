@@ -17,13 +17,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{60D6A33F-B
 		test\.gitignore = test\.gitignore
 		test\header-1.au3 = test\header-1.au3
 		test\header-2.au3 = test\header-2.au3
+		test\hello-world.au3 = test\hello-world.au3
 		test\NPCBrainibot.au3 = test\NPCBrainibot.au3
 		test\program1.au3 = test\program1.au3
 		test\program2.au3 = test\program2.au3
+		test\program3.au3 = test\program3.au3
 		test\test.au3 = test\test.au3
 		test\unittest-byref.au3 = test\unittest-byref.au3
+		test\unittest-cached.au3 = test\unittest-cached.au3
 		test\unittest-conversions.au3 = test\unittest-conversions.au3
 		test\unittest-loop.au3 = test\unittest-loop.au3
+		test\unittest-multithreading.au3 = test\unittest-multithreading.au3
+		test\unittest-netinterop-syntax.au3 = test\unittest-netinterop-syntax.au3
+		test\unittest-netinterop.au3 = test\unittest-netinterop.au3
+		test\unittest-scoping.au3 = test\unittest-scoping.au3
+		test\unittest-static.au3 = test\unittest-static.au3
+		test\unittest-stringformat.au3 = test\unittest-stringformat.au3
+		test\unittest-vartypes.au3 = test\unittest-vartypes.au3
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "util", "util", "{FF40DCDE-4803-4B83-9E99-4859187CBC5A}"
@@ -58,8 +68,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{CCA3DC14-871
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.Common", "util\AutoIt3.Common\AutoIt3.Common.csproj", "{84894845-C1AF-4A45-9026-C5C30E31E43D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.GUI.Server", "util\AutoIt3.GUI.Server\AutoIt3.GUI.Server.csproj", "{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoIt3.WinAPI.Server", "util\AutoIt3.WinAPI.Server\AutoIt3.WinAPI.Server.csproj", "{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}"
 EndProject
@@ -145,15 +153,6 @@ Global
 		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Release|x64.Build.0 = Release|Any CPU
 		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Release|x86.ActiveCfg = Release|Any CPU
 		{84894845-C1AF-4A45-9026-C5C30E31E43D}.Release|x86.Build.0 = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|x64.ActiveCfg = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|x64.Build.0 = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|x86.ActiveCfg = Release|Any CPU
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1}.Release|x86.Build.0 = Release|Any CPU
 		{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -232,7 +231,6 @@ Global
 		{BB97AD38-978A-437C-AAFB-47CC9DD16FED} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{3A2D5C5B-FA91-49C7-8156-79B0DEB0FAFB} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{84894845-C1AF-4A45-9026-C5C30E31E43D} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
-		{2FF23F83-7093-4DE3-BB67-A0C89DB7E2D1} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{5098CD4D-97FE-48B4-A180-5C2AFAC1AACD} = {FF40DCDE-4803-4B83-9E99-4859187CBC5A}
 		{8C306FB4-8647-4FB0-A4A0-D37BBEFCA794} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}
 		{7B511104-4D4E-4B2E-9276-095A4D476F11} = {60D6A33F-BC91-4317-B552-6366DB4E2D6A}

@@ -159,6 +159,7 @@ module Cleanup =
         | AnyExpression(Binary(Member membr, EqualCaseInsensitive, source)) -> (MemberAssignemnt membr, Assign, source)
         | AnyExpression e -> (VariableAssignment VARIABLE.Discard, Assign, e)
         | AssignmentExpression e -> e
+        // TODO : cover missing expression types
         |> DecomposeAssignmentExpression
         |> FoldAssignment
         |> fun (target, _, expr) -> struct(target, expr)

@@ -12,9 +12,9 @@ type VARIABLE (name : string) =
     member _.Name = name
     member _.IsDiscard = name = "_"
     override _.ToString() = "$" + name
-    override _.GetHashCode() = name.GetHashCode StringComparison.InvariantCultureIgnoreCase
+    override _.GetHashCode() = name.GetHashCode StringComparison.OrdinalIgnoreCase
     override _.Equals o = match o with
-                          | :? VARIABLE as m -> name.Equals(m.Name, StringComparison.InvariantCultureIgnoreCase)
+                          | :? VARIABLE as m -> name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)
                           | _ -> false
     static member Discard = VARIABLE "_"
 
@@ -22,9 +22,9 @@ type MACRO (name : string) =
     let name = name.TrimStart '@'
     member _.Name = name
     override _.ToString() = "@" + name
-    override _.GetHashCode() = name.GetHashCode StringComparison.InvariantCultureIgnoreCase
+    override _.GetHashCode() = name.GetHashCode StringComparison.OrdinalIgnoreCase
     override _.Equals o = match o with
-                          | :? MACRO as m -> name.Equals(m.Name, StringComparison.InvariantCultureIgnoreCase)
+                          | :? MACRO as m -> name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)
                           | _ -> false
 
 type LITERAL =

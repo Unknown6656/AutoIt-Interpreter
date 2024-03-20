@@ -18,7 +18,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         , ICOMResolver<COMWrapper>
     {
         private readonly ConcurrentDictionary<uint, COMWrapper> _com_objects = new();
-        private readonly object _mutex = new object();
+        private readonly object _mutex = new();
         private volatile uint _nextid = 0;
 
         public uint[] IDsInUse => _com_objects.Keys.ToArray();
@@ -277,7 +277,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             if (_com_objects.TryGetValue(id, out COMWrapper? com))
                 return com.GetType().FindMembers(MemberTypes.All, BindingFlags.Public | BindingFlags.Instance, null, null).Select(m => m.Name).ToArray();
 
-            return Array.Empty<string>();
+            return [];
         }
 
         internal object? Cast(object? value, Type target_type)
@@ -341,7 +341,7 @@ namespace Unknown6656.AutoIt3.COM.Server
         private static readonly MethodInfo _set;
         private static readonly MethodInfo _release;
 
-        private readonly HashSet<COMWrapper> _objects = new HashSet<COMWrapper>();
+        private readonly HashSet<COMWrapper> _objects = [];
         private readonly MemberInfo[] _cached_members;
 
         #endregion
@@ -388,7 +388,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             ObjectType = type;
             IUnknownPtr = Marshal.GetIUnknownForObject(com);
 
-            List<MemberInfo> members = new List<MemberInfo>();
+            List<MemberInfo> members = [];
 
             do
             {
@@ -403,7 +403,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
             while (type is { } && type != typeof(object));
 
-            _cached_members = members.ToArray();
+            _cached_members = [.. members];
 
             Server.DebugPrint("debug.com.wrapper.created", (long)IUnknownPtr, ObjectType);
         }
@@ -481,7 +481,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 if (FindMembers(INDEX_NAME, MemberFindMode.Getter) is { Count: > 0 } match)
                 {
-                    object? data = GetMember(match[0], new[] { index.Data });
+                    object? data = GetMember(match[0], [index.Data]);
 
                     value = COMData.FromArbitrary(data);
 
@@ -501,7 +501,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             {
                 if (FindMembers(INDEX_NAME, MemberFindMode.Setter) is { Count: > 0 } match)
                 {
-                    SetMember(match[0], value.Data, new[] { index.Data });
+                    SetMember(match[0], value.Data, [index.Data]);
 
                     return true;
                 }
@@ -631,11 +631,11 @@ namespace Unknown6656.AutoIt3.COM.Server
             List<MemberInfo> members = _cached_members.Where(m => m.Name == name).ToList();
 
             if (members.Count == 0)
-                members.AddRange(_cached_members.Where(m => string.Equals(name, m.Name, StringComparison.InvariantCultureIgnoreCase)));
+                members.AddRange(_cached_members.Where(m => string.Equals(name, m.Name, StringComparison.OrdinalIgnoreCase)));
 
             if (members.Count == 0)
             {
-                Regex regex = new Regex("^(" + string.Join("|", new[]
+                Regex regex = new("^(" + string.Join("|", new[]
                 {
                     (MemberFindMode.EventAdd, "add_"),
                     (MemberFindMode.EventRemove, "remove_"),
@@ -773,7 +773,7 @@ namespace Unknown6656.AutoIt3.COM.Server
 
                     // TODO : force typecast for [com]
 
-                    COMWrapper wrapper = new COMWrapper(Server, com, type);
+                    COMWrapper wrapper = new(Server, com, type);
 
                     _objects.Add(wrapper);
 
@@ -797,7 +797,7 @@ namespace Unknown6656.AutoIt3.COM.Server
             }
         }
 
-        public static COMWrapper FromGUID(COMServer server, Guid guid) => new COMWrapper(server, guid);
+        public static COMWrapper FromGUID(COMServer server, Guid guid) => new(server, guid);
 
         private static bool IsComObject(object o) => o.GetType().Name == "__ComObject";
 

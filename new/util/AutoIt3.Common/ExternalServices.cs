@@ -71,28 +71,28 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             string pipe_odata = argv[1];
             string pipe_debug = argv[2];
 
-            LanguageLoader loader = new LanguageLoader();
+            LanguageLoader loader = new();
 
             loader.LoadLanguagePackFromYAMLFile(new FileInfo(argv[3]));
 
-            T provider = new T { UILanguage = loader.CurrentLanguage };
+            T provider = new() { UILanguage = loader.CurrentLanguage };
             int exitcode;
 
             try
             {
                 using Task debug_task = Task.Factory.StartNew(async delegate
                 {
-                    using AnonymousPipeClientStream debug = new AnonymousPipeClientStream(PipeDirection.Out, pipe_debug);
+                    using AnonymousPipeClientStream debug = new(PipeDirection.Out, pipe_debug);
 
                     provider._debug_writer = new StreamWriter(debug) { AutoFlush = true };
 
                     while (provider._running)
                         await Task.Delay(100);
                 });
-                using AnonymousPipeClientStream pipe_in = new AnonymousPipeClientStream(PipeDirection.In, pipe_idata);
-                using AnonymousPipeClientStream pipe_out = new AnonymousPipeClientStream(PipeDirection.Out, pipe_odata);
-                using BinaryReader reader = new BinaryReader(pipe_in);
-                using BinaryWriter writer = new BinaryWriter(pipe_out);
+                using AnonymousPipeClientStream pipe_in = new(PipeDirection.In, pipe_idata);
+                using AnonymousPipeClientStream pipe_out = new(PipeDirection.Out, pipe_odata);
+                using BinaryReader reader = new(pipe_in);
+                using BinaryWriter writer = new(pipe_out);
 
                 provider.DataWriter = writer;
                 provider.DataReader = reader;
@@ -122,7 +122,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
             {
                 exitcode = ex.HResult;
 
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
 
                 while (ex is { })
                 {
@@ -204,7 +204,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                 _process_monitor = Task.Factory.StartNew(ProcessMonitorTask);
                 _debug_monitor = Task.Factory.StartNew(delegate
                 {
-                    using StreamReader _debug_reader = new StreamReader(_pipe_debug);
+                    using StreamReader _debug_reader = new(_pipe_debug);
 
                     while (ServerProcess?.HasExited is false)
                         Printer.Print(ChannelName + "-Provider", _debug_reader.ReadLine().Trim());
@@ -422,7 +422,7 @@ namespace Unknown6656.AutoIt3.Runtime.ExternalServices
                     {
                         string name = Path.GetFileName(instance?.Solution.FullName);
 
-                        if (string.Equals(name, solutionName, StringComparison.InvariantCultureIgnoreCase))
+                        if (string.Equals(name, solutionName, StringComparison.OrdinalIgnoreCase))
                             return proc;
                     }
                     catch

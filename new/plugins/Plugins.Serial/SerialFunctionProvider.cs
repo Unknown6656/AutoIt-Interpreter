@@ -14,7 +14,7 @@ namespace Unknown6656.AutoIt3.Extensibility.Plugins.Serial
         public SerialFunctionProvider(Interpreter interpreter)
             : base(interpreter)
         {
-            RegisterFunction(nameof(SerialOpen), 2, 5, SerialOpen, new Variant[] { (int)Parity.None, 8, (int)StopBits.One });
+            RegisterFunction(nameof(SerialOpen), 2, 5, SerialOpen, [(int)Parity.None, 8, (int)StopBits.One]);
             RegisterFunction(nameof(SerialClose), 1, SerialClose);
         }
 

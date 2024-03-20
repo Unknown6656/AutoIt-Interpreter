@@ -11,7 +11,7 @@ namespace Unknown6656.AutoIt3.Localization
 {
     public sealed class LanguageLoader
     {
-        private readonly Dictionary<string, LanguagePack> _packs = new();
+        private readonly Dictionary<string, LanguagePack> _packs = [];
 
         public string[] LoadedLanguageCodes => _packs.Keys.ToArray();
 
@@ -22,7 +22,7 @@ namespace Unknown6656.AutoIt3.Localization
 
         public void LoadLanguagePackFromAssembly(Assembly assembly, string @namespace, bool overwrite_existing = true)
         {
-            Regex regex_json = new Regex($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            Regex regex_json = new($@"^.+\.{@namespace}\.(lang)?-*(?<code>\w+)-*(lang)?\.json$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
             foreach ((string? code, string name) in from res in assembly.GetManifestResourceNames()
                                                     let match = regex_json.Match(res)
@@ -33,7 +33,7 @@ namespace Unknown6656.AutoIt3.Localization
                     using Stream? resource = assembly.GetManifestResourceStream(name);
 
                     if (resource is { })
-                        using (StreamReader? rd = new StreamReader(resource))
+                        using (StreamReader? rd = new(resource))
                             LoadLanguagePackFromYAML(assembly.Location, rd.ReadToEnd(), overwrite_existing);
                 }
                 catch
@@ -91,9 +91,9 @@ namespace Unknown6656.AutoIt3.Localization
 
     public sealed class LanguagePack
     {
-        private static readonly Regex REGEX_YAML = new Regex(@"^(?<indent> *)(?<quote>""|)(?<key>[^"":]+)\k<quote> *: *(?<value>""(?<string>.*)""|true|false|[+\-]\d+|[+\-]0x[0-9a-f]+|null)? *(#.*)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex REGEX_ESCAPE = new Regex(@"\\(?<esc>[rntv0baf\\]|[xu][0-9a-fA-F]{1,4})", RegexOptions.Compiled);
-        private static readonly Regex REGEX_QUOTE = new Regex(@"""""", RegexOptions.Compiled);
+        private static readonly Regex REGEX_YAML = new(@"^(?<indent> *)(?<quote>""|)(?<key>[^"":]+)\k<quote> *: *(?<value>""(?<string>.*)""|true|false|[+\-]\d+|[+\-]0x[0-9a-f]+|null)? *(#.*)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex REGEX_ESCAPE = new(@"\\(?<esc>[rntv0baf\\]|[xu][0-9a-fA-F]{1,4})", RegexOptions.Compiled);
+        private static readonly Regex REGEX_QUOTE = new(@"""""", RegexOptions.Compiled);
 
         private readonly IDictionary<string, string> _strings;
 
@@ -118,7 +118,7 @@ namespace Unknown6656.AutoIt3.Localization
             formatted = null;
             key = "strings." + key;
 
-            if (_strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value is string fmt_str)
+            if (_strings?.FirstOrDefault(kvp => kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value is string fmt_str)
             {
                 int argc = Regex.Matches(fmt_str, @"\{(?<num>\d+)\}")
                                 .Cast<Match>()
@@ -147,8 +147,8 @@ namespace Unknown6656.AutoIt3.Localization
                                  .Replace("\0", "")
                                  .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-            List<(int level, string path)> scope = new();
-            Dictionary<string, string> dict = new();
+            List<(int level, string path)> scope = [];
+            Dictionary<string, string> dict = [];
 
             foreach (string line in lines)
                 if (REGEX_YAML.Match(line) is { Success: true, Groups: GroupCollection groups })
@@ -178,7 +178,7 @@ namespace Unknown6656.AutoIt3.Localization
 
         private static string ParseString(string value)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             while (value.Length > 0)
                 if (REGEX_ESCAPE.Match(value) is { Success: true } m_esc)

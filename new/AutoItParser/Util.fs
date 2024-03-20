@@ -8,9 +8,9 @@ type Associativity =
 [<AutoOpen>]
 module Util =
     let inline (?) a b c = if a then b else c
-    
+
     let inline (|>>) (a, b) f = f a, f b
-    
+
     let inline (|>>>) (a, b, c) f = f a, f b, f c
 
     let (|As|_|) (p:'T) : 'U option =

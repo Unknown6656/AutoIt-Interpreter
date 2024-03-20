@@ -1,0 +1,19 @@
+################################################################
+# Auto-generated 2024-03-04 15:05:14.303                       #
+# ANY CHANGES TO THIS DOCUMENT WILL BE LOST UPON RE-GENERATION #
+################################################################
+#
+# git commit: 0940b4704cb8d22103d080dad91683ac3d9ef0b8
+version: 0.10.2163.8608
+image: Visual Studio 2022
+configuration: Release
+before_build:
+- cmd: nuget restore "new/AutoItInterpreter.sln"
+build:
+    project: "new/AutoItInterpreter.sln"
+    verbosity: minimal
+notifications:
+- provider: GitHubPullRequest
+  # auth_token:
+  #   secure: ""
+  template: "{{#passed}}:white_check_mark:{{/passed}}{{#failed}}:x:{{/failed}} [Build {{&projectName}} {{buildVersion}} {{status}}]({{buildUrl}}) (commit {{commitUrl}} by @{{&commitAuthorUsername}})"
