@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net8.0-windows</TargetFramework>
         <EnablePreviewFeatures>true</EnablePreviewFeatures>
         <LangVersion>preview</LangVersion>
+        <UseWindowsForms>true</UseWindowsForms>
 
         <Nullable>enable</Nullable>
 
@@ -14,7 +15,7 @@
         <RootNamespace>Unknown6656.AutoIt3</RootNamespace>
 
         <Deterministic>false</Deterministic>
-        <PublishTrimmed>true</PublishTrimmed>
+        <PublishTrimmed>false</PublishTrimmed>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
