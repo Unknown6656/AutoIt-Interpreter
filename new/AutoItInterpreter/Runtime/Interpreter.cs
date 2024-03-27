@@ -85,11 +85,11 @@ public sealed class Interpreter
     /// </summary>
     public bool IsCOMAvailable => COMConnector is { };
 
-    //public WinAPIConnector? Win32APIConnector { get; }
+    public WinAPIConnector? Win32APIConnector { get; }
 
-    //public GUIConnector GUIConnector { get; }
+    public GUIConnector GUIConnector { get; }
 
-    //public bool IsWin32APIAvailable => Win32APIConnector is { };
+    public bool IsWin32APIAvailable => Win32APIConnector is { };
 
     /// <summary>
     /// The interpreter's script scanner and caching unit.
@@ -177,10 +177,10 @@ public sealed class Interpreter
         if (NativeInterop.OperatingSystem is OS.Windows)
         {
             COMConnector = new COMConnector(this);
-            //Win32APIConnector = new WinAPIConnector(this);
+            Win32APIConnector = new WinAPIConnector(this);
         }
 
-        //GUIConnector = new GUIConnector(this);
+        GUIConnector = new GUIConnector(this);
 
         Random = new BuiltinRandom();
         ResetRandom();
@@ -213,9 +213,9 @@ public sealed class Interpreter
 
         _threads.Dispose();
         GlobalObjectStorage.Dispose();
-        // GUIConnector.Dispose();
+        GUIConnector.Dispose();
         COMConnector?.Dispose();
-        //Win32APIConnector?.Dispose();
+        Win32APIConnector?.Dispose();
 
         _instances.Remove(this);
     }
